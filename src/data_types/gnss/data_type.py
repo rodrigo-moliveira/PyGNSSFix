@@ -1,10 +1,10 @@
-from ...math_utils.Constants import Constant
+from src import constants
 
 
 class DataType:
     """
     Class DataType
-    Represents a GNSS observable datatype (CarrierPhase, PseudoRange, or Signal)
+    Represents a GNSS observable datatype (CarrierPhase, PseudoRange, Signal or Doppler)
 
     Attributes
         ----------
@@ -157,9 +157,9 @@ class DataType:
 # Default Data Types
 
 # Frequencies
-f1 = DataType(data_type="f1", description="Frequency L1 (GPS)", freq_value=Constant.L1_FREQ, freq_number=1)
-f2 = DataType(data_type="f2", description="Frequency L2 (GPS)", freq_value=Constant.L2_FREQ, freq_number=2)
-f5 = DataType(data_type="f5", description="Frequency L5 (GPS)", freq_value=Constant.L2_FREQ, freq_number=5)
+f1 = DataType(data_type="f1", description="Frequency L1 (GPS)", freq_value=constants.L1_FREQ, freq_number=1)
+f2 = DataType(data_type="f2", description="Frequency L2 (GPS)", freq_value=constants.L2_FREQ, freq_number=2)
+f5 = DataType(data_type="f5", description="Frequency L5 (GPS)", freq_value=constants.L2_FREQ, freq_number=5)
 
 ###################
 # Raw Observables #
@@ -218,7 +218,7 @@ cAvailableIonoFreeCodes = [C12, C15, C25]
 cAvailableIonoFreeCarriers = [L12, L15, L25]
 
 
-def DataTypeFactory(datatype: str):
+def get_data_type(datatype: str):
     """
     Factory for inputs types. Receives a string representing the type of the datatype and returns the associated
     DataType instance

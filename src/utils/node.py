@@ -3,6 +3,7 @@ hierarchy or in a graph.
 
 This module is imported from
 https://github.com/galactics/beyond/blob/master/beyond/utils/node.py
+(all credits to galactics)
 """
 
 from collections import OrderedDict

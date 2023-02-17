@@ -1,24 +1,19 @@
 """Retrieve and interpolate data for Earth Orientation and timescales conversions
 """
 
-import logging
 from pathlib import Path
 from inspect import isclass
 from pkg_resources import iter_entry_points
 
-from ..config import config
-from ..errors import EopError, ConfigError
+from ...errors import EopError, ConfigError
 
 __all__ = ["register", "EopDb", "TaiUtc", "Finals", "Finals2000A"]
 
 
-log = logging.getLogger(__name__)
-
-
 class TaiUtc:
-    """File listing all leap seconds throught history
+    """File listing all leap seconds throughout history
 
-    This file could be retrieved `here <http://maia.usno.navy.mil/ser7/tai-utc.dat>`__, but this server seems discontinued.
+    This file could be retrieved `here <http://maia.usno.navy.mil/ser7/tai-utc.dat>`, but this server seems discontinued
     """
 
     def __init__(self, path, encoding="ascii"):
@@ -71,7 +66,7 @@ class Finals2000A:
         - **finals2000A.data**, from 1992-01-01 to present, updated weekly
         - **finals2000A.daily**, last 90 days + 90 days of prediction, updated daily
 
-    See the associated metadata for more informations about the content of these files.
+    See the associated metadata for more information about the content of these files.
     """
 
     deltas = ("dx", "dy")
@@ -118,7 +113,7 @@ class Finals2000A:
                 try:
                     self.data[mjd]["lod"] = float(line[79:86])
                 except ValueError:
-                    # LOD is not available for this date so we take the last value available
+                    # LOD is not available for this date, so we take the last value available
                     self.data[mjd]["lod"] = self.data[mjd - 1]["lod"]
                     pass
 
@@ -127,9 +122,6 @@ class Finals2000A:
 
     def items(self):
         return self.data.items()
-
-    def dates(self):
-        return self.data.dates()
 
 
 class Finals(Finals2000A):
@@ -141,7 +133,7 @@ class Finals(Finals2000A):
         - **finals.data**, from 1992-01-01 to present, updated weekly
         - **finals.daily**, last 90 days + 90 days of prediction, updated daily
 
-    See the associated metadata for more informations about the content of these files.
+    See the associated metadata for more information about the content of these files.
     """
 
     deltas = ("dpsi", "deps")
@@ -170,7 +162,7 @@ class Eop:
 class EopDb:
     """Class handling the different EOP databases available, in a simple abstraction layer.
 
-    By defining a simple parameter in the config dict, this class will handle the instanciation
+    By defining a simple parameter in the config dict, this class will handle the instantiation
     of the database and queries in a transparent manner.
 
     see :ref:`dbname <eop-dbname>` and :ref:`missing policy <eop-missing-policy>` configurations.
@@ -184,7 +176,7 @@ class EopDb:
     WARN = "warning"
     ERROR = "error"
 
-    MIS_DEFAULT = PASS
+    MIS_DEFAULT = WARN
     """Default behaviour in case of missing value"""
 
     @classmethod
@@ -209,24 +201,24 @@ class EopDb:
 
         cls._load_entry_points()
 
-        dbname = dbname or config.get("eop", "dbname", fallback=cls.DEFAULT_DBNAME)
+        dbname = dbname  # TODO figure out what to do here or config.get("eop", "dbname", fallback=cls.DEFAULT_DBNAME)
 
         if dbname not in cls._dbs.keys():
             raise EopError(f"Unknown database '{dbname}'")
 
         if isclass(cls._dbs[dbname]):
-            # Instanciation
+            # Instantiation
             try:
                 cls._dbs[dbname] = cls._dbs[dbname]()
             except Exception as e:
-                # Keep the exception in cache in order to not retry instanciation
-                # every single time EopDb.db() is called, as instanciation
-                # of database is generally a time consumming operation.
+                # Keep the exception in cache in order to not retry instantiation
+                # every single time EopDb.db() is called, as instantiation
+                # of database is generally a time-consuming operation.
                 # If it failed once, it will most probably fail again
                 cls._dbs[dbname] = e
 
         if isinstance(cls._dbs[dbname], Exception):
-            raise EopError("Problem at database instanciation") from cls._dbs[dbname]
+            raise EopError("Problem at database instantiation") from cls._dbs[dbname]
 
         return cls._dbs[dbname]
 
@@ -251,7 +243,8 @@ class EopDb:
                 msg = str(e)
 
             if cls.policy() == cls.WARN:
-                log.warning(msg)
+                pass
+                # TODO log.warning(msg)
             elif cls.policy() == cls.ERROR:
                 raise
 
@@ -263,7 +256,7 @@ class EopDb:
 
     @classmethod
     def policy(cls):
-        pol = config.get("eop", "missing_policy", fallback=cls.MIS_DEFAULT)
+        pol = cls.MIS_DEFAULT # TODO add policy to config config.get("eop", "missing_policy", fallback=cls.MIS_DEFAULT)
         if pol not in (cls.PASS, cls.WARN, cls.ERROR):
             raise ConfigError("Unknown config value for 'eop.missing_policy'")
 
@@ -279,7 +272,7 @@ class EopDb:
 
         if name in cls._dbs:
             msg = f"'{name}' is already registered for an Eop database. Skipping"
-            log.warning(msg)
+            # TODO: raise warning
         else:
             cls._dbs[name] = klass
 
@@ -357,12 +350,11 @@ class SimpleEopDatabase:
     """
 
     def __init__(self):
-        path = Path(config.get("eop", "folder", fallback=Path.cwd()))
-        type = config.get("eop", "type", fallback="all")
+        path = ""  # TODO get path from config Path(config.get("eop", "folder", fallback=Path.cwd()))
 
         # Data reading
-        f = Finals(path / (f"finals.{type}"))
-        f2 = Finals2000A(path / (f"finals2000A.{type}"))
+        f = Finals(path / f"finals")
+        f2 = Finals2000A(path / f"finals2000A")
         t = TaiUtc(path / "tai-utc.dat")
 
         # Extracting data from finals files

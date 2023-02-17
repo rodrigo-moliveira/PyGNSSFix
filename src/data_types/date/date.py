@@ -25,7 +25,8 @@ class Timescale(Node):
         return eop.ut1_utc
 
     def _scale_tai_minus_utc(self, mjd, eop):
-        """Definition of International Atomic Time relatively to Coordinated Universal Time"""
+        """Definition of International Atomic Time relatively to Coordinated Universal Time
+        This is also known as the DAT (leap seconds)"""
         return eop.tai_utc
 
     def _scale_tt_minus_tai(self, mjd, eop):
@@ -38,6 +39,7 @@ class Timescale(Node):
 
     def _scale_tdb_minus_tt(self, mjd, eop):
         """Definition of the Barycentric Dynamic Time scale relatively to Terrestrial Time"""
+        # NOTE: This is the tdb_opt 3 from Vallado script (ast alm approach (2012) bradley email)
         jd = mjd + Date.JD_MJD
         jj = Date._julian_century(jd)
         m = radians(357.5277233 + 35999.05034 * jj)
@@ -45,11 +47,12 @@ class Timescale(Node):
         return 0.001657 * sin(m) + 0.000022 * sin(delta_lambda)
 
     def offset(self, mjd, new_scale, eop):
-        """Compute the offset necessary in order to convert from one time-scale to another
+        """Compute the offset necessary in order to convert from one timescale to another
 
         Args:
             mjd (float):
             new_scale (str): Name of the desired scale
+            eop (Eop): class with Eop data
         Return:
             float: offset to apply in seconds
         """
@@ -67,7 +70,7 @@ class Timescale(Node):
             elif hasattr(self, roper):
                 delta -= getattr(self, roper)(mjd, eop)
             else:  # pragma: no cover
-                raise DateError(f"Unknown convertion {one} => {two}")
+                raise DateError(f"Unknown conversion {one} => {two}")
 
         return delta
 
@@ -78,6 +81,7 @@ TDB = Timescale("TDB")  # Barycentric Dynamical Time
 UTC = Timescale("UTC")  # Coordinated Universal Time
 TAI = Timescale("TAI")  # International Atomic Time
 TT = Timescale("TT")  # Terrestrial Time
+# TODO: add GALILEO time
 
 GPS + TAI + UTC + UT1
 TDB + TT + TAI
@@ -127,7 +131,7 @@ class Date:
     Date objects interact with :py:class:`timedelta` as datetime do.
 
     Attributes:
-        eop: Value of the Earth Orientation Parameters for this particular date (see
+        eop (Eop): Value of the Earth Orientation Parameters for this particular date (see
             :ref:`eop`)
         scale: Scale in which this date is represented
     """
@@ -143,7 +147,7 @@ class Date:
     J2000 = 2451545.0
     """Offset between JD and J2000"""
 
-    REF_SCALE = "TAI"
+    REF_SCALE = "UTC"
     """Scale used as reference internally"""
 
     DEFAULT_SCALE = "UTC"
@@ -230,10 +234,10 @@ class Date:
         super().__setattr__("_cache", {})
 
     def __setattr__(self, *args):  # pragma: no cover
-        raise TypeError("Can not modify attributes of immutable object")
+        raise TypeError("Cannot modify attributes of immutable object")
 
     def __delattr__(self, *args):  # pragma: no cover
-        raise TypeError("Can not modify attributes of immutable object")
+        raise TypeError("Cannot modify attributes of immutable object")
 
     def __add__(self, other):
         if isinstance(other, timedelta):
@@ -329,7 +333,7 @@ class Date:
     def _datetime(self):
         """Conversion of the Date object into a :py:class:`datetime.datetime`.
 
-        The resulting object is a timezone-naive instance in the REF_SCALE time-scale
+        The resulting object is a timezone-naive instance in the REF_SCALE timescale
         """
         if "dt" not in self._cache.keys():
             self._cache["dt"] = self.MJD_T0 + timedelta(days=self._d, seconds=self._s)
@@ -444,7 +448,7 @@ class DateRange:
         """
 
         Args:
-            start (Date): Begining of the range
+            start (Date): Beginning of the range
             stop (Date or datetime.timedelta): End of the range
             step (timedelta): step size
             inclusive (bool): If ``False``, the stopping date is not included.

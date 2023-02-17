@@ -7,11 +7,19 @@ class Error(Exception):
     pass
 
 
+class UnknownScaleError(Error):
+    pass
+
+
 class DateError(Error):
     pass
 
 
 class ConfigError(Error):
+    pass
+
+
+class UnknownConstellationError(Error):
     pass
 
 
