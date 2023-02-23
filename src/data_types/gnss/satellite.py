@@ -1,16 +1,18 @@
-from PositioningSolver.src.gnss.data_types.Constellation import SatelliteSystem, SatelliteSystemFactory
+from .constellation import Constellation, get_constellation
+
+__all__ = ["get_satellite", "Satellite"]
 
 # list of all satellites for the SatelliteFactory
-__all_sats__ = []
+__cache__ = []
 
 
 def new_sat(sat):
-    if sat not in __all_sats__:
-        __all_sats__.append(sat)
+    if sat not in __cache__:
+        __cache__.append(sat)
 
 
-def SatelliteFactory(sat_string):
-    for sat in __all_sats__:
+def get_satellite(sat_string):
+    for sat in __cache__:
         if str(sat) == sat_string:
             return sat
     else:
@@ -26,12 +28,12 @@ class Satellite:
         ----------
         nID : int
             The integer identifier of the satellite
-        sat_system : SatelliteSystem
+        sat_system : Constellation
             The instance of the corresponding SatelliteSystem (constellation)
 
     """
 
-    def __init__(self, identifier, sat_system: SatelliteSystem = None):
+    def __init__(self, identifier, sat_system: Constellation = None):
         """
         Constructor of Satellite instances
 
@@ -39,18 +41,18 @@ class Satellite:
             identifier (str, int):
                 the satellite identifier, either an int (ex: 03) - just
                 the ID, or a string composed of constellation + ID (ex: "G03")
-            sat_system (SatelliteSystem):
-                instance of SatelliteSystem. Must be provided if ´´identifier´´ is of type int,
+            sat_system (Constellation):
+                instance of Constellation. Must be provided if ´´identifier´´ is of type int,
                 and may be skipped if it is of type str (since constellation is inferred from the string)
         """
 
-        if isinstance(identifier, int) and isinstance(sat_system, SatelliteSystem):
+        if isinstance(identifier, int) and isinstance(sat_system, Constellation):
             self._nID = identifier
             self._sat_system = sat_system
 
         elif isinstance(identifier, str) and (len(identifier) == 3):
             self._nID = int(identifier[1:])
-            self._sat_system = SatelliteSystemFactory(identifier[0])
+            self._sat_system = get_constellation(identifier[0])
 
         else:
             raise TypeError("Unable to initialize satellite with arguments {} and {}. See documentation."

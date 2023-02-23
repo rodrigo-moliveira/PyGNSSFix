@@ -1,4 +1,4 @@
-from PositioningSolver.src.data_types.basics.DataType import DataType
+from .data_type import DataType
 
 
 class Observation:
@@ -10,23 +10,25 @@ class Observation:
         datatype : DataType
             The DataType (observation type) of this observation
         value : float or int
-            The numeric value of this observation
+            The numeric value for this observation
     """
 
     def __init__(self, datatype: DataType, value: float):
         if isinstance(datatype, DataType):
             self.datatype = datatype
         else:
-            raise TypeError(f'First argument of Observation constructor should be of type DataType, {type(datatype)}'
-                            f' was provided instead.')
+            raise AttributeError(f'First argument of Observation constructor should be of type DataType, '
+                                 f'{type(datatype)} was provided instead.')
         if isinstance(value, float) or isinstance(value, int):
             self.value = float(value)
         else:
-            raise TypeError(f'Second argument of Observation constructor should be of type float, {type(value)}'
-                            f' was provided instead')
+            raise AttributeError(f'Second argument of Observation constructor should be of type float, {type(value)}'
+                                 f' was provided instead')
 
     def __eq__(self, other):
-        return self.datatype == other.datatype
+        if not isinstance(other, Observation):
+            raise ValueError(f"Cannot compare DataType object")
+        return self.datatype == other.datatype and self.value == other.value
 
     def __repr__(self):
         return "Observation({} : {})".format(self.value, self.datatype)

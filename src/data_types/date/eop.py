@@ -154,9 +154,8 @@ class Eop:
         self.tai_utc = kwargs["tai_utc"]
 
     def __repr__(self):
-        return "{name}(x={x}, y={y}, dx={dx}, dy={dy}, deps={deps}, dpsi={dpsi}, lod={lod}, ut1_utc={ut1_utc}, tai_utc={tai_utc})".format(
-            name=self.__class__.__name__, **self.__dict__
-        )
+        return "{name}(x={x}, y={y}, dx={dx}, dy={dy}, deps={deps}, dpsi={dpsi}, lod={lod}, ut1_utc={ut1_utc}, " \
+               "tai_utc={tai_utc})".format(name=self.__class__.__name__, **self.__dict__)
 
 
 class EopDb:
@@ -256,7 +255,7 @@ class EopDb:
 
     @classmethod
     def policy(cls):
-        pol = cls.MIS_DEFAULT # TODO add policy to config config.get("eop", "missing_policy", fallback=cls.MIS_DEFAULT)
+        pol = cls.MIS_DEFAULT  # TODO add policy to config config.get("eop", "missing_policy", fallback=cls.MIS_DEFAULT)
         if pol not in (cls.PASS, cls.WARN, cls.ERROR):
             raise ConfigError("Unknown config value for 'eop.missing_policy'")
 

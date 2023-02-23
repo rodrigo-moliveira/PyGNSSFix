@@ -1,6 +1,8 @@
 from .service_utils import AvailableConstellations, ConstellationToCodeMap
 from ...errors import UnknownConstellationError
 
+__all__ = ["Constellation", "get_constellation"]
+
 
 class Constellation(str):
     """

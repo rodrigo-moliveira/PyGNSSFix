@@ -26,3 +26,7 @@ class UnknownConstellationError(Error):
 class EopError(Error):
     """Earth Orientation Parameters error (lack of data)"""
     pass
+
+
+class DataTypeError(Error):
+    pass
