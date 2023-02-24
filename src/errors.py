@@ -1,32 +1,37 @@
 """Common errors declarations
 """
+MODULE = "PyGNSSFix"
 
-
-class Error(Exception):
+class PyGNSSFixError(Exception):
     """Generic error"""
-    pass
+    __module__ = MODULE
 
 
-class UnknownScaleError(Error):
-    pass
+class UnknownScaleError(PyGNSSFixError):
+    """Unknown timescale selected by user"""
+    __module__ = MODULE
 
 
-class DateError(Error):
-    pass
+class DateError(PyGNSSFixError):
+    """Error when converting between timescales (no connection defined)"""
+    __module__ = MODULE
 
 
-class ConfigError(Error):
-    pass
+class ConfigError(PyGNSSFixError):
+    """Error when parsing the json configuration file"""
+    __module__ = MODULE
 
 
-class UnknownConstellationError(Error):
-    pass
+class UnknownConstellationError(PyGNSSFixError):
+    """Unknown constellation defined by user"""
+    __module__ = MODULE
 
 
-class EopError(Error):
+class EopError(PyGNSSFixError):
     """Earth Orientation Parameters error (lack of data)"""
-    pass
+    __module__ = MODULE
 
 
-class DataTypeError(Error):
-    pass
+class DataTypeError(PyGNSSFixError):
+    """Unknown GNSS data type """
+    __module__ = MODULE

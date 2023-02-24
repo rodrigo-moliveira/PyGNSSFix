@@ -1,11 +1,15 @@
 import sys
-
+import json
 # do Imports as
-from src.errors import EopError
+from src.io.config.gnss_config import ConfigGNSS
 
 
 def main():
-    pass
+    # Opening JSON file
+    filename = "C:\\Users\\rooo\\Documents\\other_projects\\PyGNSSFix\\src\\io\\config\\resources\\gnss_sample.json"
+    with open(filename) as json_file:
+        data = json.load(json_file)
+    config = ConfigGNSS(**data)
 
 
 print("#--------------------------------------------------#")
