@@ -1,14 +1,30 @@
 import os
-from src.errors import ConfigError
+from src.errors import ConfigError, ConfigTypeError
 from src import PROJECT_PATH
+from src.data_types.gnss.service_utils import AvailableConstellations, Services
 
+# TODO: set selections as enum classes with https://docs.python.org/3/library/enum.html
 
-def get_field(config_dict, field):
+def get_field(config_dict, field, field_type, root: str = None):
+    _root = f"{root}.{field}" if root is not None else f"{field}"
+
+    # get the field from the dict
     try:
         _field = config_dict[field]
     except KeyError:
-        raise ConfigError(f"Missing field `{field}` in configuration file.") from None
+        raise ConfigError(f"Missing field `{_root}` in configuration file.") from None
 
+    # check if it is of the specified type
+    # dual behaviour -> field_type can be a single type or a tuple of types
+    if type(field_type) == tuple:
+        if type(_field) not in field_type:
+            raise ConfigTypeError(
+                f"Field {_root} ({_field}) is not of the specified type. It is of type {type(_field)} "
+                f"but should be one of the following types {field_type}")
+    else:
+        if type(_field) != field_type:
+            raise ConfigTypeError(f"Field {_root} ({_field}) is not of the specified type. It is of type {type(_field)} "
+                                  f"but should be of type {field_type}")
     return _field
 
 
@@ -25,34 +41,38 @@ class ConfigField(object):
 
 class Log(ConfigField):
     available_levels = ["DEBUG", "INFO", "WARN", "ERROR", "FATAL"]
+    _root = "log"
     __slots__ = ["log_level"]
 
     def __init__(self, **kwargs):
         # get & set fields
-        super().super().__setattr__("log_level", get_field(kwargs, "minimum_level"))
+        super().super().__setattr__("log_level", get_field(kwargs, "minimum_level", str, Log._root))
 
         # input validation
         if self.log_level not in Log.available_levels:
-            raise ConfigError(f"Invalid option in field log.minimum_level ({self.log_level}).\n\tAvailable values are "
-                              f"{repr(Log.available_levels)}")
+            raise ConfigError(f"Invalid option in field {Log._root}.minimum_level ({self.log_level}).\n\tAvailable "
+                              f"values are {repr(Log.available_levels)}")
 
 
 class Inputs(ConfigField):
-    __slots__ = ["rinex_obs", "rinex_nav", "rinex_sp3", "rinex_clk", "snr_control", "first_epoch", "last_epoch"]
+    __slots__ = ["rinex_obs", "rinex_nav", "rinex_sp3", "rinex_clk", "snr_control", "first_epoch", "last_epoch", "rate"]
+    _root = "inputs"
 
     def __init__(self, **kwargs):
         # get fields
-        rinex_obs = get_field(kwargs, "rinex_obs_dir_path")
-        rinex_nav = get_field(kwargs, "rinex_nav_dir_path")
-        rinex_clk = get_field(kwargs, "rinex_clk_dir_path")
-        rinex_sp3 = get_field(kwargs, "rinex_sp3_dir_path")
+        rinex_obs = get_field(kwargs, "rinex_obs_dir_path", str, Inputs._root)
+        rinex_nav = get_field(kwargs, "rinex_nav_dir_path", str, Inputs._root)
+        rinex_clk = get_field(kwargs, "rinex_clk_dir_path", str, Inputs._root)
+        rinex_sp3 = get_field(kwargs, "rinex_sp3_dir_path", str, Inputs._root)
 
-        snr_control = get_field(kwargs, "snr_control")
+        snr_control = get_field(kwargs, "snr_control", int, Inputs._root)
 
-        arc = get_field(kwargs, "arc")
+        arc = get_field(kwargs, "arc", dict, Inputs._root)
 
-        first_epoch = get_field(arc, "first_epoch")
-        last_epoch = get_field(arc, "last_epoch")
+        first_epoch = get_field(arc, "first_epoch", str, Inputs._root + ".arc")
+        last_epoch = get_field(arc, "last_epoch", str, Inputs._root + ".arc")
+
+        rate = get_field(kwargs, "rate", int, Inputs._root)
 
         # set fields
         super().super().__setattr__("rinex_obs", rinex_obs)
@@ -62,22 +82,123 @@ class Inputs(ConfigField):
         super().super().__setattr__("snr_control", snr_control)
         super().super().__setattr__("first_epoch", first_epoch)
         super().super().__setattr__("last_epoch", last_epoch)
+        super().super().__setattr__("rate", rate)
 
         # input validation
-        print(os.path.exists(f"{PROJECT_PATH}\\{self.rinex_obs}"))
+        # check rinex paths
         for name, file in zip(["rinex obs", "rinex nav", "rinex sp3", "rinex clk"],
                               [self.rinex_obs, self.rinex_nav, self.rinex_sp3, self.rinex_clk]):
             if not os.path.exists(f"{PROJECT_PATH}\\{file}"):
                 raise ConfigError(f"Input {name} directory path {PROJECT_PATH}\\{file} does not exist")
 
+        # check snr control
+        if self.snr_control < 1 or self.snr_control > 9:
+            raise ConfigError(f"Field {Inputs._root}.snr_control must be an integer between 1 and 9")
+
+
+class Constellation(ConfigField):
+    __slots__ = ["observations", "obs_std", "tropo", "iono", "relativistic_corr"]
+    _root = "model"
+
+    def __init__(self, name: str, **kwargs):
+        # get fields
+        root = Constellation._root + "." + name
+
+        observations = get_field(kwargs, "observations", list, root)
+        obs_std = get_field(kwargs, "obs_std", list, root)
+        tropo = get_field(kwargs, "troposphere", int, root)
+        iono = get_field(kwargs, "ionosphere", int, root)
+        relativistic_corr = get_field(kwargs, "relativistic_corrections", int, root)
+
+        super().super().__setattr__("observations", observations)
+        super().super().__setattr__("obs_std", obs_std)
+        super().super().__setattr__("tropo", tropo)
+        super().super().__setattr__("iono", iono)
+        super().super().__setattr__("relativistic_corr", relativistic_corr)
+
+        # input validation
+        # observations and obs_std lists must have the same size
+        if len(observations) != len(obs_std):
+            raise ConfigError(f"Lists in fields {root}.observations and {root}.obs_std must have the same size")
+
+        # check if obs_std are floats
+        for obs in obs_std:
+            if type(obs) != float and type(obs) != int:
+                raise ConfigTypeError(f"Values in field {root}.obs_std must be floats or ints")
+
+        # check if observations are valid
+        for obs in observations:
+            if obs not in Services[name]:
+                raise ConfigError(f"Observation {obs} in field {root}.observations is not valid. Available"
+                                  f" observations for constellation {name} are {Services[name]}")
+
+        # model selects
+        for field, sel, values in zip(["troposphere", "ionosphere", "relativistic_corrections"],
+                                      [tropo, iono, relativistic_corr], [[0, 1], [0, 1, 2], [0, 1]]):
+            if sel not in values:
+                raise ConfigError(f"Selection {sel} in field {root}.{field} is not valid. Available options are "
+                                  f"{values}")
+
+
+class Model(ConfigField):
+    __slots__ = ["constellations", "GPS", "GAL"]
+    _root = "model"
+
+    def __init__(self, **kwargs):
+        # get fields
+        constellations = get_field(kwargs, "constellations", list, Inputs._root)
+        gps = get_field(kwargs, "GPS", dict, Inputs._root)
+        gal = get_field(kwargs, "GAL", dict, Inputs._root)
+
+        # set fields
+        super().super().__setattr__("constellations", constellations)
+        super().super().__setattr__("GPS", Constellation("GPS", **gps))
+        super().super().__setattr__("GAL", Constellation("GAL", **gal))
+
+        # input validation
+        for constellation in constellations:
+            if constellation not in AvailableConstellations:
+                raise ConfigError(f"Constellation {constellation} in field {Model._root}.constellations is not "
+                                  f"known. Available constellations are {AvailableConstellations}")
+
+
+class Solver(ConfigField):
+    __slots__ = ["algorithm", "n_iterations", "stop_criteria", "snr_filter", "elevation_filter", "sat_status",
+                 "trans_time_alg"]
+    _root = "solver"
+
+    def __init__(self, **kwargs):
+        # get fields
+        algorithm = get_field(kwargs, "algorithm", int, Solver._root)
+        n_iterations = get_field(kwargs, "n_iterations", int, Solver._root)
+        stop_criteria = get_field(kwargs, "stop_criteria", (float, int), Solver._root)
+        snr_filter = get_field(kwargs, "snr_filter", (float, int), Solver._root)
+        elevation_filter = get_field(kwargs, "elevation_filter", (float, int), Solver._root)
+        sat_status = get_field(kwargs, "satellite_status", dict, Solver._root)
+        trans_time_alg = get_field(kwargs, "transmission_time_alg", int, Solver._root)
+
+        super().super().__setattr__("algorithm", algorithm)
+        super().super().__setattr__("n_iterations", n_iterations)
+        super().super().__setattr__("stop_criteria", stop_criteria)
+        super().super().__setattr__("snr_filter", snr_filter)
+        super().super().__setattr__("elevation_filter", elevation_filter)
+        super().super().__setattr__("trans_time_alg", trans_time_alg)
+
+        # input validation
+
+
 
 class ConfigGNSS(ConfigField):
-    __slots__ = ["log", "inputs"]
+    __slots__ = ["log", "inputs", "model", "solver"]
 
     def __init__(self, **kwargs):
         # get sub-configs
-        log_ = get_field(kwargs, "log")
-        inputs_ = get_field(kwargs, "inputs")
+        log_ = get_field(kwargs, "log", dict)
+        inputs_ = get_field(kwargs, "inputs", dict)
+        model_ = get_field(kwargs, "model", dict)
+        solver_ = get_field(kwargs, "solver", dict)
 
         super().super().__setattr__("log", Log(**log_))
         super().super().__setattr__("inputs", Inputs(**inputs_))
+        super().super().__setattr__("model", Model(**model_))
+        super().super().__setattr__("solver", Solver(**solver_))

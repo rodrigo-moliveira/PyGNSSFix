@@ -2,6 +2,7 @@
 """
 MODULE = "PyGNSSFix"
 
+
 class PyGNSSFixError(Exception):
     """Generic error"""
     __module__ = MODULE
@@ -20,6 +21,21 @@ class DateError(PyGNSSFixError):
 class ConfigError(PyGNSSFixError):
     """Error when parsing the json configuration file"""
     __module__ = MODULE
+
+    def __init__(self, message):
+        # Call the base class constructor with the parameters it needs
+        message = "Error reading the configuration file -> " + message
+        super().__init__(message)
+
+
+class ConfigTypeError(TypeError):
+    """Error when parsing the json configuration file"""
+    __module__ = MODULE
+
+    def __init__(self, message):
+        # Call the base class constructor with the parameters it needs
+        message = "Error reading the configuration file -> " + message
+        super().__init__(message)
 
 
 class UnknownConstellationError(PyGNSSFixError):

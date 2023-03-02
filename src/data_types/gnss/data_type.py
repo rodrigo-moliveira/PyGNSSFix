@@ -22,33 +22,30 @@ class DataType:
     """
 
     # Force DataType objects to immutable
-    __slots__ = ["freq_number", "freq_value", "freq", "data_type", "description"]
+    __slots__ = ["_freq_number", "_freq_value", "_freq", "_data_type", "_description"]
 
     def __init__(self, freq_number: int = None, freq_value: float = None,
                  data_type: str = None, description: str = None, freq=None):
 
         if freq_number is not None:
-            super(DataType, self).__setattr__('freq_number', freq_number)
+            super(DataType, self).__setattr__('_freq_number', freq_number)
         if freq_value is not None:
-            super(DataType, self).__setattr__('freq_value', freq_value)
+            super(DataType, self).__setattr__('_freq_value', freq_value)
         if freq is not None:
-            super(DataType, self).__setattr__('freq', freq)
+            super(DataType, self).__setattr__('_freq', freq)
         if data_type is not None:
-            super(DataType, self).__setattr__('data_type', data_type)
+            super(DataType, self).__setattr__('_data_type', data_type)
         else:
-            super(DataType, self).__setattr__('data_type', "UN")  # undefined
+            super(DataType, self).__setattr__('_data_type', "UN")  # undefined
         if description is not None:
-            super(DataType, self).__setattr__('description', description)
+            super(DataType, self).__setattr__('_description', description)
         else:
-            super(DataType, self).__setattr__('description', "Unknown Data Type")
+            super(DataType, self).__setattr__('_description', "Unknown Data Type")
 
     # Objects of this class are immutable!
     def __setattr__(self, name, value):
         """Prevent modification of attributes."""
         raise AttributeError('DataType objects are immutable and cannot be modified')
-
-    def __str__(self):
-        return self.data_type
 
     def __repr__(self):
         return f"DataType({self.data_type}, {self.description})"
@@ -65,23 +62,43 @@ class DataType:
     def __lt__(self, other):
         return self.freq_number < other.freq_number
 
-    @property
-    def short_type(self):
-        return str(self)
+    def __str__(self):
+        return self.data_type
 
     @property
-    def frequency(self):
-        if hasattr(self, "freq"):
-            return self.freq
+    def data_type(self):
+        if hasattr(self, "_data_type"):
+            return self._data_type
         else:
-            raise AttributeError(f"The provided datatype {str(self)} has no attribute 'frequency'")
+            raise AttributeError(f"The provided datatype {str(self)} has no attribute '_data_type'")
+
+    @property
+    def freq(self):
+        if hasattr(self, "_freq"):
+            return self._freq
+        else:
+            raise AttributeError(f"The provided datatype {str(self)} has no attribute 'freq'")
+
+    @property
+    def freq_value(self):
+        if hasattr(self, "_freq_value"):
+            return self._freq_value
+        else:
+            raise AttributeError(f"The provided datatype {str(self)} has no attribute 'freq_value'")
 
     @property
     def freq_number(self):
-        if hasattr(self, "freq_number"):
-            return self.freq_number
+        if hasattr(self, "_freq_number"):
+            return self._freq_number
         else:
             raise AttributeError(f"The provided datatype {str(self)} has no attribute 'freq_number'")
+
+    @property
+    def description(self):
+        if hasattr(self, "_description"):
+            return self._description
+        else:
+            raise AttributeError(f"The provided datatype {str(self)} has no attribute 'description'")
 
     @staticmethod
     def is_code(data_type):
@@ -139,7 +156,7 @@ class DataType:
 
         raise DataTypeError(f"Unable to obtain iono free pseudorange from the provided arguments. "
                             f"Datatype1 and datatype2 must be both code."
-                            f"datatype1 = {datatype1.short_type}, datatype2 = {datatype2.short_type}")
+                            f"datatype1 = {datatype1.data_type}, datatype2 = {datatype2.data_type}")
 
     @staticmethod
     def get_smooth_pseudorange(datatype):

@@ -1,5 +1,5 @@
 {
-   "_comment": "This is the JSON configuration file to run the PVT-SPP GPS-only positioning algorithm. ",
+   "_comment": "This is the JSON configuration file to run the GNSS positioning algorithm. ",
 
    "log": {
       "_comment": "Configuration of the Log File (Possible values: DEBUG, INFO, WARN, ERROR, FATAL).",
@@ -8,80 +8,73 @@
 
    "inputs": {
       "_comment1": "Input configuration files",
-      "rinex_obs_dir_path": "workspace/datasets/gnss/gnss_1/obs",
-      "rinex_nav_dir_path": "workspace/datasets/gnss_1/nav",
-	  "rinex_clk_dir_path": "workspace/datasets/gnss_1/clk",
-      "rinex_sp3_dir_path": "workspace/datasets/gnss_1/sp3",
- 
-	 "_comment2": "snr threshold to discard RINEX observables (compare with snr control digit). [1-4]: bad, [5:8]: good, 9: excellent",
-	 "snr_control": 1,
-      
-      "arc":{
+      "rinex_obs_dir_path": "workspace/datasets/gnss/BRUX/obs",
+      "rinex_nav_dir_path": "workspace/datasets/gnss/BRUX/nav",
+      "rinex_clk_dir_path": "workspace/datasets/gnss/BRUX/clk",
+      "rinex_sp3_dir_path": "workspace/datasets/gnss/BRUX/sp3",
+
+      "_comment2": "snr threshold to discard RINEX observables (compare with snr control digit). [1-4]: bad, [5:8]: good, 9: excellent",
+      "snr_control": 1,
+
+      "arc": {
          "_comment1": "Select first and last epochs in estimation arc in format YYYY-MM-DD hh:mm:ss",
          "_comment2": "Select false to deactivate fields",
          "first_epoch": "2019-01-14 06:15:00",
          "last_epoch": "2019-01-14 06:29:59"
-      }
+      },
+
+      "_comment3": "Select the input data rate (in seconds). The rate must be consistent with the RINEX OBS rate. Select false to disable.",
+      "rate": 60
    },
 
    "model": {
-      "constellation": "GPS",
-      "observations": "1C",
+      "constellations": ["GPS", "GAL"],
 
-      "rate": {
-         "_comment": "Select the input data rate (in seconds). The rate must be consistent with the RINEX OBS rate. Select false to disable.",
-         "select": 60
+      "GPS": {
+         "observations": ["1C"],
+         "obs_std": [1],
+
+         "_comment1": "Select Tropospheric model: 0 - no model, 1 - a priori Saastamoinen model",
+         "troposphere": 1,
+
+         "_comment2": "Select Ionospheric model: 0 - no model, 1 - Klobuchar model, 2 - Iono Free Combination (requires 2 observations)",
+         "ionosphere": 1,
+
+         "_comment3": "Enable / disable relativistic corrections: 0 - disable, 1 - enable",
+         "relativistic_corrections": 1
       },
 
-      "obs_combination": {
-         "_comments": "0 - Single Frequency, 1 - Dual Frequency (requires 2 frequencies)",
-         "select": 0
-      },
+      "GAL": {
+         "observations": ["1X"],
+         "obs_std": [1],
 
-      "troposphere": {
-         "_comment": "Select Tropospheric model: 0 - no model, 1 - a priori Saastamoinen model",
-         "select": 1
-      },
+         "_comment1": "Select Tropospheric model: 0 - no model, 1 - a priori Saastamoinen model",
+         "troposphere": 1,
 
-      "ionosphere": {
-         "_comment": "Select Ionospheric model: 0 - no model, 1 - Klobuchar model, 2 - Iono Free Observables (requires 2 frequencies)",
-         "select": 1
-      },
+         "_comment2": "Select Ionospheric model: 0 - no model, 1 - NeQuick-G model, 2 - Iono Free Combination (requires 2 observations)",
+         "ionosphere": 1,
 
-      "relativistic_corrections": {
-         "_comment": "Enable / disable relativistic corrections: 0 - disable, 1 - enable",
-         "select": 1
+         "_comment3": "Enable / disable relativistic corrections: 0 - disable, 1 - enable",
+         "relativistic_corrections": 1
       }
    },
 
+   "solver": {
 
-   "gps_solver": {
-      "_comment": "GPS solver module (Single Frequency Single Constellation SPP)",
+      "_comment1": "0 - Least Squares, 1 - Weighted Least Squares",
+      "algorithm": 1,
 
-      "solution_solver": {
-         "_comment": "0 - Least Squares, 1 - Weighted Least Squares",
-         "select": 1
-      },
+      "_comment2": "maximum number of iterations in iterative procedure",
+      "n_iterations": 10,
 
-      "iterations": {
-         "_comment": "maximum number of iterations in iterative procedure",
-         "select": 10
-      },
+      "_comment3": "stop condition to end iterated least squares. Process ends when (RMS(i-1) - RMS(i)) / RMS(i-1) <= stop_criteria",
+      "stop_criteria": 0.0002,
 
-      "stop_criteria": {
-         "_comment": "stop condition to end iterated least squares. Process ends when (RMS(i-1) - RMS(i)) / RMS(i-1) <= stop_criteria",
-         "select": 0.0002
-      },
+      "_comment4": "Signal strength (SNR) filter. Select value of SNR (dBHz) threshold. Use high value to disable the filter",
+      "snr_filter": 20,
 
-      "signal_strength_filter": {
-         "_comment": "Signal strength (SNR) filter. Select value of SNR (dBHz) threshold. Use high value to disable the filter",
-         "select": 20
-      },
-
-      "elevation_filter": {
-         "_comment": "Elevation filter. Select the value of minimum elevation angle to consider, in degree. Use high value to disable the filter.",
-         "select": 15
-      },
+      "_comment5": "Elevation filter. Select the value of minimum elevation angle to consider, in degree. Use high value to disable the filter.",
+      "elevation_filter": 15,
 
       "satellite_status": {
          "_comment": "whether or not to check the SV Accuracy (URA) and SV health fields of the navigation message",
@@ -90,10 +83,8 @@
          "SV_health": true
       },
 
-      "transmission_time_alg": {
-         "_comment": "Select algorithm to compute the transmission time: 0 - geometric, 1 - pseudorange",
-         "select": 1
-      }
+      "_comment6": "Select algorithm to compute the transmission time: 0 - geometric, 1 - pseudorange",
+      "transmission_time_alg": 1
    },
 
    "performance_evaluation": {
@@ -102,12 +93,9 @@
          "x_ecef": 4027881.6280,
          "y_ecef": 306998.5370,
          "z_ecef": 4919498.9840
-      }
-   },
-
-   "outputs": {
-      "output_path": "workspace\\outputs_gnss\\gnss_1\\spp_1c\\",
-
+      },
       "show_plots": true
    }
+
 }
+
