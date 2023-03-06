@@ -2,8 +2,8 @@ import os
 from src.errors import ConfigError, ConfigTypeError
 from src import PROJECT_PATH
 from src.data_types.gnss.service_utils import AvailableConstellations, Services
+from .enums import *
 
-# TODO: set selections as enum classes with https://docs.python.org/3/library/enum.html
 
 def get_field(config_dict, field, field_type, root: str = None):
     _root = f"{root}.{field}" if root is not None else f"{field}"
@@ -23,9 +23,21 @@ def get_field(config_dict, field, field_type, root: str = None):
                 f"but should be one of the following types {field_type}")
     else:
         if type(_field) != field_type:
-            raise ConfigTypeError(f"Field {_root} ({_field}) is not of the specified type. It is of type {type(_field)} "
-                                  f"but should be of type {field_type}")
+            raise ConfigTypeError(
+                f"Field {_root} ({_field}) is not of the specified type. It is of type {type(_field)} "
+                f"but should be of type {field_type}")
     return _field
+
+
+def get_enum(enum_class, field, root: str = None):
+    try:
+        enum = enum_class(field)
+    except ValueError:
+        raise ConfigTypeError(
+            f"The selected value in field {root} is illegal. Value is {field}, but available selections are "
+            f"{enum_class.show_options()}") from None
+
+    return enum
 
 
 class ConfigField(object):
@@ -106,9 +118,10 @@ class Constellation(ConfigField):
 
         observations = get_field(kwargs, "observations", list, root)
         obs_std = get_field(kwargs, "obs_std", list, root)
-        tropo = get_field(kwargs, "troposphere", int, root)
-        iono = get_field(kwargs, "ionosphere", int, root)
-        relativistic_corr = get_field(kwargs, "relativistic_corrections", int, root)
+        tropo = get_enum(EnumOnOff, get_field(kwargs, "troposphere", int, root), f"{root}.troposphere")
+        iono = get_enum(EnumIono, get_field(kwargs, "ionosphere", int, root), f"{root}.ionosphere")
+        relativistic_corr = get_enum(EnumOnOff, get_field(kwargs, "relativistic_corrections", int, root),
+                                     f"{root}.relativistic_corrections")
 
         super().super().__setattr__("observations", observations)
         super().super().__setattr__("obs_std", obs_std)
@@ -131,13 +144,6 @@ class Constellation(ConfigField):
             if obs not in Services[name]:
                 raise ConfigError(f"Observation {obs} in field {root}.observations is not valid. Available"
                                   f" observations for constellation {name} are {Services[name]}")
-
-        # model selects
-        for field, sel, values in zip(["troposphere", "ionosphere", "relativistic_corrections"],
-                                      [tropo, iono, relativistic_corr], [[0, 1], [0, 1, 2], [0, 1]]):
-            if sel not in values:
-                raise ConfigError(f"Selection {sel} in field {root}.{field} is not valid. Available options are "
-                                  f"{values}")
 
 
 class Model(ConfigField):
@@ -162,6 +168,21 @@ class Model(ConfigField):
                                   f"known. Available constellations are {AvailableConstellations}")
 
 
+class SatelliteStatus(ConfigField):
+    __slots__ = ["sv_ura", "sv_minimum_ura", "sv_health"]
+    _root = "solver.satellite_status"
+
+    def __init__(self, **kwargs):
+        # get fields
+        sv_ura = get_field(kwargs, "SV_URA", bool, SatelliteStatus._root)
+        sv_minimum_ura = get_field(kwargs, "SV_minimum_URA", (int, float), SatelliteStatus._root)
+        sv_health = get_field(kwargs, "SV_health", bool, SatelliteStatus._root)
+
+        super().super().__setattr__("sv_ura", sv_ura)
+        super().super().__setattr__("sv_minimum_ura", sv_minimum_ura)
+        super().super().__setattr__("sv_health", sv_health)
+
+
 class Solver(ConfigField):
     __slots__ = ["algorithm", "n_iterations", "stop_criteria", "snr_filter", "elevation_filter", "sat_status",
                  "trans_time_alg"]
@@ -169,13 +190,14 @@ class Solver(ConfigField):
 
     def __init__(self, **kwargs):
         # get fields
-        algorithm = get_field(kwargs, "algorithm", int, Solver._root)
+        algorithm = get_enum(EnumSolver, get_field(kwargs, "algorithm", int, Solver._root), f"{Solver._root}.algorithm")
         n_iterations = get_field(kwargs, "n_iterations", int, Solver._root)
         stop_criteria = get_field(kwargs, "stop_criteria", (float, int), Solver._root)
-        snr_filter = get_field(kwargs, "snr_filter", (float, int), Solver._root)
-        elevation_filter = get_field(kwargs, "elevation_filter", (float, int), Solver._root)
+        snr_filter = get_field(kwargs, "snr_filter", (bool, float, int), Solver._root)
+        elevation_filter = get_field(kwargs, "elevation_filter", (bool, float, int), Solver._root)
         sat_status = get_field(kwargs, "satellite_status", dict, Solver._root)
-        trans_time_alg = get_field(kwargs, "transmission_time_alg", int, Solver._root)
+        trans_time_alg = get_enum(EnumTransmissionTime, get_field(kwargs, "transmission_time_alg", int, Solver._root),
+                                  f"{Solver._root}.transmission_time_alg")
 
         super().super().__setattr__("algorithm", algorithm)
         super().super().__setattr__("n_iterations", n_iterations)
@@ -183,13 +205,38 @@ class Solver(ConfigField):
         super().super().__setattr__("snr_filter", snr_filter)
         super().super().__setattr__("elevation_filter", elevation_filter)
         super().super().__setattr__("trans_time_alg", trans_time_alg)
+        super().super().__setattr__("sat_status", SatelliteStatus(**sat_status))
 
         # input validation
+        for field in ["n_iterations", "stop_criteria", "snr_filter", "elevation_filter"]:
+            val = getattr(self, field)
 
+            if val <= 0:
+                raise ConfigTypeError(f"Number of iterations in field {Solver._root}.{field} must be "
+                                      f"positive. Selected value is {val}")
+
+
+class PerformanceEval(ConfigField):
+    __slots__ = ["static", "true_static_position", "show_plots"]
+    _root = "performance_evaluation"
+
+    def __init__(self, **kwargs):
+        # get fields
+        static = get_field(kwargs, "static", bool, PerformanceEval._root)
+        coordinates = get_field(kwargs, "true_static_position", dict, PerformanceEval._root)
+        x = get_field(coordinates, "x_ecef", (float, int), f"{PerformanceEval._root}.x_ecef")
+        y = get_field(coordinates, "y_ecef", (float, int), f"{PerformanceEval._root}.y_ecef")
+        z = get_field(coordinates, "z_ecef", (float, int), f"{PerformanceEval._root}.z_ecef")
+
+        show_plots = get_field(kwargs, "show_plots", bool, PerformanceEval._root)
+
+        super().super().__setattr__("static", static)
+        super().super().__setattr__("true_static_position", [x, y, z])
+        super().super().__setattr__("show_plots", show_plots)
 
 
 class ConfigGNSS(ConfigField):
-    __slots__ = ["log", "inputs", "model", "solver"]
+    __slots__ = ["log", "inputs", "model", "solver", "performance_evaluation"]
 
     def __init__(self, **kwargs):
         # get sub-configs
@@ -197,8 +244,10 @@ class ConfigGNSS(ConfigField):
         inputs_ = get_field(kwargs, "inputs", dict)
         model_ = get_field(kwargs, "model", dict)
         solver_ = get_field(kwargs, "solver", dict)
+        performance_eval_ = get_field(kwargs, "performance_evaluation", dict)
 
         super().super().__setattr__("log", Log(**log_))
         super().super().__setattr__("inputs", Inputs(**inputs_))
         super().super().__setattr__("model", Model(**model_))
         super().super().__setattr__("solver", Solver(**solver_))
+        super().super().__setattr__("performance_evaluation", PerformanceEval(**performance_eval_))

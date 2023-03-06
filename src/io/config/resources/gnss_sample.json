@@ -70,10 +70,10 @@
       "_comment3": "stop condition to end iterated least squares. Process ends when (RMS(i-1) - RMS(i)) / RMS(i-1) <= stop_criteria",
       "stop_criteria": 0.0002,
 
-      "_comment4": "Signal strength (SNR) filter. Select value of SNR (dBHz) threshold. Use high value to disable the filter",
+      "_comment4": "Signal strength (SNR) filter. Select value of SNR (dBHz) threshold. Select false to turn off",
       "snr_filter": 20,
 
-      "_comment5": "Elevation filter. Select the value of minimum elevation angle to consider, in degree. Use high value to disable the filter.",
+      "_comment5": "Elevation filter. Select the value of minimum elevation angle to consider, in degree. Select false to turn off",
       "elevation_filter": 15,
 
       "satellite_status": {
@@ -88,12 +88,14 @@
    },
 
    "performance_evaluation": {
-      "true_position": {
-         "_comment": "True/reference receiver coordinates with respect to ECEF frame",
+      "static": true,
+      "true_static_position": {
+         "_comment": "True receiver coordinates with respect to ECEF frame [meters]",
          "x_ecef": 4027881.6280,
          "y_ecef": 306998.5370,
          "z_ecef": 4919498.9840
       },
+
       "show_plots": true
    }
 
