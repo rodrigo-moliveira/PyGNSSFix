@@ -8,7 +8,7 @@ from ...errors import DateError, UnknownScaleError
 from .eop import EopDb
 from ...utils.node import Node
 
-__all__ = ["Date", "timedelta"]
+__all__ = ["Epoch", "timedelta"]
 
 
 class Timescale(Node):
@@ -40,10 +40,10 @@ class Timescale(Node):
     def _scale_tdb_minus_tt(self, mjd, eop):
         """Definition of the Barycentric Dynamic Time scale relatively to Terrestrial Time"""
         # NOTE: This is the tdb_opt 3 from Vallado script (ast alm approach (2012) bradley email)
-        jd = mjd + Date.JD_MJD
-        jj = Date._julian_century(jd)
+        jd = mjd + Epoch.JD_MJD
+        jj = Epoch._julian_century(jd)
         m = radians(357.5277233 + 35999.05034 * jj)
-        delta_lambda = radians(246.11 + 0.90251792 * (jd - Date.J2000))
+        delta_lambda = radians(246.11 + 0.90251792 * (jd - Epoch.J2000))
         return 0.001657 * sin(m) + 0.000022 * sin(delta_lambda)
 
     def offset(self, mjd, new_scale, eop):
@@ -97,7 +97,7 @@ def get_scale(name):
         raise UnknownScaleError(name)
 
 
-class Date:
+class Epoch:
     """Date object
 
     All computations and in-memory saving are made in
@@ -163,7 +163,7 @@ class Date:
             if isinstance(arg, datetime):
                 # Python datetime.datetime object
                 d, s = self._convert_dt(arg)
-            elif isinstance(arg, Date):
+            elif isinstance(arg, Epoch):
                 # Date object
                 d = arg.d
                 s = arg.s
@@ -252,7 +252,7 @@ class Date:
             other = timedelta(seconds=-other.total_seconds())
         elif isinstance(other, datetime):
             return self.datetime - other
-        elif isinstance(other, Date):
+        elif isinstance(other, Epoch):
             return self._datetime - other._datetime
         else:
             raise TypeError(f"Unknown operation with {type(other)}")
@@ -559,5 +559,5 @@ else:  # pragma: no cover
 
             return values
 
-    munits.registry.setdefault(Date, DateConverter())
+    munits.registry.setdefault(Epoch, DateConverter())
     munits.registry.setdefault(DateRange, DateConverter())

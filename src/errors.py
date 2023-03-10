@@ -51,3 +51,13 @@ class EopError(PyGNSSFixError):
 class DataTypeError(PyGNSSFixError):
     """Unknown GNSS data type """
     __module__ = MODULE
+
+
+class TimeSeriesError(PyGNSSFixError):
+    """Error in time series class"""
+    __module__ = MODULE
+
+
+class UnknownConversionError(PyGNSSFixError):
+    """Error in time series class"""
+    __module__ = MODULE
