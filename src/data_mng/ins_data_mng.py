@@ -1,17 +1,21 @@
 from src.data_mng.containers.container import Container
+from src.data_mng.csv_data import CSVData
 
 
-class GnssDataManager(Container):
+class InsDataManager(Container):
     __slots__ = ["navigation_data", "observation_data",
                  "_available", "_do_not_save", "error_dict", "_plottable"]
 
     def __init__(self):
         super().__init__()
 
+        # Reference time
+        self.time = CSVData(name="time", description="sample time", units=["s"], legend=["time"])
+
         # Input Navigation Data
-        self.navigation_data = []  # TODO: nav data class
+        self.navigation_data = CSVData(name="navigation_data", description="Input Navigation Data")
         # Input Observation Data
-        self.observation_data = []  # TODO: obs data class
+        self.observation_data = CSVData(name="observation_data", description="Input Observation Data")
 
         # available data for the current simulation
         self._available = []
@@ -28,7 +32,7 @@ class GnssDataManager(Container):
     def __repr__(self):
         return str(self)
 
-    def add_data(self, data_name, data):
+    def add_data(self, data_name, data, units=None):
         """
         Add data to available.
         Args:
@@ -36,11 +40,18 @@ class GnssDataManager(Container):
             data: a scalar, a numpy array or a dict of the above two. If data is a dict, each
                 value in it should be of same type (scalar or numpy array), same size and same
                 units.
+            units: Units of the data. If you know clearly no units conversion is needed, set
+                units to None. If you do not know what units are used in the class InsDataMgr,
+                you'd better provide the units of the data. Units conversion will be done
+                automatically.
+                If data is a scalar, units should be a list of one string to define its unit.
+                If data is a numpy of size(m,n), units should be a list of n strings
+                to define the units.
         """
         if data_name in self.__slots__:
             sim = getattr(self, data_name, None)
             if sim is not None:
-                sim.add_data(data)
+                sim.add_data(data, units)
 
                 # add to 'available' list
                 if data_name not in self._available:

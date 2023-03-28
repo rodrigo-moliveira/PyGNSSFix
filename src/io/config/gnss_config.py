@@ -217,7 +217,7 @@ class Solver(ConfigField):
 
 
 class PerformanceEval(ConfigField):
-    __slots__ = ["static", "true_static_position", "show_plots"]
+    __slots__ = ["static", "true_static_position", "show_plots", "output_path"]
     _root = "performance_evaluation"
 
     def __init__(self, **kwargs):
@@ -229,10 +229,12 @@ class PerformanceEval(ConfigField):
         z = get_field(coordinates, "z_ecef", (float, int), f"{PerformanceEval._root}.z_ecef")
 
         show_plots = get_field(kwargs, "show_plots", bool, PerformanceEval._root)
+        output_path = get_field(kwargs, "output_path", str, PerformanceEval._root)
 
         super().super().__setattr__("static", static)
         super().super().__setattr__("true_static_position", [x, y, z])
         super().super().__setattr__("show_plots", show_plots)
+        super().super().__setattr__("output_path", output_path)
 
 
 class ConfigGNSS(ConfigField):

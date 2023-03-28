@@ -3,9 +3,9 @@ import numpy as np
 from src.utils.units import convert_unit
 
 
-class SimulationData:
+class CSVData:
     """
-    Simulated data
+    Container to store data from a CSV file. The
     """
     def __init__(self, name, description, units=None, output_units=None, legend=None, ignore_first_row=False,
                  title=""):

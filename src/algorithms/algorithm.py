@@ -1,8 +1,7 @@
 class Algorithm:
     def __init__(self):
-        self.inputs = []
-        self.outputs = []
-        self.results = []
+        self.inputs = {}
+        self.outputs = {}
 
     def __str__(self):
         return "Algorithm(Unknown Algorithm)"
@@ -11,4 +10,4 @@ class Algorithm:
         pass
 
     def get_results(self, *args):
-        return self.results
+        return self.outputs
