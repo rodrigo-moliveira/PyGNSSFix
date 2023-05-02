@@ -58,6 +58,26 @@ class TimeSeriesError(PyGNSSFixError):
     __module__ = MODULE
 
 
+class FileError(PyGNSSFixError):
+    """Error reading input file"""
+    __module__ = MODULE
+
+
 class UnknownConversionError(PyGNSSFixError):
     """Error in time series class"""
+    __module__ = MODULE
+
+
+class NonExistentObservable(PyGNSSFixError):
+    """Observable not found"""
+    __module__ = MODULE
+
+
+class DuplicateObservable(PyGNSSFixError):
+    """Observable not found"""
+    __module__ = MODULE
+
+
+class EmptyObservationData(PyGNSSFixError):
+    """Observation Data is empty"""
     __module__ = MODULE

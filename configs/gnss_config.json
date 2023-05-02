@@ -7,11 +7,11 @@
    },
 
    "inputs": {
-      "_comment1": "Input configuration files",
-      "rinex_obs_dir_path": "workspace/datasets/gnss/BRUX/obs",
-      "rinex_nav_dir_path": "workspace/datasets/gnss/BRUX/nav",
-      "rinex_clk_dir_path": "workspace/datasets/gnss/BRUX/clk",
-      "rinex_sp3_dir_path": "workspace/datasets/gnss/BRUX/sp3",
+      "_comment1": "Input data files",
+      "rinex_obs_files": ["datasets/gnss/BRUX/BRUX00BEL_S_20190140615_15M_01S_MO.rnx"],
+      "rinex_nav_files": ["datasets/gnss/BRUX/BRDC00IGN_R_20190140000_01D_GN.rnx"],
+      "rinex_clk_files": [""],
+      "rinex_sp3_files": ["datasets/gnss/BRUX/ESA0MGNFIN_20190140000_01D_05M_ORB.SP3"],
 
       "_comment2": "snr threshold to discard RINEX observables (compare with snr control digit). [1-4]: bad, [5:8]: good, 9: excellent",
       "snr_control": 1,

@@ -7,7 +7,7 @@ class GnssSinglePointSolution(Algorithm):
     def __init__(self):
         super().__init__()
         self.inputs = {"observation_data": None, "navigation_data": None}
-        self.outputs = {"output_pos": None}
+        self.outputs = {"nav_solution": None}
         self.name = "GNSS Single Point Solution Algorithm"
 
     def __str__(self):
@@ -20,4 +20,7 @@ class GnssSinglePointSolution(Algorithm):
 
         # Perform Least-Squares over input pseudorange observables..
 
-        self.get_results()["output_pos"] = 1
+        for time in range(1, 100):
+            pass
+
+        self.outputs["nav_solution"] = 1

@@ -9,5 +9,5 @@ class Algorithm:
     def compute(self, *args):
         pass
 
-    def get_results(self, *args):
+    def get_results(self):
         return self.outputs

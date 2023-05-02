@@ -2,16 +2,16 @@ from src.data_mng.containers.container import Container
 
 
 class GnssDataManager(Container):
-    __slots__ = ["navigation_data", "observation_data",
+    __slots__ = ["nav_data", "nav_header", "obs_data", "obs_header",
                  "_available", "_do_not_save", "error_dict", "_plottable"]
 
     def __init__(self):
         super().__init__()
 
         # Input Navigation Data
-        self.navigation_data = []  # TODO: nav data class
+        # self.navigation_data = []  # TODO: nav data class
         # Input Observation Data
-        self.observation_data = []  # TODO: obs data class
+        # self.observation_data = []  # TODO: obs data class
 
         # available data for the current simulation
         self._available = []

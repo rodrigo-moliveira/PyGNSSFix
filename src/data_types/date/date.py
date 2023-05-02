@@ -426,10 +426,10 @@ class DateRange:
 
     Example:
 
-        >>> start = Date(2021, 2, 9, 23, 35, 58)
+        >>> start = Epoch(2021, 2, 9, 23, 35, 58)
         >>> stop = timedelta(hours=1, minutes=1)
         >>> step = timedelta(minutes=15)
-        >>> r = Date.range(start, stop, step)
+        >>> r = Epoch.range(start, stop, step)
         >>> len(r)
         5
         >>> for d in r:  # iterable
@@ -440,7 +440,7 @@ class DateRange:
         2021-02-10T00:05:58 UTC
         2021-02-10T00:20:58 UTC
         2021-02-10T00:35:58 UTC
-        >>> Date(2021, 2, 9, 23, 45) in r  # membership test
+        >>> Epoch(2021, 2, 9, 23, 45) in r  # membership test
         True
     """
 
@@ -498,7 +498,7 @@ class DateRange:
             inclusive (bool): If ``False``, the stopping date is not included.
                 This is the same behavior as the built-in :py:func:`range`.
         Yield:
-            Date:
+            Epoch:
         """
 
         date = self.start

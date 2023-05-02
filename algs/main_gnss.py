@@ -1,5 +1,6 @@
 import sys
 import json
+import shutil
 
 from src.algorithms.gnss_alg_manager import GnssAlgorithmManager
 from src.io.config.gnss_config import ConfigGNSS
@@ -29,14 +30,11 @@ def main():
     alg = GnssSinglePointSolution()
     alg_mng = GnssAlgorithmManager(alg, config)
 
-    # read input files
-    alg_mng.read_inputs()
-
     # run algorithm
     alg_mng.run()
 
-    # run quality manager / interpret results
-    alg_mng.results()
+    # copy config json file to output dir
+    shutil.copyfile(config_filename, f"{alg_mng.data_dir}\\config.json")
 
 
 print("#--------------------------------------------------#")

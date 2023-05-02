@@ -13,7 +13,7 @@ class TimeSeries(OrderedDict):
     The keys can either be :class:`src.data_types.date.date.Epoch` or floats
     """
 
-    def __init__(self, overwriting=True):
+    def __init__(self, overwriting=False):
         """
         Construct a Timeseries
 

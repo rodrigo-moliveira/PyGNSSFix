@@ -1,6 +1,6 @@
 import os
 from src.errors import ConfigError, ConfigTypeError
-from src import PROJECT_PATH
+from src import WORKSPACE_PATH
 from src.data_types.gnss.service_utils import AvailableConstellations, Services
 from .enums import *
 
@@ -72,10 +72,10 @@ class Inputs(ConfigField):
 
     def __init__(self, **kwargs):
         # get fields
-        rinex_obs = get_field(kwargs, "rinex_obs_dir_path", str, Inputs._root)
-        rinex_nav = get_field(kwargs, "rinex_nav_dir_path", str, Inputs._root)
-        rinex_clk = get_field(kwargs, "rinex_clk_dir_path", str, Inputs._root)
-        rinex_sp3 = get_field(kwargs, "rinex_sp3_dir_path", str, Inputs._root)
+        rinex_obs = get_field(kwargs, "rinex_obs_files", list, Inputs._root)
+        rinex_nav = get_field(kwargs, "rinex_nav_files", list, Inputs._root)
+        rinex_clk = get_field(kwargs, "rinex_clk_files", list, Inputs._root)
+        rinex_sp3 = get_field(kwargs, "rinex_sp3_files", list, Inputs._root)
 
         snr_control = get_field(kwargs, "snr_control", int, Inputs._root)
 
@@ -98,10 +98,11 @@ class Inputs(ConfigField):
 
         # input validation
         # check rinex paths
-        for name, file in zip(["rinex obs", "rinex nav", "rinex sp3", "rinex clk"],
-                              [self.rinex_obs, self.rinex_nav, self.rinex_sp3, self.rinex_clk]):
-            if not os.path.exists(f"{PROJECT_PATH}\\{file}"):
-                raise ConfigError(f"Input {name} directory path {PROJECT_PATH}\\{file} does not exist")
+        for name, file_list in zip(["rinex obs", "rinex nav", "rinex sp3", "rinex clk"],
+                                   [self.rinex_obs, self.rinex_nav, self.rinex_sp3, self.rinex_clk]):
+            for file in file_list:
+                if not os.path.exists(f"{WORKSPACE_PATH}/{file}"):
+                    raise ConfigError(f"Input {name} directory path {WORKSPACE_PATH}/{file} does not exist")
 
         # check snr control
         if self.snr_control < 1 or self.snr_control > 9:
@@ -253,3 +254,16 @@ class ConfigGNSS(ConfigField):
         super().super().__setattr__("model", Model(**model_))
         super().super().__setattr__("solver", Solver(**solver_))
         super().super().__setattr__("performance_evaluation", PerformanceEval(**performance_eval_))
+
+    def get_services(self):
+        services = {}
+
+        # iterate over all active constellations
+        constellations = self.model.constellations
+        for constellation in constellations:
+            if constellation.upper() == "GPS":
+                services["GPS"] = self.model.GPS.observations
+            elif constellation.upper() == "GAL":
+                services["GAL"] = self.model.GAL.observations
+
+        return services
