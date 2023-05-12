@@ -81,3 +81,8 @@ class DuplicateObservable(PyGNSSFixError):
 class EmptyObservationData(PyGNSSFixError):
     """Observation Data is empty"""
     __module__ = MODULE
+
+
+class ArraySizeError(PyGNSSFixError):
+    """Array has wrong size/shape"""
+    __module__ = MODULE
