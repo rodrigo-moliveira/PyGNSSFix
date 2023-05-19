@@ -230,7 +230,7 @@ class EopDb:
             mjd: Date expressed as Mean Julian Date
             dbname: Name of the database to use
         Return:
-            Eop: Interpolated data for this particuliar MJD
+            Eop: Interpolated data for this particular MJD
         """
 
         try:

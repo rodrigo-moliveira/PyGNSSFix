@@ -147,17 +147,18 @@ class Epoch:
     J2000 = 2451545.0
     """Offset between JD and J2000"""
 
-    REF_SCALE = "UTC"
+    REF_SCALE = "GPS"
     """Scale used as reference internally"""
 
     DEFAULT_SCALE = "UTC"
     """Default scale"""
 
+    DEFAULT_FORMAT = "%Y-%m-%d %H:%M:%S"
+
     def __init__(self, *args, scale=DEFAULT_SCALE, **kwargs):
 
         if type(scale) is str:
             scale = get_scale(scale.upper())
-
         if len(args) == 1:
             arg = args[0]
             if isinstance(arg, datetime):
@@ -340,7 +341,7 @@ class Epoch:
         return self._cache["dt"]
 
     @classmethod
-    def strptime(cls, data, format, scale=DEFAULT_SCALE):  # pragma: no cover
+    def strptime(cls, data, format=DEFAULT_FORMAT, scale=DEFAULT_SCALE):  # pragma: no cover
         """Convert a string representation of a date to a Date object"""
         return cls(datetime.strptime(data, format), scale=scale)
 

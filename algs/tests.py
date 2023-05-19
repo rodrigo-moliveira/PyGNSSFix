@@ -1,5 +1,6 @@
 import numpy as np
 from src.models.attitude.attitude import euler2exp_att, exp_att2euler, euler2quat
+from src.models.attitude.attitude import *
 
 def read_file(file, token_map):
     fh = open(file)
@@ -49,13 +50,45 @@ def test_get_quat():
     np.savetxt(pvat_quat_file, pvat_data, delimiter=",")
 
 
+def test_atts():
+    #dcm = np.array([[1,2,3],[4,5,6],[7,8,9]])
+    #quat = dcm2quat(dcm)
+
+    #print(dcm)
+    #print(quat)
+
+    pos = np.array([4837583.0, -310732.0, 4132333.0])
+    euler = np.array([-1.555,0.22,0.011]) # roll pitch yaw
+    lat,lon,h = cartesian2geodetic(*pos)
+    print(lat, lon, h)
+    dcm_e_n = latlon2dcm_e_n(lat, lon)
+    print("dcm_e_n")
+    print(dcm_e_n)
+
+    dcm_n_b = euler2dcm(euler)
+    print("dcm_n_b")
+    print(dcm_n_b)
+
+    dcm_e_b = dcm_n_b @ dcm_e_n
+    print("dcm_e_b")
+    print(dcm_e_b)
+
+    q = dcm2quat(dcm_e_b)
+    print("final q")
+    print(q)
+
+    print("\n\n")
+    att = euler2exp_att(pos, euler)
+    euler2 = exp_att2euler(pos, att)
+    print(euler)
+    print(euler2)
 
 def main():
     #test_exp_att()
     #test_get_quat()
 
-    test_to_ned()
-
+    #test_to_ned()
+    test_atts()
     #pos = np.array([4.837583308680000e+06 , -3.107328416690000e+05  , 4.132333731440000e+06])
     #euler = np.array([0,0,2.777584889938198480e-04])
     #exp_att = euler2exp_att(pos,euler)

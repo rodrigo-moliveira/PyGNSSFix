@@ -60,6 +60,8 @@ class Constellation(str):
 
 _GPS = Constellation("GPS")
 _GAL = Constellation("GAL")
+_GLO = Constellation("GLO")
+_BDS = Constellation("BDS")
 
 
 def get_constellation(system: str):
@@ -75,6 +77,10 @@ def get_constellation(system: str):
         return _GPS
     elif system.upper() == "GAL" or system.upper() == "E":
         return _GAL
+    elif system.upper() == "GLO" or system.upper() == "R":
+        return _GLO
+    elif system.upper() == "BDS" or system.upper() == "B":
+        return _BDS
     else:
         raise UnknownConstellationError(
             "No Satellite System matched the descriptor {}.".format(system)

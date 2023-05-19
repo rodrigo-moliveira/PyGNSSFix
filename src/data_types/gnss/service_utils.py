@@ -5,7 +5,7 @@ Utility maps and dicts to deal with the constellations and observations.
 -> Available constellations: Galileo and GPS
 """
 
-AvailableConstellations = {"GPS", "GAL"}
+AvailableConstellations = {"GPS", "GAL", "GLO", "BDS"}
 
 # Rinex format
 GPSServices = {'1C', '1S', '1L', '1X', '1P', '1W', '1Y', '1M',
@@ -22,10 +22,12 @@ Services = {
     "GAL": GALServices
 }
 
-ConstellationToCodeMap = {"GPS": "G", "GAL": "E", "UNKNOWN": "U"}
+ConstellationToCodeMap = {"GPS": "G", "GAL": "E", "GLO": "R", "BDS": "C", "UNKNOWN": "U"}
 
 CodeToConstellationMap = {"G": "GPS",
-                          "E": "GAL"}
+                          "E": "GAL",
+                          "R": "GLO",
+                          "C": "BDS"}
 
 
 def get_code_from_service(service, constellation):

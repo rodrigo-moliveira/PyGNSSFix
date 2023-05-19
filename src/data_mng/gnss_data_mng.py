@@ -2,16 +2,16 @@ from src.data_mng.containers.container import Container
 
 
 class GnssDataManager(Container):
-    __slots__ = ["nav_data", "nav_header", "obs_data", "obs_header",
+    __slots__ = ["nav_data", "obs_data",
                  "_available", "_do_not_save", "error_dict", "_plottable"]
 
     def __init__(self):
         super().__init__()
 
         # Input Navigation Data
-        # self.navigation_data = []  # TODO: nav data class
+        self.nav_data = None
         # Input Observation Data
-        # self.observation_data = []  # TODO: obs data class
+        self.obs_data = None
 
         # available data for the current simulation
         self._available = []
@@ -38,13 +38,10 @@ class GnssDataManager(Container):
                 units.
         """
         if data_name in self.__slots__:
-            sim = getattr(self, data_name, None)
-            if sim is not None:
-                sim.add_data(data)
-
-                # add to 'available' list
-                if data_name not in self._available:
-                    self._available.append(data_name)
+            setattr(self, data_name, data)
+            # add to 'available' list
+            if data_name not in self._available:
+                self._available.append(data_name)
         else:
             raise ValueError(f"Unsupported data: {data_name}, not in {self.__slots__}")
 
@@ -60,7 +57,7 @@ class GnssDataManager(Container):
         # single data
         if isinstance(data_names, str):
             if data_names in self._available:
-                return getattr(self, data_names).data
+                return getattr(self, data_names)
             else:
                 raise ValueError(f'{data_names} is not available.')
 
@@ -100,4 +97,3 @@ class GnssDataManager(Container):
     @property
     def available(self):
         return self._available
-

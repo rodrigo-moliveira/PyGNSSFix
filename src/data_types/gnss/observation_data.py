@@ -167,12 +167,12 @@ class ObservationData:
         self._data = TimeSeries()
         self._types = []
         self._satellites = []
-        # TODO: self.header
+        self.header = []
 
     def __str__(self):
         data_str = "Observation Data:\n"
         for epc, data in self._data.items():
-            data_str += str(epc.to_time_stamp()) + "\n"
+            data_str += str(epc) + "\n"
             data_str += str(data) + "\n"
 
         return data_str

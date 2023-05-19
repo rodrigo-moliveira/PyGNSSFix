@@ -243,7 +243,6 @@ D7_GAL = DataType(data_type="D7", description="Doppler in E5b (GAL)", freq=E5b, 
 D8_GAL = DataType(data_type="D8", description="Doppler in E5AltBOC (GAL)", freq=E5ALTBOC, freq_number=8)
 D6_GAL = DataType(data_type="D6", description="Doppler in E6 (GAL)", freq=E6, freq_number=6)
 
-
 #####################################
 # Iono Free PseudoRange Observables #
 #####################################
@@ -292,13 +291,20 @@ UN = DataType(data_type="UN", description="Unknown inputs type")
 ##############
 # Containers #
 ##############
-cAvailableCodes = [PR1_GPS, PR2_GPS, PR5_GPS, PR1_GAL, PR1_GAL, PR5_GAL, PR6_GAL, PR7_GAL, PR8_GAL]
+cAvailableCodes = [PR1_GPS, PR2_GPS, PR5_GPS, PR1_GAL, PR5_GAL, PR6_GAL, PR7_GAL, PR8_GAL]
 cAvailableSignals = [S1_GPS, S2_GPS, S5_GPS, S1_GAL, S5_GAL, S6_GAL, S7_GAL, S8_GAL]
 cAvailableCarriers = [CP1_GPS, CP2_GPS, CP5_GPS, CP1_GAL, CP5_GAL, CP6_GAL, CP7_GAL, CP8_GAL]
 cAvailableFrequencies = [L1, L2, L5, E1, E5a, E5b, E5ALTBOC, E6]
 cAvailableSmoothCodes = [SPR1_GPS, SPR2_GPS, SPR5_GPS, SPR1_GAL, SPR5_GAL, SPR6_GAL, PR7_GAL, PR8_GAL]
 cAvailableIonoFreeSmoothCodes = [SPR12_GPS, SPR15_GPS, SPR15_GAL, SPR16_GAL, SPR17_GAL, SPR18_GAL]
 cAvailableIonoFreeCodes = [PR12_GPS, PR15_GPS, PR15_GAL, PR16_GAL, PR17_GAL, PR18_GAL]
+
+cGPSObsSignals = {"C": {"1": PR1_GPS, "2": PR2_GPS, "5": PR5_GPS},
+                  "L": {"1": CP1_GPS, "2": CP2_GPS, "5": CP5_GPS},
+                  "S": {"1": S1_GPS, "2": S2_GPS, "5": S5_GPS}}
+cGALObsSignals = {"C": {"1": PR1_GAL, "5": PR5_GAL, "6": PR6_GAL, "7": PR7_GAL, "8": PR8_GAL},
+                  "L": {"1": CP1_GAL, "5": CP5_GAL, "6": CP6_GAL, "7": CP7_GAL, "8": CP8_GAL},
+                  "S": {"1": S1_GAL, "5": S5_GAL, "6": S6_GAL, "7": S7_GAL, "8": S8_GAL}}
 
 
 def get_data_type(datatype: str):
@@ -316,5 +322,15 @@ def get_data_type(datatype: str):
         for _type in container:
             if _type.data_type == datatype:
                 return _type
-
     return UN
+
+
+def data_type_from_rinex(data_type: str, constellation: str):
+    if constellation == "GPS":
+        return cGPSObsSignals[data_type[0]][data_type[1]]
+    elif constellation == "GAL":
+        return cGALObsSignals[data_type[0]][data_type[1]]
+    return UN
+
+
+PR1_GPS = DataType(data_type="PR1", description="PseudoRange in L1 (GPS)", freq=L1, freq_number=1)
