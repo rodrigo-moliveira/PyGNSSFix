@@ -30,7 +30,6 @@ class Container:
     def __repr__(self):
         # print all attributes to string format (with data)
         _allAttrs = ""
-        print(self.__slots__)
         for atr in self.__slots__:
             _allAttrs += atr + "=" + str(getattr(self, atr)) + ", "
         _allAttrs = _allAttrs[0:-2]

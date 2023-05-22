@@ -4,7 +4,7 @@ from src.data_types.date.date import Epoch
 from src.data_types.gnss.satellite import get_satellite
 from src.data_types.gnss.data_type import data_type_from_rinex
 from src.data_types.gnss.constellation import get_constellation
-from src.data_types.gnss.observation_data import ObservationData, ObservationHeader
+from src.data_types.gnss.observation_data import ObservationData
 from src.data_types.gnss.service_utils import CodeToConstellationMap
 from src.errors import ConfigError, FileError
 from src import WORKSPACE_PATH
@@ -18,30 +18,28 @@ class RinexObsReader:
 
     Attributes
         ----------
-        obs: ObservationData
+        _obs: ObservationData
 
     """
 
-    def __init__(self, file: str, services, log=None,
+    def __init__(self, obs: ObservationData, file: str, services, log=None,
                  first_arc_epoch=None, last_arc_epoch=None, snr_control_check=0):
 
         # instance variables
-        self._file = file
         self._services = services
         self._map = {}
-        self.obs = ObservationData()
-        self.obs.header = ObservationHeader()
+        self._obs = obs
         self._log = log
         self._snr_control_check = snr_control_check
 
-        f_handler = open(f"{WORKSPACE_PATH}/{self._file}", "r")
+        f_handler = open(f"{WORKSPACE_PATH}/{file}", "r")
 
         # read header
         self._read_header(f_handler)
 
         # first and final arc epochs to read, if not None
-        self._first_arc_epoch = Epoch.strptime(first_arc_epoch, scale=self.obs.header.time_system)
-        self._last_arc_epoch = Epoch.strptime(last_arc_epoch, scale=self.obs.header.time_system)
+        self._first_arc_epoch = Epoch.strptime(first_arc_epoch, scale=self._obs.header.time_system)
+        self._last_arc_epoch = Epoch.strptime(last_arc_epoch, scale=self._obs.header.time_system)
 
         self._validate_requested_observations()
 
@@ -69,41 +67,41 @@ class RinexObsReader:
             line = file.readline()
 
             if "RINEX VERSION / TYPE" in line:
-                self.obs.header.rinex_version = float(line[5:10])
-                if self.obs.header.rinex_version < 3:
-                    raise FileError(f"Provided rinex file {self._file} is of version {self.obs.header.rinex_version}"
+                self._obs.header.rinex_version = float(line[5:10])
+                if self._obs.header.rinex_version < 3:
+                    raise FileError(f"Provided rinex file {file} is of version {self._obs.header.rinex_version}"
                                     f". Only version 3.00 or higher is supported.")
 
                 rinex_type = line[20]
                 if rinex_type != 'O':
-                    raise FileError(f"Rinex File {self._file} should be a GNSS Observation Data File. Instead, a "
+                    raise FileError(f"Rinex File {file} should be a GNSS Observation Data File. Instead, a "
                                     f"{RINEX_FILE_TYPES.get(rinex_type, 'Unknown Data File')} file was provided")
 
-                self.obs.header.satellite_system = line[40]
+                self._obs.header.satellite_system = line[40]
 
             elif "APPROX POSITION XYZ" in line:
                 data = line[:RINEX_OBS_END_OF_DATA_HEADER]
                 # static antenna position in ECEF frame (static receiver)
-                self.obs.header.receiver_position = tuple(map(float, data.split()))
+                self._obs.header.receiver_position = tuple(map(float, data.split()))
 
             elif "LEAP SECONDS" in line:
                 data = line[:RINEX_OBS_END_OF_DATA_HEADER].split()
-                self.obs.header.leap_seconds = int(data[0])
+                self._obs.header.leap_seconds = int(data[0])
 
             elif "TIME OF FIRST OBS" in line:
                 data = line[:RINEX_OBS_END_OF_DATA_HEADER]
                 self._set_time_system(data[48:51].upper())
 
                 data = data.split()
-                self.obs.header.first_epoch = Epoch(int(data[0]), int(data[1]), int(data[2]),
-                                                    int(data[3]), int(data[4]), floor(float(data[5])),
-                                                    scale=self.obs.header.time_system)
+                self._obs.header.first_epoch = Epoch(int(data[0]), int(data[1]), int(data[2]),
+                                                     int(data[3]), int(data[4]), floor(float(data[5])),
+                                                     scale=self._obs.header.time_system)
 
             elif "TIME OF LAST OBS" in line:
                 data = line[:RINEX_OBS_END_OF_DATA_HEADER].split()
-                self.obs.header.last_epoch = Epoch(int(data[0]), int(data[1]), int(data[2]),
-                                                   int(data[3]), int(data[4]), floor(float(data[5])),
-                                                   scale=self.obs.header.time_system)
+                self._obs.header.last_epoch = Epoch(int(data[0]), int(data[1]), int(data[2]),
+                                                    int(data[3]), int(data[4]), floor(float(data[5])),
+                                                    scale=self._obs.header.time_system)
 
             elif "SYS / # / OBS TYPES" in line:
                 data = line[:RINEX_OBS_END_OF_DATA_HEADER].split()
@@ -145,9 +143,9 @@ class RinexObsReader:
 
         # set default time system (according to the provided satellite system)
         if not time_system or time_system.isspace():
-            self.obs.header.time_system = RINEX_SATELLITE_SYSTEM.get(self.obs.header.satellite_system, "GPS")
+            self._obs.header.time_system = RINEX_SATELLITE_SYSTEM.get(self._obs.header.satellite_system, "GPS")
         else:
-            self.obs.header.time_system = time_system
+            self._obs.header.time_system = time_system
 
     def _read_obs(self, file):
         """
@@ -193,7 +191,7 @@ class RinexObsReader:
                 data = line[1:].split()
                 this_epoch = Epoch(int(data[0]), int(data[1]), int(data[2]),
                                    int(data[3]), int(data[4]), floor(float(data[5])),
-                                   scale=self.obs.header.time_system)
+                                   scale=self._obs.header.time_system)
 
                 epochFlag = int(data[6])
                 # nmbOfSats = data[7]
@@ -255,8 +253,9 @@ class RinexObsReader:
                                 pass
 
                             # set observable
-                            self.obs.set_observable(this_epoch, this_sat, this_type, observable)
+                            self._obs.set_observable(this_epoch, this_sat, this_type, observable)
                             # print("Setting observable", this_epoch, constellation, this_sat, this_type, observable)
 
-                        except (ValueError, IndexError) as e:
-                            self._log.debug("problem parsing line {} for index {}: {}".format(line, this_index, e))
+                        except (ValueError, IndexError):
+                            pass
+                            # self._log.debug("problem parsing line {} for index {}: {}".format(line, this_index, e))

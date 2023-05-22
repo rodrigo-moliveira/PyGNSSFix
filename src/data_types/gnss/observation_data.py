@@ -167,13 +167,13 @@ class ObservationData:
         self._data = TimeSeries()
         self._types = []
         self._satellites = []
-        self.header = []
+        self.header = ObservationHeader()
 
     def __str__(self):
-        data_str = "Observation Data:\n"
-        for epc, data in self._data.items():
-            data_str += str(epc) + "\n"
-            data_str += str(data) + "\n"
+        data_str = f"Observation Data:\nHeader:\n{repr(self.header)}\nData:\n{str(self._data)}"
+        #for epc, data in self._data.items():
+        #    data_str += str(epc) + "\n"
+        #    data_str += str(data) + "\n"
 
         return data_str
 

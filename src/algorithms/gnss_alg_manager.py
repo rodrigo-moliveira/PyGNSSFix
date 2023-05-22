@@ -5,8 +5,11 @@ from src import RUNS_PATH, WORKSPACE_PATH
 from src.data_mng.gnss_data_mng import GnssDataManager
 from src.common_log import set_logs, get_logger
 from src.data_types.gnss.observation_data import ObservationData
+from src.data_types.gnss.satellite import get_satellite
 from src.errors import PyGNSSFixError
+from src.io.rinex.nav_reader import RinexNavReader
 from src.io.rinex.obs_reader import RinexObsReader
+from src.data_types.gnss.navigation_data import NavigationData, NavigationHeader
 
 
 class GnssAlgorithmManager:
@@ -33,29 +36,39 @@ class GnssAlgorithmManager:
 
     def _read_inputs(self, logger):
 
+        # TODO: add log messages
         try:
             # read navigation data
-            nav_data_dir = self.config.inputs.rinex_nav
-            nav_data = None
-            # self.data_manager.add_data("navigation_data", nav_data)
-
-            # get observation data variables
+            nav_file = self.config.inputs.rinex_nav[0]
             obs_file = self.config.inputs.rinex_obs[0]
             services = self.config.get_services()
             first_epoch = self.config.inputs.first_epoch
             last_epoch = self.config.inputs.last_epoch
             snr_check = self.config.inputs.snr_control
 
-            handler = RinexObsReader(obs_file, services, logger, first_epoch, last_epoch, snr_check)
+            nav = NavigationData()
+            obs = ObservationData()
+
+            # self.data_manager.add_data("navigation_data", nav_data)
+
+            # get user configurations data variables
+
+            #r = RinexNavReader(nav_file, nav)
+            RinexObsReader(obs, obs_file, services, logger, first_epoch, last_epoch, snr_check)
 
             # self.data_manager.add_data("services", services)
-            self.data_manager.add_data("obs_data", handler.obs)
+            self.data_manager.add_data("obs_data", obs)
+            self.data_manager.add_data("nav_data", nav)
 
             # ... add more here
         except PyGNSSFixError as e:
             logger.error(f"{str(e)}")
-        except Exception as e:
-            logger.error(f"Exception caught -> {str(e)}")
+            return False
+        #except Exception as e:
+        #    logger.error(f"Exception caught -> {str(e)}")
+        #    return False
+
+        return True
 
     def _run(self):
         pass
@@ -87,12 +100,23 @@ class GnssAlgorithmManager:
         main_log.info(f"Running {str(self.algorithm)}")
 
         # read inputs
-        self._read_inputs(io_log)
+        main_log.info(f"Reading input files...")
+        success = self._read_inputs(io_log)
+        if not success:
+            main_log.warn("Stopping execution of program due to error encountered in execution")
+            return
+
+        # run preprocessor
+        main_log.info(f"Running preprocessor...")
 
         # run algorithm
+        main_log.info(f"Running estimation algorithm...")
 
         # process results
+        main_log.info(f"Running quality manager...")
         self._results()
+
+        main_log.info(f"Successfully executed algorithm {str(self.algorithm)}")
 
     def _results(self, trace=True, performance=False, save=False):
 
@@ -100,11 +124,14 @@ class GnssAlgorithmManager:
         # if save:
         #    self.data_manager.save_data(data_dir)
 
+
         if trace:
             # store trace files
-            trace_dir = f"{self.data_dir}\\trace\\observation_data.txt"
-            with open(trace_dir, "w") as file:
+            trace_dir = f"{self.data_dir}\\trace"
+            with open(f"{trace_dir}\\observation_data.txt", "w") as file:
                 file.write(str(self.data_manager.get_data("obs_data")))
+            # with open(f"{trace_dir}\\navigation_data.txt", "w") as file:
+            #    file.write(str(self.data_manager.get_data("nav_data")))
 
         if performance:
             pass

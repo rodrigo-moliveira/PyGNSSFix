@@ -32,6 +32,7 @@ class TimeSeries(OrderedDict):
         # if not self.overwriting and epoch not in self._epochs:
         if not self.overwriting and epoch in self._epochs:
             # epoch is already defined, and we are in non-overwriting mode -> skip insertion
+            print("epoch is already defined, and we are in non-overwriting mode -> skip insertion")
             if logger is not None:
                 # TODO: add logger message (warning)
                 pass
@@ -121,10 +122,12 @@ class TimeSeries(OrderedDict):
 
     def _sort(self):
         # this sort is not very efficient...
+        print("sorting")
         if self.sorted is False:
-            self._epochs = sorted(self.epochs)
-            new_dct = OrderedDict((key, self[key]) for key in self.epochs)
+            epochs = sorted(self.epochs)
+            self.epochs.clear()
 
+            new_dct = OrderedDict((key, self[key]) for key in epochs)
             self.clear()
             self.update(new_dct)
 

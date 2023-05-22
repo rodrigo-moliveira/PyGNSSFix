@@ -1,9 +1,10 @@
-from ...io_manager.import_rinex.RinexUtils import to_float
-from ...data_types.basics.Epoch import Epoch
-from PositioningSolver.src.gnss.data_types.Satellite import SatelliteFactory
+from . import utils
+from src.data_types.date.date import Epoch
+from src.data_types.gnss.satellite import get_satellite
+from src.errors import FileError
 
-from .RinexUtils import RinexUtils
-from PositioningSolver.src.gnss.data_types.NavigationData import NavigationPointGPS, NavigationHeader
+from src.data_types.gnss.navigation_data import NavigationData, NavigationPoint
+from ... import WORKSPACE_PATH
 
 """
 Example of File Rinex Navigation File V3.03 (header + data):
@@ -24,49 +25,43 @@ G01 2019 01 13 16 00 00-1.447494141757D-04-6.366462912410D-12 0.000000000000D+00
      2.000000000000D+00 0.000000000000D+00 5.587935447693D-09 3.100000000000D+01
      5.427000000000D+04    
 
-
-
-
 Important Note: The time tags of the navigation messages (e.g., time of ephemeris, time of clock) are given in the 
-respective satellite time systems!"""
+respective satellite time systems!
+
+"""
 
 
-class RinexNavReaderGPS:
+class RinexNavReader:
     """
     Class RinexNavReader
 
     Attributes
         ----------
-        nav_header : NavigationHeader (composed of attributes rinex_version, satellite_system,
-                                      iono_corrections, leap_seconds, first_epoch)
-        nav_data : NavigationDataMap
+        nav : NavigationData
     """
 
-    def __init__(self, file, NavigationDataMap):
+    def __init__(self, file, nav):
 
         # instance variables
-        self.nav_header = NavigationHeader()
-        self.nav_data = NavigationDataMap
+        self.nav = nav
         self._first_epoch = None
         self._first_epoch_set = False
 
-        cFile = open(file, "r")
+        f_handler = open(f"{WORKSPACE_PATH}/{file}", "r")
 
         # read header
-        self._read_header(cFile)
+        self._read_header(f_handler)
 
         # read inputs
-        self._read_data(cFile)
+        self._read_data(f_handler)
 
-        # attach header to the NavigationDataMap
-        self.nav_header.first_epoch = self._first_epoch
-        self.nav_data.set_header(self.nav_header)
+        self.nav.header.first_epoch = self._first_epoch
 
-        cFile.close()
+        f_handler.close()
 
-    def _read_header(self, cFile):
+    def _read_header(self, file):
         """
-        Method to read header data and store it in container self.nav_header (@ObservationHeader)
+        Method to read header data
 
         Tags to look for:
             * RINEX VERSION / TYPE  -> rinex_version and satellite_system
@@ -77,38 +72,35 @@ class RinexNavReaderGPS:
         line = " "
 
         while line:
-            line = cFile.readline()
-            # print(line)
+            line = file.readline()
 
             if "RINEX VERSION / TYPE" in line:
-                self.nav_header.rinex_version = float(line[5:10])
-                if self.nav_header.rinex_version < 3:
-                    from PositioningSolver.src.utils.errors import FileError
+                self.nav.header.rinex_version = float(line[5:10])
+                if self.nav.header.rinex_version < 3:
                     raise FileError("The provided rinex file {} is of version {}. Only version 3.00 or "
-                                    "higher is supported. Error!".format(cFile, self.nav_header.rinex_version))
+                                    "higher is supported. Error!".format(file, self.nav.header.rinex_version))
 
                 rinex_type = line[20]
                 if rinex_type != 'N':
-                    from PositioningSolver.src.utils.errors import FileError
                     raise FileError("Rinex File {} should be a GNSS Navigation Data File. Instead, "
-                                    "a {} was provided (code {})".format(cFile,
-                                                                         RinexUtils.RINEX_FILE_TYPES.get
+                                    "a {} was provided (code {})".format(file,
+                                                                         utils.RINEX_FILE_TYPES.get
                                                                          (rinex_type, "Unknown Data File"), rinex_type))
 
-                self.nav_header.satellite_system = RinexUtils.RINEX_SATELLITE_SYSTEM.get(line[40], "UNKNOWN")
+                self.nav.header.satellite_system = utils.RINEX_SATELLITE_SYSTEM.get(line[40], "UNKNOWN")
 
             elif "LEAP SECONDS" in line:
-                data = line[:RinexUtils.RINEX_OBS_END_OF_DATA_HEADER].split()
-                self.nav_header.leap_seconds = int(data[0])
+                data = line[:utils.RINEX_OBS_END_OF_DATA_HEADER].split()
+                self.nav.header.leap_seconds = int(data[0])
 
             elif "IONOSPHERIC CORR" in line:
-                data = line[:RinexUtils.RINEX_OBS_END_OF_DATA_HEADER].split()
-                self.nav_header.iono_corrections[data[0]] = [float(i) for i in data[1:]]
+                data = line[:utils.RINEX_OBS_END_OF_DATA_HEADER].split()
+                self.nav.header.iono_corrections[data[0]] = [float(i) for i in data[1:]]
 
             elif "END OF HEADER" in line:
                 break
 
-    def _read_data(self, cFile):
+    def _read_data(self, file):
         """
         Read GPS navigation data
 
@@ -150,39 +142,35 @@ class RinexNavReaderGPS:
         line = " "
 
         while line:
-            line = cFile.readline()
-            # print (line)
+            line = file.readline()
 
             if len(line) == 0:
                 break
 
             if line[0] == "G":
                 # new GPS navigation epoch inputs
-                navMessage = NavigationPointGPS()
+                navMessage = NavigationPoint()
 
                 # read 1st line
-                satellite = SatelliteFactory(line[0:3])
+                satellite = get_satellite(line[0:3])
                 year = int(line[4:8])
                 month = int(line[9:11])
                 day = int(line[12:14])
                 hour = int(line[15:17])
                 minute = int(line[18:20])
                 second = int(line[21:23])
-                toc = Epoch({"year": year,
-                             "month": month,
-                             "day": day,
-                             "hour": hour,
-                             "minute": minute,
-                             "second": second},
-                            time_system="sensors")
+
+                toc = Epoch(year, month, day, hour, minute, second,
+                            scale=str(satellite.sat_system))  # time_system="GPS"
+
                 # set first epoch for this file
                 if not self._first_epoch_set:
                     self._first_epoch = toc
                     self._first_epoch_set = True
 
-                af0 = to_float(line[23:42])
-                af1 = to_float(line[42:61])
-                af2 = to_float(line[61:80])
+                af0 = utils.to_float(line[23:42])
+                af1 = utils.to_float(line[42:61])
+                af2 = utils.to_float(line[61:80])
                 setattr(navMessage, "satellite", satellite)
                 setattr(navMessage, "toc", toc)
                 setattr(navMessage, "af0", af0)
@@ -190,82 +178,73 @@ class RinexNavReaderGPS:
                 setattr(navMessage, "af2", af2)
 
                 # read 2nd line
-                line = cFile.readline()
-                iode = to_float(line[4:23])
-                crs = to_float(line[23:42])
-                deltaN = to_float(line[42:61])
-                M0 = to_float(line[61:80])
+                line = file.readline()
+                iode = utils.to_float(line[4:23])
+                crs = utils.to_float(line[23:42])
+                deltaN = utils.to_float(line[42:61])
+                M0 = utils.to_float(line[61:80])
                 setattr(navMessage, "IODE", iode)
                 setattr(navMessage, "crs", crs)
                 setattr(navMessage, "deltaN", deltaN)
                 setattr(navMessage, "M0", M0)
-                # print (iode, crs, deltaN, M0)
 
                 # read 3rd line
-                line = cFile.readline()
-                cuc = to_float(line[4:23])
-                eccentricity = to_float(line[23:42])
-                cus = to_float(line[42:61])
-                sqrtA = to_float(line[61:80])
+                line = file.readline()
+                cuc = utils.to_float(line[4:23])
+                eccentricity = utils.to_float(line[23:42])
+                cus = utils.to_float(line[42:61])
+                sqrtA = utils.to_float(line[61:80])
                 setattr(navMessage, "cuc", cuc)
                 setattr(navMessage, "eccentricity", eccentricity)
                 setattr(navMessage, "cus", cus)
                 setattr(navMessage, "sqrtA", sqrtA)
-                # print(cuc, eccentricity, cus, sqrtA)
 
                 # read 4th line
-                line = cFile.readline()
-                sec_toe = to_float(line[1:23])
-                cic = to_float(line[23:42])
-                RAAN0 = to_float(line[42:61])
-                cis = to_float(line[61:80])
-                # setattr(navMessage, "sec_toe", sec_toe)
+                line = file.readline()
+                sec_toe = utils.to_float(line[1:23])
+                cic = utils.to_float(line[23:42])
+                RAAN0 = utils.to_float(line[42:61])
+                cis = utils.to_float(line[61:80])
                 setattr(navMessage, "cic", cic)
                 setattr(navMessage, "RAAN0", RAAN0)
                 setattr(navMessage, "cis", cis)
-                # print(toe, cic, RAAN0, cis)
 
                 # read 5th line
-                line = cFile.readline()
-                inclination0 = to_float(line[4:23])
-                crc = to_float(line[23:42])
-                omega = to_float(line[42:61])
-                RAANDot = to_float(line[61:80])
+                line = file.readline()
+                inclination0 = utils.to_float(line[4:23])
+                crc = utils.to_float(line[23:42])
+                omega = utils.to_float(line[42:61])
+                RAANDot = utils.to_float(line[61:80])
                 setattr(navMessage, "i0", inclination0)
                 setattr(navMessage, "crc", crc)
                 setattr(navMessage, "omega", omega)
                 setattr(navMessage, "RAANDot", RAANDot)
-                # print(inclination0, crc, RAANDot, RAANDot)
 
                 # read 6th line
-                line = cFile.readline()
-                iDot = to_float(line[4:23])
-                codesL2 = to_float(line[23:42])
-                week_toe = to_float(line[42:61])
-                flagL2 = to_float(line[61:80])
-                toe = Epoch([week_toe, sec_toe])
-                setattr(navMessage, "toe", toe)
+                line = file.readline()
+                iDot = utils.to_float(line[4:23])
+                codesL2 = utils.to_float(line[23:42])
+                week_toe = utils.to_float(line[42:61])
+                flagL2 = utils.to_float(line[61:80])
+                setattr(navMessage, "toe", [week_toe, sec_toe])
                 setattr(navMessage, "iDot", iDot)
                 setattr(navMessage, "codesL2", codesL2)
-                # setattr(navMessage, "week_toe", week_toe)
                 setattr(navMessage, "flagL2", flagL2)
-                # print(iDot, codesL2, week_toe, flagL2)
 
                 # read 7th line
-                line = cFile.readline()
-                SV_URA = to_float(line[4:23])
-                SV_health = to_float(line[23:42])
-                TGD = to_float(line[42:61])
-                IODC = to_float(line[61:80])
+                line = file.readline()
+                SV_URA = utils.to_float(line[4:23])
+                SV_health = utils.to_float(line[23:42])
+                TGD = utils.to_float(line[42:61])
+                IODC = utils.to_float(line[61:80])
                 setattr(navMessage, "SV_URA", SV_URA)
                 setattr(navMessage, "SV_health", SV_health)
                 setattr(navMessage, "TGD", TGD)
                 setattr(navMessage, "IODC", IODC)
-                # print(SV_URA, SV_health, TGD, IODC)
 
                 # read 8th line
-                line = cFile.readline()
-                TransmissionTime = to_float(line[4:23])
+                line = file.readline()
+                TransmissionTime = utils.to_float(line[4:23])
                 setattr(navMessage, "TransmissionTime", TransmissionTime)
 
-                self.nav_data.set_data(toc, satellite, navMessage)
+                self.nav.set_data(toc, satellite, navMessage)
