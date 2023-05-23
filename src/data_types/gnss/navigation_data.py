@@ -65,9 +65,9 @@ class NavigationData:
 
     def __str__(self):
 
-        myStr = f"Navigation Header:\n{repr(self._header)}\n"
+        myStr = f"{repr(self._header)}\n"
         for sat, data in self._data.items():
-            myStr += str(sat) + f"\n\t{str(data)}\n"
+            myStr += str(sat) + f"\n{str(data)}\n"
 
         return myStr
 

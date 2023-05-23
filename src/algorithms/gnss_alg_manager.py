@@ -53,7 +53,7 @@ class GnssAlgorithmManager:
 
             # get user configurations data variables
 
-            #r = RinexNavReader(nav_file, nav)
+            RinexNavReader(nav_file, nav)
             RinexObsReader(obs, obs_file, services, logger, first_epoch, last_epoch, snr_check)
 
             # self.data_manager.add_data("services", services)
@@ -130,8 +130,8 @@ class GnssAlgorithmManager:
             trace_dir = f"{self.data_dir}\\trace"
             with open(f"{trace_dir}\\observation_data.txt", "w") as file:
                 file.write(str(self.data_manager.get_data("obs_data")))
-            # with open(f"{trace_dir}\\navigation_data.txt", "w") as file:
-            #    file.write(str(self.data_manager.get_data("nav_data")))
+            with open(f"{trace_dir}\\navigation_data.txt", "w") as file:
+                file.write(str(self.data_manager.get_data("nav_data")))
 
         if performance:
             pass

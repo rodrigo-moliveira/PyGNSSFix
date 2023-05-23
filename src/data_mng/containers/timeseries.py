@@ -122,7 +122,6 @@ class TimeSeries(OrderedDict):
 
     def _sort(self):
         # this sort is not very efficient...
-        print("sorting")
         if self.sorted is False:
             epochs = sorted(self.epochs)
             self.epochs.clear()
@@ -136,9 +135,9 @@ class TimeSeries(OrderedDict):
     def __repr__(self):
         self._sort()
 
-        my_str = "Time Series:\n"
+        my_str = ""
         for epc, obs in self.items():
-            my_str += "\t" + repr(epc) + " -> " + str(obs) + "\n"
+            my_str += repr(epc) + " -> " + str(obs) + "\n"
         return my_str
 
     def copy(self):

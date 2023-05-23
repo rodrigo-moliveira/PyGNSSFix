@@ -170,10 +170,7 @@ class ObservationData:
         self.header = ObservationHeader()
 
     def __str__(self):
-        data_str = f"Observation Data:\nHeader:\n{repr(self.header)}\nData:\n{str(self._data)}"
-        #for epc, data in self._data.items():
-        #    data_str += str(epc) + "\n"
-        #    data_str += str(data) + "\n"
+        data_str = f"{repr(self.header)}\n{str(self._data)}"
 
         return data_str
 
