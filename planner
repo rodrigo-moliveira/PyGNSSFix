@@ -1,4 +1,3 @@
-parei na leitura de observation data
-agora é continuar para a navigation data
 arranjar maneira de passar os EOPs desde o config.json até à database
+ler dados de navegacao/observacao de gal
 escrever um traceback dos erros..

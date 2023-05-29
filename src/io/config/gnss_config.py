@@ -67,7 +67,8 @@ class Log(ConfigField):
 
 
 class Inputs(ConfigField):
-    __slots__ = ["rinex_obs", "rinex_nav", "rinex_sp3", "rinex_clk", "snr_control", "first_epoch", "last_epoch", "rate"]
+    __slots__ = ["rinex_obs", "rinex_nav", "rinex_sp3", "rinex_clk", "leap_seconds", "finals",
+                 "snr_control", "first_epoch", "last_epoch", "rate"]
     _root = "inputs"
 
     def __init__(self, **kwargs):
@@ -76,6 +77,8 @@ class Inputs(ConfigField):
         rinex_nav = get_field(kwargs, "rinex_nav_files", list, Inputs._root)
         rinex_clk = get_field(kwargs, "rinex_clk_files", list, Inputs._root)
         rinex_sp3 = get_field(kwargs, "rinex_sp3_files", list, Inputs._root)
+        leap_seconds = get_field(kwargs, "leap_file", str, Inputs._root)
+        finals = get_field(kwargs, "finals_file", str, Inputs._root)
 
         snr_control = get_field(kwargs, "snr_control", int, Inputs._root)
 
@@ -91,6 +94,8 @@ class Inputs(ConfigField):
         super().super().__setattr__("rinex_nav", rinex_nav)
         super().super().__setattr__("rinex_clk", rinex_clk)
         super().super().__setattr__("rinex_sp3", rinex_sp3)
+        super().super().__setattr__("leap_seconds", leap_seconds)
+        super().super().__setattr__("finals", finals)
         super().super().__setattr__("snr_control", snr_control)
         super().super().__setattr__("first_epoch", first_epoch)
         super().super().__setattr__("last_epoch", last_epoch)

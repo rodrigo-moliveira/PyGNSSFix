@@ -3,7 +3,6 @@
 
 from pathlib import Path
 from inspect import isclass
-from pkg_resources import iter_entry_points
 
 from ...errors import EopError, ConfigError
 
@@ -13,7 +12,7 @@ __all__ = ["register", "EopDb", "TaiUtc", "Finals", "Finals2000A"]
 class TaiUtc:
     """File listing all leap seconds throughout history
 
-    This file could be retrieved `here <http://maia.usno.navy.mil/ser7/tai-utc.dat>`, but this server seems discontinued
+    This file could be retrieved `here <http://maia.usno.navy.mil/ser7/tai-utc.dat>`
     """
 
     def __init__(self, path, encoding="ascii"):
@@ -143,15 +142,15 @@ class Eop:
     """Earth Orientation Parameters"""
 
     def __init__(self, **kwargs):
-        self.x = kwargs["x"]
-        self.y = kwargs["y"]
-        self.dx = kwargs["dx"]
-        self.dy = kwargs["dy"]
-        self.deps = kwargs["deps"]
-        self.dpsi = kwargs["dpsi"]
-        self.lod = kwargs["lod"]
-        self.ut1_utc = kwargs["ut1_utc"]
-        self.tai_utc = kwargs["tai_utc"]
+        self.x = kwargs.get("x", 0)
+        self.y = kwargs.get("y", 0)
+        self.dx = kwargs.get("dx", 0)
+        self.dy = kwargs.get("dy", 0)
+        self.deps = kwargs.get("deps", 0)
+        self.dpsi = kwargs.get("dpsi", 0)
+        self.lod = kwargs.get("lod", 0)
+        self.ut1_utc = kwargs.get("ut1_utc", 0)
+        self.tai_utc = kwargs.get("tai_utc", 0)
 
     def __repr__(self):
         return "{name}(x={x}, y={y}, dx={dx}, dy={dy}, deps={deps}, dpsi={dpsi}, lod={lod}, ut1_utc={ut1_utc}, " \
@@ -179,16 +178,7 @@ class EopDb:
     """Default behaviour in case of missing value"""
 
     @classmethod
-    def _load_entry_points(cls):
-
-        if not hasattr(cls, "_entry_points_loaded"):
-            # Loading external DB, via entry points
-            for entry in iter_entry_points("beyond.eopdb"):
-                EopDb.register(entry.load(), entry.name)
-            cls._entry_points_loaded = True
-
-    @classmethod
-    def db(cls, dbname=None):
+    def db(cls, dbname=DEFAULT_DBNAME):
         """Retrieve the database
 
         Args:
@@ -197,10 +187,6 @@ class EopDb:
         Return:
             object
         """
-
-        cls._load_entry_points()
-
-        dbname = dbname  # TODO figure out what to do here or config.get("eop", "dbname", fallback=cls.DEFAULT_DBNAME)
 
         if dbname not in cls._dbs.keys():
             raise EopError(f"Unknown database '{dbname}'")
@@ -222,17 +208,16 @@ class EopDb:
         return cls._dbs[dbname]
 
     @classmethod
-    def get(cls, mjd: float, dbname: str = None) -> Eop:
+    def get(cls, mjd: float, dbname: str = DEFAULT_DBNAME) -> Eop:
         """Retrieve Earth Orientation Parameters and timescales differences
         for a given date
 
         Args:
-            mjd: Date expressed as Mean Julian Date
+            mjd: Date expressed as Modified Julian Date
             dbname: Name of the database to use
         Return:
             Eop: Interpolated data for this particular MJD
         """
-
         try:
             value = cls.db(dbname)[mjd]
         except (EopError, KeyError) as e:
@@ -240,7 +225,6 @@ class EopDb:
                 msg = f"Missing EOP data for mjd = '{e}'"
             else:
                 msg = str(e)
-
             if cls.policy() == cls.WARN:
                 pass
                 # TODO log.warning(msg)
@@ -268,7 +252,6 @@ class EopDb:
         The only requirement of this database is that it should have ``__getitem__``
         method accepting MJD as float.
         """
-
         if name in cls._dbs:
             msg = f"'{name}' is already registered for an Eop database. Skipping"
             # TODO: raise warning
@@ -349,18 +332,18 @@ class SimpleEopDatabase:
     """
 
     def __init__(self):
-        path = ""  # TODO get path from config Path(config.get("eop", "folder", fallback=Path.cwd()))
+        from src import config, WORKSPACE_PATH
 
         # Data reading
-        f = Finals(path / f"finals")
-        f2 = Finals2000A(path / f"finals2000A")
-        t = TaiUtc(path / "tai-utc.dat")
+        f = Finals(WORKSPACE_PATH / f"{config.inputs.finals}")
+        # f2 = Finals2000A(WORKSPACE_PATH / f"finals2000A")
+        t = TaiUtc(WORKSPACE_PATH / f"{config.inputs.leap_seconds}")
 
         # Extracting data from finals files
         self._finals = {}
         for date, values in f.items():
             self._finals[date] = values
-            self._finals[date].update(f2[date])
+            # self._finals[date].update(f2[date])
 
         self._tai_utc = t.data.copy()
 

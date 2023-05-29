@@ -25,6 +25,9 @@ def main():
     except (ConfigError, ConfigTypeError) as e:
         print(f"[ERROR READING CONFIGURATION FILE]: {e}\nfilename = {config_filename}")
         exit()
+    except Exception as e:
+        print(f"[UNEXPECTED ERROR READING CONFIGURATION FILE]: {e}\nfilename = {config_filename}")
+        exit()
 
     # create algorithm and algorithm manager
     alg = GnssSinglePointSolution()

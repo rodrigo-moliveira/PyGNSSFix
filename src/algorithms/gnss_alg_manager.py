@@ -1,15 +1,14 @@
 import os
 import time
 
-from src import RUNS_PATH, WORKSPACE_PATH
+import src
 from src.data_mng.gnss_data_mng import GnssDataManager
 from src.common_log import set_logs, get_logger
 from src.data_types.gnss.observation_data import ObservationData
-from src.data_types.gnss.satellite import get_satellite
 from src.errors import PyGNSSFixError
 from src.io.rinex.nav_reader import RinexNavReader
 from src.io.rinex.obs_reader import RinexObsReader
-from src.data_types.gnss.navigation_data import NavigationData, NavigationHeader
+from src.data_types.gnss.navigation_data import NavigationData
 
 
 class GnssAlgorithmManager:
@@ -21,30 +20,29 @@ class GnssAlgorithmManager:
             algorithm (src.algorithms.algorithm.Algorithm) : name..
             config (src.io.config.gnss_config.ConfigGNSS) : name..
         """
-
         self.data_manager = GnssDataManager()
         self.algorithm = algorithm
-        self.config = config
+        src.initialize_config(config)
 
         # create output folder
-        data_dir = self.config.performance_evaluation.output_path
+        data_dir = src.config.performance_evaluation.output_path
         self.data_dir = self._check_data_dir(data_dir)
 
         # creating logger object
         # initialize logger objects
-        set_logs(config.log.log_level, f"{self.data_dir}\\log.txt")
+        set_logs(src.config.log.log_level, f"{self.data_dir}\\log.txt")
 
     def _read_inputs(self, logger):
 
         # TODO: add log messages
         try:
             # read navigation data
-            nav_file = self.config.inputs.rinex_nav[0]
-            obs_file = self.config.inputs.rinex_obs[0]
-            services = self.config.get_services()
-            first_epoch = self.config.inputs.first_epoch
-            last_epoch = self.config.inputs.last_epoch
-            snr_check = self.config.inputs.snr_control
+            nav_file = src.config.inputs.rinex_nav[0]
+            obs_file = src.config.inputs.rinex_obs[0]
+            services = src.config.get_services()
+            first_epoch = src.config.inputs.first_epoch
+            last_epoch = src.config.inputs.last_epoch
+            snr_check = src.config.inputs.snr_control
 
             nav = NavigationData()
             obs = ObservationData()
@@ -64,7 +62,7 @@ class GnssAlgorithmManager:
         except PyGNSSFixError as e:
             logger.error(f"{str(e)}")
             return False
-        #except Exception as e:
+        # except Exception as e:
         #    logger.error(f"Exception caught -> {str(e)}")
         #    return False
 
@@ -124,7 +122,6 @@ class GnssAlgorithmManager:
         # if save:
         #    self.data_manager.save_data(data_dir)
 
-
         if trace:
             # store trace files
             trace_dir = f"{self.data_dir}\\trace"
@@ -150,7 +147,7 @@ class GnssAlgorithmManager:
         # check data dir
         # data_dir is not specified, automatically create one
         if data_dir is None or data_dir == '':
-            data_dir = str(RUNS_PATH)
+            data_dir = str(src.RUNS_PATH)
             if data_dir[-1] != '//':
                 data_dir = data_dir + '//'
             data_dir = data_dir + time.strftime('%Y-%m-%dT%HH%MM%SS', time.localtime()) + '//'

@@ -102,7 +102,7 @@ class Epoch:
 
     All computations and in-memory saving are made in
     `MJD <https://en.wikipedia.org/wiki/Julian_day>`__ and
-    `TAI <https://en.wikipedia.org/wiki/International_Atomic_Time>`__.
+    `UTC.
     In the current implementation, the Date object does not handle the
     leap second.
 

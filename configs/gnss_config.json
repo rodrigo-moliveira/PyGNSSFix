@@ -13,6 +13,9 @@
       "rinex_clk_files": [""],
       "rinex_sp3_files": ["datasets/gnss/BRUX/ESA0MGNFIN_20190140000_01D_05M_ORB.SP3"],
 
+      "leap_file": "time_data/tai-utc.dat",
+      "finals_file": "time_data/finals1980.data.txt",
+
       "_comment2": "snr threshold to discard RINEX observables (compare with snr control digit). [1-4]: bad, [5:8]: good, 9: excellent",
       "snr_control": 1,
 
