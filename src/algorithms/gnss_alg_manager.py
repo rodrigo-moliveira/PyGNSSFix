@@ -25,31 +25,27 @@ class GnssAlgorithmManager:
         src.initialize_config(config)
 
         # create output folder
-        data_dir = src.config.performance_evaluation.output_path
+        data_dir = src.get_config().performance_evaluation.output_path
         self.data_dir = self._check_data_dir(data_dir)
 
         # creating logger object
         # initialize logger objects
-        set_logs(src.config.log.log_level, f"{self.data_dir}\\log.txt")
+        set_logs(src.get_config().log.log_level, f"{self.data_dir}\\log.txt")
 
     def _read_inputs(self, logger):
 
         # TODO: add log messages
         try:
             # read navigation data
-            nav_file = src.config.inputs.rinex_nav[0]
-            obs_file = src.config.inputs.rinex_obs[0]
-            services = src.config.get_services()
-            first_epoch = src.config.inputs.first_epoch
-            last_epoch = src.config.inputs.last_epoch
-            snr_check = src.config.inputs.snr_control
+            nav_file = src.get_config().inputs.rinex_nav[0]
+            obs_file = src.get_config().inputs.rinex_obs[0]
+            services = src.get_config().get_services()
+            first_epoch = src.get_config().inputs.first_epoch
+            last_epoch = src.get_config().inputs.last_epoch
+            snr_check = src.get_config().inputs.snr_control
 
             nav = NavigationData()
             obs = ObservationData()
-
-            # self.data_manager.add_data("navigation_data", nav_data)
-
-            # get user configurations data variables
 
             RinexNavReader(nav_file, nav)
             RinexObsReader(obs, obs_file, services, logger, first_epoch, last_epoch, snr_check)
@@ -62,9 +58,9 @@ class GnssAlgorithmManager:
         except PyGNSSFixError as e:
             logger.error(f"{str(e)}")
             return False
-        # except Exception as e:
-        #    logger.error(f"Exception caught -> {str(e)}")
-        #    return False
+        except Exception as e:
+            logger.error(f"Exception caught -> {str(e)}")
+            return False
 
         return True
 

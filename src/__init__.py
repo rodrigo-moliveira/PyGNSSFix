@@ -18,3 +18,7 @@ def initialize_config(config):
     else:
         msg = "Database is already initialized to {0}."
         raise RuntimeError(msg.format(this.config))
+
+
+def get_config():
+    return this.config

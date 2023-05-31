@@ -86,7 +86,6 @@ TT = Timescale("TT")  # Terrestrial Time
 GPS + TAI + UTC + UT1
 TDB + TT + TAI
 
-
 _cache = {"UT1": UT1, "GPS": GPS, "TDB": TDB, "UTC": UTC, "TAI": TAI, "TT": TT}
 
 
@@ -147,7 +146,7 @@ class Epoch:
     J2000 = 2451545.0
     """Offset between JD and J2000"""
 
-    REF_SCALE = "GPS"
+    REF_SCALE = "UT1"
     """Scale used as reference internally"""
 
     DEFAULT_SCALE = "UTC"
@@ -180,7 +179,7 @@ class Epoch:
             else:
                 raise TypeError(f"Unknown type '{type(arg)}'")
         elif len(args) == 2 and (
-            isinstance(args[0], int) and isinstance(args[1], (int, float))
+                isinstance(args[0], int) and isinstance(args[1], (int, float))
         ):
             # Julian day and seconds in the day
             d, s = args
@@ -277,6 +276,12 @@ class Epoch:
 
     def __repr__(self):  # pragma: no cover
         return f"<{self.__class__.__name__} '{self}'>"
+
+    def debug_print(self, scale="ref_scale"):
+        if scale == "ref_scale":
+            return f"({self._d},{self._s}) {self.REF_SCALE}"
+        else:
+            return f"{self._convert_to_scale()} {self.scale}"
 
     def __str__(self):  # pragma: no cover
         if "str" not in self._cache.keys():
@@ -559,6 +564,7 @@ else:  # pragma: no cover
             values = [DateConverter._conv(v) for v in values]
 
             return values
+
 
     munits.registry.setdefault(Epoch, DateConverter())
     munits.registry.setdefault(DateRange, DateConverter())

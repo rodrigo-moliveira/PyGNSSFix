@@ -97,7 +97,6 @@ class NavigationData:
             timeseries.set_data(epoch, nav_message)
             self._data[satellite] = timeseries
 
-
     def set_header(self, header: NavigationHeader):
         """
         method to set the navigation header.

@@ -1,3 +1,3 @@
-arranjar maneira de passar os EOPs desde o config.json até à database
+criar um construtor da Epoch para GPS Week e Seconds of Week
 ler dados de navegacao/observacao de gal
 escrever um traceback dos erros..
