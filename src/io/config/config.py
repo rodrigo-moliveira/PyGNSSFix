@@ -1,0 +1,87 @@
+"""Configuration handler
+
+The configuration is a simple dictionary. See :ref:`configuration` for
+details.
+"""
+
+from src.errors import ConfigError
+
+
+class Config(dict):
+    """Configuration
+
+    Example:
+        .. code-block:: python
+
+            from space.config import config
+
+            print(config['env']['eop_missing_policy'])
+            print(config.get('env', 'non-existent-field', fallback=25))
+
+    """
+
+    _instance = None
+
+    def init(self, initial_dict):
+        super().__init__()  # Call the parent class (dict) constructor
+        self.update(initial_dict)  # Update the dictionary with the values from initial_dict
+
+    def get(self, *keys, fallback=ConfigError):
+        """Retrieve a value in the config, if the value is not available
+        give the fallback value specified.
+        """
+
+        full_keys = list(keys).copy()
+        key = None
+
+        section, *keys = keys
+        out = super().get(section, fallback)
+
+        while isinstance(out, dict):
+            key = keys.pop(0)
+            out = out.get(key, fallback)
+
+        if keys and out is not fallback:
+            raise ConfigError(
+                "Dict structure mismatch : Looked for '{}', stopped at '{}'".format(
+                    ".".join(full_keys), key
+                )
+            )
+
+        if out is ConfigError:
+            raise ConfigError(
+                "Invalid dict structure: Could not find {} in config".format(".".join(full_keys))
+            )
+
+        return out
+
+    def set(self, *args):
+        """Set a value in the config dictionary
+
+        The last argument is the value to set
+
+        Example:
+
+        .. code-block:: python
+
+            config.set('aaa', 'bbb', True)
+            print(config)
+            # {
+            #     'aaa': {
+            #         'bbb': True
+            #     }
+            # }
+        """
+
+        # split arguments in keys and value
+        *first_keys, last_key, value = args
+
+        subdict = self
+        for k in first_keys:
+            subdict.setdefault(k, {})
+            subdict = subdict[k]
+
+        subdict[last_key] = value
+
+
+config_dict = Config()

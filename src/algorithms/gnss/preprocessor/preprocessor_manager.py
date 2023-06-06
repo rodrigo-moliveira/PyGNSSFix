@@ -10,7 +10,7 @@ from .functor import FunctorMapper, IonoFreeFunctor, SmoothFunctor
 class Preprocessor:
 
     def __init__(self, trace_path, service_manager, constellation, raw_data, compute_iono_free, output_rate):
-
+        preprocessor_log = get_logger("PREPROCESSOR")
         log = get_logger("preprocessor")
         log.info("###############################################################")
         log.info("###### Starting module 'Processing Observation Data' ... ######")

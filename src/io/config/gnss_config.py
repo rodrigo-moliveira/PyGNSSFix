@@ -1,3 +1,6 @@
+"""
+DEPRECATED
+
 import os
 from src.errors import ConfigError, ConfigTypeError
 from src import WORKSPACE_PATH
@@ -5,7 +8,7 @@ from src.data_types.gnss.service_utils import AvailableConstellations, Services
 from .enums import *
 
 
-def get_field(config_dict, field, field_type, root: str = None):
+def _get_field(config_dict, field, field_type, root: str = None):
     _root = f"{root}.{field}" if root is not None else f"{field}"
 
     # get the field from the dict
@@ -29,7 +32,7 @@ def get_field(config_dict, field, field_type, root: str = None):
     return _field
 
 
-def get_enum(enum_class, field, root: str = None):
+def _get_enum(enum_class, field, root: str = None):
     try:
         enum = enum_class(field)
     except ValueError:
@@ -54,15 +57,15 @@ class ConfigField(object):
 class Log(ConfigField):
     available_levels = ["DEBUG", "INFO", "WARN", "ERROR", "FATAL"]
     _root = "log"
-    __slots__ = ["log_level"]
+    __slots__ = ["minimum_level"]
 
     def __init__(self, **kwargs):
         # get & set fields
-        super().super().__setattr__("log_level", get_field(kwargs, "minimum_level", str, Log._root))
+        super().super().__setattr__("minimum_level", _get_field(kwargs, "minimum_level", str, Log._root))
 
         # input validation
-        if self.log_level not in Log.available_levels:
-            raise ConfigError(f"Invalid option in field {Log._root}.minimum_level ({self.log_level}).\n\tAvailable "
+        if self.minimum_level not in Log.available_levels:
+            raise ConfigError(f"Invalid option in field {Log._root}.minimum_level ({self.minimum_level}).\n\tAvailable "
                               f"values are {repr(Log.available_levels)}")
 
 
@@ -73,21 +76,21 @@ class Inputs(ConfigField):
 
     def __init__(self, **kwargs):
         # get fields
-        rinex_obs = get_field(kwargs, "rinex_obs_files", list, Inputs._root)
-        rinex_nav = get_field(kwargs, "rinex_nav_files", list, Inputs._root)
-        rinex_clk = get_field(kwargs, "rinex_clk_files", list, Inputs._root)
-        rinex_sp3 = get_field(kwargs, "rinex_sp3_files", list, Inputs._root)
-        leap_seconds = get_field(kwargs, "leap_file", str, Inputs._root)
-        finals = get_field(kwargs, "finals_file", str, Inputs._root)
+        rinex_obs = _get_field(kwargs, "rinex_obs_files", list, Inputs._root)
+        rinex_nav = _get_field(kwargs, "rinex_nav_files", list, Inputs._root)
+        rinex_clk = _get_field(kwargs, "rinex_clk_files", list, Inputs._root)
+        rinex_sp3 = _get_field(kwargs, "rinex_sp3_files", list, Inputs._root)
+        leap_seconds = _get_field(kwargs, "leap_file", str, Inputs._root)
+        finals = _get_field(kwargs, "finals_file", str, Inputs._root)
 
-        snr_control = get_field(kwargs, "snr_control", int, Inputs._root)
+        snr_control = _get_field(kwargs, "snr_control", int, Inputs._root)
 
-        arc = get_field(kwargs, "arc", dict, Inputs._root)
+        arc = _get_field(kwargs, "arc", dict, Inputs._root)
 
-        first_epoch = get_field(arc, "first_epoch", str, Inputs._root + ".arc")
-        last_epoch = get_field(arc, "last_epoch", str, Inputs._root + ".arc")
+        first_epoch = _get_field(arc, "first_epoch", str, Inputs._root + ".arc")
+        last_epoch = _get_field(arc, "last_epoch", str, Inputs._root + ".arc")
 
-        rate = get_field(kwargs, "rate", int, Inputs._root)
+        rate = _get_field(kwargs, "rate", int, Inputs._root)
 
         # set fields
         super().super().__setattr__("rinex_obs", rinex_obs)
@@ -122,11 +125,11 @@ class Constellation(ConfigField):
         # get fields
         root = Constellation._root + "." + name
 
-        observations = get_field(kwargs, "observations", list, root)
-        obs_std = get_field(kwargs, "obs_std", list, root)
-        tropo = get_enum(EnumOnOff, get_field(kwargs, "troposphere", int, root), f"{root}.troposphere")
-        iono = get_enum(EnumIono, get_field(kwargs, "ionosphere", int, root), f"{root}.ionosphere")
-        relativistic_corr = get_enum(EnumOnOff, get_field(kwargs, "relativistic_corrections", int, root),
+        observations = _get_field(kwargs, "observations", list, root)
+        obs_std = _get_field(kwargs, "obs_std", list, root)
+        tropo = _get_enum(EnumOnOff, _get_field(kwargs, "troposphere", int, root), f"{root}.troposphere")
+        iono = _get_enum(EnumIono, _get_field(kwargs, "ionosphere", int, root), f"{root}.ionosphere")
+        relativistic_corr = _get_enum(EnumOnOff, _get_field(kwargs, "relativistic_corrections", int, root),
                                      f"{root}.relativistic_corrections")
 
         super().super().__setattr__("observations", observations)
@@ -158,9 +161,9 @@ class Model(ConfigField):
 
     def __init__(self, **kwargs):
         # get fields
-        constellations = get_field(kwargs, "constellations", list, Inputs._root)
-        gps = get_field(kwargs, "GPS", dict, Inputs._root)
-        gal = get_field(kwargs, "GAL", dict, Inputs._root)
+        constellations = _get_field(kwargs, "constellations", list, Inputs._root)
+        gps = _get_field(kwargs, "GPS", dict, Inputs._root)
+        gal = _get_field(kwargs, "GAL", dict, Inputs._root)
 
         # set fields
         super().super().__setattr__("constellations", constellations)
@@ -180,9 +183,9 @@ class SatelliteStatus(ConfigField):
 
     def __init__(self, **kwargs):
         # get fields
-        sv_ura = get_field(kwargs, "SV_URA", bool, SatelliteStatus._root)
-        sv_minimum_ura = get_field(kwargs, "SV_minimum_URA", (int, float), SatelliteStatus._root)
-        sv_health = get_field(kwargs, "SV_health", bool, SatelliteStatus._root)
+        sv_ura = _get_field(kwargs, "SV_URA", bool, SatelliteStatus._root)
+        sv_minimum_ura = _get_field(kwargs, "SV_minimum_URA", (int, float), SatelliteStatus._root)
+        sv_health = _get_field(kwargs, "SV_health", bool, SatelliteStatus._root)
 
         super().super().__setattr__("sv_ura", sv_ura)
         super().super().__setattr__("sv_minimum_ura", sv_minimum_ura)
@@ -196,13 +199,13 @@ class Solver(ConfigField):
 
     def __init__(self, **kwargs):
         # get fields
-        algorithm = get_enum(EnumSolver, get_field(kwargs, "algorithm", int, Solver._root), f"{Solver._root}.algorithm")
-        n_iterations = get_field(kwargs, "n_iterations", int, Solver._root)
-        stop_criteria = get_field(kwargs, "stop_criteria", (float, int), Solver._root)
-        snr_filter = get_field(kwargs, "snr_filter", (bool, float, int), Solver._root)
-        elevation_filter = get_field(kwargs, "elevation_filter", (bool, float, int), Solver._root)
-        sat_status = get_field(kwargs, "satellite_status", dict, Solver._root)
-        trans_time_alg = get_enum(EnumTransmissionTime, get_field(kwargs, "transmission_time_alg", int, Solver._root),
+        algorithm = _get_enum(EnumSolver, _get_field(kwargs, "algorithm", int, Solver._root), f"{Solver._root}.algorithm")
+        n_iterations = _get_field(kwargs, "n_iterations", int, Solver._root)
+        stop_criteria = _get_field(kwargs, "stop_criteria", (float, int), Solver._root)
+        snr_filter = _get_field(kwargs, "snr_filter", (bool, float, int), Solver._root)
+        elevation_filter = _get_field(kwargs, "elevation_filter", (bool, float, int), Solver._root)
+        sat_status = _get_field(kwargs, "satellite_status", dict, Solver._root)
+        trans_time_alg = _get_enum(EnumTransmissionTime, _get_field(kwargs, "transmission_time_alg", int, Solver._root),
                                   f"{Solver._root}.transmission_time_alg")
 
         super().super().__setattr__("algorithm", algorithm)
@@ -228,14 +231,14 @@ class PerformanceEval(ConfigField):
 
     def __init__(self, **kwargs):
         # get fields
-        static = get_field(kwargs, "static", bool, PerformanceEval._root)
-        coordinates = get_field(kwargs, "true_static_position", dict, PerformanceEval._root)
-        x = get_field(coordinates, "x_ecef", (float, int), f"{PerformanceEval._root}.x_ecef")
-        y = get_field(coordinates, "y_ecef", (float, int), f"{PerformanceEval._root}.y_ecef")
-        z = get_field(coordinates, "z_ecef", (float, int), f"{PerformanceEval._root}.z_ecef")
+        static = _get_field(kwargs, "static", bool, PerformanceEval._root)
+        coordinates = _get_field(kwargs, "true_static_position", dict, PerformanceEval._root)
+        x = _get_field(coordinates, "x_ecef", (float, int), f"{PerformanceEval._root}.x_ecef")
+        y = _get_field(coordinates, "y_ecef", (float, int), f"{PerformanceEval._root}.y_ecef")
+        z = _get_field(coordinates, "z_ecef", (float, int), f"{PerformanceEval._root}.z_ecef")
 
-        show_plots = get_field(kwargs, "show_plots", bool, PerformanceEval._root)
-        output_path = get_field(kwargs, "output_path", str, PerformanceEval._root)
+        show_plots = _get_field(kwargs, "show_plots", bool, PerformanceEval._root)
+        output_path = _get_field(kwargs, "output_path", str, PerformanceEval._root)
 
         super().super().__setattr__("static", static)
         super().super().__setattr__("true_static_position", [x, y, z])
@@ -248,11 +251,11 @@ class ConfigGNSS(ConfigField):
 
     def __init__(self, **kwargs):
         # get sub-configs
-        log_ = get_field(kwargs, "log", dict)
-        inputs_ = get_field(kwargs, "inputs", dict)
-        model_ = get_field(kwargs, "model", dict)
-        solver_ = get_field(kwargs, "solver", dict)
-        performance_eval_ = get_field(kwargs, "performance_evaluation", dict)
+        log_ = _get_field(kwargs, "log", dict)
+        inputs_ = _get_field(kwargs, "inputs", dict)
+        model_ = _get_field(kwargs, "model", dict)
+        solver_ = _get_field(kwargs, "solver", dict)
+        performance_eval_ = _get_field(kwargs, "performance_evaluation", dict)
 
         super().super().__setattr__("log", Log(**log_))
         super().super().__setattr__("inputs", Inputs(**inputs_))
@@ -272,3 +275,23 @@ class ConfigGNSS(ConfigField):
                 services["GAL"] = self.model.GAL.observations
 
         return services
+
+    def get(self, *keys, fallback=None):
+
+        fullkeys = list(keys).copy()
+        section, *keys = keys
+        out = getattr(self, section)
+
+        while isinstance(out, ConfigField):
+            key = keys.pop(0)
+            out = getattr(out, key)
+
+        if keys and out is not fallback:
+            raise ConfigError(
+                "Dict structure mismatch : Looked for '{}', stopped at '{}'".format(
+                    ".".join(fullkeys), key
+                )
+            )
+
+        return out
+"""

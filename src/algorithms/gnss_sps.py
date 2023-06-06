@@ -13,9 +13,15 @@ class GnssSinglePointSolution(Algorithm):
     def __str__(self):
         return f"Algorithm({self.name})"
 
-    def compute(self):
+    def compute(self, data_manager):
         # compute results and append them
+        # get nav and obs data
+        # perform pre-processing here..
+        # run preprocessor
+        main_log.info(f"Running preprocessor...")
 
+        # run algorithm
+        main_log.info(f"Running estimation algorithm...")
         # ...
 
         # Perform Least-Squares over input pseudorange observables..

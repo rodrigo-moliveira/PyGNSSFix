@@ -1,7 +1,7 @@
 import os
 import time
 
-import src
+from src import RUNS_PATH
 from src.data_mng.gnss_data_mng import GnssDataManager
 from src.common_log import set_logs, get_logger
 from src.data_types.gnss.observation_data import ObservationData
@@ -9,40 +9,41 @@ from src.errors import PyGNSSFixError
 from src.io.rinex.nav_reader import RinexNavReader
 from src.io.rinex.obs_reader import RinexObsReader
 from src.data_types.gnss.navigation_data import NavigationData
+from src.io.config import config_dict
 
 
 class GnssAlgorithmManager:
 
-    def __init__(self, algorithm, config):
+    def __init__(self, algorithm):
         """
         Add data to available.
         Args:
             algorithm (src.algorithms.algorithm.Algorithm) : name..
-            config (src.io.config.gnss_config.ConfigGNSS) : name..
         """
+        # create data members
         self.data_manager = GnssDataManager()
         self.algorithm = algorithm
-        src.initialize_config(config)
 
         # create output folder
-        data_dir = src.get_config().performance_evaluation.output_path
+        data_dir = config_dict.get("performance_evaluation", "output_path")
         self.data_dir = self._check_data_dir(data_dir)
 
-        # creating logger object
         # initialize logger objects
-        set_logs(src.get_config().log.log_level, f"{self.data_dir}\\log.txt")
+        set_logs(config_dict.get("log", "minimum_level"), f"{self.data_dir}\\log.txt")
 
-    def _read_inputs(self, logger):
+    def _read_inputs(self):
 
+        logger = get_logger("IO")
         # TODO: add log messages
         try:
             # read navigation data
-            nav_file = src.get_config().inputs.rinex_nav[0]
-            obs_file = src.get_config().inputs.rinex_obs[0]
-            services = src.get_config().get_services()
-            first_epoch = src.get_config().inputs.first_epoch
-            last_epoch = src.get_config().inputs.last_epoch
-            snr_check = src.get_config().inputs.snr_control
+            # limpar aqui
+            nav_file = config.get_config().inputs.rinex_nav[0]
+            obs_file = config.get_config().inputs.rinex_obs[0]
+            services = config.get_config().get_services()
+            first_epoch = config.get_config().inputs.first_epoch
+            last_epoch = config.get_config().inputs.last_epoch
+            snr_check = config.get_config().inputs.snr_control
 
             nav = NavigationData()
             obs = ObservationData()
@@ -64,50 +65,25 @@ class GnssAlgorithmManager:
 
         return True
 
-    def _run(self):
-        pass
-
-        """# fetch input variables to this algorithm
-                input_names = self.algorithm.inputs
-                inputs = []
-    
-                for _in_name in input_names:
-                    _in = self.data_manager.get_data(_in_name)
-                    inputs.append(_in)
-    
-                self.algorithm.compute(*inputs)
-    
-                # get results and add them to the data manager
-                _results = self.algorithm.get_results()
-                for _data, _name in zip(_results, self.algorithm.outputs):
-                    if _data is not None:
-                        self.data_manager.add_data(_name, _data)
-                """
-
     def run(self):
-        # get loggers
         main_log = get_logger("GNSS_ALG")
-        io_log = get_logger("IO")
-        preprocessor_log = get_logger("PREPROCESSOR")
 
         # start algorithm
         main_log.info(f"Running {str(self.algorithm)}")
 
         # read inputs
-        main_log.info(f"Reading input files...")
-        success = self._read_inputs(io_log)
+        main_log.info(f"Starting IO Module...")
+        success = self._read_inputs()
         if not success:
-            main_log.warn("Stopping execution of program due to error encountered in execution")
+            main_log.warn("Stopping execution of program due to error encountered in execution of IO Module")
             return
 
-        # run preprocessor
-        main_log.info(f"Running preprocessor...")
-
-        # run algorithm
-        main_log.info(f"Running estimation algorithm...")
+        # computing algorithm
+        main_log.info(f"Starting Main Algorithm Module...")
+        self.algorithm.compute(self.data_manager)
 
         # process results
-        main_log.info(f"Running quality manager...")
+        main_log.info(f"Starting Performance Module...")
         self._results()
 
         main_log.info(f"Successfully executed algorithm {str(self.algorithm)}")
@@ -143,7 +119,7 @@ class GnssAlgorithmManager:
         # check data dir
         # data_dir is not specified, automatically create one
         if data_dir is None or data_dir == '':
-            data_dir = str(src.RUNS_PATH)
+            data_dir = str(RUNS_PATH)
             if data_dir[-1] != '//':
                 data_dir = data_dir + '//'
             data_dir = data_dir + time.strftime('%Y-%m-%dT%HH%MM%SS', time.localtime()) + '//'
