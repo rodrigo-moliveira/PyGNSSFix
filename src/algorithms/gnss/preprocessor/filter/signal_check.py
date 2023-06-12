@@ -1,6 +1,5 @@
-from PositioningSolver.src.data_types.basics.DataType import DataType
+from src.data_types.gnss.data_type import DataType
 from . import Filter
-from PositioningSolver.src.config import config
 
 
 class SignalCheckFilter(Filter):

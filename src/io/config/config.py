@@ -83,5 +83,18 @@ class Config(dict):
 
         subdict[last_key] = value
 
+    def get_services(self):
+        services = {}
+
+        # iterate over all active constellations
+        constellations = self.get("model", "constellations")
+        for constellation in constellations:
+            if constellation.upper() == "GPS":
+                services["GPS"] = self.get("model", "GPS", "observations")
+            elif constellation.upper() == "GAL":
+                services["GAL"] = self.get("model", "GAL", "observations")
+
+        return services
+
 
 config_dict = Config()

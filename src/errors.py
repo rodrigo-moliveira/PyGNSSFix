@@ -151,3 +151,12 @@ class ArraySizeError(PyGNSSFixError):
         # Call the base class constructor with the parameters it needs
         message = "Array Size Error -> " + message
         super().__init__(message)
+
+
+class PreprocessorError(PyGNSSFixError):
+    __module__ = MODULE
+
+    def __init__(self, message):
+        # Call the base class constructor with the parameters it needs
+        message = "Preprocessor Error -> " + message
+        super().__init__(message)

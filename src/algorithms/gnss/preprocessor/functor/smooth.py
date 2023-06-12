@@ -1,9 +1,9 @@
-from PositioningSolver.src.gnss.data_types.ObservationData import ObservationData
 from . import Functor
-from PositioningSolver.src.data_types.basics.DataType import DataType
-from PositioningSolver.src.gnss.data_types.Observation import Observation
 
-from PositioningSolver.src.utils.errors import NonExistentObservable
+from src.data_types.gnss.observation_data import ObservationData
+from src.data_types.gnss.data_type import DataType
+from src.data_types.gnss.observation import Observation
+from src.errors import NonExistentObservable
 
 # NOTE: The Smooth (Hatch Filter) algorithm did not work very well. It is probably because we first need to apply some
 # kind of preprocessing on the carrier data (maybe correct for phase wind up, or something).

@@ -137,7 +137,7 @@ class RinexObsReader:
                 for service in services:
                     if service not in services_read:
                         raise ConfigError(f"User-selected service "
-                                          f"'{service}' does not exist in provided Observation File")
+                                          f"'{service}' {constellation} does not exist in provided Observation File")
 
     def _set_time_system(self, time_system: str):
 

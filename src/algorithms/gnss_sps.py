@@ -1,7 +1,9 @@
 # GNSS Single Point Solution Algorithm
 
 from .algorithm import Algorithm
-
+from .gnss.preprocessor.preprocessor_manager import PreprocessorManager
+from ..common_log import get_logger
+from src.io.config import config_dict
 
 class GnssSinglePointSolution(Algorithm):
     def __init__(self):
@@ -13,15 +15,17 @@ class GnssSinglePointSolution(Algorithm):
     def __str__(self):
         return f"Algorithm({self.name})"
 
-    def compute(self, data_manager):
-        # compute results and append them
-        # get nav and obs data
-        # perform pre-processing here..
-        # run preprocessor
-        main_log.info(f"Running preprocessor...")
+    def compute(self, data_manager, trace_path):
+        log = get_logger("GNSS_ALG")
+        raw_obs_data = data_manager.get_data("obs_data")
+
+        # perform pre-processing here
+        log.info(f"Starting Preprocessor Module")
+        preprocessor = PreprocessorManager(trace_path, raw_obs_data)
+        preprocessor.compute()
 
         # run algorithm
-        main_log.info(f"Running estimation algorithm...")
+        log.info(f"Running estimation algorithm...")
         # ...
 
         # Perform Least-Squares over input pseudorange observables..

@@ -1,28 +1,21 @@
-from .... import get_logger
-from ....config import config
-from PositioningSolver.src.gnss.data_types.ObservationData import ObservationData
-from ....gnss.data_types.ServicesUtils import get_code_type_from_service
-from ....utils.errors import PreprocessorError
+from src.common_log import get_logger
+from src.io.config import config_dict
+from src.data_types.gnss.observation_data import ObservationData
+from src.data_types.gnss.service_utils import get_code_from_service
+from src.errors import PreprocessorError
 from .filter import FilterMapper, TypeConsistencyFilter, RateDowngradeFilter, SignalCheckFilter
 from .functor import FunctorMapper, IonoFreeFunctor, SmoothFunctor
 
 
-class Preprocessor:
+class PreprocessorManager:
 
-    def __init__(self, trace_path, service_manager, constellation, raw_data, compute_iono_free, output_rate):
-        preprocessor_log = get_logger("PREPROCESSOR")
-        log = get_logger("preprocessor")
-        log.info("###############################################################")
-        log.info("###### Starting module 'Processing Observation Data' ... ######")
+    def __init__(self, trace_path, raw_data):
+        self.log = get_logger("PREPROCESSOR")
 
-        self.log = log
         self.trace_path = trace_path
-        self.service_manager = service_manager
-        self.constellation = constellation
         self.raw_data = raw_data
 
-        self.compute_iono_free = compute_iono_free
-        self.output_rate = output_rate
+        self.services = config_dict.get_services()
 
     def compute(self):
         """
@@ -37,6 +30,8 @@ class Preprocessor:
                 * Compute (IonoFree) Smooth Observation Data -> Compute smooth code observables
 
         """
+        self.log.info("Starting Preprocessor...")
+        exit()
         # SNR Check Filter
         try:
             self.snr_filter(self.raw_data)

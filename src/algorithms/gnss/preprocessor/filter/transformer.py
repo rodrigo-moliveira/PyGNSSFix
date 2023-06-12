@@ -1,5 +1,4 @@
-from PositioningSolver.src.gnss.data_types.ObservationData import ObservationData
-
+from src.data_types.gnss.observation_data import ObservationData
 
 class FilterMapper:
 

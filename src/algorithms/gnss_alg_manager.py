@@ -35,15 +35,16 @@ class GnssAlgorithmManager:
 
         logger = get_logger("IO")
         # TODO: add log messages
+        # TODO: add possibility of multiple files
+        # TODO: print trace files here
         try:
             # read navigation data
-            # limpar aqui
-            nav_file = config.get_config().inputs.rinex_nav[0]
-            obs_file = config.get_config().inputs.rinex_obs[0]
-            services = config.get_config().get_services()
-            first_epoch = config.get_config().inputs.first_epoch
-            last_epoch = config.get_config().inputs.last_epoch
-            snr_check = config.get_config().inputs.snr_control
+            nav_file = config_dict.get("inputs", "nav_files")[0]
+            obs_file = config_dict.get("inputs", "obs_files")[0]
+            services = config_dict.get_services()
+            first_epoch = config_dict.get("inputs", "arc", "first_epoch")
+            last_epoch = config_dict.get("inputs", "arc", "last_epoch")
+            snr_check = config_dict.get("inputs", "snr_control")
 
             nav = NavigationData()
             obs = ObservationData()
@@ -57,10 +58,10 @@ class GnssAlgorithmManager:
 
             # ... add more here
         except PyGNSSFixError as e:
-            logger.error(f"{str(e)}")
+            logger.error(f"Exception caught ->{str(e)}")
             return False
         except Exception as e:
-            logger.error(f"Exception caught -> {str(e)}")
+            logger.error(f"General Exception caught -> {str(e)}")
             return False
 
         return True
@@ -80,7 +81,7 @@ class GnssAlgorithmManager:
 
         # computing algorithm
         main_log.info(f"Starting Main Algorithm Module...")
-        self.algorithm.compute(self.data_manager)
+        self.algorithm.compute(self.data_manager, f"{self.data_dir}\\trace")
 
         # process results
         main_log.info(f"Starting Performance Module...")

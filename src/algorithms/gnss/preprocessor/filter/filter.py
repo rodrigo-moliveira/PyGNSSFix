@@ -1,7 +1,7 @@
 # base filter class
-from PositioningSolver.src.gnss.data_types.Observation import Observation
-from PositioningSolver.src.gnss.data_types.Satellite import Satellite
-from PositioningSolver.src.data_types.basics.Epoch import Epoch
+from src.data_types.gnss.observation import Observation
+from src.data_types.gnss.satellite import Satellite
+from src.data_types.date.date import Epoch
 
 
 # Filter classes inherited from this must implement the ``is_applicable`` method

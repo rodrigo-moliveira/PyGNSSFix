@@ -1,6 +1,6 @@
 from . import Functor
-from PositioningSolver.src.data_types.basics.DataType import DataType
-from PositioningSolver.src.gnss.data_types.Observation import Observation
+from src.data_types.gnss.data_type import DataType
+from src.data_types.gnss.observation import Observation
 
 
 class IonoFreeFunctor(Functor):

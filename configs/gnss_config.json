@@ -7,11 +7,13 @@
    },
 
    "inputs": {
+      "trace_files": true,
+
       "_comment1": "Input data files",
-      "rinex_obs_files": ["datasets/gnss/BRUX/BRUX00BEL_S_20190140615_15M_01S_MO.rnx"],
-      "rinex_nav_files": ["datasets/gnss/BRUX/BRDC00IGN_R_20190140000_01D_GN.rnx"],
-      "rinex_clk_files": [""],
-      "rinex_sp3_files": ["datasets/gnss/BRUX/ESA0MGNFIN_20190140000_01D_05M_ORB.SP3"],
+      "obs_files": ["datasets/gnss/BRUX/BRUX00BEL_S_20190140615_15M_01S_MO.rnx"],
+      "nav_files": ["datasets/gnss/BRUX/BRDC00IGN_R_20190140000_01D_GN.rnx"],
+      "clk_files": [""],
+      "sp3_files": ["datasets/gnss/BRUX/ESA0MGNFIN_20190140000_01D_05M_ORB.SP3"],
 
       "leap_file": "time_data/tai-utc.dat",
       "finals_file": "time_data/finals1980.data.txt",
@@ -62,16 +64,8 @@
       }
    },
 
-   "solver": {
-
-      "_comment1": "0 - Least Squares, 1 - Weighted Least Squares",
-      "algorithm": 1,
-
-      "_comment2": "maximum number of iterations in iterative procedure",
-      "n_iterations": 10,
-
-      "_comment3": "stop condition to end iterated least squares. Process ends when (RMS(i-1) - RMS(i)) / RMS(i-1) <= stop_criteria",
-      "stop_criteria": 0.0002,
+   "preprocessor": {
+      "trace_files": true,
 
       "_comment4": "Signal strength (SNR) filter. Select value of SNR (dBHz) threshold. Select false to turn off",
       "snr_filter": 20,
@@ -84,7 +78,18 @@
          "SV_URA": true,
          "SV_minimum_URA": 6144.0,
          "SV_health": true
-      },
+      }
+   },
+
+   "solver": {
+      "_comment1": "0 - Least Squares, 1 - Weighted Least Squares",
+      "algorithm": 1,
+
+      "_comment2": "maximum number of iterations in iterative procedure",
+      "n_iterations": 10,
+
+      "_comment3": "stop condition to end iterated least squares. Process ends when (RMS(i-1) - RMS(i)) / RMS(i-1) <= stop_criteria",
+      "stop_criteria": 0.0002,
 
       "_comment6": "Select algorithm to compute the transmission time: 0 - geometric, 1 - pseudorange",
       "transmission_time_alg": 1
