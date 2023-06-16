@@ -34,9 +34,9 @@ class GnssAlgorithmManager:
     def _read_inputs(self):
 
         logger = get_logger("IO")
-        # TODO: add log messages
-        # TODO: add possibility of multiple files
-        # TODO: print trace files here
+        #TODO: add log messages
+        #TODO: add possibility of multiple files
+        #TODO: print trace files here
         try:
             # read navigation data
             nav_file = config_dict.get("inputs", "nav_files")[0]
@@ -52,9 +52,15 @@ class GnssAlgorithmManager:
             RinexNavReader(nav_file, nav)
             RinexObsReader(obs, obs_file, services, logger, first_epoch, last_epoch, snr_check)
 
-            # self.data_manager.add_data("services", services)
             self.data_manager.add_data("obs_data", obs)
             self.data_manager.add_data("nav_data", nav)
+
+            # trace data files
+            trace_dir = f"{self.data_dir}\\trace"
+            with open(f"{trace_dir}\\RawObservationData.txt", "w") as file:
+                file.write(str(self.data_manager.get_data("obs_data")))
+            with open(f"{trace_dir}\\RawNavigationData.txt", "w") as file:
+                file.write(str(self.data_manager.get_data("nav_data")))
 
             # ... add more here
         except PyGNSSFixError as e:
@@ -75,13 +81,17 @@ class GnssAlgorithmManager:
         # read inputs
         main_log.info(f"Starting IO Module...")
         success = self._read_inputs()
+        # TODO: remove success and put try catch block here
         if not success:
             main_log.warn("Stopping execution of program due to error encountered in execution of IO Module")
             return
 
         # computing algorithm
-        main_log.info(f"Starting Main Algorithm Module...")
-        self.algorithm.compute(self.data_manager, f"{self.data_dir}\\trace")
+        try:
+            main_log.info(f"Starting Main Algorithm Module...")
+            self.algorithm.compute(self.data_manager, f"{self.data_dir}\\trace")
+        except Exception as e:
+            main_log.error(f"Exception caught: {e}")
 
         # process results
         main_log.info(f"Starting Performance Module...")
@@ -94,14 +104,6 @@ class GnssAlgorithmManager:
         # save data files
         # if save:
         #    self.data_manager.save_data(data_dir)
-
-        if trace:
-            # store trace files
-            trace_dir = f"{self.data_dir}\\trace"
-            with open(f"{trace_dir}\\observation_data.txt", "w") as file:
-                file.write(str(self.data_manager.get_data("obs_data")))
-            with open(f"{trace_dir}\\navigation_data.txt", "w") as file:
-                file.write(str(self.data_manager.get_data("nav_data")))
 
         if performance:
             pass

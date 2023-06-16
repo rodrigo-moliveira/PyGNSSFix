@@ -150,6 +150,14 @@ class EpochData:
         if sat in self._data:
             self._data.pop(sat)
 
+    def copy(self):
+        # self._data = OrderedDict()
+        obj = EpochData()
+        for sat, obs_list in self._data.items():
+            # construct new observation and set it
+            for obs in obs_list:
+                obj.set_observable(sat, obs.copy())
+        return obj
 
 class ObservationData:
     """
@@ -347,3 +355,15 @@ class ObservationData:
 
             except NonExistentObservable:
                 return epoch + rate
+
+    def copy(self):
+        """ return a copy of this object"""
+        obj = ObservationData()
+
+        # shallow/reference copies and deep copy of data
+        obj._types = self._types
+        obj._satellites = self._satellites
+        obj.header = self.header
+        obj._data = self._data.copy()
+
+        return obj

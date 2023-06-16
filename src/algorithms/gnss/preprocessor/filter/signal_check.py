@@ -4,10 +4,10 @@ from . import Filter
 
 class SignalCheckFilter(Filter):
 
-    def __init__(self, observation_data):
+    def __init__(self, observation_data, snr_threshold):
         super().__init__()
         self.observation_data = observation_data
-        self.snr_threshold = config["gps_solver"]["signal_strength_filter"]["select"]
+        self.snr_threshold = snr_threshold
 
     def apply(self, sat, epoch, observation, v_removable):
         # return False to keep this observable

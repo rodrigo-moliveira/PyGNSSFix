@@ -31,13 +31,13 @@ class PreprocessorManager:
 
         """
         self.log.info("Starting Preprocessor...")
-        exit()
+
         # SNR Check Filter
         try:
             self.snr_filter(self.raw_data)
         except Exception as e:
-            raise PreprocessorError(f"Error performing SNR filter: {e}")
-
+            raise PreprocessorError(f"PreprocessorManager -> Error performing SNR filter: {e}")
+        return None
         # Type Consistency Filter
         try:
             self.consistency_filter(self.raw_data)
@@ -92,11 +92,13 @@ class PreprocessorManager:
     def snr_filter(self, observation_data):
         self.log.info("Applying SNR check filter to remove data with low signal to noise ratio (SNR)")
 
-        snr_functor = SignalCheckFilter(self.raw_data)
+        snr_threshold = config_dict.get("preprocessor", "snr_filter")
+
+        snr_functor = SignalCheckFilter(observation_data, snr_threshold)
         mapper = FilterMapper(snr_functor)
         mapper.apply(observation_data)
 
-        # Saving Consistent data to file
+        # Saving debug data to file
         self.log.debug(
             "Writing SNR Checked Observation Data to trace file {}".format("SNRCheckObservationData.txt"))
         f = open(self.trace_path + "/SNRCheckObservationData.txt", "w")

@@ -17,11 +17,13 @@ class GnssSinglePointSolution(Algorithm):
 
     def compute(self, data_manager, trace_path):
         log = get_logger("GNSS_ALG")
-        raw_obs_data = data_manager.get_data("obs_data")
+
+        # create copy of input raw obs data
+        obs_data = data_manager.get_data("obs_data").copy()
 
         # perform pre-processing here
         log.info(f"Starting Preprocessor Module")
-        preprocessor = PreprocessorManager(trace_path, raw_obs_data)
+        preprocessor = PreprocessorManager(trace_path, obs_data)
         preprocessor.compute()
 
         # run algorithm

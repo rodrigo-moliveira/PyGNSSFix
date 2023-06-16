@@ -110,3 +110,6 @@ class Observation:
 
     def __float__(self):
         return self.value
+
+    def copy(self):
+        return Observation(self.datatype, float(self.value))
