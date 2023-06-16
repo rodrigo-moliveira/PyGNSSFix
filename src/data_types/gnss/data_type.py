@@ -331,6 +331,3 @@ def data_type_from_rinex(data_type: str, constellation: str):
     elif constellation == "GAL":
         return cGALObsSignals[data_type[0]][data_type[1]]
     return UN
-
-
-PR1_GPS = DataType(data_type="PR1", description="PseudoRange in L1 (GPS)", freq=L1, freq_number=1)

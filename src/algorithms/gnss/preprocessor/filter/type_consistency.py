@@ -9,5 +9,5 @@ class TypeConsistencyFilter(Filter):
 
     def is_applicable(self, sat, epoch, observation):
         # return False to keep this observable
-        return observation.datatype not in self.types
+        return observation.datatype not in self.types[sat.sat_system]
 

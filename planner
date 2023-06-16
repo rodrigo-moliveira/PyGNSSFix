@@ -1,3 +1,11 @@
 criar um construtor da Epoch para GPS Week e Seconds of Week
 ler dados de navegacao/observacao de gal
 escrever um traceback dos erros..
+
+
+High-level plan:
+* Terminar o estado atual
+* Adicionar Leitura e Modelo de Clocks, Sp3, IONEX (criar um GPS PPPP)
+* Adicionar processamento de GAL
+* Dual-constellation PPPP
+* Adicionar Kalman filter com user dynamics (kinematic + reduced-dynamic positioning)

@@ -1,7 +1,7 @@
 from src.common_log import get_logger
+from src.data_types.gnss.data_type import data_type_from_rinex
 from src.io.config import config_dict
 from src.data_types.gnss.observation_data import ObservationData
-from src.data_types.gnss.service_utils import get_code_from_service
 from src.errors import PreprocessorError
 from .filter import FilterMapper, TypeConsistencyFilter, RateDowngradeFilter, SignalCheckFilter
 from .functor import FunctorMapper, IonoFreeFunctor, SmoothFunctor
@@ -11,10 +11,8 @@ class PreprocessorManager:
 
     def __init__(self, trace_path, raw_data):
         self.log = get_logger("PREPROCESSOR")
-
         self.trace_path = trace_path
         self.raw_data = raw_data
-
         self.services = config_dict.get_services()
 
     def compute(self):
@@ -33,16 +31,17 @@ class PreprocessorManager:
         self.log.info("Starting Preprocessor...")
 
         # SNR Check Filter
+        # TODO: write a filter report (x% of data was removed, etc.)
         try:
             self.snr_filter(self.raw_data)
         except Exception as e:
             raise PreprocessorError(f"PreprocessorManager -> Error performing SNR filter: {e}")
-        return None
+
         # Type Consistency Filter
         try:
             self.consistency_filter(self.raw_data)
         except Exception as e:
-            raise PreprocessorError(f"Error performing Consistency Type filter: {e}")
+            raise PreprocessorError(f"PreprocessorManager -> Error performing Consistency Type filter: {e}")
 
         # pointer to output dataset (processed by Iono, Smooth and RateDowngrade functors)
         _data_out = self.raw_data
@@ -51,7 +50,7 @@ class PreprocessorManager:
         try:
             _data_out = self.iono_free(_data_out)
         except Exception as e:
-            raise PreprocessorError(f"Error computing Iono Free Observation Data: {e}")
+            raise PreprocessorError(f"PreprocessorManager -> Error computing Iono Free Observation Data: {e}")
 
         """Currently, the Smooth Algorithm is turned off. Further investigation is needed to fix it"""
         # Get Smooth Observation Data
@@ -64,22 +63,26 @@ class PreprocessorManager:
         try:
             _data_out = self.downgrade(_data_out)
         except Exception as e:
-            raise PreprocessorError(f"Error performing Downgrade Rate filter: {e}")
+            raise PreprocessorError(f"PreprocessorManager -> Error performing Downgrade Rate filter: {e}")
 
-        self.log.info("####### End of module 'Process Observation Data' ... #######\n")
+        self.log.info("End of module Preprocessor")
 
         return _data_out
 
     def consistency_filter(self, observation_data):
         self.log.info("Applying consistency filter to remove unnecessary datatypes and data-less satellites")
-        types = get_code_type_from_service(self.service_manager.services[self.constellation], self.constellation)
+        datatypes = {}
 
-        # if self.compute_smooth:
-        #    types += get_carrier_type_from_service(self.service_manager.services[self.constellation],
-        #                                           self.constellation)
+        # NOTE: currently we filter out Signal and Carrier Observables -> only need Pseudorange
+        for constellation, services in self.services.items():
+            datatypes[constellation] = []
+            for service in services:
+                datatype = data_type_from_rinex(f"C{service}", constellation)
+                if datatype is not None:
+                    datatypes[constellation].append(datatype)
 
-        type_functor = TypeConsistencyFilter(types)
-        mapper = FilterMapper(type_functor)
+        type_filter = TypeConsistencyFilter(datatypes)
+        mapper = FilterMapper(type_filter)
         mapper.apply(observation_data)
 
         # Saving Consistent data to file
@@ -90,12 +93,11 @@ class PreprocessorManager:
         f.close()
 
     def snr_filter(self, observation_data):
-        self.log.info("Applying SNR check filter to remove data with low signal to noise ratio (SNR)")
-
         snr_threshold = config_dict.get("preprocessor", "snr_filter")
+        self.log.info(f"Applying SNR check filter. SNR Threshold is {snr_threshold}")
 
-        snr_functor = SignalCheckFilter(observation_data, snr_threshold)
-        mapper = FilterMapper(snr_functor)
+        snr_filter = SignalCheckFilter(observation_data, snr_threshold)
+        mapper = FilterMapper(snr_filter)
         mapper.apply(observation_data)
 
         # Saving debug data to file

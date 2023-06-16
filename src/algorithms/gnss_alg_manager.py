@@ -36,7 +36,6 @@ class GnssAlgorithmManager:
         logger = get_logger("IO")
         #TODO: add log messages
         #TODO: add possibility of multiple files
-        #TODO: print trace files here
         try:
             # read navigation data
             nav_file = config_dict.get("inputs", "nav_files")[0]
