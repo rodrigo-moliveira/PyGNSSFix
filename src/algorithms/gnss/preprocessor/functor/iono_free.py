@@ -5,17 +5,18 @@ from src.data_types.gnss.observation import Observation
 
 class IonoFreeFunctor(Functor):
 
-    def __init__(self, observations):
+    def __init__(self, constellation, observations):
         super().__init__()
 
+        self.constellation = constellation
         self.observations = list(observations)
         try:
             self.base_freq_index = int(self.observations[0][0])
             self.second_freq_index = int(self.observations[1][0])
         except Exception as e:
-            raise AttributeError(f"Only one frequency is available, {self.observations}. User needs to select two "
-                                 f"frequencies for the computation of Iono Free observables. "
-                                 f"\nTraceback Reason: {e}")
+            raise AttributeError(f"Problem getting base and second frequencies in Iono Free Computation for "
+                                 f"constellation {self.constellation}, observations provided are {self.observations}. "
+                                 f"Traceback Reason: {e}")
 
     def get_iono_free_datatype(self, v_obs_in):
         # get code and carrier for first frequency (C1, L1)
@@ -58,18 +59,18 @@ class IonoFreeFunctor(Functor):
 
         # get iono free code
         if C1 is not None and C2 is not None:
-            C12 = DataType.get_iono_free_datatype(C1.datatype, C2.datatype)
+            C12 = DataType.get_iono_free_pseudorange(C1.datatype, C2.datatype)
 
             # get iono-free value
             iono_free = self.compute_iono_free(C1, C2)
             v_obs_out.append(Observation(C12, iono_free))
 
         # get iono free carrier
-        if L1 is not None and L2 is not None:
-            L12 = DataType.get_iono_free_datatype(L1.datatype, L2.datatype)
+        # if L1 is not None and L2 is not None:
+        #    L12 = DataType.get_iono_free_carrier_phase(L1.datatype, L2.datatype)
 
             # get iono-free value
-            iono_free = self.compute_iono_free(L1, L2)
-            v_obs_out.append(Observation(L12, iono_free))
+            # iono_free = self.compute_iono_free(L1, L2)
+            # v_obs_out.append(Observation(L12, iono_free))
 
         return v_obs_out

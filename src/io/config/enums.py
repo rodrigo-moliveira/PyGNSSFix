@@ -25,12 +25,12 @@ class EnumOnOff(Enum):
 
 class EnumIono(Enum):
     DISABLED = 0
-    ENABLED = 1
-    APRIORI = 2
+    APRIORI = 1
+    IONO_FREE = 2
 
     @classmethod
     def show_options(cls):
-        return f"[0 - DISABLED, 1 - ENABLED, 2 - A PRIORI METHOD]"
+        return f"[0 - DISABLED, 1 - A PRIORI METHOD, 2 - IONO FREE COMBINATIONS]"
 
 
 class EnumTransmissionTime(Enum):

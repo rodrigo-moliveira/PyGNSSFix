@@ -342,7 +342,7 @@ class ObservationData:
     def get_rate(self):
         epochs = self.get_epochs()
         if len(epochs) > 2:
-            return epochs[1] - epochs[0]
+            return (epochs[1] - epochs[0]).total_seconds()
         raise EmptyObservationData(f"Observation Data is empty")
 
     def get_first_arc_epoch(self, sat, epoch, rate):
@@ -367,3 +367,15 @@ class ObservationData:
         obj._data = self._data.copy()
 
         return obj
+
+    def set_observations_for_constellation(self, constellation, obs_data_in):
+        # set observations given an ObservationData object
+        epochs = obs_data_in.get_epochs()
+        for epoch in epochs:
+            epoch_data = obs_data_in.get_epoch_data(epoch)
+            sats = epoch_data.get_satellites()
+            for sat in sats:
+                if sat.sat_system == constellation:
+                    observables = epoch_data.get_observables(sat)
+                    for obs in observables:
+                        self.set_observation(epoch, sat, obs)

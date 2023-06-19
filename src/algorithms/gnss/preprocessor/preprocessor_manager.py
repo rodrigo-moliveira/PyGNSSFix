@@ -4,7 +4,8 @@ from src.io.config import config_dict
 from src.data_types.gnss.observation_data import ObservationData
 from src.errors import PreprocessorError
 from .filter import FilterMapper, TypeConsistencyFilter, RateDowngradeFilter, SignalCheckFilter
-from .functor import FunctorMapper, IonoFreeFunctor, SmoothFunctor
+from src.algorithms.gnss.preprocessor.functor.constellation_filter import ConstellationFunctor
+from .functor import FunctorMapper, IonoFreeFunctor
 
 
 class PreprocessorManager:
@@ -43,14 +44,31 @@ class PreprocessorManager:
         except Exception as e:
             raise PreprocessorError(f"PreprocessorManager -> Error performing Consistency Type filter: {e}")
 
-        # pointer to output dataset (processed by Iono, Smooth and RateDowngrade functors)
-        _data_out = self.raw_data
+        obs_data_out = ObservationData()
 
-        # Get Iono Free Observation Data
-        try:
-            _data_out = self.iono_free(_data_out)
-        except Exception as e:
-            raise PreprocessorError(f"PreprocessorManager -> Error computing Iono Free Observation Data: {e}")
+        # check to compute or not iono free dataset from raw observables
+        for constellation in self.services.keys():
+            compute_iono_free = config_dict.is_iono_free(constellation)
+            if compute_iono_free:
+                obs_list = config_dict.get("model", constellation, "observations")
+                n_obs = len(obs_list)
+                if n_obs != 2:
+                    raise PreprocessorError(f"Unable to compute iono free data for constellation {constellation} "
+                                            f"due to lack of data. Need 2 observations, but have {n_obs} ({obs_list})")
+                else:
+                    self.log.info(f"Computing iono free data for constellation {constellation} with observations "
+                                  f"{obs_list}")
+                    try:
+                        self.iono_free(self.raw_data, obs_data_out, constellation)
+                    except Exception as e:
+                        raise PreprocessorError(
+                            f"PreprocessorManager -> Error computing Iono Free Observation Data: {e}")
+            else:
+                self.log.info(f"Iono free data not computed for {constellation} due to user choice")
+                # select raw observables for this constellation
+                functor = ConstellationFunctor(constellation)
+                mapper = FunctorMapper(functor)
+                mapper.apply(self.raw_data, obs_data_out)
 
         """Currently, the Smooth Algorithm is turned off. Further investigation is needed to fix it"""
         # Get Smooth Observation Data
@@ -61,13 +79,19 @@ class PreprocessorManager:
 
         # Prepare ObservationData for output (downgrade output rate)
         try:
-            _data_out = self.downgrade(_data_out)
+            self.downgrade(obs_data_out)
         except Exception as e:
             raise PreprocessorError(f"PreprocessorManager -> Error performing Downgrade Rate filter: {e}")
 
-        self.log.info("End of module Preprocessor")
+        # Saving Output Observation Data to File
+        self.log.debug(
+            "Writing Preprocessor output Observation Data to trace file {}".format("PreprocessedObservationData.txt"))
+        f = open(self.trace_path + "/PreprocessedObservationData.txt", "w")
+        f.write(str(obs_data_out))
+        f.close()
 
-        return _data_out
+        self.log.info("End of module Preprocessor")
+        return obs_data_out
 
     def consistency_filter(self, observation_data):
         self.log.info("Applying consistency filter to remove unnecessary datatypes and data-less satellites")
@@ -107,26 +131,12 @@ class PreprocessorManager:
         f.write(str(observation_data))
         f.close()
 
-    def iono_free(self, data):
-        if self.compute_iono_free:
-            self.log.info("Computing iono free data")
-            iono_free_functor = IonoFreeFunctor(self.service_manager[self.constellation])
-            mapper = FunctorMapper(iono_free_functor)
-            iono_free_data = ObservationData()
-            mapper.apply(data, iono_free_data)
+    def iono_free(self, raw_data, data_out, constellation):
+        functor = IonoFreeFunctor(constellation, self.services[constellation])
+        mapper = FunctorMapper(functor)
+        mapper.apply(raw_data, data_out)
 
-            # Saving Iono Free data to file
-            self.log.debug("Writing Iono Free Observation Data to trace file {}".format("IonoFreeObservationData.txt"))
-            f = open(self.trace_path + "/IonoFreeObservationData.txt", "w")
-            f.write(str(iono_free_data))
-            f.close()
-
-            # change pointer of _data_out
-            data = iono_free_data
-
-        return data
-
-    def smooth(self, data):
+    """def smooth(self, data):
         self.log.info("Computing smooth data")
 
         smooth_functor = SmoothFunctor(config["model"]["smooth"]["time_constant"],
@@ -142,29 +152,25 @@ class PreprocessorManager:
 
         # change pointer of _data_out
         data = smooth_data
-        return data
+        return data"""
 
     def downgrade(self, data):
         # Downgrade observation data rate
-        if self.output_rate:
-            rate_in = data.get_rate()
-            self.log.info(f"Downgrading observation data from input rate {rate_in} [s] to rate "
-                          f"{self.output_rate} [s]")
+        rate_out = config_dict.get("inputs", "rate")
+        rate_in = data.get_rate()
 
-            if self.output_rate % rate_in != 0:
+        if rate_in != rate_out:
+            self.log.info(f"Downgrading observation data from input rate {rate_in} [s] to output rate "
+                          f"{rate_out} [s]")
+
+            if rate_out % rate_in != 0:
                 self.log.warning(f"It is not possible to downgrade to the selected rate. Output rate is not divisible "
-                                 f"by input rate! Keeping input rate of {rate_in}...")
+                                 f"by input rate. Keeping input rate of {rate_in}...")
 
             else:
                 epoch_list = data.get_epochs()
-                downgrade_filter = RateDowngradeFilter(self.output_rate, epoch_list[0])
+                downgrade_filter = RateDowngradeFilter(rate_out, epoch_list[0])
                 mapper = FilterMapper(downgrade_filter)
                 mapper.apply(data)
-
-                self.log.debug(
-                    "Writing Downgraded Observation Data to trace file {}".format("DowngradedObservationData.txt"))
-                f = open(self.trace_path + "/DowngradedObservationData.txt", "w")
-                f.write(str(data))
-                f.close()
 
         return data

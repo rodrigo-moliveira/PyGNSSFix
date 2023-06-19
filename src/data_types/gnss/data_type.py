@@ -22,10 +22,10 @@ class DataType:
     """
 
     # Force DataType objects to immutable
-    __slots__ = ["_freq_number", "_freq_value", "_freq", "_data_type", "_description"]
+    __slots__ = ["_freq_number", "_freq_value", "_freq", "_data_type", "_description", "_constellation"]
 
     def __init__(self, freq_number: int = None, freq_value: float = None,
-                 data_type: str = None, description: str = None, freq=None):
+                 data_type: str = None, description: str = None, freq=None, constellation=None):
 
         if freq_number is not None:
             super(DataType, self).__setattr__('_freq_number', freq_number)
@@ -33,6 +33,8 @@ class DataType:
             super(DataType, self).__setattr__('_freq_value', freq_value)
         if freq is not None:
             super(DataType, self).__setattr__('_freq', freq)
+        if constellation is not None:
+            super(DataType, self).__setattr__('_constellation', constellation)
         if data_type is not None:
             super(DataType, self).__setattr__('_data_type', data_type)
         else:
@@ -147,7 +149,7 @@ class DataType:
         if DataType.is_code(datatype1) and DataType.is_code(datatype2):
             index1 = datatype1.freq_number
             index2 = datatype2.freq_number
-            return get_data_type(f"C{min(index1, index2)}{max(index1, index2)}")
+            return get_data_type(f"PR{min(index1, index2)}{max(index1, index2)}")
 
         # if DataType.is_carrier(datatype1) and DataType.is_carrier(datatype2):
         #    index1 = datatype1.freq_number
@@ -185,17 +187,24 @@ class DataType:
 ###############
 
 # GPS Frequencies
-L1 = DataType(data_type="L1/E1", description="Frequency L1 for GPS", freq_value=constants.GPS_L1_FREQ)
-L2 = DataType(data_type="L2", description="Frequency L2 for GPS", freq_value=constants.GPS_L2_FREQ)
-L5 = DataType(data_type="L5", description="Frequency L5 for GPS", freq_value=constants.GPS_L5_FREQ)
+L1 = DataType(data_type="L1/E1", description="Frequency L1 for GPS", freq_value=constants.GPS_L1_FREQ,
+              constellation="GPS")
+L2 = DataType(data_type="L2", description="Frequency L2 for GPS", freq_value=constants.GPS_L2_FREQ,
+              constellation="GPS")
+L5 = DataType(data_type="L5", description="Frequency L5 for GPS", freq_value=constants.GPS_L5_FREQ,
+              constellation="GPS")
 
 # GAL Frequencies
-E1 = DataType(data_type="E1", description="Frequency E1 (GAL)", freq_value=constants.GAL_E1_FREQ)
-E5a = DataType(data_type="E5a", description="Frequency E5a (GAL)", freq_value=constants.GAL_E5A_FREQ)
-E5b = DataType(data_type="E5b", description="Frequency E5b (GAL)", freq_value=constants.GAL_E5B_FREQ)
+E1 = DataType(data_type="E1", description="Frequency E1 (GAL)", freq_value=constants.GAL_E1_FREQ,
+              constellation="GAL")
+E5a = DataType(data_type="E5a", description="Frequency E5a (GAL)", freq_value=constants.GAL_E5A_FREQ,
+               constellation="GAL")
+E5b = DataType(data_type="E5b", description="Frequency E5b (GAL)", freq_value=constants.GAL_E5B_FREQ,
+               constellation="GPS")
 E5ALTBOC = DataType(data_type="E5AltBOC", description="Frequency E5AltBOC (GAL)",
-                    freq_value=constants.GAL_E5ALTBOC_FREQ)
-E6 = DataType(data_type="E6", description="Frequency E6 (GAL)", freq_value=constants.GAL_E6_FREQ)
+                    freq_value=constants.GAL_E5ALTBOC_FREQ, constellation="GAL")
+E6 = DataType(data_type="E6", description="Frequency E6 (GAL)", freq_value=constants.GAL_E6_FREQ,
+              constellation="GPS")
 
 ###################
 # Raw Observables #

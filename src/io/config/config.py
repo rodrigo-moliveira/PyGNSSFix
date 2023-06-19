@@ -5,6 +5,7 @@ details.
 """
 
 from src.errors import ConfigError
+from src.io.config.enums import EnumIono
 
 
 class Config(dict):
@@ -95,6 +96,10 @@ class Config(dict):
                 services["GAL"] = self.get("model", "GAL", "observations")
 
         return services
+
+    def is_iono_free(self, constellation):
+        iono_model = EnumIono(self.get("model", constellation, "ionosphere"))
+        return iono_model == EnumIono.IONO_FREE
 
 
 config_dict = Config()
