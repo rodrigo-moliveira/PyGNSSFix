@@ -4,7 +4,7 @@ DEPRECATED
 import os
 from src.errors import ConfigError, ConfigTypeError
 from src import WORKSPACE_PATH
-from src.data_types.gnss.service_utils import AvailableConstellations, Services
+from src.data_types.solver.service_utils import AvailableConstellations, Services
 from .enums import *
 
 

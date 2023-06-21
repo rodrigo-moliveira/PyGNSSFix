@@ -1,6 +1,7 @@
 # GNSS Single Point Solution Algorithm
 
 from .algorithm import Algorithm
+from .gnss.solver.gnss_solver import GnssSolver
 from .gnss.preprocessor.preprocessor_manager import PreprocessorManager
 from ..common_log import get_logger
 from src.io.config import config_dict
@@ -20,19 +21,15 @@ class GnssSinglePointSolution(Algorithm):
 
         # get the input raw obs data
         raw_obs_data = data_manager.get_data("obs_data")
+        nav_data = data_manager.get_data("nav_data")
 
         # perform pre-processing here
         log.info(f"Starting Preprocessor Module")
         preprocessor = PreprocessorManager(trace_path, raw_obs_data)
         obs_data = preprocessor.compute()  # this is the observation data to actually process
 
-        # run algorithm
+        # run estimation algorithm
         log.info(f"Running estimation algorithm...")
-        # ...
-
-        # Perform Least-Squares over input pseudorange observables..
-
-        for time in range(1, 100):
-            pass
+        solver = GnssSolver()
 
         self.outputs["nav_solution"] = 1
