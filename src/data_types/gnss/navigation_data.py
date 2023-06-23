@@ -1,9 +1,9 @@
 from collections import OrderedDict
 from src.errors import TimeSeriesError
 from src.data_types.date.date import Epoch
-from src.data_types.gnss.satellite import Satellite, get_satellite
-from src.data_mng.containers.timeseries import TimeSeries
-from src.data_mng.containers.container import Container
+from src.data_types.gnss.satellite import Satellite
+from src.data_mng.timeseries import TimeSeries
+from src.data_mng.container import Container
 
 
 # Note: currently only GPS navigation messages are allowed.
@@ -136,7 +136,7 @@ class NavigationData:
             _epoch = self._data[sat].get_closest_epoch(epoch)
             return self._data[sat].get_data_for_epoch(_epoch)
         except TimeSeriesError as e:
-            raise TimeSeriesError(f"satellite {str(sat)} has no available navigation data for epoch {repr(epoch)}, {e}")
+            raise TimeSeriesError(f"satellite {str(sat)} has no available navigation data for epoch {str(epoch)}, {e}")
 
     @property
     def header(self):

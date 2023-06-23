@@ -1,11 +1,11 @@
-from PositioningSolver.src.gnss.observation_models.ephemeride_propagator import EphemeridePropagator
-from PositioningSolver.src.data_types.basics.DataType import DataTypeFactory, DataType
-from PositioningSolver.src.data_types.containers.Container import Container
-from PositioningSolver.src.gnss.state_space.utils import ENU2AzEl
-from PositioningSolver.src.utils.errors import NonExistentObservable
+from .ephemeride_propagator import EphemeridePropagator
+from src.data_types.gnss.data_type import DataType
+#from PositioningSolver.src.data_types.containers.Container import Container
+#from PositioningSolver.src.gnss.state_space.utils import ENU2AzEl
+#from PositioningSolver.src.utils.errors import NonExistentObservable
 
-C1 = DataTypeFactory("C1")
-f1 = C1.freq
+#C1 = DataTypeFactory("C1")
+#f1 = C1.freq
 
 
 class SatelliteGeometry(Container):

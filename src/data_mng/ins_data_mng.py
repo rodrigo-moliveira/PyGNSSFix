@@ -1,4 +1,4 @@
-from src.data_mng.containers.container import Container
+from src.data_mng.container import Container
 from src.data_mng.csv_data import CSVData
 
 

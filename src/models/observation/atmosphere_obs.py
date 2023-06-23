@@ -2,11 +2,11 @@ import numpy as np
 
 from math import sin, cos
 
-from PositioningSolver.src.data_types.basics.DataType import DataTypeFactory
-from PositioningSolver.src.math_utils.Constants import Constant
+#from PositioningSolver.src.data_types.basics.DataType import DataTypeFactory
+#from PositioningSolver.src.math_utils.Constants import Constant
 
-C1 = DataTypeFactory("C1")
-f1 = C1.freq  # L1 frequency for GPS
+#C1 = DataTypeFactory("C1")
+#f1 = C1.freq  # L1 frequency for GPS
 
 
 def ionosphereCorrection(user_lat, user_long, sv_el, sv_az, alfa, beta, GPS_time, frequency):

@@ -33,6 +33,15 @@ class EnumIono(Enum):
         return f"[0 - DISABLED, 1 - A PRIORI METHOD, 2 - IONO FREE COMBINATIONS]"
 
 
+class EnumTropo(Enum):
+    DISABLED = 0
+    SAASTAMOINEM = 1
+
+    @classmethod
+    def show_options(cls):
+        return f"[0 - DISABLED, 1 - SAASTAMOINEM MODEL]"
+
+
 class EnumTransmissionTime(Enum):
     GEOMETRIC = 0
     PSEUDORANGE = 1

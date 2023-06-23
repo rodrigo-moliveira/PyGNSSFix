@@ -5,15 +5,17 @@ from src.data_types.gnss.observation_data import ObservationData
 from src.errors import PreprocessorError
 from .filter import FilterMapper, TypeConsistencyFilter, RateDowngradeFilter, SignalCheckFilter
 from src.algorithms.gnss.preprocessor.functor.constellation_filter import ConstellationFunctor
+from .filter.ura_health_check import SatFilterHealthURA
 from .functor import FunctorMapper, IonoFreeFunctor
 
 
 class PreprocessorManager:
 
-    def __init__(self, trace_path, raw_data):
+    def __init__(self, trace_path, raw_data, nav_data):
         self.log = get_logger("PREPROCESSOR")
         self.trace_path = trace_path
         self.raw_data = raw_data
+        self.nav_data = nav_data
         self.services = config_dict.get_services()
 
     def compute(self):
@@ -37,6 +39,11 @@ class PreprocessorManager:
             self.snr_filter(self.raw_data)
         except Exception as e:
             raise PreprocessorError(f"PreprocessorManager -> Error performing SNR filter: {e}")
+
+        try:
+            self.sv_ura_health_filter(self.raw_data)
+        except Exception as e:
+            raise PreprocessorError(f"PreprocessorManager -> Error performing SV URA and Health filter: {e}")
 
         # Type Consistency Filter
         try:
@@ -130,6 +137,28 @@ class PreprocessorManager:
         f = open(self.trace_path + "/SNRCheckObservationData.txt", "w")
         f.write(str(observation_data))
         f.close()
+
+    def sv_ura_health_filter(self):
+        # PAREI AQUI - continuar a implementar o health check e sv ura checks aqui
+        ura_check = config_dict.get("preprocessor", "satellite_status", "SV_URA")
+        ura_threshold = config_dict.get("preprocessor", "satellite_status", "SV_minimum_URA")
+        health_check = config_dict.get("preprocessor", "satellite_status", "SV_health")
+
+        if ura_check or health_check:
+            self.log.info(f"Applying Satellite URA and/or Health checks. URA check is {ura_check}, "
+                          f"URA threshold is {ura_threshold}, health check is {health_check}")
+
+            snr_filter = SatFilterHealthURA(observation_data, snr_threshold)
+            mapper = FilterMapper(snr_filter)
+            mapper.apply(observation_data)
+
+            # Saving debug data to file
+            self.log.debug(
+                "Writing SNR Checked Observation Data to trace file {}".format("SNRCheckObservationData.txt"))
+            f = open(self.trace_path + "/SNRCheckObservationData.txt", "w")
+            f.write(str(observation_data))
+            f.close()
+
 
     def iono_free(self, raw_data, data_out, constellation):
         functor = IonoFreeFunctor(constellation, self.services[constellation])

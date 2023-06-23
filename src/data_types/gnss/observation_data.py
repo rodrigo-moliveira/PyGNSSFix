@@ -3,8 +3,8 @@ from collections import OrderedDict
 from src.data_types.gnss.data_type import DataType
 from src.data_types.date.date import Epoch
 from src.data_types.gnss.satellite import Satellite
-from src.data_mng.containers.timeseries import TimeSeries
-from src.data_mng.containers.container import Container
+from src.data_mng.timeseries import TimeSeries
+from src.data_mng.container import Container
 from src.errors import NonExistentObservable, EmptyObservationData, DuplicateObservable
 from src.data_types.gnss.observation import Observation
 

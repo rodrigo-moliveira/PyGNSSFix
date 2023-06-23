@@ -30,6 +30,7 @@ class GnssSinglePointSolution(Algorithm):
 
         # run estimation algorithm
         log.info(f"Running estimation algorithm...")
-        solver = GnssSolver()
+        solver = GnssSolver(obs_data, nav_data)
+        solver.solve()
 
         self.outputs["nav_solution"] = 1

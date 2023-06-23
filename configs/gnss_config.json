@@ -92,7 +92,12 @@
       "stop_criteria": 0.0002,
 
       "_comment6": "Select algorithm to compute the transmission time: 0 - geometric, 1 - pseudorange",
-      "transmission_time_alg": 1
+      "transmission_time_alg": 1,
+
+      "_comment7": "Initial position (m), velocity (m/s) and clock (s)",
+      "initial_pos_std": [0, 0, 0, 1, 1, 1],
+      "initial_vel_std": [0, 0, 0, 1, 1, 1],
+      "initial_clock_std": [0, 1]
    },
 
    "performance_evaluation": {
