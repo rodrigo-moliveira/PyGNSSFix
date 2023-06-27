@@ -1,5 +1,6 @@
 from src.data_types.gnss.observation_data import ObservationData
 
+
 class FilterMapper:
 
     def __init__(self, _filter):

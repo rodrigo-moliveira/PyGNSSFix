@@ -35,6 +35,7 @@ class PreprocessorManager:
 
         # SNR Check Filter
         # TODO: write a filter report (x% of data was removed, etc.)
+        # TODO: add log messages to all filters... (removed obs for epoch...)
         try:
             self.snr_filter(self.raw_data)
         except Exception as e:
@@ -138,27 +139,26 @@ class PreprocessorManager:
         f.write(str(observation_data))
         f.close()
 
-    def sv_ura_health_filter(self):
-        # PAREI AQUI - continuar a implementar o health check e sv ura checks aqui
+    def sv_ura_health_filter(self, observation_data):
         ura_check = config_dict.get("preprocessor", "satellite_status", "SV_URA")
-        ura_threshold = config_dict.get("preprocessor", "satellite_status", "SV_minimum_URA")
+        ura_threshold = config_dict.get("preprocessor", "satellite_status", "SV_maximum_URA")
         health_check = config_dict.get("preprocessor", "satellite_status", "SV_health")
 
         if ura_check or health_check:
             self.log.info(f"Applying Satellite URA and/or Health checks. URA check is {ura_check}, "
                           f"URA threshold is {ura_threshold}, health check is {health_check}")
 
-            snr_filter = SatFilterHealthURA(observation_data, snr_threshold)
-            mapper = FilterMapper(snr_filter)
+            ura_filter = SatFilterHealthURA(self.nav_data, ura_check, ura_threshold, health_check, self.log)
+            mapper = FilterMapper(ura_filter)
             mapper.apply(observation_data)
 
             # Saving debug data to file
             self.log.debug(
-                "Writing SNR Checked Observation Data to trace file {}".format("SNRCheckObservationData.txt"))
-            f = open(self.trace_path + "/SNRCheckObservationData.txt", "w")
+                "Writing SV URA and Health Check Observation Data to trace file {}".
+                format("SvURAHealthObservationData.txt"))
+            f = open(self.trace_path + "/SvURAHealthObservationData.txt", "w")
             f.write(str(observation_data))
             f.close()
-
 
     def iono_free(self, raw_data, data_out, constellation):
         functor = IonoFreeFunctor(constellation, self.services[constellation])

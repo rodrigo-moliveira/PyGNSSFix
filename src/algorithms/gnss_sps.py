@@ -4,7 +4,7 @@ from .algorithm import Algorithm
 from .gnss.solver.gnss_solver import GnssSolver
 from .gnss.preprocessor.preprocessor_manager import PreprocessorManager
 from ..common_log import get_logger
-from src.io.config import config_dict
+
 
 class GnssSinglePointSolution(Algorithm):
     def __init__(self):
@@ -25,7 +25,7 @@ class GnssSinglePointSolution(Algorithm):
 
         # perform pre-processing here
         log.info(f"Starting Preprocessor Module")
-        preprocessor = PreprocessorManager(trace_path, raw_obs_data)
+        preprocessor = PreprocessorManager(trace_path, raw_obs_data, nav_data)
         obs_data = preprocessor.compute()  # this is the observation data to actually process
 
         # run estimation algorithm

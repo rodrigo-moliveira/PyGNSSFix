@@ -70,13 +70,10 @@
       "_comment4": "Signal strength (SNR) filter. Select value of SNR (dBHz) threshold. Select false to turn off",
       "snr_filter": 20,
 
-      "_comment5": "Elevation filter. Select the value of minimum elevation angle to consider, in degree. Select false to turn off",
-      "elevation_filter": 15,
-
       "satellite_status": {
          "_comment": "whether or not to check the SV Accuracy (URA) and SV health fields of the navigation message",
          "SV_URA": true,
-         "SV_minimum_URA": 6144.0,
+         "SV_maximum_URA": 6144.0,
          "SV_health": true
       }
    },
@@ -93,6 +90,9 @@
 
       "_comment6": "Select algorithm to compute the transmission time: 0 - geometric, 1 - pseudorange",
       "transmission_time_alg": 1,
+
+      "_comment5": "Elevation filter. Select the value of minimum elevation angle to consider, in degree. Select false to turn off",
+      "elevation_filter": 15,
 
       "_comment7": "Initial position (m), velocity (m/s) and clock (s)",
       "initial_pos_std": [0, 0, 0, 1, 1, 1],

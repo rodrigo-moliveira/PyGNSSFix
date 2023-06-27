@@ -3,9 +3,9 @@ import numpy as np
 
 from src.algorithms.gnss.estimators.state_space import GnssStateSpace
 from src.common_log import get_logger
-from src.data_types.gnss.data_type import DataType
 from src.io.config import config_dict
 from src.io.config.enums import *
+from src.models.observation.geometry import SystemGeometry
 
 np.set_printoptions(linewidth=np.inf)
 
@@ -86,7 +86,6 @@ class GnssSolver:
         """
         self.obs_data = obs_data
         self.nav_data = nav_data
-        self.nav_header = self.nav_data.header
 
         self.log = get_logger("GNSS_ALG")
         self.log.info("Starting module GNSS Positioning Solver...")
@@ -148,9 +147,10 @@ class GnssSolver:
                                    clock_bias=state.clock_bias,
                                    date=epoch)
             # call lower level of solve
-            _solver_info = self._solve(epoch, epoch_data, state, self.nav_header)
+            _solver_info = self._solve(epoch, epoch_data, state)
 
-            """if success:
+            """ Re-add this later!!!
+            if success:
                 # add solution to Output timeseries
                 self.log.info(f"Successfully solved positioning for epoch {epoch.to_time_stamp()} with "
                               f"RMS = {RMS} [m]")
@@ -174,19 +174,16 @@ class GnssSolver:
     def _stop(rms_old, rms_new, stop_criteria):
         return abs((rms_old - rms_new) / rms_old) <= stop_criteria
 
-    def _solve(self, epoch, epoch_data, state, nav_header):
+    def _solve(self, epoch, epoch_data, state):
         # begin iterative process for this epoch
         _solver_info = {}
         iteration = 0
         success = False
-        RMS_prev = RMS = 1
+        RMS_prev = 1
         DOP = prefit_residuals = postfit_residuals = None
 
-        # URA, Satellite health filters. Flagged satellites are removed
-        self._initial_satellite_validation(epoch, epoch_data)
-
-        # system geometry manager
-        system_geometry = SystemGeometry(self.nav_data, nav_header, epoch_data)
+        # build system geometry for this epoch
+        system_geometry = SystemGeometry(self.nav_data, epoch_data)
 
         # check which model to use (Single Frequency / Dual Frequency / no model -> not enough data)
         control, model = self._check_model_availability(system_geometry, epoch_data, epoch)
@@ -204,9 +201,6 @@ class GnssSolver:
             # compute geometry-related data for each satellite link
             system_geometry.compute(epoch, state.receiver_position, state.receiver_clock, self.compute_TX_time,
                                     self._info["MAIN_CODE"], self._info["REL_CORRECTION"])
-
-            # apply elevation filter
-            self._elevation_filter(system_geometry, iteration)
 
             # solve the Least Squares
             try:
@@ -468,48 +462,3 @@ class GnssSolver:
             if sats_to_remove:
                 self.log.debug(f"Removing satellites {sats_to_remove} in iteration {iteration} due to "
                                f"elevation filter. ")
-
-    def _initial_satellite_validation(self, epoch, epoch_data):
-        """
-        evaluates if this satellite can be used in PVT solver:
-            * checks SV accuracy index (SV_URA). **REF[3]** advises to only use satellites for URA < 6144 [m]
-            * checks SV_health. if SV_health != 0, then discard satellite
-        """
-
-        vSats = epoch_data.get_satellites()
-        sats_to_remove = []
-        for sat in vSats:
-            print(sat)
-
-            # fetch valid navigation message (closest to the current epoch)
-            try:
-                nav_message = self.nav_data.get_sat_data_for_epoch(sat, epoch)
-            except Exception as e:
-                sats_to_remove.append(sat)
-                self.log.warning(f"Ignoring satellite {sat}: {e}")
-                continue
-
-            # URA filter
-            if self._info["SATELLITE_STATUS_FILTER"]["SV_URA"]:
-                URA = nav_message.SV_URA
-                URA_threshold = self._info["SATELLITE_STATUS_FILTER"]["SV_minimum_URA"]
-
-                if URA > URA_threshold:
-                    self.log.warning(f"Satellite {sat} is being discarded at epoch {str(epoch)} due to high "
-                                     f"URA value ({URA}) compared to threshold {URA_threshold}")
-                    sats_to_remove.append(sat)
-                    continue
-
-            # Satellite Health filter
-            if self._info["SATELLITE_STATUS_FILTER"]["SV_health"]:
-                SV_health = nav_message.SV_health
-
-                if SV_health != 0:
-                    self.log.warning(f"Satellite {sat} is being discarded at epoch {str(epoch)} due to bad "
-                                     f"health flag. SV_health = {SV_health} in the navigation message")
-                    sats_to_remove.append(sat)
-                    continue
-
-        # remove flagged satellites
-        for sat in sats_to_remove:
-            epoch_data.remove_satellite(sat)
