@@ -49,7 +49,7 @@ class GnssSolver:
                     * troposphere - a priori Saastamoinen model
 
 
-        Iterated Least Squares PVT - High Level Algorithm
+        Iterated Least-Squares PVT - High Level Algorithm
         -------
 
         for each observation epoch (time tag in rinex obs):
@@ -194,7 +194,7 @@ class GnssSolver:
         # self.log.info(f"Processing {epoch.to_time_stamp()} with model {GPSSolver.MODEL[model]}. Available Satellites:"
         #              f"{system_geometry.get_satellites()}")
 
-        # Iterated Least Squares algorithm (Note: in the eventuality of implementing other filters, e.g.: Kalman Filter,
+        # Iterated Least-Squares algorithm (Note: in the eventuality of implementing other filters, e.g.: Kalman Filter,
         # then we need to branch the solver from here..)
         while iteration < self._info["MAX_ITER"]:
 
@@ -402,9 +402,11 @@ class GnssSolver:
             * if that is not the case, a PVT solution is impossible to be computed -> Warn the user..
 
         """
+        # START BY REVIEWING THIS FUNCTION...
         # user selected model (Dual Frequency or Single Frequency)
+        print("in _check_model_availability")
         model = self._info["MODEL"]
-        MIN_SAT = self._info["NR_EQS"]
+        MIN_SAT = len(solution) # GnssStateSpace has len() function
 
         # Dual Frequency model
         if model == 1:

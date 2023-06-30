@@ -1,11 +1,8 @@
 from .ephemeride_propagator import EphemeridePropagator
-from src.data_types.gnss.data_type import DataType
-#from PositioningSolver.src.data_types.containers.Container import Container
-#from PositioningSolver.src.gnss.state_space.utils import ENU2AzEl
-#from PositioningSolver.src.utils.errors import NonExistentObservable
-
-#C1 = DataTypeFactory("C1")
-#f1 = C1.freq
+from src.data_types.gnss.data_type import DataType, L1
+from ..frames.frames import enu2azel
+from ...data_mng.container import Container
+from ...errors import NonExistentObservable
 
 
 class SatelliteGeometry(Container):
@@ -41,25 +38,25 @@ class SatelliteGeometry(Container):
         reconstruction equation, for a given satellite.
 
         Args:
-            rec_pos (src.data_types.state_space.statevector.Position) : Receiver position
+            rec_pos (numpy.ndarray) : Receiver position
             epoch (src.data_types.basics.Epoch.Epoch) : epoch under evaluation
             rec_bias (float) : Receiver clock bias
             nav_message (src.data_types.containers.NavigationData.NavigationPointGPS) : navigation point for the
                                                                                         satellite under evaluation
             computeTX (function) : function to compute the transmission time
             PR_obs (src.data_types.data_types.Observation.Observation) : Code observation to use in some computations
-            relativistic_correction (bool) : whether or not to compute relativistic correction
+            relativistic_correction (bool) : whether to compute relativistic correction
         """
 
-        # get reception time in GPS time system ( T_GPS = T_receiver - t_(receiver_bias) )
+        # get reception time in GNSS time system ( T_GPS = T_receiver - t_(receiver_bias) )
         time_reception = epoch + (-rec_bias)
 
         # get TGD (to use in the computeTX algorithm), and fix it for non L1 users
-        TGD = nav_message.TGD
+        # currently this is GPS dependent
         if DataType.is_iono_free_smooth_code(PR_obs.datatype) or DataType.is_iono_free_code(PR_obs.datatype):
             TGD = 0  # TGD is 0 for Iono Free observables
-        elif PR_obs.datatype.freq != f1:  # correct TGD in case of frequency different from f1
-            TGD = (f1.freq_value / PR_obs.datatype.freq.freq_value) ** 2 * TGD
+        else:
+            TGD = (L1.freq_value / PR_obs.datatype.freq.freq_value) ** 2 * nav_message.TGD
 
         # algorithm to compute Transmission time (in GPS time)
         time_emission, transit = computeTX(r_receiver=rec_pos,
@@ -74,6 +71,8 @@ class SatelliteGeometry(Container):
             get_sat_position_and_true_range(nav_message, time_emission, transit, rec_pos, relativistic_correction)
 
         # get receiver latitude and longitude from ECEF
+        print("fix function geometry.compute()")
+        exit()
         receiver_position = rec_pos.copy()
         receiver_position.form = "geodetic"
 
@@ -81,7 +80,7 @@ class SatelliteGeometry(Container):
         p_satENU = p_sat.copy()
         p_satENU.observer = receiver_position
         p_satENU.frame = "ENU"
-        az, el = ENU2AzEl(p_satENU[0], p_satENU[1], p_satENU[2])
+        az, el = enu2azel(p_satENU[0], p_satENU[1], p_satENU[2])
 
         # save results in container
         self.transit_time = transit
@@ -96,16 +95,14 @@ class SatelliteGeometry(Container):
 
 
 class SystemGeometry:
-    def __init__(self, nav_data, nav_header, epoch_data):
+    def __init__(self, nav_data, epoch_data):
         """
         Args:
             nav_data (src.data_types.containers.NavigationData.NavigationDataMap) : Navigation data map
-            nav_header (src.data_types.containers.NavigationData.NavigationHeader) : Valid navigation header
             epoch_data (src.data_types.containers.ObservationData.EpochData) : observation epoch data for
         """
         self._data = dict.fromkeys(epoch_data.get_satellites())
         self.nav_data = nav_data
-        self.nav_header = nav_header
         self.epoch_data = epoch_data
 
     def _clean(self):
@@ -129,7 +126,7 @@ class SystemGeometry:
             return getattr(self._data[sat], attribute)
         return None
 
-    def compute(self, epoch, receiver_position, receiver_clock: float, compute_TX_time,
+    def compute(self, epoch, receiver_position, receiver_clock, compute_tx_time,
                 main_datatype, relativistic_correction):
         """
         compute satellite-related quantities (tropo, iono, transmission time, etc.) to be used in the PVT observation
@@ -139,9 +136,9 @@ class SystemGeometry:
             epoch (src.data_types.basics.Epoch.Epoch) : epoch under evaluation
             receiver_position (src.data_types.state_space.statevector.Position) : Receiver position
             receiver_clock (float) : Receiver clock bias
-            compute_TX_time (function) : function to compute the transmission time
+            compute_tx_time (function) : function to compute the transmission time
             main_datatype (DataType) : Code observation to use in some computations
-            relativistic_correction (bool) : whether or not to compute relativistic correction
+            relativistic_correction (bool) : whether to compute relativistic correction
         """
         self._clean()
         _to_remove = []
@@ -162,7 +159,7 @@ class SystemGeometry:
                 continue
 
             geometry.compute(receiver_position, epoch, receiver_clock, nav_message,
-                             compute_TX_time, main_observation, relativistic_correction)
+                             compute_tx_time, main_observation, relativistic_correction)
 
             self._data[sat] = geometry
 
@@ -180,7 +177,8 @@ class SystemGeometry:
             list [float, float, float] : Line of sight for [x, y, z] axis of ECEF frame
 
         """
-
+        print("fix function get_unit_line_of_sight")
+        exit()
         receiver = self.get("receiver_position", sat)
         satellite = self.get("satellite_position", sat)
         true_range = self.get("true_range", sat)

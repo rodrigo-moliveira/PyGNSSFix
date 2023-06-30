@@ -1,13 +1,20 @@
 from numpy.linalg import norm
 
-#from PositioningSolver.src.gnss.observation_models import ephemeride_propagator
-#from PositioningSolver.src.gnss.state_space.utils import matrix_ECEF2ECI
-#from PositioningSolver.src.math_utils.Constants import Constant
+from src.models.frames.frames import dcm_e_i
+from src.models.observation.ephemeride_propagator import EphemeridePropagator, fix_gps_week_crossovers
+from src import constants
 
 # utility functions related to navigation clocks
 
 
-def compute_TX_time_geometric(r_receiver=None, t_reception=None, dt_receiver=None, nav_message=None, **kwargs):
+def compute_tx_time(model="tx_time_geometric", **kwargs):
+    if model == "tx_time_geometric":
+        return tx_time_geometric(kwargs)
+    elif model == "tx_time_pseudorange":
+        return tx_time_pseudorange(kwargs)
+
+
+def tx_time_geometric(r_receiver=None, t_reception=None, dt_receiver=None, nav_message=None):
     """
     Implements the algorithm to compute:
         * transit time (propagation time from signal transmission to reception)
@@ -48,15 +55,15 @@ def compute_TX_time_geometric(r_receiver=None, t_reception=None, dt_receiver=Non
     while residual > residual_th and N < max_iter:
         # 2. Get satellite coordinates
         t = t_reception + (-tau)
-        r_satellite, _ = ephemeride_propagator.EphemeridePropagator.compute(nav_message, t, False)
+        r_satellite, _ = EphemeridePropagator.compute(nav_message, t, False)
 
         # 3. Compute pseudorange (in ECEF frame associated to t_receiver epoch)
-        _R = matrix_ECEF2ECI(-tau)
+        _R = dcm_e_i(-tau)
         rho = norm(_R @ r_satellite - r_receiver)
         # LOS = (_R @ r_satellite - r_receiver) / rho
 
         # 4. Compute new tau [s]
-        tau = rho / Constant.SPEED_OF_LIGHT
+        tau = rho / constants.SPEED_OF_LIGHT
 
         # 5. Check convergence
         residual = abs(rho - rho_previous)
@@ -68,7 +75,7 @@ def compute_TX_time_geometric(r_receiver=None, t_reception=None, dt_receiver=Non
     return T_emission, tau
 
 
-def compute_TX_time_pseudorange(pseudorange_obs=None, t_reception=None, nav_message=None, TGD=None, **kwargs):
+def tx_time_pseudorange(pseudorange_obs=None, t_reception=None, nav_message=None, TGD=None):
     """
     Implements the algorithm to compute:
         * transit time (propagation time from signal transmission to reception)
@@ -90,9 +97,9 @@ def compute_TX_time_pseudorange(pseudorange_obs=None, t_reception=None, nav_mess
         tuple [src.data_types.basics.Epoch.Epoch, float] : computed TX epoch, computed transit time
     """
 
-    tau = pseudorange_obs.value / Constant.SPEED_OF_LIGHT
+    tau = pseudorange_obs.value / constants.SPEED_OF_LIGHT
     t_emission = t_reception + (-tau)  # t(emission)^{satellite} = t(reception)^{receiver} - tau
-    dt_sat, _ = SVBroadcastCorrection(nav_message.af0, nav_message.af1, nav_message.af2, nav_message.toc, t_emission)
+    dt_sat, _ = gps_broadcast_clock(nav_message.af0, nav_message.af1, nav_message.af2, nav_message.toc, t_emission)
 
     # correct for TGD (already corrected for the appropriate frequency, and is 0 for IF observables)
     dt_sat = dt_sat - TGD
@@ -102,7 +109,7 @@ def compute_TX_time_pseudorange(pseudorange_obs=None, t_reception=None, nav_mess
     return T_emission, tau
 
 
-def SVBroadcastCorrection(af0: float, af1: float, af2: float, toc: float, tx_raw: float) -> tuple[float, float]:
+def gps_broadcast_clock(af0: float, af1: float, af2: float, toc: float, tx_raw: float) -> tuple[float, float]:
     """
     The polynomial defined in the following allows the user to determine the effective SV PRN code phase offset
     referenced to the phase center of the antennas (Δt sv) with respect to GNSS system time (t) at the time of
@@ -129,8 +136,12 @@ def SVBroadcastCorrection(af0: float, af1: float, af2: float, toc: float, tx_raw
         tuple [float, float] : clock bias, clock drift
     """
 
-    dt = ephemeride_propagator.correct_gps_week_crossovers(tx_raw - toc)
+    dt = fix_gps_week_crossovers(tx_raw - toc)
     clock_bias = af0 + af1 * dt + af2 * dt * dt
     clock_drift = af1 + 2 * af2 * dt
 
     return clock_bias, clock_drift
+
+
+def gal_broadcast_clock():
+    pass

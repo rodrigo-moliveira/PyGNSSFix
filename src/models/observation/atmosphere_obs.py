@@ -1,15 +1,10 @@
 import numpy as np
-
 from math import sin, cos
 
-#from PositioningSolver.src.data_types.basics.DataType import DataTypeFactory
-#from PositioningSolver.src.math_utils.Constants import Constant
-
-#C1 = DataTypeFactory("C1")
-#f1 = C1.freq  # L1 frequency for GPS
+from src import constants
 
 
-def ionosphereCorrection(user_lat, user_long, sv_el, sv_az, alfa, beta, GPS_time, frequency):
+def iono_klobuchar(user_lat, user_long, sv_el, sv_az, alfa, beta, GPS_time, frequency):
     """
     This function computes the ionosphere correction of pseudorange measurements for online single frequency users,
     using the a priori Klobuchar Ionospheric Model
@@ -42,9 +37,9 @@ def ionosphereCorrection(user_lat, user_long, sv_el, sv_az, alfa, beta, GPS_time
     """
 
     # Get angles in semicircles
-    sv_el_semi = sv_el / Constant.PI
-    user_lat_semi = user_lat / Constant.PI
-    user_long_semi = user_long / Constant.PI
+    sv_el_semi = sv_el / constants.PI
+    user_lat_semi = user_lat / constants.PI
+    user_long_semi = user_long / constants.PI
 
     # Calculate the earth-centred angle (elevation in semicircles)
     psi = 0.0137 / (sv_el_semi + 0.11) - 0.022
@@ -57,14 +52,14 @@ def ionosphereCorrection(user_lat, user_long, sv_el, sv_az, alfa, beta, GPS_time
         lat_IPP = -0.416
 
     # Compute the longitude of the IPP
-    long_IPP = user_long_semi + (psi * sin(sv_az)) / cos(lat_IPP * Constant.PI)
+    long_IPP = user_long_semi + (psi * sin(sv_az)) / cos(lat_IPP * constants.PI)
 
     # Find the geomagnetic latitude of the IPP
-    lat_m = lat_IPP + 0.064 * cos((long_IPP - 1.617) * Constant.PI)
+    lat_m = lat_IPP + 0.064 * cos((long_IPP - 1.617) * constants.PI)
 
     # Find the local time at the IPP
-    t = Constant.SECONDS_IN_DAY / 2 * long_IPP + GPS_time.seconds
-    t = t % Constant.SECONDS_IN_DAY
+    t = constants.SECONDS_IN_DAY / 2 * long_IPP + GPS_time.seconds
+    t = t % constants.SECONDS_IN_DAY
 
     # Compute the amplitude of ionospheric delay.
     A_I = alfa[0] + alfa[1] * lat_m + alfa[2] * (lat_m ** 2) + alfa[3] * (lat_m ** 3)
@@ -77,7 +72,7 @@ def ionosphereCorrection(user_lat, user_long, sv_el, sv_az, alfa, beta, GPS_time
         P_I = 72000
 
     # Compute the phase of ionospheric delay
-    X_I = 2 * Constant.PI * (t - 50400) / P_I
+    X_I = 2 * constants.PI * (t - 50400) / P_I
 
     # Compute the slant factor (elevation in semicircles).
     F = 1.0 + 16.0 * (0.53 - sv_el_semi) ** 3
@@ -88,12 +83,8 @@ def ionosphereCorrection(user_lat, user_long, sv_el, sv_az, alfa, beta, GPS_time
     else:
         iono = (5E-9 + A_I * (1 - (X_I ** 2) / 2 + (X_I ** 4) / 24)) * F
 
-    # fix I for non L1 users
-    if frequency != f1:
-        iono = (f1.freq_value / frequency.freq_value) ** 2 * iono
-
     # get ionosphere in meters
-    iono = iono * Constant.SPEED_OF_LIGHT
+    iono = iono * constants.SPEED_OF_LIGHT
     return iono
 
 
@@ -115,7 +106,7 @@ P_season = np.array([[0.00,      0.00,   0.00,    0.00e-3,  0.00],
                      [-0.50,     14.50,  3.39,    0.62e-3,  0.30]])
 
 
-def troposphericCorrection(h, lat, DOY, el):
+def tropo_saastamoinen(h, lat, DOY, el):
     """
     This function computes the tropospheric correction of pseudorange measurements for online users,
     using the a priori Saastamoinen Model
@@ -138,7 +129,7 @@ def troposphericCorrection(h, lat, DOY, el):
     """
 
     # convert lat to degrees
-    lat = Constant.RAD2DEG * lat
+    lat = constants.RAD2DEG * lat
 
     if lat < 0:
         D_star = 211
