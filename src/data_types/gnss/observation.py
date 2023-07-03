@@ -31,7 +31,7 @@ class Observation:
         return self.datatype == other.datatype and self.value == other.value
 
     def __repr__(self):
-        return "Observation({} : {})".format(self.value, self.datatype)
+        return "Observation({} : {})".format(self.value, repr(self.datatype))
 
     # Algebraic methods to allow an Observation object to be treated as a float
     def __add__(self, other):

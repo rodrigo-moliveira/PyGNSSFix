@@ -9,3 +9,4 @@ High-level plan:
 * Adicionar processamento de GAL
 * Dual-constellation PPPP
 * Adicionar Kalman filter com user dynamics (kinematic + reduced-dynamic positioning)
+* processar range rate

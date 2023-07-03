@@ -26,11 +26,28 @@ class EnumOnOff(Enum):
 class EnumIono(Enum):
     DISABLED = 0
     APRIORI = 1
-    IONO_FREE = 2
 
     @classmethod
     def show_options(cls):
-        return f"[0 - DISABLED, 1 - A PRIORI METHOD, 2 - IONO FREE COMBINATIONS]"
+        return f"[0 - DISABLED, 1 - A PRIORI METHOD]"
+
+
+class EnumCombined(Enum):
+    UNCOMBINED_MODEL = 0
+    COMBINED_MODEL = 1
+
+    @classmethod
+    def show_options(cls):
+        return f"[0 - UNCOMBINED OBSERVATIONS MODEL, 1 - COMBINED OBSERVATIONS MODEL]"
+
+
+class EnumModel(Enum):
+    SINGLE_FREQ = 0
+    DUAL_FREQ = 1
+
+    @classmethod
+    def show_options(cls):
+        return f"[0 - SINGLE FREQUENCY MODEL, 1 - DUAL FREQUENCY MODEL]"
 
 
 class EnumTropo(Enum):

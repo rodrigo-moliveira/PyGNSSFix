@@ -72,7 +72,7 @@ class GnssAlgorithmManager:
         return True
 
     def run(self):
-        main_log = get_logger("GNSS_ALG")
+        main_log = get_logger("MAIN_LOG")
 
         # start algorithm
         main_log.info(f"Running {str(self.algorithm)}")

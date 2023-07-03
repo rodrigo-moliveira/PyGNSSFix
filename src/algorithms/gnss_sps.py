@@ -17,7 +17,7 @@ class GnssSinglePointSolution(Algorithm):
         return f"Algorithm({self.name})"
 
     def compute(self, data_manager, trace_path):
-        log = get_logger("GNSS_ALG")
+        log = get_logger("MAIN_LOG")
 
         # get the input raw obs data
         raw_obs_data = data_manager.get_data("obs_data")

@@ -95,7 +95,7 @@ class EpochData:
     def get_satellites(self):
         return list(self._data.keys())
 
-    def get_sats_for_datatypes(self, *datatype_list):
+    def get_sats_for_datatypes(self, datatype_list):
         sat_list = []
 
         for sat in self.get_satellites():
@@ -103,7 +103,7 @@ class EpochData:
 
             # iterate over all requested types
             for datatype in datatype_list:
-                if not self.has_observable(sat, datatype):
+                if datatype is not None and not self.has_observable(sat, datatype):
                     has_type = False  # we found out that actually this satellites does NOT have this type
 
             # if this satellite has data for all requested datatypes, append to the list
@@ -173,7 +173,7 @@ class ObservationData:
 
     def __init__(self):
         self._data = TimeSeries()
-        self._types = []
+        self._types = {"GPS": [], "GAL": []}
         self._satellites = []
         self.header = ObservationHeader()
 
@@ -224,14 +224,14 @@ class ObservationData:
         epoch_data.set_observable(satellite, obs)
 
         # append this obs type to the list
-        if obs.datatype not in self._types:
-            self._types.append(obs.datatype)
+        if obs.datatype not in self._types[satellite.sat_system]:
+            self._types[satellite.sat_system].append(obs.datatype)
 
         if satellite not in self._satellites:
             self._satellites.append(satellite)
 
     def has_type(self, datatype):
-        return datatype in self._types
+        return datatype in self._types[datatype.constellation]
 
     def has_satellite(self, satellite):
         return satellite in self._satellites
@@ -333,8 +333,15 @@ class ObservationData:
     def get_satellites(self):
         return self._satellites
 
-    def get_types(self):
-        return self._types
+    def get_types(self, constellation):
+        return self._types[constellation]
+
+    def get_code_types(self, constellation):
+        types = list(self.get_types(constellation))
+        for t in types:
+            if not DataType.is_code(t):
+                types.remove(t)
+        return types
 
     def get_satellite_list(self):
         return [str(sat) for sat in self._satellites]

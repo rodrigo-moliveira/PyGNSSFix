@@ -75,6 +75,13 @@ class DataType:
             raise AttributeError(f"The provided datatype {str(self)} has no attribute '_data_type'")
 
     @property
+    def constellation(self):
+        if hasattr(self, "_constellation"):
+            return self._constellation
+        else:
+            raise AttributeError(f"The provided datatype {str(self)} has no attribute '_constellation'")
+
+    @property
     def freq(self):
         if hasattr(self, "_freq"):
             return self._freq
@@ -104,7 +111,7 @@ class DataType:
 
     @staticmethod
     def is_code(data_type):
-        return data_type in cAvailableCodes
+        return data_type in cAvailableCodes or data_type in cAvailableIonoFreeCodes
 
     @staticmethod
     def is_iono_free_code(data_type):

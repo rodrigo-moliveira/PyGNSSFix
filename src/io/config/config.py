@@ -5,7 +5,7 @@ details.
 """
 
 from src.errors import ConfigError
-from src.io.config.enums import EnumIono
+from src.io.config.enums import EnumCombined
 
 
 class Config(dict):
@@ -98,8 +98,11 @@ class Config(dict):
         return services
 
     def is_iono_free(self, constellation):
-        iono_model = EnumIono(self.get("model", constellation, "ionosphere"))
-        return iono_model == EnumIono.IONO_FREE
+        """
+        Returns true if user selected combined observation model (compute iono free observations)
+        """
+        combined_model = EnumCombined(self.get("model", constellation, "combined"))
+        return combined_model == EnumCombined.COMBINED_MODEL
 
 
 config_dict = Config()

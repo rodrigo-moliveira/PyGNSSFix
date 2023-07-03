@@ -160,3 +160,13 @@ class PreprocessorError(PyGNSSFixError):
         # Call the base class constructor with the parameters it needs
         message = "Preprocessor Error -> " + message
         super().__init__(message)
+
+
+class PVTComputationFail(PyGNSSFixError):
+    """Error in PVT Computation"""
+    __module__ = MODULE
+
+    def __init__(self, message):
+        # Call the base class constructor with the parameters it needs
+        message = "Error in PVT Computation -> " + message
+        super().__init__(message)

@@ -142,9 +142,9 @@ class SystemGeometry:
         """
         self._clean()
         _to_remove = []
-        vSatellites = self.get_satellites()
+        sat_list = self.get_satellites()
 
-        for sat in vSatellites:
+        for sat in sat_list:
             geometry = SatelliteGeometry()
 
             # fetch navigation message for this satellite
