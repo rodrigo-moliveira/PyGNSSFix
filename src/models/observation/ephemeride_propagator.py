@@ -104,6 +104,8 @@ class EphemeridePropagator:
 
         table 20-III [sec 20.3.3.4.3] of **REF[3]**
         """
+        # unpack week and seconds of week
+        _, sow = epoch
 
         # fetch navigation inputs
         M0 = getattr(nav_message, "M0")
@@ -121,7 +123,8 @@ class EphemeridePropagator:
         iDot = getattr(nav_message, "iDot")
         cic = getattr(nav_message, "cic")
         cis = getattr(nav_message, "cis")
-        toe = getattr(nav_message, "toe")
+        toe = getattr(nav_message, "toe")[1]  # to get seconds of week for TOE
+
         # toc = getattr(navPoint, "toc")
         # af0 = getattr(navPoint, "af0")
         # af1 = getattr(navPoint, "af1")
@@ -136,7 +139,7 @@ class EphemeridePropagator:
         n = sqrt(constants.MU / A_3)
 
         # time from ephemeris reference epoch (correct for beginning / end of week crossovers)
-        dt = epoch - toe
+        dt = sow - toe
         dt = fix_gps_week_crossovers(dt)
 
         # corrected mean motion
@@ -169,7 +172,7 @@ class EphemeridePropagator:
         y_orbital = radius * sin(u)
 
         # corrected RAAN
-        RAAN = RAAN0 + (RAANDot - constants.EARTH_ROTATION) * dt - constants.EARTH_ROTATION * toe.seconds
+        RAAN = RAAN0 + (RAANDot - constants.EARTH_ROTATION) * dt - constants.EARTH_ROTATION * toe
 
         # ECEF coordinates
         x_ECEF = x_orbital * cos(RAAN) - y_orbital * cos(i) * sin(RAAN)

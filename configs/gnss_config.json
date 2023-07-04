@@ -89,7 +89,7 @@
       "stop_criteria": 0.0002,
 
       "_comment6": "Select algorithm to compute the transmission time: 0 - geometric, 1 - pseudorange",
-      "transmission_time_alg": 1,
+      "transmission_time_alg": 0,
 
       "_comment34": "Enable / disable relativistic corrections: 0 - disable, 1 - enable",
       "relativistic_corrections": 1,

@@ -140,13 +140,16 @@ class Epoch:
     MJD_T0 = datetime(1858, 11, 17)
     """Origin of MJD"""
 
+    GPS_ORIGIN = datetime(1980, 1, 6, 0, 0, 0)
+    """Origin of GPST (6th January 1980 00:00:00 midnight)"""
+
     JD_MJD = 2400000.5
     """Offset between JD and MJD"""
 
     J2000 = 2451545.0
     """Offset between JD and J2000"""
 
-    REF_SCALE = "UT1"
+    REF_SCALE = "GPS"
     """Scale used as reference internally"""
 
     DEFAULT_SCALE = "UTC"
@@ -421,6 +424,25 @@ class Epoch:
     def range(cls, *args, **kwargs):
         """See :py:class:`DateRange` for arguments and documentation"""
         return DateRange(*args, **kwargs)
+
+    @property
+    def gps_time(self):
+        """
+        Computes GPS Time GPST (Week number and Seconds of Week) for this Epoch
+        The origin of GPST (week = 0, seconds of week = 0) is 6 January 1980 at 00:00 midnight
+        """
+        # convert this epoch to GPS Time
+        gps_epoch = self.change_scale("GPS")
+        dt = (gps_epoch - Epoch.GPS_ORIGIN).total_seconds()
+        week = (dt/3600/24) // 7
+        sow = dt - week*3600*24*7
+        return int(week), sow
+
+    @property
+    def gal_time(self):
+        """Computes GAL Time GST (Week number and Seconds of Week) for this Epoch"""
+
+        return 0, 0
 
 
 class DateRange:

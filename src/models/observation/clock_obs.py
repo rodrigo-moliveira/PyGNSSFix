@@ -1,5 +1,8 @@
+from datetime import timedelta
+
 from numpy.linalg import norm
 
+from src.io.config.enums import EnumTransmissionTime
 from src.models.frames.frames import dcm_e_i
 from src.models.observation.ephemeride_propagator import EphemeridePropagator, fix_gps_week_crossovers
 from src import constants
@@ -7,14 +10,14 @@ from src import constants
 # utility functions related to navigation clocks
 
 
-def compute_tx_time(model="tx_time_geometric", **kwargs):
-    if model == "tx_time_geometric":
-        return tx_time_geometric(kwargs)
-    elif model == "tx_time_pseudorange":
-        return tx_time_pseudorange(kwargs)
+def compute_tx_time(model=None, **kwargs):
+    if model == EnumTransmissionTime.GEOMETRIC:
+        return tx_time_geometric(**kwargs)
+    elif model == EnumTransmissionTime.PSEUDORANGE:
+        return tx_time_pseudorange(**kwargs)
 
 
-def tx_time_geometric(r_receiver=None, t_reception=None, dt_receiver=None, nav_message=None):
+def tx_time_geometric(r_receiver=None, t_reception=None, dt_receiver=None, nav_message=None, **kwargs):
     """
     Implements the algorithm to compute:
         * transit time (propagation time from signal transmission to reception)
@@ -54,8 +57,8 @@ def tx_time_geometric(r_receiver=None, t_reception=None, dt_receiver=None, nav_m
 
     while residual > residual_th and N < max_iter:
         # 2. Get satellite coordinates
-        t = t_reception + (-tau)
-        r_satellite, _ = EphemeridePropagator.compute(nav_message, t, False)
+        t = t_reception + timedelta(seconds=-tau)
+        r_satellite, _ = EphemeridePropagator.compute(nav_message, t.gps_time, False)
 
         # 3. Compute pseudorange (in ECEF frame associated to t_receiver epoch)
         _R = dcm_e_i(-tau)
@@ -71,11 +74,11 @@ def tx_time_geometric(r_receiver=None, t_reception=None, dt_receiver=None, nav_m
         N += 1
 
     # compute transmission time, using Eq. (5.9)
-    T_emission = t_reception + (-tau) + (-dt_receiver)
+    T_emission = t_reception + timedelta(seconds=-tau-dt_receiver)
     return T_emission, tau
 
 
-def tx_time_pseudorange(pseudorange_obs=None, t_reception=None, nav_message=None, TGD=None):
+def tx_time_pseudorange(pseudorange_obs=None, t_reception=None, nav_message=None, TGD=None, **kwargs):
     """
     Implements the algorithm to compute:
         * transit time (propagation time from signal transmission to reception)
@@ -98,14 +101,17 @@ def tx_time_pseudorange(pseudorange_obs=None, t_reception=None, nav_message=None
     """
 
     tau = pseudorange_obs.value / constants.SPEED_OF_LIGHT
-    t_emission = t_reception + (-tau)  # t(emission)^{satellite} = t(reception)^{receiver} - tau
-    dt_sat, _ = gps_broadcast_clock(nav_message.af0, nav_message.af1, nav_message.af2, nav_message.toc, t_emission)
+    t_emission = t_reception + timedelta(seconds=-tau)  # t(emission)^{satellite} = t(reception)^{receiver} - tau
+    dt_sat, _ = gps_broadcast_clock(nav_message.af0, nav_message.af1, nav_message.af2,
+                                    nav_message.toc.gps_time[1],  # to get seconds of week
+                                    t_emission.gps_time[1]  # to get seconds of week
+                                    )
 
     # correct for TGD (already corrected for the appropriate frequency, and is 0 for IF observables)
     dt_sat = dt_sat - TGD
 
     # compute transmission time, using Eq. (5.6)
-    T_emission = t_emission + (-dt_sat)  # t(emission)^{GPS} = t(emission)^{satellite} - dt_sat
+    T_emission = t_emission + timedelta(seconds=-dt_sat)  # t(emission)^{GPS} = t(emission)^{satellite} - dt_sat
     return T_emission, tau
 
 
@@ -135,7 +141,6 @@ def gps_broadcast_clock(af0: float, af1: float, af2: float, toc: float, tx_raw: 
     Return:
         tuple [float, float] : clock bias, clock drift
     """
-
     dt = fix_gps_week_crossovers(tx_raw - toc)
     clock_bias = af0 + af1 * dt + af2 * dt * dt
     clock_drift = af1 + 2 * af2 * dt

@@ -332,12 +332,16 @@ class SimpleEopDatabase:
     """
 
     def __init__(self):
-        from src import config, WORKSPACE_PATH
+        from src import WORKSPACE_PATH
+        from src.io.config import config_dict
+
+        leap_file = config_dict.get("inputs", "leap_file")
+        finals_file = config_dict.get("inputs", "finals_file")
 
         # Data reading
-        f = Finals(WORKSPACE_PATH / f"{config.inputs.finals}")
+        f = Finals(WORKSPACE_PATH / f"{finals_file}")
         # f2 = Finals2000A(WORKSPACE_PATH / f"finals2000A")
-        t = TaiUtc(WORKSPACE_PATH / f"{config.inputs.leap_seconds}")
+        t = TaiUtc(WORKSPACE_PATH / f"{leap_file}")
 
         # Extracting data from finals files
         self._finals = {}

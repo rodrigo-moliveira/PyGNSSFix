@@ -3,6 +3,7 @@ import numpy as np
 
 from src.algorithms.gnss.estimators.state_space import GnssStateSpace
 from src.common_log import get_logger
+from src.data_types.date import Epoch
 from src.errors import PVTComputationFail
 from src.io.config import config_dict
 from src.io.config.enums import *
@@ -170,8 +171,10 @@ class GnssSolver:
         epochs = self.obs_data.get_epochs()
 
         # initialize receiver_position
-        state = GnssStateSpace(position=self._info["INITIAL_POS"],
-                               clock_bias=self._info["INITIAL_CLOCK_BIAS"])
+        initial_pos = self._info["INITIAL_POS"][0:3]
+        initial_clock = self._info["INITIAL_CLOCK_BIAS"][0]
+        state = GnssStateSpace(position=initial_pos,
+                               clock_bias=initial_clock)
 
         # iterate over all available epochs
         for epoch in epochs:
@@ -239,11 +242,9 @@ class GnssSolver:
         while iteration < self._info["MAX_ITER"]:
 
             # compute geometry-related data for each satellite link
-            print("computing system geometry")
             system_geometry.compute(epoch, state.position, state.clock_bias, self._info["TX_TIME_ALG"],
                                     gps_codes[0], self._info["REL_CORRECTION"])
-            print("computed yes!!")
-            exit()
+
             # solve the Least Squares
             try:
                 if model == 0:
