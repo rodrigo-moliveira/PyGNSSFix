@@ -104,6 +104,7 @@ class EphemeridePropagator:
 
         table 20-III [sec 20.3.3.4.3] of **REF[3]**
         """
+        # TODO: a correcao GPST / GST poderá ser aqui
         # unpack week and seconds of week
         _, sow = epoch
 

@@ -33,10 +33,10 @@
    },
 
    "model": {
-      "constellations": ["GPS", "GAL"],
+      "constellations": ["GPS"],
 
       "GPS": {
-         "observations": ["1C", "2W"],
+         "observations": ["1C"],
          "obs_std": [1, 1],
 
          "_comment0": "Select true to build combined observations (iono free combination), requires 2 observations",

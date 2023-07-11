@@ -159,6 +159,7 @@ class EpochData:
                 obj.set_observable(sat, obs.copy())
         return obj
 
+
 class ObservationData:
     """
     Class ObservationData
@@ -386,3 +387,10 @@ class ObservationData:
                     observables = epoch_data.get_observables(sat)
                     for obs in observables:
                         self.set_observation(epoch, sat, obs)
+
+    def get_constellations(self):
+        consts = []
+        for sat in self.get_satellites():
+            if sat.sat_system not in consts:
+                consts.append(sat.sat_system)
+        return consts

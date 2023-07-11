@@ -11,6 +11,7 @@ from src import constants
 
 
 def compute_tx_time(model=None, **kwargs):
+    # TODO: a correcao GPST / GST poderá ser aqui
     if model == EnumTransmissionTime.GEOMETRIC:
         return tx_time_geometric(**kwargs)
     elif model == EnumTransmissionTime.PSEUDORANGE:

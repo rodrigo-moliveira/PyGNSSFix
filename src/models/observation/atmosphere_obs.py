@@ -4,7 +4,7 @@ from math import sin, cos
 from src import constants
 
 
-def iono_klobuchar(user_lat, user_long, sv_el, sv_az, alfa, beta, GPS_time, frequency):
+def iono_klobuchar(user_lat, user_long, sv_el, sv_az, alfa, beta, gps_sow):
     """
     This function computes the ionosphere correction of pseudorange measurements for online single frequency users,
     using the a priori Klobuchar Ionospheric Model
@@ -24,8 +24,7 @@ def iono_klobuchar(user_lat, user_long, sv_el, sv_az, alfa, beta, GPS_time, freq
         sv_az (float) : satellite azimuth [rad]
         alfa (list) : list of alfa parameters, length 4
         beta (list) : list of beta parameters, length 4
-        GPS_time (src.data_types.basics.Epoch.Epoch) : GPS epoch to compute the iono
-        frequency (src.data_types.basics.DataType.DataType) : user frequency (the iono is frequency dependent)
+        gps_sow (src.data_types.basics.Epoch.Epoch) : GPS seconds of week to compute the iono
 
 
     Ionosphere delay is frequency dependent. The algorithm gives the delay with respect to the L1 frequency. For L2 / L5
@@ -58,7 +57,7 @@ def iono_klobuchar(user_lat, user_long, sv_el, sv_az, alfa, beta, GPS_time, freq
     lat_m = lat_IPP + 0.064 * cos((long_IPP - 1.617) * constants.PI)
 
     # Find the local time at the IPP
-    t = constants.SECONDS_IN_DAY / 2 * long_IPP + GPS_time.seconds
+    t = constants.SECONDS_IN_DAY / 2 * long_IPP + gps_sow
     t = t % constants.SECONDS_IN_DAY
 
     # Compute the amplitude of ionospheric delay.
@@ -106,7 +105,7 @@ P_season = np.array([[0.00,      0.00,   0.00,    0.00e-3,  0.00],
                      [-0.50,     14.50,  3.39,    0.62e-3,  0.30]])
 
 
-def tropo_saastamoinen(h, lat, DOY, el):
+def tropo_saastamoinen(h, lat, doy, el):
     """
     This function computes the tropospheric correction of pseudorange measurements for online users,
     using the a priori Saastamoinen Model
@@ -119,7 +118,7 @@ def tropo_saastamoinen(h, lat, DOY, el):
     Args:
         h (float) : user altitude (geodetic coordinate)     [m]
         lat (float) : user latitude (geodetic coordinate)   [rad]
-        DOY (float) : Day of the year (from 1 to 365)       [1 - 365]
+        doy (float) : Day of the year (from 1 to 365)       [1 - 365]
         el (float) : user elevation                         [rad]
 
     Return:
@@ -152,7 +151,7 @@ def tropo_saastamoinen(h, lat, DOY, el):
         P0 = P_mean[_i] + (P_mean[_i + 1] - P_mean[_i]) * m
         DP = P_season[_i] + (P_season[_i + 1] - P_season[_i]) * m
 
-    Par = P0 - DP * cos(2 * np.pi * (DOY - D_star) / 365.25)
+    Par = P0 - DP * cos(2 * np.pi * (doy - D_star) / 365.25)
 
     P, T, e, beta, Lambda = Par[:]
 

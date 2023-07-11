@@ -177,19 +177,12 @@ class SystemGeometry:
             list [float, float, float] : Line of sight for [x, y, z] axis of ECEF frame
 
         """
-        print("fix function get_unit_line_of_sight")
-        exit()
+
         receiver = self.get("receiver_position", sat)
         satellite = self.get("satellite_position", sat)
         true_range = self.get("true_range", sat)
 
-        # force cartesian form
-        receiver.form = "cartesian"
-        satellite.form = "cartesian"
-
-        LOS = [(receiver[i] - satellite[i]) / true_range for i in (0, 1, 2)]
-
-        return LOS
+        return [(receiver[i] - satellite[i]) / true_range for i in (0, 1, 2)]
 
     def __str__(self):
         return str(self._data)

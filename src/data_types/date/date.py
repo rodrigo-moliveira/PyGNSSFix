@@ -431,19 +431,27 @@ class Epoch:
         Computes GPS Time GPST (Week number and Seconds of Week) for this Epoch
         The origin of GPST (week = 0, seconds of week = 0) is 6 January 1980 at 00:00 midnight
         """
-        # convert this epoch to GPS Time
-        gps_epoch = self.change_scale("GPS")
-        dt = (gps_epoch - Epoch.GPS_ORIGIN).total_seconds()
-        week = (dt/3600/24) // 7
-        sow = dt - week*3600*24*7
-        return int(week), sow
+        if "gps_time" not in self._cache.keys():
+            # convert this epoch to GPS Time
+            gps_epoch = self.change_scale("GPS")
+            dt = (gps_epoch - Epoch.GPS_ORIGIN).total_seconds()
+            week = (dt/3600/24) // 7
+            sow = dt - week*3600*24*7
+            self._cache["gps_time"] = (int(week), sow)
+        return self._cache["gps_time"]
 
     @property
     def gal_time(self):
         """Computes GAL Time GST (Week number and Seconds of Week) for this Epoch"""
-
+        # TODO implement this
         return 0, 0
 
+    @property
+    def doy(self):
+        """Computes day of year"""
+        if "doy" not in self._cache.keys():
+            self._cache["doy"] = self.datetime.timetuple().tm_yday
+        return self._cache["doy"]
 
 class DateRange:
     """Object representing a range of Date objects
