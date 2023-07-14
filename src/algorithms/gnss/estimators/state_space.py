@@ -4,7 +4,7 @@ from src.data_mng.container import Container
 
 
 class GnssStateSpace(Container):
-    __slots__ = ["position", "velocity", "clock_bias", "iono", "ISB", "date"]
+    __slots__ = ["position", "velocity", "clock_bias", "iono", "ISB", "date", "_info"]
 
     def __init__(self, **kwargs):
         super().__init__()
@@ -20,6 +20,8 @@ class GnssStateSpace(Container):
 
         # time tag
         self.date = kwargs.get("date", None)
+
+        self._info = dict()
 
     def __str__(self):
         _str = f"position = {self.position}, " \
@@ -49,3 +51,11 @@ class GnssStateSpace(Container):
             n += len(self.velocity)
 
         return n
+
+    def add_solver_info(self, arg, val):
+        self._info[arg] = val
+
+    def get_solver_info(self, arg):
+        if arg in self._info:
+            return self._info[arg]
+        return None

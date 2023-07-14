@@ -5,7 +5,6 @@ from src.algorithms.gnss.estimators.state_space import GnssStateSpace
 from src.algorithms.gnss.estimators.weighted_ls import WeightedLeastSquares
 from src.algorithms.gnss.solver.obs_reconstructor import ObservationReconstruction
 from src.common_log import get_logger
-from src.data_types.date import Epoch
 from src.errors import PVTComputationFail
 from src.io.config import config_dict
 from src.io.config.enums import *
@@ -105,6 +104,9 @@ class GnssSolver:
         # user configurations
         self._set_solver_info(config_dict)
 
+        # solution dict
+        self.solution = {}
+
     def _set_solver_info(self, config):
 
         # Fetching user options
@@ -133,12 +135,12 @@ class GnssSolver:
             code_types = self.obs_data.get_code_types(const)
             if len(code_types) > 1 and COMBINED_OBS_MODEL[const] == EnumCombined.UNCOMBINED_MODEL:
                 # Dual-Frequency Model
-                self.log.info(f"Dual-Frequency Model for constellation {const} and {COMBINED_OBS_MODEL[const]}")
+                self.log.info(f"Selected model for {const} is Dual-Frequency and {repr(COMBINED_OBS_MODEL[const])}")
                 MODEL[const] = EnumModel.DUAL_FREQ
                 CODES[const] = [code_types[0], code_types[1]]  # setting main and second code type
             else:
                 # Single-Frequency Model
-                self.log.info(f"Single-Frequency Model for constellation {const} and {COMBINED_OBS_MODEL[const]}")
+                self.log.info(f"Selected model for {const} is Single-Frequency and {repr(COMBINED_OBS_MODEL[const])}")
                 MODEL[const] = EnumModel.SINGLE_FREQ
                 CODES[const] = [code_types[0], None]
 
@@ -159,17 +161,6 @@ class GnssSolver:
         }
 
     def solve(self):
-        """
-        Output dict:
-            receiver_pos (src.data_types.containers.TimeSeries.TimeSeries) : receiver position output timeseries store
-            receiver_bias (src.data_types.containers.TimeSeries.TimeSeries) : receiver clock bias output timeseries
-            estimated_iono (src.data_types.containers.TimeSeries.TimeSeries) : estimated ionosphere (for dual-frequency)
-            prefit_residuals (src.data_types.containers.TimeSeries.TimeSeries) : prefit residuals output
-            postfit_residuals (src.data_types.containers.TimeSeries.TimeSeries) : postfit residuals output
-            DOPs (src.data_types.data_types.DOP.DOP) : DOPs output timeseries
-            sat_info (src.data_types.containers.TimeSeries.TimeSeries) : satellite info time series
-        """
-
         # available epochs
         epochs = self.obs_data.get_epochs()
 
@@ -189,26 +180,18 @@ class GnssSolver:
                                    clock_bias=state.clock_bias,
                                    date=epoch)
             # call lower level of solve
-            _solver_info = self._solve(epoch, epoch_data, state)
+            success = self._solve(epoch, epoch_data, state)
 
-            """ Re-add this later!!!
             if success:
                 # add solution to Output timeseries
-                self.log.info(f"Successfully solved positioning for epoch {epoch.to_time_stamp()} with "
-                              f"RMS = {RMS} [m]")
+                self.log.info(f"Successfully solved positioning for epoch {str(epoch)} with "
+                              f"RMS = {state.get_solver_info('rms')} [m]")
 
                 # store data for this epoch
-                receiver_pos.set_data(epoch, state.receiver_position)
-                receiver_bias.set_data(epoch, state.receiver_clock)
-                if state.iono:
-                    estimated_iono.set_data(epoch, state.iono)
-                sat_info.set_data(epoch, _debug_info.get("geometry", None))
-                DOPs.set_dop(epoch, "matrix", _debug_info.get("DOP", None))
-                prefit_residuals.set_data(epoch, _debug_info.get("prefit", None))
-                postfit_residuals.set_data(epoch, _debug_info.get("postfit", None))
+                self.solution[epoch] = state
+
             else:
-                self.log.warning(f"PVT failed to converge for epoch {epoch.to_time_stamp()}. "
-                                 f"No solution will be computed for this epoch.")"""
+                self.log.warning(f"No solution computed for epoch {str(epoch)}.")
 
         self.log.info("Successfully ending module GNSS Positioning Solver...")
 
@@ -218,11 +201,12 @@ class GnssSolver:
 
     def _solve(self, epoch, epoch_data, state):
         # begin iterative process for this epoch
-        _solver_info = {}
         iteration = 0
         success = False
-        rms_prev = 1
+        rms = rms_prev = 1
         dop = prefit_residuals = postfit_residuals = None
+
+        # TODO: tmp -> this needs to be revisited
         gps_model = self._info['MODEL']['GPS']
         gps_obs_model = self._info['COMBINED_OBS_MODEL']['GPS']
         gps_codes = self._info['CODES']['GPS']
@@ -230,14 +214,15 @@ class GnssSolver:
         # build system geometry for this epoch
         system_geometry = SystemGeometry(self.nav_data, epoch_data)
 
-        # check which model to use (Single Frequency / Dual Frequency / not enough data)
+        # check data availability for this epoch
         data_available = self._check_model_availability(system_geometry, epoch_data, epoch)
 
         if not data_available:
-            return False, 0  # not enough data to process this epoch
+            # the log message is issued in self._check_model_availability
+            return False  # not enough data to process this epoch
 
-        self.log.info(f"Processing {str(epoch)} with model GPS {gps_model} - {gps_obs_model}. Available Satellites: "
-                      f"{system_geometry.get_satellites()}")
+        self.log.info(f"Processing epoch {str(epoch)}")
+        self.log.debug(f"Available Satellites: {system_geometry.get_satellites()}")
 
         # Iterated Least-Squares algorithm
         # Note: in the eventuality of implementing other filters, e.g.: Kalman Filter, then we need to branch
@@ -249,8 +234,7 @@ class GnssSolver:
 
             # solve the Least Squares
             try:
-                postfit_residuals, DOP, prefit_residuals = self._solve_LS(system_geometry, epoch_data, state, epoch)
-                print(f"epoch {str(epoch)} iteration {iteration} state {state.position}")
+                postfit_residuals, dop, prefit_residuals = self._solve_LS(system_geometry, epoch_data, state, epoch)
             except PVTComputationFail as e:
                 self.log.warning(f"Least Squares failed for {str(epoch)} on iteration {iteration}."
                                  f"Reason: {e}")
@@ -261,7 +245,7 @@ class GnssSolver:
 
             # check stop condition
             if self._stop(rms_prev, rms, self._info["STOP_CRITERIA"]):
-                self.log.info(f"Least Squares was successful. Reached convergence at iteration {iteration}")
+                self.log.debug(f"Least Squares was successful. Reached convergence at iteration {iteration}")
                 success = True
                 break
 
@@ -269,13 +253,20 @@ class GnssSolver:
             rms_prev = rms
             iteration += 1
 
-        # save debug_info
-        _solver_info["geometry"] = system_geometry
-        _solver_info["DOP"] = dop
-        _solver_info["prefit"] = prefit_residuals
-        _solver_info["postfit"] = postfit_residuals
-        _solver_info["success"] = success
-        return _solver_info
+        # end of iterative procedure
+        if iteration == self._info["MAX_ITER"]:
+            self.log.warning(f"PVT failed to converge for epoch {str(epoch)}, with RMS={rms}. "
+                             f"No solution will be computed for this epoch.")
+            return False
+
+        # save other iteration data to state variable
+        state.add_solver_info("geometry", system_geometry)
+        state.add_solver_info("DOP", dop)
+        state.add_solver_info("prefit_residuals", prefit_residuals)
+        state.add_solver_info("postfit_residuals", postfit_residuals)
+        state.add_solver_info("rms", rms)
+
+        return success
 
     def _solve_LS(self, system_geometry, epoch_data, state, epoch):
         # initializations
@@ -337,6 +328,7 @@ class GnssSolver:
         # update state vector with incremental dX
         state.position += dX[0:3]
         state.clock_bias = dX[3] / constants.SPEED_OF_LIGHT  # receiver clock in seconds
+        # TODO: state ISB, state iono
 
         # get post-fit residuals
         post_fit = y - G[:, 0:3] @ dX[0:3]
@@ -436,6 +428,7 @@ class GnssSolver:
 
         """
         # TODO: currently only GPS is processed. This will need to be revisited
+        # TODO: esta é a ordem certa para dual frequency? se calhar o check tem de ser depois de eliminar os dados
         model = self._info["MODEL"]["GPS"]
         codes = self._info["CODES"]["GPS"]
         MIN_SAT = 4
@@ -443,7 +436,7 @@ class GnssSolver:
         sat_list = epoch_data.get_sats_for_datatypes(codes)
         if len(sat_list) < MIN_SAT:
             self.log.warning(
-                f"Not enough satellites to compute the {model} PVT positioning at {str(epoch)}."
+                f"Not enough satellites to compute model {model} PVT positioning at {str(epoch)}. "
                 f"Available satellites with data for codes {codes}: "
                 f"{sat_list}. Minimum number of satellites is {MIN_SAT}. Aborting the solution for this epoch...")
             return False
@@ -461,26 +454,24 @@ class GnssSolver:
                               f"inconsistencies in code data for both frequencies")
         return True
 
-    def _elevation_filter(self, system_geometry, iteration):
-        # TODO: re-add this
-        # only apply the filter after iteration 3
-        if iteration > 3:
+    def _elevation_filter(self, system_geometry):
+        # TODO: re-add this on last iteration
 
-            # get elevation threshold in radians
-            sats_to_remove = []
-            threshold = self._info["ELEVATION_FILTER"]
-            for sat, sat_info in system_geometry.items():
+        # get elevation threshold in radians
+        sats_to_remove = []
+        threshold = self._info["ELEVATION_FILTER"]
+        for sat, sat_info in system_geometry.items():
 
-                if sat_info.el * constants.RAD2DEG < threshold:
-                    sats_to_remove.append(sat)
-                    # self.log.debug(f"Removing satellite {sat} in iteration {iteration} due to elevation filter. "
-                    #               f"Minimum threshold is {threshold} "
-                    #               f"[deg], computed elevation is {sat_info.el * Constant.RAD2DEG} [deg]")
+            if sat_info.el * constants.RAD2DEG < threshold:
+                sats_to_remove.append(sat)
+                # self.log.debug(f"Removing satellite {sat} in iteration {iteration} due to elevation filter. "
+                #               f"Minimum threshold is {threshold} "
+                #               f"[deg], computed elevation is {sat_info.el * Constant.RAD2DEG} [deg]")
 
-            # remove flagged satellites
-            for sat in sats_to_remove:
-                system_geometry.remove(sat)
+        # remove flagged satellites
+        for sat in sats_to_remove:
+            system_geometry.remove(sat)
 
-            if sats_to_remove:
-                self.log.debug(f"Removing satellites {sats_to_remove} in iteration {iteration} due to "
-                               f"elevation filter. ")
+        if sats_to_remove:
+            self.log.debug(f"Removing satellites {sats_to_remove} in iteration {iteration} due to "
+                           f"elevation filter. ")

@@ -40,6 +40,12 @@ class EnumCombined(Enum):
     def show_options(cls):
         return f"[0 - UNCOMBINED OBSERVATIONS MODEL, 1 - COMBINED OBSERVATIONS MODEL]"
 
+    def __repr__(self):
+        if self == EnumCombined.COMBINED_MODEL:
+            return "Combined Model (Iono-Free Observation)"
+        if self == EnumCombined.UNCOMBINED_MODEL:
+            return "Uncombined Model"
+
 
 class EnumModel(Enum):
     SINGLE_FREQ = 0
