@@ -6,6 +6,7 @@ from src.data_mng.gnss_data_mng import GnssDataManager
 from src.common_log import set_logs, get_logger
 from src.data_types.gnss.observation_data import ObservationData
 from src.errors import PyGNSSFixError
+from src.io.io_manager import IOManager
 from src.io.rinex.nav_reader import RinexNavReader
 from src.io.rinex.obs_reader import RinexObsReader
 from src.data_types.gnss.navigation_data import NavigationData
@@ -25,7 +26,7 @@ class GnssAlgorithmManager:
         self.algorithm = algorithm
 
         # create output folder
-        data_dir = config_dict.get("performance_evaluation", "output_path")
+        data_dir = config_dict.get("output", "output_path")
         self.data_dir = self._check_data_dir(data_dir)
 
         # initialize logger objects
@@ -92,22 +93,15 @@ class GnssAlgorithmManager:
         except Exception as e:
             main_log.error(f"Exception caught: {e}")
 
-        # process results
-        main_log.info(f"Starting Performance Module...")
-        self._results()
+        # saving outputs
+        main_log.info(f"Saving outputs to output directory...")
+        self._save_run()
 
         main_log.info(f"Successfully executed algorithm {str(self.algorithm)}")
 
-    def _results(self, trace=True, performance=False, save=False):
-
-        # save data files
-        # if save:
-        #    self.data_manager.save_data(data_dir)
-
-        if performance:
-            pass
-            # GnssQualityManager.process(self.data_manager, data_dir, self.algorithm.name, performance, plot,
-            # separate_axis)
+    def _save_run(self):
+        log = get_logger("IO")
+        self.data_manager.save_data(self.data_dir, log)
 
     def _check_data_dir(self, data_dir):
         """
@@ -120,7 +114,7 @@ class GnssAlgorithmManager:
         """
         # check data dir
         # data_dir is not specified, automatically create one
-        if data_dir is None or data_dir == '':
+        if data_dir is None or data_dir == '' or data_dir == "default":
             data_dir = str(RUNS_PATH)
             if data_dir[-1] != '//':
                 data_dir = data_dir + '//'

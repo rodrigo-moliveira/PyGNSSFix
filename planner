@@ -1,4 +1,16 @@
-criar um construtor da Epoch para GPS Week e Seconds of Week
+para finalizar a versao pre-liminar
+no gnss_alg_manager guardar todos os outputs para a pasta de outputs
+atualizar o campo json com os outputs
+
+criar um script de performance evaluation
+criar um leitor de dados que leia a sessao corrida
+chamar o PerformaceEvaluation manager (adaptar)
+
+
+
+
+
+depois:
 ler dados de navegacao/observacao de gal
 escrever um traceback dos erros..
 

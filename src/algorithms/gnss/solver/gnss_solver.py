@@ -13,6 +13,7 @@ from src import constants
 
 np.set_printoptions(linewidth=np.inf)
 
+# TODO: add covariance matrix to output
 
 def get_weight(system_geometry, sat):
     sigma_elevation = np.e ** (-system_geometry.get("el", sat))
@@ -105,7 +106,7 @@ class GnssSolver:
         self._set_solver_info(config_dict)
 
         # solution dict
-        self.solution = {}
+        self.solution = []
 
     def _set_solver_info(self, config):
 
@@ -188,7 +189,7 @@ class GnssSolver:
                               f"RMS = {state.get_solver_info('rms')} [m]")
 
                 # store data for this epoch
-                self.solution[epoch] = state
+                self.solution.append(state)
 
             else:
                 self.log.warning(f"No solution computed for epoch {str(epoch)}.")
@@ -207,8 +208,8 @@ class GnssSolver:
         dop = prefit_residuals = postfit_residuals = None
 
         # TODO: tmp -> this needs to be revisited
-        gps_model = self._info['MODEL']['GPS']
-        gps_obs_model = self._info['COMBINED_OBS_MODEL']['GPS']
+        # gps_model = self._info['MODEL']['GPS']
+        # gps_obs_model = self._info['COMBINED_OBS_MODEL']['GPS']
         gps_codes = self._info['CODES']['GPS']
 
         # build system geometry for this epoch
@@ -473,5 +474,5 @@ class GnssSolver:
             system_geometry.remove(sat)
 
         if sats_to_remove:
-            self.log.debug(f"Removing satellites {sats_to_remove} in iteration {iteration} due to "
+            self.log.debug(f"Removing satellites {sats_to_remove} in due to "
                            f"elevation filter. ")

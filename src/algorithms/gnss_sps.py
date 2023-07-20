@@ -9,8 +9,6 @@ from ..common_log import get_logger
 class GnssSinglePointSolution(Algorithm):
     def __init__(self):
         super().__init__()
-        self.inputs = {"observation_data": None, "navigation_data": None}
-        self.outputs = {"nav_solution": None}
         self.name = "GNSS Single Point Solution Algorithm"
 
     def __str__(self):
@@ -33,4 +31,4 @@ class GnssSinglePointSolution(Algorithm):
         solver = GnssSolver(obs_data, nav_data)
         solver.solve()
 
-        self.outputs["nav_solution"] = 1
+        data_manager.add_data("nav_solution", solver.solution)

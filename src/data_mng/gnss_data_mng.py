@@ -1,9 +1,10 @@
 from src.data_mng.container import Container
+from src.io.config import config_dict
 
 
 class GnssDataManager(Container):
-    __slots__ = ["nav_data", "obs_data",
-                 "_available", "_do_not_save", "error_dict", "_plottable"]
+    __slots__ = ["nav_data", "obs_data", "nav_solution", "_to_save",
+                 "_available", "_do_not_save"]
 
     def __init__(self):
         super().__init__()
@@ -15,12 +16,7 @@ class GnssDataManager(Container):
 
         # available data for the current simulation
         self._available = []
-        self._plottable = {"projection"}
-
-        # SimulationData which is not intended to be saved
-        self._do_not_save = []
-
-        self.error_dict = {}
+        self._to_save = ["nav_solution"]
 
     def __str__(self):
         return f'{type(self).__name__}( DataManager for GNSS algorithms )'
@@ -43,56 +39,51 @@ class GnssDataManager(Container):
             if data_name not in self._available:
                 self._available.append(data_name)
         else:
-            raise ValueError(f"Unsupported data: {data_name}, not in {self.__slots__}")
+            raise ValueError(f"Unsupported data: {data_name}, not in {self.__slots__[0:-2]}")
 
-    def get_data(self, data_names):
+    def get_data(self, data_name):
         """
         Get data section of data_names.
         Args:
-            data_names: a list of data names
+            data_name: a list of data names
         Returns:
             data: a list of data corresponding to data_names.
             If there is any unavailable data in data_names, return None
         """
         # single data
-        if isinstance(data_names, str):
-            if data_names in self._available:
-                return getattr(self, data_names)
+        if isinstance(data_name, str):
+            if data_name in self._available:
+                return getattr(self, data_name)
             else:
-                raise ValueError(f'{data_names} is not available.')
+                raise ValueError(f'{data_name} is not available.')
 
-        # vector data
-        data = []
-        for i in data_names:
-            if i in self._available:
-                data.append(getattr(self, i).data)
-            else:
-                raise ValueError(f'{i} is not available.')
-        return data
+    def save_data(self, directory, log):
+        log.info(f"storing data to {directory}...")
+        epoch_type = config_dict.get("output", "epoch_type")
+        file_list = {}
 
-    def save_data(self, directory):
         for sim_data in self._available:
-            if sim_data not in self._do_not_save:
-
+            if sim_data in self._to_save:
                 # fetch sim_data
                 sim = getattr(self, sim_data, None)
-
                 if sim is not None:
-                    # print("saving", sim_data)
-                    sim.save_to_file(directory, self.time)
 
-    """def performance_evaluation(self):
-        # pos, vel, att
-        summary = ""
+                    # iterate over estimated states
+                    for state in sim:
 
-        for data, ref_data in zip(["pos", "vel", "att"], ["ref_pos", "ref_vel", "ref_att"]):
-            _data = getattr(self, data, None)
-            _ref_data = getattr(self, ref_data, None)
-            if not _data.is_empty() and not _ref_data.is_empty():
-                summary += self._evaluate(_data, _ref_data)
+                        # save estimated data for this epoch
+                        estimables = state.get_estimables()
+                        for est in estimables:
 
-        return summary
-    """
+                            # add this estimable to the file list (only do this once)
+                            if est not in file_list:
+                                file_list[est] = open(f"{directory}\\{est}.txt", "w")
+                                file_list[est].write(f"{state.get_header(est)}\n")
+
+                            # save this epoch data
+                            entry = state.export_to_file(est)
+
+                            file_list[est].write(f"{str(state.date)},{entry}\n")
 
     @property
     def available(self):

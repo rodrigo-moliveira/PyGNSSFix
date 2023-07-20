@@ -103,6 +103,14 @@
       "initial_clock_std": [0, 1]
    },
 
+   "output": {
+      "_comment": "select output folder (absolute path) to store the run. Set 'default' to store in default path runs/",
+      "output_path": "default",
+
+      "_comment1": "select how to store the epochs. 'GNSS' for week and seconds of week, 'timetag' for a time tag",
+      "epoch_type": "timetag"
+   },
+
    "performance_evaluation": {
       "static": true,
       "true_static_position": {
@@ -110,12 +118,7 @@
          "x_ecef": 4027881.6280,
          "y_ecef": 306998.5370,
          "z_ecef": 4919498.9840
-      },
-
-      "show_plots": true,
-
-      "output_path": ""
+      }
    }
-
 }
 

@@ -59,3 +59,42 @@ class GnssStateSpace(Container):
         if arg in self._info:
             return self._info[arg]
         return None
+
+    def get_estimables(self):
+        estimables = set()
+        for est in self.__slots__:
+            if est != "_info" and est != "date":
+                if getattr(self, est, None) is not None:
+                    estimables.add(est)
+
+            if est == "_info":
+                info = getattr(self, est, None)
+                if info is not None:
+                    if "geometry" in info.keys():
+                        estimables.add("satellite_azel")  # save satellite azimuth and elevation
+                    if "DOP" in info.keys():
+                        estimables.add("DOP")
+                    if "prefit_residuals" in info.keys():
+                        estimables.add("residuals")
+                    if "postfit_residuals" in info.keys():
+                        estimables.add("residuals")
+                    if "rms" in info.keys():
+                        estimables.add("rms")
+        return estimables
+
+    def get_header(self, estimable):
+        if estimable == "position":
+            return "Epoch,X_ECEF[m],Y_ECEF[m],Z_ECEF[m],cov_XX[m^2],cov_YY[m^2],cov_ZZ[m^2],cov_XZ[m^2],cov_YZ[m^2],cov_ZZ[m^2]"
+        if estimable == "position":
+            return "Epoch,clock_bias[s],cov[s^2]"
+        elif estimable == "residuals":
+            return "Epoch,prefit_residuals[TBC],postfit_residuals[TBC]"
+        elif estimable == "rms":
+            return "Epoch,rms[TBC]"
+        elif estimable == "satellite_azel":
+            return "Epoch,sat,azimuth[deg],elevation[deg]"
+        else:
+            raise ValueError(f"Undefined header due to unknown estimable {estimable}")
+
+    def export_to_file(self, directory):
+        pass
