@@ -7,7 +7,8 @@ criar um leitor de dados que leia a sessao corrida
 chamar o PerformaceEvaluation manager (adaptar)
 
 
-
+compute mean and std of prefit residuals -> mean should be zero. STD should be sigma_URE (user range error). This should be computed
+for each satelltie
 
 
 depois:

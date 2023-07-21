@@ -1,5 +1,6 @@
 import numpy as np
 
+from src import constants
 from src.data_mng.container import Container
 
 
@@ -75,26 +76,68 @@ class GnssStateSpace(Container):
                     if "DOP" in info.keys():
                         estimables.add("DOP")
                     if "prefit_residuals" in info.keys():
-                        estimables.add("residuals")
+                        estimables.add("prefit_residuals")
                     if "postfit_residuals" in info.keys():
-                        estimables.add("residuals")
-                    if "rms" in info.keys():
-                        estimables.add("rms")
+                        estimables.add("postfit_residuals")
         return estimables
 
     def get_header(self, estimable):
         if estimable == "position":
-            return "Epoch,X_ECEF[m],Y_ECEF[m],Z_ECEF[m],cov_XX[m^2],cov_YY[m^2],cov_ZZ[m^2],cov_XZ[m^2],cov_YZ[m^2],cov_ZZ[m^2]"
-        if estimable == "position":
+            return "Epoch,X_ECEF[m],Y_ECEF[m],Z_ECEF[m],cov_XX[m^2],cov_YY[m^2],cov_ZZ[m^2],cov_XY[m^2],cov_XZ[m^2]," \
+                   "cov_YZ[m^2]"
+        if estimable == "clock_bias":
             return "Epoch,clock_bias[s],cov[s^2]"
-        elif estimable == "residuals":
-            return "Epoch,prefit_residuals[TBC],postfit_residuals[TBC]"
-        elif estimable == "rms":
-            return "Epoch,rms[TBC]"
+        elif estimable == "prefit_residuals":
+            return "Epoch,sat,prefit_residuals_i[m^2]"
+        elif estimable == "postfit_residuals":
+            return "Epoch,sat,postfit_residuals_i[m^2]"
         elif estimable == "satellite_azel":
             return "Epoch,sat,azimuth[deg],elevation[deg]"
+        elif estimable == "DOP":
+            return "Epoch,DOP_X[m],DOP_Y[m],DOP_Z[m],DOP_T[m]"
         else:
             raise ValueError(f"Undefined header due to unknown estimable {estimable}")
 
-    def export_to_file(self, directory):
-        pass
+    def export_to_file(self, estimable):
+        if estimable == "position":
+            cov = self._info["cov"]
+            cov_xx = cov[0, 0]
+            cov_yy = cov[1, 1]
+            cov_zz = cov[2, 2]
+            cov_xy = cov[0, 1]
+            cov_xz = cov[0, 2]
+            cov_yz = cov[1, 2]
+            return f"{self.position[0]},{self.position[1]},{self.position[2]},{cov_xx},{cov_yy},{cov_zz},{cov_xy}," \
+                   f"{cov_xz},{cov_yz}"
+
+        if estimable == "clock_bias":
+            cov = self._info["cov"]
+            cov_t = cov[3, 3] / (constants.SPEED_OF_LIGHT**2)  # in seconds^2
+            return f"{self.clock_bias},{cov_t}"
+
+        elif estimable == "prefit_residuals" or estimable == "postfit_residuals":
+            residuals = self._info[estimable]
+            sat_list = self._info["sat_list"]
+            data = []
+            if len(sat_list) > 0:
+                for sat, res in zip(sat_list, residuals):
+                    data.append(f"{sat},{res}")
+            return data
+
+        elif estimable == "satellite_azel":
+            geometry = self._info["geometry"]
+            sat_list = self._info["sat_list"]
+            data = []
+            if len(sat_list) > 0:
+                for sat in sat_list:
+                    el = geometry.get("el", sat) * constants.RAD2DEG
+                    az = geometry.get("az", sat) * constants.RAD2DEG
+                    data.append(f"{sat},{az},{el}")
+            return data
+
+        elif estimable == "DOP":
+            dop = self._info["DOP"]
+            return f"{dop[0, 0]},{dop[1, 1]},{dop[2, 2]},{dop[3, 3]}"
+
+        else:
+            raise ValueError(f"Undefined header due to unknown estimable {estimable}")

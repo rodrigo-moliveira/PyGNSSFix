@@ -29,7 +29,7 @@
       },
 
       "_comment3": "Select the input data rate (in seconds). The rate must be consistent with the RINEX OBS rate. Select false to disable.",
-      "rate": 30
+      "rate": 1
    },
 
    "model": {

@@ -59,7 +59,7 @@ class GnssDataManager(Container):
 
     def save_data(self, directory, log):
         log.info(f"storing data to {directory}...")
-        epoch_type = config_dict.get("output", "epoch_type")
+        epoch_type = config_dict.get("output", "epoch_type")  # TODO: add this to the mix
         file_list = {}
 
         for sim_data in self._available:
@@ -81,9 +81,12 @@ class GnssDataManager(Container):
                                 file_list[est].write(f"{state.get_header(est)}\n")
 
                             # save this epoch data
-                            entry = state.export_to_file(est)
-
-                            file_list[est].write(f"{str(state.date)},{entry}\n")
+                            data = state.export_to_file(est)
+                            if isinstance(data, str):
+                                file_list[est].write(f"{str(state.date)},{data}\n")
+                            elif isinstance(data, list):
+                                for entry in data:
+                                    file_list[est].write(f"{str(state.date)},{entry}\n")
 
     @property
     def available(self):

@@ -177,7 +177,7 @@ class GnssSolver:
             epoch_data = self.obs_data.get_epoch_data(epoch)
 
             # initialize solve-for variables (receiver position and bias) for the present epoch
-            state = GnssStateSpace(position=state.position,
+            state = GnssStateSpace(position=state.position.copy(),
                                    clock_bias=state.clock_bias,
                                    date=epoch)
             # call lower level of solve
@@ -205,7 +205,7 @@ class GnssSolver:
         iteration = 0
         success = False
         rms = rms_prev = 1
-        dop = prefit_residuals = postfit_residuals = None
+        dop = cov = prefit_residuals = postfit_residuals = None
 
         # TODO: tmp -> this needs to be revisited
         # gps_model = self._info['MODEL']['GPS']
@@ -235,7 +235,8 @@ class GnssSolver:
 
             # solve the Least Squares
             try:
-                postfit_residuals, dop, prefit_residuals = self._solve_LS(system_geometry, epoch_data, state, epoch)
+                postfit_residuals, dop, prefit_residuals, cov = \
+                    self._solve_LS(system_geometry, epoch_data, state, epoch)
             except PVTComputationFail as e:
                 self.log.warning(f"Least Squares failed for {str(epoch)} on iteration {iteration}."
                                  f"Reason: {e}")
@@ -265,7 +266,8 @@ class GnssSolver:
         state.add_solver_info("DOP", dop)
         state.add_solver_info("prefit_residuals", prefit_residuals)
         state.add_solver_info("postfit_residuals", postfit_residuals)
-        state.add_solver_info("rms", rms)
+        state.add_solver_info("cov", cov)
+        state.add_solver_info("sat_list", system_geometry.get_satellites())
 
         return success
 
@@ -319,6 +321,7 @@ class GnssSolver:
             solver.solve()
 
             dop = np.linalg.inv(G.T @ G)  # Dilution of precision matrix (without Weights)
+            cov = np.linalg.inv(G.T @ W @ G)  # covariance matrix of the LS estimator
 
         except (AttributeError, np.linalg.LinAlgError) as e:
             # possible error in the numpy.linalg.inv() function -> solution not possible
@@ -334,7 +337,7 @@ class GnssSolver:
         # get post-fit residuals
         post_fit = y - G[:, 0:3] @ dX[0:3]
 
-        return post_fit, dop, y
+        return post_fit, dop, y, cov
 
     """def _solve_df_LS(self, system_geometry, epoch_data, state, nav_header, epoch):
 
