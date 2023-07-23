@@ -5,8 +5,6 @@ from src import RUNS_PATH
 from src.data_mng.gnss_data_mng import GnssDataManager
 from src.common_log import set_logs, get_logger
 from src.data_types.gnss.observation_data import ObservationData
-from src.errors import PyGNSSFixError
-from src.io.io_manager import IOManager
 from src.io.rinex.nav_reader import RinexNavReader
 from src.io.rinex.obs_reader import RinexObsReader
 from src.data_types.gnss.navigation_data import NavigationData
@@ -16,11 +14,6 @@ from src.io.config import config_dict
 class GnssAlgorithmManager:
 
     def __init__(self, algorithm):
-        """
-        Add data to available.
-        Args:
-            algorithm (src.algorithms.algorithm.Algorithm) : name..
-        """
         # create data members
         self.data_manager = GnssDataManager()
         self.algorithm = algorithm
@@ -32,70 +25,66 @@ class GnssAlgorithmManager:
         # initialize logger objects
         set_logs(config_dict.get("log", "minimum_level"), f"{self.data_dir}\\log.txt")
 
+        main_log = get_logger("MAIN_LOG")
+        main_log.info("Starting GNSS Algorithm Manager")
+
     def _read_inputs(self):
 
         logger = get_logger("IO")
         #TODO: add log messages
         #TODO: add possibility of multiple files
-        try:
-            # read navigation data
-            nav_file = config_dict.get("inputs", "nav_files")[0]
-            obs_file = config_dict.get("inputs", "obs_files")[0]
-            services = config_dict.get_services()
-            first_epoch = config_dict.get("inputs", "arc", "first_epoch")
-            last_epoch = config_dict.get("inputs", "arc", "last_epoch")
-            snr_check = config_dict.get("inputs", "snr_control")
 
-            nav = NavigationData()
-            obs = ObservationData()
+        # read navigation data
+        nav_file = config_dict.get("inputs", "nav_files")[0]
+        obs_file = config_dict.get("inputs", "obs_files")[0]
+        services = config_dict.get_services()
+        first_epoch = config_dict.get("inputs", "arc", "first_epoch")
+        last_epoch = config_dict.get("inputs", "arc", "last_epoch")
+        snr_check = config_dict.get("inputs", "snr_control")
 
-            RinexNavReader(nav_file, nav)
-            RinexObsReader(obs, obs_file, services, logger, first_epoch, last_epoch, snr_check)
+        nav = NavigationData()
+        obs = ObservationData()
 
-            self.data_manager.add_data("obs_data", obs)
-            self.data_manager.add_data("nav_data", nav)
+        RinexNavReader(nav_file, nav)
+        RinexObsReader(obs, obs_file, services, logger, first_epoch, last_epoch, snr_check)
 
-            # trace data files
-            trace_dir = f"{self.data_dir}\\trace"
-            with open(f"{trace_dir}\\RawObservationData.txt", "w") as file:
-                file.write(str(self.data_manager.get_data("obs_data")))
-            with open(f"{trace_dir}\\RawNavigationData.txt", "w") as file:
-                file.write(str(self.data_manager.get_data("nav_data")))
+        self.data_manager.add_data("obs_data", obs)
+        self.data_manager.add_data("nav_data", nav)
 
-            # ... add more here
-        except PyGNSSFixError as e:
-            logger.error(f"Exception caught ->{str(e)}")
-            return False
-        except Exception as e:
-            logger.error(f"General Exception caught -> {str(e)}")
-            return False
-
-        return True
+        # trace data files
+        trace_dir = f"{self.data_dir}\\trace"
+        with open(f"{trace_dir}\\RawObservationData.txt", "w") as file:
+            file.write(str(self.data_manager.get_data("obs_data")))
+        with open(f"{trace_dir}\\RawNavigationData.txt", "w") as file:
+            file.write(str(self.data_manager.get_data("nav_data")))
 
     def run(self):
         main_log = get_logger("MAIN_LOG")
+        main_log.info(f"Running algorithm {str(self.algorithm)}")
 
-        # start algorithm
-        main_log.info(f"Running {str(self.algorithm)}")
+        # Input Reader Module
+        try:
+            main_log.info(f"Starting Input Reader Module...")
+            self._read_inputs()
+        except Exception as e:
+            main_log.error(f"Stopping execution of program due to error in execution of Input Reader Module: {e}")
+            exit(-1)
 
-        # read inputs
-        main_log.info(f"Starting IO Module...")
-        success = self._read_inputs()
-        # TODO: remove success and put try catch block here
-        if not success:
-            main_log.warn("Stopping execution of program due to error encountered in execution of IO Module")
-            return
-
-        # computing algorithm
+        # Main Algorithm Module
         try:
             main_log.info(f"Starting Main Algorithm Module...")
             self.algorithm.compute(self.data_manager, f"{self.data_dir}\\trace")
         except Exception as e:
-            main_log.error(f"Exception caught: {e}")
+            main_log.error(f"Stopping execution of program due to error in execution of Main Algorithm Module: {e}")
+            exit(-1)
 
-        # saving outputs
-        main_log.info(f"Saving outputs to output directory...")
-        self._save_run()
+        # Output Writer Module
+        try:
+            main_log.info(f"Starting Output Writer Module...")
+            self._save_run()
+        except Exception as e:
+            main_log.error(f"Stopping execution of program due to error in execution of Output Writer Module: {e}")
+            exit(-1)
 
         main_log.info(f"Successfully executed algorithm {str(self.algorithm)}")
 

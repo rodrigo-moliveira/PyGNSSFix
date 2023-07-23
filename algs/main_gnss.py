@@ -4,7 +4,6 @@ import shutil
 
 from src.algorithms.gnss_alg_manager import GnssAlgorithmManager
 from src.io.config import config_dict
-from src.errors import ConfigError, ConfigTypeError
 from src.algorithms.gnss_sps import GnssSinglePointSolution
 
 
@@ -15,7 +14,7 @@ def main():
     except IndexError as e:
         print("ERROR: No configuration json file was provided as command argument")
         print("To run `main_gnss.py` please do:\n\t$ python main_gnss.py <path_to_config>")
-        exit()
+        exit(-1)
 
     # read config file
     try:
@@ -37,7 +36,7 @@ def main():
         # copy config json file to output dir
         shutil.copyfile(config_filename, f"{alg_mng.data_dir}\\config.json")
     except Exception as e:
-        print(f"Unexpected error running while running algorithm: {e}")
+        print(f"Unexpected error running while running program: {e}")
         exit()
 
 

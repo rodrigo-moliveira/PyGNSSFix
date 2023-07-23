@@ -12,7 +12,7 @@ class GnssSinglePointSolution(Algorithm):
         self.name = "GNSS Single Point Solution Algorithm"
 
     def __str__(self):
-        return f"Algorithm({self.name})"
+        return f"{self.name}"
 
     def compute(self, data_manager, trace_path):
         log = get_logger("MAIN_LOG")

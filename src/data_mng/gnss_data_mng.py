@@ -79,6 +79,7 @@ class GnssDataManager(Container):
                             if est not in file_list:
                                 file_list[est] = open(f"{directory}\\{est}.txt", "w")
                                 file_list[est].write(f"{state.get_header(est)}\n")
+                                log.info(f"creating output file {directory}\\{est}.txt")
 
                             # save this epoch data
                             data = state.export_to_file(est)

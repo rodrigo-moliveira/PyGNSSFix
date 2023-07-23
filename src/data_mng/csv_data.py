@@ -56,6 +56,9 @@ class CSVData:
         self.data = None
         self.ignore_first_row = ignore_first_row
 
+    def read_from_file(self, file, options):
+        pass
+
     def add_data(self, data, units=None):
         """
         Add data to SimulatedData.
