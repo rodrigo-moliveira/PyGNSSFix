@@ -3,6 +3,7 @@ import sys
 import os
 
 from src import RUNS_PATH
+from src.data_mng.csv_data_mng import GnssRunStorageManager
 from src.io.config import config_dict
 
 
@@ -11,7 +12,7 @@ def main():
         run_path = sys.argv[1]
         run_path = RUNS_PATH / run_path
         print(f"Running Performance Evaluation Module for run {run_path}")
-    except IndexError as e:
+    except IndexError:
         print("ERROR: No run path was provided as command argument")
         print("To run `performance_eval.py` please do:\n\t$ python performance_eval.py <path_to_run>")
         exit(-1)
@@ -23,26 +24,26 @@ def main():
 
     # read config file
     try:
-        print(f"Reading config file {run_path/'config.json'}")
-        with open(run_path/"config.json") as json_file:
+        print(f"Reading config file {run_path / 'config.json'}")
+        with open(run_path / "config.json") as json_file:
             data = json.load(json_file)
         config_dict.init(data)
     except Exception as e:
-        print(f"Error Reading Configuration File: {e}\nfilename = {run_path/'config.json'}")
+        print(f"Error Reading Configuration File: {e}\nfilename = {run_path / 'config.json'}")
         exit()
 
     try:
         # load run
-
+        print("Loading output files")
+        data_manager = GnssRunStorageManager()
+        data_manager.read_data(run_path)
 
         # run Performance Evaluation Module
-        alg_mng.run()
+        # alg_mng.run()
 
-        
     except Exception as e:
         print(f"Unexpected error running while running program: {e}")
         exit()
-
 
 
 print("#--------------------------------------------------#")

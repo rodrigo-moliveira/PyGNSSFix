@@ -39,3 +39,22 @@ EARTH_SEMI_MAJOR_AXIS = 6378137.0  # [m]  Equatorial radius Re
 EARTH_J2 = 1.08262668355315130e-3  # J2 harmonic
 EARTH_MASS = 5.97237e24  # [kg]
 EARTH_G0 = 9.80665  # [m/s^2] standard value cf. https://www.convertunits.com/from/g-unit/to/m/s%5E2
+
+# Output file names
+AZEL = "satellite_azel.txt"
+DOP = "DOP.txt"
+PRE_RESIDUALS = "prefit_residuals.txt"
+POST_RESIDUALS = "postfit_residuals.txt"
+POSITION = "position.txt"
+CLOCK = "clock_bias.txt"
+OUTPUT_FILENAME_MAP = {
+    "satellite_azel": AZEL,
+    "dop": DOP,
+    "prefit_residuals": PRE_RESIDUALS,
+    "postfit_residuals": POST_RESIDUALS,
+    "position": POSITION,
+    "clock_bias": CLOCK,
+    "iono": None,
+    "isb": None,
+    "velocity": None
+}

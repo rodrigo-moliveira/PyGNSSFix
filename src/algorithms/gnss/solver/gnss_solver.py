@@ -263,7 +263,7 @@ class GnssSolver:
 
         # save other iteration data to state variable
         state.add_solver_info("geometry", system_geometry)
-        state.add_solver_info("DOP", dop)
+        state.add_solver_info("dop", dop)
         state.add_solver_info("prefit_residuals", prefit_residuals)
         state.add_solver_info("postfit_residuals", postfit_residuals)
         state.add_solver_info("cov", cov)

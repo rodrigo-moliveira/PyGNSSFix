@@ -1,5 +1,3 @@
-import numpy as np
-
 from src.utils.units import convert_unit
 
 
@@ -7,6 +5,7 @@ class CSVData:
     """
     Container to store data from a CSV file. The
     """
+
     def __init__(self, name, description, units=None, output_units=None, legend=None, ignore_first_row=False,
                  title=""):
         """
@@ -56,9 +55,6 @@ class CSVData:
         self.data = None
         self.ignore_first_row = ignore_first_row
 
-    def read_from_file(self, file, options):
-        pass
-
     def add_data(self, data, units=None):
         """
         Add data to SimulatedData.
@@ -87,6 +83,11 @@ class CSVData:
     def __str__(self):
         return self.name
 
+    def is_empty(self):
+        return self.data is None
+
+
+"""
     def save_to_file(self, directory, time_obj=None):
         print(f"saving {self.name} to file")
         # TODO: log message...
@@ -170,6 +171,4 @@ class CSVData:
             _data.append(line)
 
         return _data
-
-    def is_empty(self):
-        return self.data is None
+"""

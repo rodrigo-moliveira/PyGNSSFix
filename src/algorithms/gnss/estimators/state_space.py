@@ -5,7 +5,7 @@ from src.data_mng.container import Container
 
 
 class GnssStateSpace(Container):
-    __slots__ = ["position", "velocity", "clock_bias", "iono", "ISB", "date", "_info"]
+    __slots__ = ["position", "velocity", "clock_bias", "iono", "isb", "date", "_info"]
 
     def __init__(self, **kwargs):
         super().__init__()
@@ -15,7 +15,7 @@ class GnssStateSpace(Container):
         self.clock_bias = kwargs.get("clock_bias", 0)  # with fallback
 
         # optional solve-for variables (initialized to None)
-        self.ISB = kwargs.get("ISB", None)  # fallback to None (not estimated)
+        self.isb = kwargs.get("ISB", None)  # fallback to None (not estimated)
         self.iono = kwargs.get("iono", None)  # fallback to None (not estimated)
         self.velocity = kwargs.get("velocity", None)  # fallback to None (not estimated)
 
@@ -29,8 +29,8 @@ class GnssStateSpace(Container):
                f"clock bias = {self.clock_bias}"
         if self.velocity:
             _str += f", velocity = {self.velocity}"
-        if self.ISB:
-            _str += f", ISB = {self.ISB}"
+        if self.isb:
+            _str += f", ISB = {self.isb}"
         if self.iono:
             _str += f", iono = {self.iono}"
 
@@ -46,7 +46,7 @@ class GnssStateSpace(Container):
 
         if self.iono is not None:
             n += len(self.iono)
-        if self.ISB is not None:
+        if self.isb is not None:
             n += 1
         if self.velocity is not None:
             n += len(self.velocity)
@@ -73,8 +73,8 @@ class GnssStateSpace(Container):
                 if info is not None:
                     if "geometry" in info.keys():
                         estimables.add("satellite_azel")  # save satellite azimuth and elevation
-                    if "DOP" in info.keys():
-                        estimables.add("DOP")
+                    if "dop" in info.keys():
+                        estimables.add("dop")
                     if "prefit_residuals" in info.keys():
                         estimables.add("prefit_residuals")
                     if "postfit_residuals" in info.keys():
@@ -93,7 +93,7 @@ class GnssStateSpace(Container):
             return "Epoch,sat,postfit_residuals_i[m^2]"
         elif estimable == "satellite_azel":
             return "Epoch,sat,azimuth[deg],elevation[deg]"
-        elif estimable == "DOP":
+        elif estimable == "dop":
             return "Epoch,DOP_X[m],DOP_Y[m],DOP_Z[m],DOP_T[m]"
         else:
             raise ValueError(f"Undefined header due to unknown estimable {estimable}")
@@ -135,8 +135,8 @@ class GnssStateSpace(Container):
                     data.append(f"{sat},{az},{el}")
             return data
 
-        elif estimable == "DOP":
-            dop = self._info["DOP"]
+        elif estimable == "dop":
+            dop = self._info["dop"]
             return f"{dop[0, 0]},{dop[1, 1]},{dop[2, 2]},{dop[3, 3]}"
 
         else:

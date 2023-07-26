@@ -83,7 +83,7 @@ class GnssAlgorithmManager:
             main_log.info(f"Starting Output Writer Module...")
             self._save_run()
         except Exception as e:
-            main_log.error(f"Stopping execution of program due to error in execution of Output Writer Module: {e}")
+            main_log.error(f"Stopping execution of program due to error in execution of Output Writer Module: {str(e)}")
             exit(-1)
 
         main_log.info(f"Successfully executed algorithm {str(self.algorithm)}")

@@ -1,3 +1,4 @@
+from src.constants import OUTPUT_FILENAME_MAP
 from src.data_mng.container import Container
 from src.io.config import config_dict
 
@@ -77,9 +78,10 @@ class GnssDataManager(Container):
 
                             # add this estimable to the file list (only do this once)
                             if est not in file_list:
-                                file_list[est] = open(f"{directory}\\{est}.txt", "w")
+                                filename = f"{directory}\\{OUTPUT_FILENAME_MAP[est]}"
+                                file_list[est] = open(filename, "w")
                                 file_list[est].write(f"{state.get_header(est)}\n")
-                                log.info(f"creating output file {directory}\\{est}.txt")
+                                log.info(f"creating output file {filename}")
 
                             # save this epoch data
                             data = state.export_to_file(est)
