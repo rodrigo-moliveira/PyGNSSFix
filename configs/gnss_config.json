@@ -105,10 +105,7 @@
 
    "output": {
       "_comment": "select output folder (absolute path) to store the run. Set 'default' to store in default path runs/",
-      "output_path": "default",
-
-      "_comment1": "select how to store the epochs. 'GNSS' for week and seconds of week, 'timetag' for a time tag",
-      "epoch_type": "timetag"
+      "output_path": "default"
    },
 
    "performance_evaluation": {

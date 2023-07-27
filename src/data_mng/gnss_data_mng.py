@@ -60,7 +60,6 @@ class GnssDataManager(Container):
 
     def save_data(self, directory, log):
         log.info(f"storing data to {directory}...")
-        epoch_type = config_dict.get("output", "epoch_type")  # TODO: add this to the mix
         file_list = {}
 
         for sim_data in self._available:
@@ -71,6 +70,9 @@ class GnssDataManager(Container):
 
                     # iterate over estimated states
                     for state in sim:
+
+                        week, sow = state.date.gps_time
+                        time_str = f"{week},{sow}"
 
                         # save estimated data for this epoch
                         estimables = state.get_estimables()
@@ -86,10 +88,10 @@ class GnssDataManager(Container):
                             # save this epoch data
                             data = state.export_to_file(est)
                             if isinstance(data, str):
-                                file_list[est].write(f"{str(state.date)},{data}\n")
+                                file_list[est].write(f"{time_str},{data}\n")
                             elif isinstance(data, list):
                                 for entry in data:
-                                    file_list[est].write(f"{str(state.date)},{entry}\n")
+                                    file_list[est].write(f"{time_str},{entry}\n")
 
     @property
     def available(self):

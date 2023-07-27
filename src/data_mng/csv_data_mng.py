@@ -55,6 +55,13 @@ class GnssRunStorageManager(Container):
                                          legend=[' '],
                                          title="Postfit Residuals")
 
+        # satellite azimuth elevation
+        self.satellite_azel = CSVData(name="satellite_azel",
+                                      description="Satellite Azimuth Elevation",
+                                      units=['deg', 'deg'],
+                                      legend=['azimuth', 'elevation'],
+                                      title="Satellite Azimuth and Elevation")
+
         # available data for the current simulation
         self._available = []
 
@@ -131,7 +138,7 @@ class GnssRunStorageManager(Container):
         return self._available
 
     def read_data(self, output_folder):
-        position = CSVReader.read_csv_file(output_folder/OUTPUT_FILENAME_MAP["position"],
+        position = CSVReader.read_csv_file(output_folder / OUTPUT_FILENAME_MAP["position"],
                                            ignore_header=True)
         dop = CSVReader.read_csv_file(output_folder / OUTPUT_FILENAME_MAP["dop"],
                                       ignore_header=True)

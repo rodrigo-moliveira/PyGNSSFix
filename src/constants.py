@@ -47,6 +47,7 @@ PRE_RESIDUALS = "prefit_residuals.txt"
 POST_RESIDUALS = "postfit_residuals.txt"
 POSITION = "position.txt"
 CLOCK = "clock_bias.txt"
+TIME = "time.txt"
 OUTPUT_FILENAME_MAP = {
     "satellite_azel": AZEL,
     "dop": DOP,
@@ -54,6 +55,7 @@ OUTPUT_FILENAME_MAP = {
     "postfit_residuals": POST_RESIDUALS,
     "position": POSITION,
     "clock_bias": CLOCK,
+    "time": TIME,
     "iono": None,
     "isb": None,
     "velocity": None

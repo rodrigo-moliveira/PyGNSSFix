@@ -205,7 +205,7 @@ class GnssSolver:
         iteration = 0
         success = False
         rms = rms_prev = 1
-        dop = cov = prefit_residuals = postfit_residuals = None
+        geometry_matrix = cov = prefit_residuals = postfit_residuals = None
 
         # TODO: tmp -> this needs to be revisited
         # gps_model = self._info['MODEL']['GPS']
@@ -235,7 +235,7 @@ class GnssSolver:
 
             # solve the Least Squares
             try:
-                postfit_residuals, dop, prefit_residuals, cov = \
+                postfit_residuals, geometry_matrix, prefit_residuals, cov = \
                     self._solve_LS(system_geometry, epoch_data, state, epoch)
             except PVTComputationFail as e:
                 self.log.warning(f"Least Squares failed for {str(epoch)} on iteration {iteration}."
@@ -263,7 +263,7 @@ class GnssSolver:
 
         # save other iteration data to state variable
         state.add_solver_info("geometry", system_geometry)
-        state.add_solver_info("dop", dop)
+        state.add_solver_info("geometry_matrix", geometry_matrix)
         state.add_solver_info("prefit_residuals", prefit_residuals)
         state.add_solver_info("postfit_residuals", postfit_residuals)
         state.add_solver_info("cov", cov)
@@ -320,7 +320,6 @@ class GnssSolver:
             solver = WeightedLeastSquares(y, G, W=W)
             solver.solve()
 
-            dop = np.linalg.inv(G.T @ G)  # Dilution of precision matrix (without Weights)
             cov = np.linalg.inv(G.T @ W @ G)  # covariance matrix of the LS estimator
 
         except (AttributeError, np.linalg.LinAlgError) as e:
@@ -337,7 +336,7 @@ class GnssSolver:
         # get post-fit residuals
         post_fit = y - G[:, 0:3] @ dX[0:3]
 
-        return post_fit, dop, y, cov
+        return post_fit, G, y, cov
 
     """def _solve_df_LS(self, system_geometry, epoch_data, state, nav_header, epoch):
 

@@ -1,4 +1,5 @@
 import csv
+import numpy as np
 
 
 class CSVReader:
@@ -16,4 +17,4 @@ class CSVReader:
             for row in reader:
                 data.append(row)
 
-        return data
+        return np.array(data)

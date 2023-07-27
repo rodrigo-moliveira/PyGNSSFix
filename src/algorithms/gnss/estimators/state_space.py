@@ -68,12 +68,17 @@ class GnssStateSpace(Container):
                 if getattr(self, est, None) is not None:
                     estimables.add(est)
 
+            if est == "date":
+                if getattr(self, est, None) is not None:
+                    estimables.add("time")
+
             if est == "_info":
                 info = getattr(self, est, None)
                 if info is not None:
                     if "geometry" in info.keys():
                         estimables.add("satellite_azel")  # save satellite azimuth and elevation
                     if "dop" in info.keys():
+                        #estimables.add("dop_ecef")
                         estimables.add("dop")
                     if "prefit_residuals" in info.keys():
                         estimables.add("prefit_residuals")
@@ -83,20 +88,24 @@ class GnssStateSpace(Container):
 
     def get_header(self, estimable):
         if estimable == "position":
-            return "Epoch,X_ECEF[m],Y_ECEF[m],Z_ECEF[m],cov_XX[m^2],cov_YY[m^2],cov_ZZ[m^2],cov_XY[m^2],cov_XZ[m^2]," \
-                   "cov_YZ[m^2]"
+            return "GPS_Week,GPS_TOW,X_ECEF[m],Y_ECEF[m],Z_ECEF[m],cov_XX[m^2],cov_YY[m^2],cov_ZZ[m^2],cov_XY[m^2]," \
+                   "cov_XZ[m^2],cov_YZ[m^2]"
         if estimable == "clock_bias":
-            return "Epoch,clock_bias[s],cov[s^2]"
+            return "GPS_Week,GPS_TOW,clock_bias[s],cov[s^2]"
+        if estimable == "time":
+            return "GPS_Week,GPS_TOW,Epoch_timetag"
         elif estimable == "prefit_residuals":
-            return "Epoch,sat,prefit_residuals_i[m^2]"
+            return "GPS_Week,GPS_TOW,sat,prefit_residuals_i[m^2]"
         elif estimable == "postfit_residuals":
-            return "Epoch,sat,postfit_residuals_i[m^2]"
+            return "GPS_Week,GPS_TOW,sat,postfit_residuals_i[m^2]"
         elif estimable == "satellite_azel":
-            return "Epoch,sat,azimuth[deg],elevation[deg]"
+            return "GPS_Week,GPS_TOW,sat,azimuth[deg],elevation[deg]"
+
+        # TODO: update this
         elif estimable == "dop":
-            return "Epoch,DOP_X[m],DOP_Y[m],DOP_Z[m],DOP_T[m]"
+            return "GPS_Week,GPS_TOW,DOP_X[m],DOP_Y[m],DOP_Z[m],DOP_T[m]"
         else:
-            raise ValueError(f"Undefined header due to unknown estimable {estimable}")
+            raise ValueError(f"Undefined header due to unknown estimable '{estimable}'")
 
     def export_to_file(self, estimable):
         if estimable == "position":
@@ -139,5 +148,8 @@ class GnssStateSpace(Container):
             dop = self._info["dop"]
             return f"{dop[0, 0]},{dop[1, 1]},{dop[2, 2]},{dop[3, 3]}"
 
+        elif estimable == "time":
+            return f"{str(self.date)}"
+
         else:
-            raise ValueError(f"Undefined header due to unknown estimable {estimable}")
+            raise ValueError(f"Undefined data due to unknown estimable '{estimable}'")
