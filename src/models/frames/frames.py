@@ -36,7 +36,7 @@ def geodetic2cartesian(lat, long, height):
     return [x, y, z]
 
 
-def latlon2dcm_e_n(lat, lon):
+def latlon2dcm_e_ned(lat, lon):
     """
     transformation matrix from the ECEF frame to the NED frame defined by lat and lon.
     Args:
@@ -48,6 +48,17 @@ def latlon2dcm_e_n(lat, lon):
     #              [-cos(lat)*cos(lon), -cos(lat)*sin(lon), -sin(lat)]])
 
     return rot2(-np.pi / 2.0 - lat) @ rot3(lon)
+
+
+def latlon2dcm_e_enu(lat, lon):
+    """
+    transformation matrix from the ECEF frame to the ENU frame defined by lat and lon.
+    Args:
+        lat: latitude, rad
+        lon: longitude, rad
+    """
+    # get rotation matrix from ECEF to ENU
+    return rot1((constants.PI / 2 - lat)) @ rot3((constants.PI / 2 + lon))
 
 
 def cartesian2geodetic(x, y, z):
@@ -115,7 +126,7 @@ def ecef2ned(arr_rover_ecef, arr_obs_ecef, origin_llh):
     lon = origin_llh[1]
 
     # get rotation matrix from ECEF to NED
-    R = latlon2dcm_e_n(lat, lon)
+    R = latlon2dcm_e_ned(lat, lon)
 
     # apply transform
     arr_enu = R @ (arr_rover_ecef - arr_obs_ecef)
@@ -288,7 +299,7 @@ def enu2azel(x_enu, y_enu, z_enu):
     Return:
         list : [Az, El] [rad]
     """
-    dist = sqrt(x_enu*x_enu + y_enu*y_enu + z_enu*z_enu)
+    dist = sqrt(x_enu * x_enu + y_enu * y_enu + z_enu * z_enu)
 
     El = asin(z_enu / dist)
 

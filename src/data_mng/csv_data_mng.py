@@ -1,17 +1,23 @@
 from src.constants import OUTPUT_FILENAME_MAP
 from src.data_mng.container import Container
-from src.data_mng.csv_data import CSVData
-from src.io.csv_reader import CSVReader
+from src.io.csv_data import CSVData, read_csv_file
 
 
 # TODO: quando chegar ao INS, criar um class mae com as features generices e depois separar em duas
 
 class GnssRunStorageManager(Container):
-    __slots__ = ["position", "velocity", "prefit_residuals", "clock_bias",
-                 "postfit_residuals", "dop", "satellite_azel", "_available"]
+    __slots__ = ["time", "position", "velocity", "prefit_residuals", "clock_bias",
+                 "postfit_residuals", "dop_ecef", "dop_local", "satellite_azel", "_available"]
 
     def __init__(self):
         super().__init__()
+
+        # time
+        self.time = CSVData(name="time",
+                            description="Time steps",
+                            units=[''],
+                            legend=[''],
+                            title="Time")
 
         # position in ECEF
         self.position = CSVData(name="position",
@@ -35,11 +41,17 @@ class GnssRunStorageManager(Container):
                                 title="Velocity (ECEF)")
 
         # Dilution of Precision (DOP)
-        self.dop = CSVData(name="DOP",
-                           description="Dilution of Precision in ECEF frame",
-                           units=['', '', '', ''],
-                           legend=[' ', ' ', ' ', ' '],
-                           title="Dilution of Precision (ECEF)")
+        self.dop_ecef = CSVData(name="DOP_ECEF",
+                                description="Dilution of Precision in ECEF frame",
+                                units=['', '', '', ''],
+                                legend=['', '', '', ''],
+                                title="Dilution of Precision (ECEF)")
+
+        self.dop_local = CSVData(name="DOP_local",
+                                 description="Dilution of Precision in local (ENU) frame",
+                                 units=['', '', '', ''],
+                                 legend=['', '', '', ''],
+                                 title="Dilution of Precision (ENU)")
 
         # prefit residuals
         self.prefit_residuals = CSVData(name="prefit_residuals",
@@ -95,59 +107,44 @@ class GnssRunStorageManager(Container):
         else:
             raise ValueError(f"Unsupported data: {data_name}, not in {self.__slots__}")
 
-    def get_data(self, data_names):
+    def get_data(self, data):
         """
         Get data section of data_names.
         Args:
-            data_names: a list of data names
+            data: name of data to get
         Returns:
             data: a list of data corresponding to data_names.
             If there is any unavailable data in data_names, return None
         """
-        # single data
-        if isinstance(data_names, str):
-            if data_names in self._available:
-                return getattr(self, data_names).data
-            else:
-                raise ValueError(f'{data_names} is not available.')
-
-        # vector data
-        data = []
-        for i in data_names:
-            if i in self._available:
-                data.append(getattr(self, i).data)
-            else:
-                raise ValueError(f'{i} is not available.')
-        return data
-
-    """   
-        def save_data(self, directory):
-        for sim_data in self._available:
-            if sim_data not in self._do_not_save:
-
-                # fetch sim_data
-                sim = getattr(self, sim_data, None)
-
-                if sim is not None:
-                    # print("saving", sim_data)
-                    sim.save_to_file(directory, self.time)
-    """
+        if data in self._available:
+            return getattr(self, data)
+        else:
+            raise ValueError(f'{data} is not available.')
 
     @property
     def available(self):
         return self._available
 
     def read_data(self, output_folder):
-        position = CSVReader.read_csv_file(output_folder / OUTPUT_FILENAME_MAP["position"],
-                                           ignore_header=True)
-        dop = CSVReader.read_csv_file(output_folder / OUTPUT_FILENAME_MAP["dop"],
-                                      ignore_header=True)
-        clock_bias = CSVReader.read_csv_file(output_folder / OUTPUT_FILENAME_MAP["clock_bias"],
-                                             ignore_header=True)
-        satellite_azel = CSVReader.read_csv_file(output_folder / OUTPUT_FILENAME_MAP["satellite_azel"],
-                                                 ignore_header=True)
+        time = read_csv_file(output_folder / OUTPUT_FILENAME_MAP["time"],
+                                 header=True, columns=(0, 1))
 
+        position = read_csv_file(output_folder / OUTPUT_FILENAME_MAP["position"],
+                                 header=True, columns=(2, 3, 4))
+
+        #dop_ecef = read_csv_file(output_folder / OUTPUT_FILENAME_MAP["dop_ecef"],
+        #                         header=True, columns=(2,))
+        #dop_local = read_csv_file(output_folder / OUTPUT_FILENAME_MAP["dop_local"],
+        #                          header=True, columns=(2, ))
+        #clock_bias = read_csv_file(output_folder / OUTPUT_FILENAME_MAP["clock_bias"],
+        #                           header=True, columns=(2, ))
+        #satellite_azel = read_csv_file(output_folder / OUTPUT_FILENAME_MAP["satellite_azel"],
+        #                               header=True, columns=(2, ))
+
+        # Nota que há ficheiros que são para cada satélite, nesses é necessário adaptar
+        self.add_data("time", time)
         self.add_data("position", position)
-        self.add_data("dop", dop)
-        self.add_data("clock_bias", clock_bias)
-        self.add_data("satellite_azel", satellite_azel)
+        #self.add_data("dop_ecef", dop_ecef)
+        #self.add_data("dop_local", dop_local)
+        #self.add_data("clock_bias", clock_bias)
+        #self.add_data("satellite_azel", satellite_azel)

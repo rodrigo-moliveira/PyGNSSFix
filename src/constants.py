@@ -42,7 +42,8 @@ EARTH_G0 = 9.80665  # [m/s^2] standard value cf. https://www.convertunits.com/fr
 
 # Output file names
 AZEL = "satellite_azel.txt"
-DOP = "DOP.txt"
+DOP_ECEF = "DOP_ECEF.txt"
+DOP_LOCAL = "DOP_local.txt"
 PRE_RESIDUALS = "prefit_residuals.txt"
 POST_RESIDUALS = "postfit_residuals.txt"
 POSITION = "position.txt"
@@ -50,7 +51,8 @@ CLOCK = "clock_bias.txt"
 TIME = "time.txt"
 OUTPUT_FILENAME_MAP = {
     "satellite_azel": AZEL,
-    "dop": DOP,
+    "dop_ecef": DOP_ECEF,
+    "dop_local": DOP_LOCAL,
     "prefit_residuals": PRE_RESIDUALS,
     "postfit_residuals": POST_RESIDUALS,
     "position": POSITION,

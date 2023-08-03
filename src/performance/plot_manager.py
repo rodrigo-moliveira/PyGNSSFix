@@ -1,14 +1,9 @@
 import matplotlib.pyplot as plt
 
-from PositioningSolver.src.gnss.data_types.ObservationData import ObservationData
-from ..data_types.basics.Epoch import Epoch
-from ..data_types.containers.TimeSeries import TimeSeries
-from ..plots.skyplot import plot_sky
-
-from ..utils.errors import NonExistentObservable
+from src.errors import NonExistentObservable
 
 
-def plot_observables(observation_data: ObservationData, satellite, datatype, **kwargs):
+def plot_observables(observation_data, satellite, datatype, **kwargs):
     epochs = observation_data.get_epochs()
 
     times = []
@@ -81,7 +76,7 @@ def plot_3D_trajectory(data_points, **kwargs):
     return ax
 
 
-def plot_1D_TimeSeries(series: TimeSeries, **kwargs):
+def plot_1D_TimeSeries(series, **kwargs):
     time, data = series.export2time_data()
 
     # convert x from Epoch to datetime Objects
@@ -161,7 +156,7 @@ def loglog(x, y, **kwargs):
     return ax
 
 
-def plot_satellite_availability(sat_info: TimeSeries, **kwargs):
+def plot_satellite_availability(sat_info, **kwargs):
     from matplotlib.ticker import MaxNLocator
 
     x = list(sat_info.keys())

@@ -77,9 +77,9 @@ class GnssStateSpace(Container):
                 if info is not None:
                     if "geometry" in info.keys():
                         estimables.add("satellite_azel")  # save satellite azimuth and elevation
-                    if "dop" in info.keys():
-                        #estimables.add("dop_ecef")
-                        estimables.add("dop")
+                    if "geometry_matrix" in info.keys():
+                        estimables.add("dop_ecef")
+                        estimables.add("dop_local")
                     if "prefit_residuals" in info.keys():
                         estimables.add("prefit_residuals")
                     if "postfit_residuals" in info.keys():
@@ -100,10 +100,10 @@ class GnssStateSpace(Container):
             return "GPS_Week,GPS_TOW,sat,postfit_residuals_i[m^2]"
         elif estimable == "satellite_azel":
             return "GPS_Week,GPS_TOW,sat,azimuth[deg],elevation[deg]"
-
-        # TODO: update this
-        elif estimable == "dop":
-            return "GPS_Week,GPS_TOW,DOP_X[m],DOP_Y[m],DOP_Z[m],DOP_T[m]"
+        elif estimable == "dop_ecef":
+            return "GPS_Week,GPS_TOW,DOP_x,DOP_y,DOP_z,DOP_t,DOP_geometry,DOP_position"
+        elif estimable == "dop_local":
+            return "GPS_Week,GPS_TOW,DOP_East,DOP_North,DOP_Up,DOP_Horizontal"
         else:
             raise ValueError(f"Undefined header due to unknown estimable '{estimable}'")
 
@@ -144,9 +144,13 @@ class GnssStateSpace(Container):
                     data.append(f"{sat},{az},{el}")
             return data
 
-        elif estimable == "dop":
-            dop = self._info["dop"]
-            return f"{dop[0, 0]},{dop[1, 1]},{dop[2, 2]},{dop[3, 3]}"
+        elif estimable == "dop_ecef":
+            dop = self._info["dop_ecef"]
+            return f"{dop['x_ecef']},{dop['y_ecef']},{dop['z_ecef']},{dop['time']},{dop['geometry']},{dop['position']}"
+
+        elif estimable == "dop_local":
+            dop = self._info["dop_local"]
+            return f"{dop['east']},{dop['north']},{dop['up']},{dop['horizontal']}"
 
         elif estimable == "time":
             return f"{str(self.date)}"

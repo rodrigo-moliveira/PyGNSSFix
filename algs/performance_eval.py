@@ -3,9 +3,9 @@ import sys
 import os
 
 from src import RUNS_PATH
-from src.algorithms.performance.performance_manager import PerformanceEvaluation
 from src.data_mng.csv_data_mng import GnssRunStorageManager
 from src.io.config import config_dict
+from src.performance.performance_manager import PerformanceEvaluation
 
 
 def main():
@@ -36,12 +36,11 @@ def main():
     try:
         # load run
         data_manager = GnssRunStorageManager()
-        data_manager.read_data(run_path)
+        data_manager.read_data(run_path / 'output')
 
         # run Performance Evaluation Module
         print("Executing Performance Evaluation Manager for GNSS run...")
-        alg = PerformanceEvaluation()
-        alg.process(data_manager)
+        PerformanceEvaluation.process(run_path, data_manager, config_dict)
 
     except Exception as e:
         print(f"Unexpected error running while running program: {e}")

@@ -1,19 +1,17 @@
-para finalizar a versao pre-liminar
-no gnss_alg_manager guardar todos os outputs para a pasta de outputs
-atualizar o campo json com os outputs
-
-criar um script de performance evaluation
-criar um leitor de dados que leia a sessao corrida
-chamar o PerformaceEvaluation manager (adaptar)
-
-
-compute mean and std of prefit residuals -> mean should be zero. STD should be sigma_URE (user range error). This should be computed
-for each satelltie
-
-
+para finalizar a versao preliminar:
+[ ] criar um script de performance evaluation
+[X] criar um leitor de dados que leia a sessao corrida
+[ ] chamar o PerformaceEvaluation manager (adaptar)
+[ ] trocar o ENU pelo NED e certificar que o sat azel se mantém igual...
+[ ] adicionar o filtro de elevation no gnss_solver
+[ ] compute mean and std of prefit residuals -> mean should be zero. STD should be sigma_URE (user range error). This should be computed for each satelltief and also postfit residuals...
 depois:
-ler dados de navegacao/observacao de gal
-escrever um traceback dos erros..
+    [ ] ler dados de navegacao/observacao de gal
+    [ ] escrever um traceback dos filtros do preprocessor
+    [ ] completar o dual frequency
+    [ ] limpar o código
+    [ ] só depois avançar para as coisas de baixo
+    [ ] covariance plots
 
 
 High-level plan:
