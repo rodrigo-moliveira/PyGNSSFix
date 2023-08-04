@@ -1,24 +1,33 @@
+TODO list:
+    *
+
 para finalizar a versao preliminar:
-[X] criar um script de performance evaluation
-[X] criar um leitor de dados que leia a sessao corrida
-[X] chamar o PerformaceEvaluation manager (adaptar)
-[ ] trocar o ENU pelo NED e certificar que o sat azel se mantém igual...
+[ ] testar o Iono free SPS: ter a certeza de que o tgd é 0 e o DI é 0.
+    [ ] Se for L1 L5 ou L2 L5, avisar que em SPS não há DCBs (warning). Mas colocar o tgd a 0
+[ ] Implementar o Dual Frequency SPS
 [ ] adicionar o filtro de elevation no gnss_solver
-[ ] compute mean and std of prefit residuals -> mean should be zero. STD should be sigma_URE (user range error). This should be computed for each satelltief and also postfit residuals...
+[ ] compute mean and std of pre/postfit residuals -> mean should be zero. STD should be sigma_URE (user range error). This should be computed for each satellite
+[ ] plot residuals
+[ ] plot position covariance (3D plot, 2D surfaces, etc...)
+[ ] plot 3d sigma of estimation error
+[ ] escrever um traceback dos filtros do preprocessor
+[ ] limpar o código
+
 depois:
     [ ] ler dados de navegacao/observacao de gal
-    [ ] escrever um traceback dos filtros do preprocessor
-    [ ] completar o dual frequency
-    [ ] limpar o código
-    [ ] só depois avançar para as coisas de baixo
-    [ ] covariance plots, estimation sigma bound
-    [ ] plot residuals. And find mean and std of postfit residuals
+    [ ] implementar o GAL SPS (com ISB estimation)
+
+depois:
+    [ ] criar um config field com o modo (SPS ou PPPP)
+    [ ] Adicionar Leitura e Modelo de Clocks, Sp3, IONEX (criar um PPPP)
+    [ ] substituir alguns modelos do SPS pelos respetivos do PPPP
+
+depois:
+    [ ] Adicionar Kalman filter com user dynamics
+    [ ] process doppler measurements to estimate velocity
 
 
-High-level plan:
-* Terminar o estado atual
-* Adicionar Leitura e Modelo de Clocks, Sp3, IONEX (criar um GPS PPPP)
-* Adicionar processamento de GAL
-* Dual-constellation PPPP
-* Adicionar Kalman filter com user dynamics (kinematic + reduced-dynamic positioning)
-* processar range rate
+muito depois - start loosely coupled:
+    [ ] sensor emulator
+    [ ] INS
+    [ ] loosely coupled
