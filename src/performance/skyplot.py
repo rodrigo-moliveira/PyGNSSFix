@@ -1,15 +1,14 @@
-# to plot skyplots, https://astroplan.readthedocs.io/en/latest/tutorials/plots.html#plots-sky-charts
 from matplotlib import pyplot as plt
 
+from src import constants
+
 # Note -> elevation is positive towards East, that is elevation = 90 [deg] points towards East
-from ..math_utils.Constants import Constant
 
 
 def plot_sky(trajectory, target_name, ax=None, style_kwargs=None,
              north_to_east_ccw=True, grid=True,
              warn_below_horizon=False):
     # Note: this function is adapted from https://github.com/astropy/astroplan/blob/master/astroplan/plots/sky.py
-    # but I had to adapt it to this project
 
     # Set up axes & plot styles if needed.
     if ax is None:
@@ -23,8 +22,8 @@ def plot_sky(trajectory, target_name, ax=None, style_kwargs=None,
 
     # Grab elevation and azimuth
     # elevation is smartly plotted through the radius dimension of the polar coordinates
-    altitude = [90.1 - x[1] * Constant.RAD2DEG for x in trajectory]  # plotted in degrees
-    azimuth = [x[0] for x in trajectory]  # Azimuth MUST be given to plot() in radians
+    altitude = [90.1 - x[1] for x in trajectory]  # plotted in degrees
+    azimuth = [x[0] * constants.DEG2RAD for x in trajectory]  # Azimuth MUST be given to plot() in radians
 
     # if altitude > 91.0:
     #    if warn_below_horizon:

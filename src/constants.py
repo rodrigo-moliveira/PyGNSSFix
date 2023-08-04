@@ -43,7 +43,7 @@ EARTH_G0 = 9.80665  # [m/s^2] standard value cf. https://www.convertunits.com/fr
 # Output file names
 AZEL = "satellite_azel.txt"
 DOP_ECEF = "DOP_ECEF.txt"
-DOP_LOCAL = "DOP_local.txt"
+DOP_LOCAL = "DOP_ENU.txt"
 PRE_RESIDUALS = "prefit_residuals.txt"
 POST_RESIDUALS = "postfit_residuals.txt"
 POSITION = "position.txt"

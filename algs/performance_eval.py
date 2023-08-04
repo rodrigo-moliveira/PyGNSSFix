@@ -40,7 +40,8 @@ def main():
 
         # run Performance Evaluation Module
         print("Executing Performance Evaluation Manager for GNSS run...")
-        PerformanceEvaluation.process(run_path, data_manager, config_dict)
+        eval_manager = PerformanceEvaluation(data_manager, config_dict)
+        eval_manager.process(run_path)
 
     except Exception as e:
         print(f"Unexpected error running while running program: {e}")

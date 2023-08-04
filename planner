@@ -1,7 +1,7 @@
 para finalizar a versao preliminar:
-[ ] criar um script de performance evaluation
+[X] criar um script de performance evaluation
 [X] criar um leitor de dados que leia a sessao corrida
-[ ] chamar o PerformaceEvaluation manager (adaptar)
+[X] chamar o PerformaceEvaluation manager (adaptar)
 [ ] trocar o ENU pelo NED e certificar que o sat azel se mantém igual...
 [ ] adicionar o filtro de elevation no gnss_solver
 [ ] compute mean and std of prefit residuals -> mean should be zero. STD should be sigma_URE (user range error). This should be computed for each satelltief and also postfit residuals...
@@ -11,7 +11,8 @@ depois:
     [ ] completar o dual frequency
     [ ] limpar o código
     [ ] só depois avançar para as coisas de baixo
-    [ ] covariance plots
+    [ ] covariance plots, estimation sigma bound
+    [ ] plot residuals. And find mean and std of postfit residuals
 
 
 High-level plan:

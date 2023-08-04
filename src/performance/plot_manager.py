@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 
 from src.errors import NonExistentObservable
+from src.performance.skyplot import plot_sky
 
 
 def plot_observables(observation_data, satellite, datatype, **kwargs):
@@ -32,17 +33,16 @@ def plot_observables(observation_data, satellite, datatype, **kwargs):
     return ax
 
 
-def plot_skyplot(sat_info_series):
+def plot_skyplot(azel):
     ax = None
 
     _data = {}
-    for epoch, sat_info in sat_info_series.items():
+    for epoch, sat_info in azel.items():
         for sat, info in sat_info.items():
 
             if str(sat) not in _data:
                 _data[str(sat)] = []
-
-            _data[str(sat)].append([info.az, info.el])
+            _data[str(sat)].append(info)
 
     for sat, data in _data.items():
         ax = plot_sky(data, sat, north_to_east_ccw=False, style_kwargs={'s': 10}, ax=ax)
@@ -58,8 +58,8 @@ def plot_3D_trajectory(data_points, **kwargs):
         fig = plt.figure()
         ax = fig.add_subplot(projection='3d')
 
-    ax.plot([x[0] for x in data_points], [x[1] for x in data_points], [x[2] for x in data_points],
-            label=kwargs.get("label", ""))
+    ax.scatter([x[0] for x in data_points], [x[1] for x in data_points], [x[2] for x in data_points],
+               label=kwargs.get("label", ""))
     if "true_position" in kwargs:
         true = kwargs.get("true_position")
         ax.scatter(true[0], true[1], true[2], marker='*', label="True State")
@@ -76,35 +76,11 @@ def plot_3D_trajectory(data_points, **kwargs):
     return ax
 
 
-def plot_1D_TimeSeries(series, **kwargs):
-    time, data = series.export2time_data()
-
-    # convert x from Epoch to datetime Objects
-    if isinstance(time[0], Epoch):
-        time = [i.to_datetime() for i in time]
-
-    # try to fetch axis to insert the plot. If no ax is provided, create a new one
-    ax = kwargs.get("ax", None)
-    if ax is None:
-        fig, ax = plt.subplots()
-
-    ax.plot(time, data, linewidth=2.0)
-    ax.set_xlabel(kwargs.get("x_label", ""))
-    ax.set_ylabel(kwargs.get("y_label", ""))
-    ax.set_title(kwargs.get("title", ""))
-
-    return ax
-
-
 def grid():
     plt.grid(True)
 
 
 def plot_1D(x, y, **kwargs):
-    # convert x from Epoch to datetime Objects
-    if isinstance(x[0], Epoch):
-        x = [i.to_datetime() for i in x]
-
     # try to fetch axis to insert the plot. If no ax is provided, create a new one
     ax = kwargs.get("ax", None)
     if ax is None:
@@ -132,10 +108,6 @@ def plot_1D(x, y, **kwargs):
 
 
 def loglog(x, y, **kwargs):
-    # convert x from Epoch to datetime Objects
-    if isinstance(x[0], Epoch):
-        x = [i.to_datetime() for i in x]
-
     # try to fetch axis to insert the plot. If no ax is provided, create a new one
     ax = kwargs.get("ax", None)
     if ax is None:
@@ -158,19 +130,19 @@ def loglog(x, y, **kwargs):
 
 def plot_satellite_availability(sat_info, **kwargs):
     from matplotlib.ticker import MaxNLocator
+    time = []
+    sats = []
 
-    x = list(sat_info.keys())
-    y = list(sat_info.values())
-    availability = [len(_y) for _y in y]
+    for epoch, data in sat_info.items():
+        time.append(float(epoch[1]))
+        sats.append(list(data.keys()))
 
-    # convert x from Epoch to datetime Objects
-    if isinstance(x[0], Epoch):
-        x = [i.to_datetime() for i in x]
+    availability = [len(_y) for _y in sats]
 
     # plot
     fig, ax = plt.subplots()
 
-    ax.plot(x, availability, linewidth=2.0)
+    ax.plot(time, availability, linewidth=2.0)
     ax.set_xlabel(kwargs.get("x_label", ""))
     ax.set_ylabel(kwargs.get("y_label", ""))
     ax.set_title(kwargs.get("title", ""))
@@ -178,21 +150,24 @@ def plot_satellite_availability(sat_info, **kwargs):
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
 
-def plot_2D_trajectory(x, y, **kwargs):
+def plot_2D_trajectory(data, **kwargs):
     # try to fetch axis to insert the plot. If no ax is provided, create a new one
     ax = kwargs.get("ax", None)
     if ax is None:
         fig, ax = plt.subplots()
 
+    x = [d[0] for d in data]
+    y = [d[1] for d in data]
+
     # plot
     ax.scatter(x, y, linewidth=0.2, marker=kwargs.get("marker", 'o'), label=kwargs.get("label", None))
+    ax.scatter(0, 0, linewidth=0.2, marker=kwargs.get("marker", '*'), label="true")
 
     ax.set_xlabel(kwargs.get("x_label", ""))
     ax.set_ylabel(kwargs.get("y_label", ""))
     ax.set_title(kwargs.get("title", ""))
 
-    if "set_legend" in kwargs:
-        ax.legend()
+    ax.legend()
 
     return ax
 

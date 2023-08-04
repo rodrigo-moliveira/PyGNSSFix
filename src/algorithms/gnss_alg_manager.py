@@ -90,7 +90,7 @@ class GnssAlgorithmManager:
 
     def _save_run(self):
         log = get_logger("IO")
-        self.data_manager.save_data(self.data_dir, log)
+        self.data_manager.save_data(f"{self.data_dir}\\output", log)
 
     def _check_data_dir(self, data_dir):
         """
@@ -116,6 +116,7 @@ class GnssAlgorithmManager:
                 data_dir = os.path.abspath(data_dir)
                 os.makedirs(data_dir)
                 os.makedirs(f"{data_dir}\\trace")
+                os.makedirs(f"{data_dir}\\output")
             except:
                 raise IOError(f"Cannot create dir: {data_dir}")
         return data_dir

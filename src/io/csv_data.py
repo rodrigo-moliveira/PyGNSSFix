@@ -8,11 +8,13 @@ def read_csv_file(filepath, **options):
     print(f"reading file {filepath}...")
     cols = options.get("columns", None)
     skip_first = 1 if options.get("header", True) else 0
+    dtype = options.get("dtype", float)
 
     data = np.loadtxt(filepath,
                       skiprows=skip_first,
                       delimiter=',',
-                      usecols=cols)
+                      usecols=cols,
+                      dtype=dtype)
     return data
 
 

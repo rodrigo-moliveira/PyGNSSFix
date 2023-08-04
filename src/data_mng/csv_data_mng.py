@@ -5,6 +5,27 @@ from src.io.csv_data import CSVData, read_csv_file
 
 # TODO: quando chegar ao INS, criar um class mae com as features generices e depois separar em duas
 
+def parse_satellite_data_file(data_in, cols):
+    data_out = {}
+    for line in data_in:
+
+        # fetch data for this line
+        epoch = (line[0], line[1])  # week and sow
+        sat = line[2]  # satellite ID
+        data = []
+        for col in cols:
+            data.append(float(line[col]))
+
+        # add epoch to outer dict
+        if epoch not in data_out.keys():
+            data_out[epoch] = {}
+
+        # add this data point
+        data_out[epoch][sat] = data
+
+    return data_out
+
+
 class GnssRunStorageManager(Container):
     __slots__ = ["time", "position", "velocity", "prefit_residuals", "clock_bias",
                  "postfit_residuals", "dop_ecef", "dop_local", "satellite_azel", "_available"]
@@ -127,24 +148,24 @@ class GnssRunStorageManager(Container):
 
     def read_data(self, output_folder):
         time = read_csv_file(output_folder / OUTPUT_FILENAME_MAP["time"],
-                                 header=True, columns=(0, 1))
-
+                             header=True, columns=(0, 1))
         position = read_csv_file(output_folder / OUTPUT_FILENAME_MAP["position"],
                                  header=True, columns=(2, 3, 4))
+        dop_ecef = read_csv_file(output_folder / OUTPUT_FILENAME_MAP["dop_ecef"],
+                                 header=True, columns=(2, 3, 4, 5, 6, 7))
+        dop_enu = read_csv_file(output_folder / OUTPUT_FILENAME_MAP["dop_local"],
+                                header=True, columns=(2, 3, 4, 5))
+        clock_bias = read_csv_file(output_folder / OUTPUT_FILENAME_MAP["clock_bias"],
+                                   header=True, columns=(2,))
+        satellite_azel = read_csv_file(output_folder / OUTPUT_FILENAME_MAP["satellite_azel"],
+                                       header=True, columns=(0, 1, 2, 3, 4), dtype=str)
+        residuals = read_csv_file(output_folder / OUTPUT_FILENAME_MAP["postfit_residuals"],
+                                  header=True, columns=(0, 1, 2, 3), dtype=str)
 
-        #dop_ecef = read_csv_file(output_folder / OUTPUT_FILENAME_MAP["dop_ecef"],
-        #                         header=True, columns=(2,))
-        #dop_local = read_csv_file(output_folder / OUTPUT_FILENAME_MAP["dop_local"],
-        #                          header=True, columns=(2, ))
-        #clock_bias = read_csv_file(output_folder / OUTPUT_FILENAME_MAP["clock_bias"],
-        #                           header=True, columns=(2, ))
-        #satellite_azel = read_csv_file(output_folder / OUTPUT_FILENAME_MAP["satellite_azel"],
-        #                               header=True, columns=(2, ))
-
-        # Nota que há ficheiros que são para cada satélite, nesses é necessário adaptar
         self.add_data("time", time)
         self.add_data("position", position)
-        #self.add_data("dop_ecef", dop_ecef)
-        #self.add_data("dop_local", dop_local)
-        #self.add_data("clock_bias", clock_bias)
-        #self.add_data("satellite_azel", satellite_azel)
+        self.add_data("dop_ecef", dop_ecef)
+        self.add_data("dop_local", dop_enu)
+        self.add_data("clock_bias", clock_bias)
+        self.add_data("satellite_azel", parse_satellite_data_file(satellite_azel, cols=(3, 4)))
+        self.add_data("postfit_residuals", parse_satellite_data_file(residuals, cols=(3,)))
