@@ -55,11 +55,12 @@ class SatelliteGeometry(Container):
         time_reception = epoch + timedelta(seconds=-rec_bias)
 
         # get TGD (to use in the compute_tx_time algorithm), and fix it for non L1 users
-        # currently this is GPS dependent
+        # TODO: currently this is GPS dependent, and assumes that second freq is L2
         if DataType.is_iono_free_smooth_code(PR_obs.datatype) or DataType.is_iono_free_code(PR_obs.datatype):
             TGD = 0  # TGD is 0 for Iono Free observables
         else:
             TGD = (L1.freq_value / PR_obs.datatype.freq.freq_value) ** 2 * nav_message.TGD
+        # TODO: add warning for L5 users, that this is not correct TGD to use...
 
         # algorithm to compute Transmission time (in GNSS time)
         time_emission, transit = compute_tx_time(model=compute_tx,

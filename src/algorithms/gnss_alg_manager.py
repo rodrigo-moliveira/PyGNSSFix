@@ -1,5 +1,6 @@
 import os
 import time
+import traceback
 
 from src import RUNS_PATH
 from src.data_mng.gnss_data_mng import GnssDataManager
@@ -68,6 +69,7 @@ class GnssAlgorithmManager:
             self._read_inputs()
         except Exception as e:
             main_log.error(f"Stopping execution of program due to error in execution of Input Reader Module: {e}")
+            print(traceback.format_exc())
             exit(-1)
 
         # Main Algorithm Module
@@ -76,6 +78,7 @@ class GnssAlgorithmManager:
             self.algorithm.compute(self.data_manager, f"{self.data_dir}\\trace")
         except Exception as e:
             main_log.error(f"Stopping execution of program due to error in execution of Main Algorithm Module: {e}")
+            print(traceback.format_exc())
             exit(-1)
 
         # Output Writer Module
@@ -84,6 +87,7 @@ class GnssAlgorithmManager:
             self._save_run()
         except Exception as e:
             main_log.error(f"Stopping execution of program due to error in execution of Output Writer Module: {str(e)}")
+            print(traceback.format_exc())
             exit(-1)
 
         main_log.info(f"Successfully executed algorithm {str(self.algorithm)}")

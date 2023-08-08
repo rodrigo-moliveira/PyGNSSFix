@@ -11,7 +11,7 @@ para finalizar a versao preliminar:
 [ ] plot position covariance (3D plot, 2D surfaces, etc...)
 [ ] plot 3d sigma of estimation error
 [ ] escrever um traceback dos filtros do preprocessor
-[ ] limpar o código
+[ ] limpar o código / solve all TODOs
 
 depois:
     [ ] ler dados de navegacao/observacao de gal
@@ -31,3 +31,6 @@ muito depois - start loosely coupled:
     [ ] sensor emulator
     [ ] INS
     [ ] loosely coupled
+
+...
+    [ ] adicionar processamento de carrier phase - PPP

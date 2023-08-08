@@ -101,7 +101,7 @@ class Config(dict):
         """
         Returns true if user selected combined observation model (compute iono free observations)
         """
-        combined_model = EnumCombined(self.get("model", constellation, "combined"))
+        combined_model = EnumCombined(self.get("model", constellation, "iono_free"))
         return combined_model == EnumCombined.COMBINED_MODEL
 
 

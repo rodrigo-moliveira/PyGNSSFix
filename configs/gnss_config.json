@@ -25,7 +25,7 @@
          "_comment1": "Select first and last epochs in estimation arc in format YYYY-MM-DD hh:mm:ss",
          "_comment2": "Select false to deactivate fields",
          "first_epoch": "2019-01-14 06:15:00",
-         "last_epoch": "2019-01-14 06:16:59"
+         "last_epoch": "2019-01-14 06:20:59"
       },
 
       "_comment3": "Select the input data rate (in seconds). The rate must be consistent with the RINEX OBS rate. Select false to disable.",
@@ -36,11 +36,11 @@
       "constellations": ["GPS"],
 
       "GPS": {
-         "observations": ["1C"],
+         "observations": ["1C","2W"],
          "obs_std": [1, 1],
 
          "_comment0": "Select true to build combined observations (iono free combination), requires 2 observations",
-         "combined": false,
+         "iono_free": true,
 
          "_comment1": "Select Tropospheric model: 0 - no model, 1 - a priori Saastamoinen model",
          "troposphere": 1,
@@ -54,7 +54,7 @@
          "obs_std": [1, 1],
 
          "_comment0": "Select true to build combined observations (iono free combination), requires 2 observations",
-         "combined": true,
+         "iono_free": true,
 
          "_comment1": "Select Tropospheric model: 0 - no model, 1 - a priori Saastamoinen model",
          "troposphere": 1,

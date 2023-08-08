@@ -13,9 +13,10 @@ from src import constants
 
 np.set_printoptions(linewidth=np.inf)
 
-# TODO: add covariance matrix to output
 
 def get_weight(system_geometry, sat):
+    # TODO: need to add here the user defined sigmas as a multiplication factor
+    # "obs_std", and can add the possibility of this mask as well.
     sigma_elevation = np.e ** (-system_geometry.get("el", sat))
     w = (1 / sigma_elevation) ** 2
 
@@ -129,19 +130,22 @@ class GnssSolver:
             TROPO[const] = EnumTropo(config.get("model", const, "troposphere"))  # 0 - no model, 1 - Saastamoinen
             IONO[const] = EnumIono(config.get("model", const, "ionosphere"))  # 0 - no model, 1 - A priori
 
-            COMBINED_OBS_MODEL[const] = EnumCombined(config.get("model", const, "combined"))  # false - uncombined,
-            # true - combined
+            COMBINED_OBS_MODEL[const] = EnumCombined(config.get("model", const, "iono_free"))  # false - uncombined,
+            # true - combined (iono free combination)
+            IONO[const] = EnumIono.DISABLED  # if it is iono free, then we turn off ionospheric correction
 
             # check if the model is single frequency or dual frequency
             code_types = self.obs_data.get_code_types(const)
             if len(code_types) > 1 and COMBINED_OBS_MODEL[const] == EnumCombined.UNCOMBINED_MODEL:
                 # Dual-Frequency Model
-                self.log.info(f"Selected model for {const} is Dual-Frequency and {repr(COMBINED_OBS_MODEL[const])}")
+                self.log.info(f"Selected model for {const} is Dual-Frequency and {repr(COMBINED_OBS_MODEL[const])} "
+                              f"with observations {code_types}")
                 MODEL[const] = EnumModel.DUAL_FREQ
                 CODES[const] = [code_types[0], code_types[1]]  # setting main and second code type
             else:
                 # Single-Frequency Model
-                self.log.info(f"Selected model for {const} is Single-Frequency and {repr(COMBINED_OBS_MODEL[const])}")
+                self.log.info(f"Selected model for {const} is Single-Frequency and {repr(COMBINED_OBS_MODEL[const])} "
+                              f"with observation {code_types}")
                 MODEL[const] = EnumModel.SINGLE_FREQ
                 CODES[const] = [code_types[0], None]
 
