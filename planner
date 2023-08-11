@@ -2,7 +2,7 @@ TODO list:
     *
 
 para finalizar a versao preliminar:
-[ ] testar o Iono free SPS: ter a certeza de que o tgd é 0 e o DI é 0.
+[X] testar o Iono free SPS: ter a certeza de que o tgd é 0 e o DI é 0.
     [ ] Se for L1 L5 ou L2 L5, avisar que em SPS não há DCBs (warning). Mas colocar o tgd a 0
 [ ] Implementar o Dual Frequency SPS
 [ ] adicionar o filtro de elevation no gnss_solver
@@ -11,6 +11,7 @@ para finalizar a versao preliminar:
 [ ] plot position covariance (3D plot, 2D surfaces, etc...)
 [ ] plot 3d sigma of estimation error
 [ ] escrever um traceback dos filtros do preprocessor
+[ ] compute allan variance of clock bias
 [ ] limpar o código / solve all TODOs
 
 depois:

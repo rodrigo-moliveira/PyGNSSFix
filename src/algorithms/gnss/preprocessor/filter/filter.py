@@ -9,7 +9,7 @@ class Filter:
     def __init__(self):
         pass
 
-    def is_applicable(self, sat: Satellite, epoch: Epoch, observation: Observation):
+    def is_applicable(self, sat: Satellite, epoch: Epoch, observation: Observation, **kwargs):
         # return True to remove observables, return False to keep observable
         return True
 

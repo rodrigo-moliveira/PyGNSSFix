@@ -5,7 +5,7 @@ details.
 """
 
 from src.errors import ConfigError
-from src.io.config.enums import EnumCombined
+from src.io.config.enums import EnumPositioningMode
 
 
 class Config(dict):
@@ -26,6 +26,8 @@ class Config(dict):
     def init(self, initial_dict):
         super().__init__()  # Call the parent class (dict) constructor
         self.update(initial_dict)  # Update the dictionary with the values from initial_dict
+        self["model"]["mode"] = EnumPositioningMode.init_model(self["model"]["mode"])
+        # TODO: add config validation
 
     def get(self, *keys, fallback=ConfigError):
         """Retrieve a value in the config, if the value is not available
@@ -97,12 +99,14 @@ class Config(dict):
 
         return services
 
-    def is_iono_free(self, constellation):
+    def get_model(self):
+        return self["model"]["mode"]
+
+    def is_iono_free(self):
         """
         Returns true if user selected combined observation model (compute iono free observations)
         """
-        combined_model = EnumCombined(self.get("model", constellation, "iono_free"))
-        return combined_model == EnumCombined.COMBINED_MODEL
+        return self["model"]["mode"] == EnumPositioningMode.SPS_IF
 
 
 config_dict = Config()

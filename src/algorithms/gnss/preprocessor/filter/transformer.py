@@ -24,7 +24,7 @@ class FilterMapper:
                 v_observables = obs_data.get_observables_at_epoch(epoch, sat)
 
                 for obs in v_observables:
-                    if self.filter.is_applicable(sat, epoch, obs):
+                    if self.filter.is_applicable(sat, epoch, obs, obs_list=v_observables):
                         self.filter.apply(sat, epoch, obs, v_removable)
 
                 # remove observables

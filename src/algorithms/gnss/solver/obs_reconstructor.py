@@ -1,3 +1,4 @@
+from src.io.config import config_dict
 from src.io.config.enums import EnumOnOff, EnumIono, EnumTropo
 from src.models.frames import cartesian2geodetic
 from src.models.observation.atmosphere_obs import iono_klobuchar, tropo_saastamoinen
@@ -44,14 +45,15 @@ class ObservationReconstruction:
         dt_sat -= self._system_geometry.get("tgd", sat)
 
         # ionosphere
-        if self._model["iono"][sat.sat_system] == EnumIono.APRIORI:
-            time_reception = self._system_geometry.get("time_reception", sat)
-            iono = iono_klobuchar(lat, long, el, az, self._nav_header.iono_corrections["GPSA"],
-                                  self._nav_header.iono_corrections["GPSB"], time_reception.gps_time[1])
+        if not config_dict.is_iono_free():
+            if self._model["iono"][sat.sat_system] == EnumIono.KLOBUCHAR:
+                time_reception = self._system_geometry.get("time_reception", sat)
+                iono = iono_klobuchar(lat, long, el, az, self._nav_header.iono_corrections["GPSA"],
+                                      self._nav_header.iono_corrections["GPSB"], time_reception.gps_time[1])
 
-            # fix I for non L1 users
-            if datatype.freq != L1:
-                iono = (L1.freq_value / datatype.freq.freq_value) ** 2 * iono
+                # fix I for non L1 users (L2 or L5)
+                if datatype.freq != L1:
+                    iono = (L1.freq_value / datatype.freq.freq_value) ** 2 * iono
 
         # troposphere
         if self._model["tropo"][sat.sat_system] == EnumTropo.SAASTAMOINEM:

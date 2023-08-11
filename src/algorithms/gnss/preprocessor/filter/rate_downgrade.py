@@ -8,6 +8,6 @@ class RateDowngradeFilter(Filter):
         self.rate_out = rate_out
         self.first_epoch = first_epoch
 
-    def is_applicable(self, sat, epoch, observation):
+    def is_applicable(self, sat, epoch, observation, **kwargs):
         # return True to remove observables, return False to keep observable
         return (epoch - self.first_epoch).total_seconds() % self.rate_out != 0

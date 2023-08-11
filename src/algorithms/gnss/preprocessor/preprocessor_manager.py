@@ -55,8 +55,8 @@ class PreprocessorManager:
         obs_data_out = ObservationData()
 
         # check to compute or not iono free dataset from raw observables
+        compute_iono_free = config_dict.is_iono_free()
         for constellation in self.services.keys():
-            compute_iono_free = config_dict.is_iono_free(constellation)
             if compute_iono_free:
                 obs_list = config_dict.get("model", constellation, "observations")
                 n_obs = len(obs_list)

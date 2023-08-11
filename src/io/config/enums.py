@@ -1,9 +1,7 @@
 from enum import Enum
 
+from src.errors import EnumError
 
-# Enum classes already perform input validation
-# >>> EnumSolver(1) is okay
-# >>> EnumSolver(10) will return ValueError
 
 class EnumSolver(Enum):
     LS = 0
@@ -12,6 +10,33 @@ class EnumSolver(Enum):
     @classmethod
     def show_options(cls):
         return f"[0 - LEAST SQUARES, 1 - WEIGHTED LEAST SQUARES]"
+
+
+class EnumPositioningMode(Enum):
+    SPS = 0
+    SPS_IF = 1
+
+    @classmethod
+    def init_model(cls, model_str: str):
+        if model_str.lower() == "sps":
+            return EnumPositioningMode.SPS
+        elif model_str.lower() == "sps_if":
+            return EnumPositioningMode.SPS_IF
+        else:
+            raise EnumError(f"Unsupported model {model_str}. Available options are 'SPS', 'SPS_IF'")
+
+    @classmethod
+    def show_options(cls):
+        return f"[0 - SPS, 1 - SPS (Iono-Free) ]"
+
+
+class EnumModel(Enum):
+    SINGLE_FREQ = 0
+    DUAL_FREQ = 1
+
+    @classmethod
+    def show_options(cls):
+        return f"[0 - SINGLE FREQUENCY MODEL, 1 - DUAL FREQUENCY MODEL]"
 
 
 class EnumOnOff(Enum):
@@ -25,35 +50,12 @@ class EnumOnOff(Enum):
 
 class EnumIono(Enum):
     DISABLED = 0
-    APRIORI = 1
+    KLOBUCHAR = 1
+    NEQUICK = 2
 
     @classmethod
     def show_options(cls):
-        return f"[0 - DISABLED, 1 - A PRIORI METHOD]"
-
-
-class EnumCombined(Enum):
-    UNCOMBINED_MODEL = 0
-    COMBINED_MODEL = 1
-
-    @classmethod
-    def show_options(cls):
-        return f"[0 - UNCOMBINED OBSERVATIONS MODEL, 1 - COMBINED OBSERVATIONS MODEL]"
-
-    def __repr__(self):
-        if self == EnumCombined.COMBINED_MODEL:
-            return "Combined Model (Iono-Free Observation)"
-        if self == EnumCombined.UNCOMBINED_MODEL:
-            return "Uncombined Model"
-
-
-class EnumModel(Enum):
-    SINGLE_FREQ = 0
-    DUAL_FREQ = 1
-
-    @classmethod
-    def show_options(cls):
-        return f"[0 - SINGLE FREQUENCY MODEL, 1 - DUAL FREQUENCY MODEL]"
+        return f"[0 - DISABLED, 1 - Klobuchar (for GPS), 2 - NeQuick (for GAL)]"
 
 
 class EnumTropo(Enum):

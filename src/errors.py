@@ -170,3 +170,12 @@ class PVTComputationFail(PyGNSSFixError):
         # Call the base class constructor with the parameters it needs
         message = "Error in PVT Computation -> " + message
         super().__init__(message)
+
+
+class EnumError(PyGNSSFixError):
+    __module__ = MODULE
+
+    def __init__(self, message):
+        # Call the base class constructor with the parameters it needs
+        message = "Enum Error -> " + message
+        super().__init__(message)

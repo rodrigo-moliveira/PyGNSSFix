@@ -25,7 +25,7 @@
          "_comment1": "Select first and last epochs in estimation arc in format YYYY-MM-DD hh:mm:ss",
          "_comment2": "Select false to deactivate fields",
          "first_epoch": "2019-01-14 06:15:00",
-         "last_epoch": "2019-01-14 06:20:59"
+         "last_epoch": "2019-01-14 06:17:00"
       },
 
       "_comment3": "Select the input data rate (in seconds). The rate must be consistent with the RINEX OBS rate. Select false to disable.",
@@ -34,33 +34,31 @@
 
    "model": {
       "constellations": ["GPS"],
+      "mode": "SPS",
+      "_comment": "available modes are SPS, SPS_IF",
 
       "GPS": {
          "observations": ["1C","2W"],
          "obs_std": [1, 1],
-
-         "_comment0": "Select true to build combined observations (iono free combination), requires 2 observations",
-         "iono_free": true,
+         "elevation_mask": true,
 
          "_comment1": "Select Tropospheric model: 0 - no model, 1 - a priori Saastamoinen model",
          "troposphere": 1,
 
-         "_comment2": "Select Ionospheric model: 0 - no model, 1 - Klobuchar model",
+         "_comment2": "Select Ionospheric model: 0 - no model, 1 - Klobuchar model, 2 - NeQuick-G Model",
          "ionosphere": 1
       },
 
       "GAL": {
          "observations": ["1C", "5Q"],
          "obs_std": [1, 1],
-
-         "_comment0": "Select true to build combined observations (iono free combination), requires 2 observations",
-         "iono_free": true,
+         "elevation_mask": true,
 
          "_comment1": "Select Tropospheric model: 0 - no model, 1 - a priori Saastamoinen model",
          "troposphere": 1,
 
-         "_comment2": "Select Ionospheric model: 0 - no model, 1 - NeQuick-G model",
-         "ionosphere": 1
+         "_comment2": "Select Ionospheric model: 0 - no model, 1 - Klobuchar model, 2 - NeQuick-G Model",
+         "ionosphere": 2
       }
    },
 
