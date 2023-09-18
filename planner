@@ -1,34 +1,38 @@
-TODO list:
-    *
+tasks for preliminary version:
+    [X] testar o Iono free SPS: ter a certeza de que o tgd é 0 e o DI é 0.
+    [X] Implementar o Dual Frequency SPS GPS
+    [ ] re-adicionar o filtro de elevation no gnss_solver
+    [ ] escrever um traceback dos filtros do preprocessor
+    [ ] limpar o código / solve all TODOs
 
-para finalizar a versao preliminar:
-[X] testar o Iono free SPS: ter a certeza de que o tgd é 0 e o DI é 0.
-    [ ] Se for L1 L5 ou L2 L5, avisar que em SPS não há DCBs (warning). Mas colocar o tgd a 0
-[ ] Implementar o Dual Frequency SPS
-[ ] adicionar o filtro de elevation no gnss_solver
-[ ] compute mean and std of pre/postfit residuals -> mean should be zero. STD should be sigma_URE (user range error). This should be computed for each satellite
-[ ] plot residuals
-[ ] plot position covariance (3D plot, 2D surfaces, etc...)
-[ ] plot 3d sigma of estimation error
-[ ] escrever um traceback dos filtros do preprocessor
-[ ] compute allan variance of clock bias
-[ ] limpar o código / solve all TODOs
-
-depois:
+adicionar GAL SPS
     [ ] ler dados de navegacao/observacao de gal
     [ ] implementar o GAL SPS (com ISB estimation)
 
-depois:
+ISTO TERMINA A VERSAO PRELIMINAR
+--- ### ---
+
+post-processing tasks:
+    [ ] plot Iono states
+    [ ] compute mean and std of pre/postfit residuals -> mean should be zero. STD should be sigma_URE (user range error). This should be computed for each satellite
+    [ ] plot residuals
+    [ ] plot position covariance (3D plot, 2D surfaces, etc...)
+    [ ] plot 3d sigma of estimation error
+    [ ] compute allan variance of clock bias
+
+caminhar para PPPP:
     [ ] criar um config field com o modo (SPS ou PPPP)
     [ ] Adicionar Leitura e Modelo de Clocks, Sp3, IONEX (criar um PPPP)
     [ ] substituir alguns modelos do SPS pelos respetivos do PPPP
+    [ ] ler sat DCBs e criar uma classe que substitua o modelo atual
 
-depois:
+finalizar o GNSS user positioning com:
     [ ] Adicionar Kalman filter com user dynamics
     [ ] process doppler measurements to estimate velocity
 
 
-muito depois - start loosely coupled:
+loosely coupled:
+    [ ] attitude basics
     [ ] sensor emulator
     [ ] INS
     [ ] loosely coupled
