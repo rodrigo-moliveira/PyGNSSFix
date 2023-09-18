@@ -21,7 +21,7 @@ class GnssSinglePointSolution(Algorithm):
         sol = data_manager.get_data("nav_solution")
 
         for state in sol:
-            system_matrix = state.get_solver_info("geometry_matrix")  # this is G matrix in LS
+            system_matrix = state.get_additional_info("geometry_matrix")  # this is G matrix in LS
             dop_matrix = np.linalg.inv(system_matrix.T @ system_matrix)
 
             # DOPs
@@ -37,7 +37,7 @@ class GnssSinglePointSolution(Algorithm):
                         "x_ecef": x_ecef,
                         "y_ecef": y_ecef,
                         "z_ecef": z_ecef}
-            state.add_solver_info("dop_ecef", dop_ecef)
+            state.add_additional_info("dop_ecef", dop_ecef)
 
             # computing DOPs in ENU frame
             lat, long, _ = cartesian2geodetic(*state.position)
@@ -52,9 +52,9 @@ class GnssSinglePointSolution(Algorithm):
                        "north": dop_north,
                        "up": dop_up,
                        "horizontal": dop_horizontal}
-            state.add_solver_info("dop_local", dop_enu)
+            state.add_additional_info("dop_local", dop_enu)
 
-            log.info(f"DOPs for epoch {str(state.date)}: geometry = {geometry_dop}, horizontal = {dop_horizontal}, "
+            log.info(f"DOPs for epoch {str(state.epoch)}: geometry = {geometry_dop}, horizontal = {dop_horizontal}, "
                      f"vertical = {dop_up}")
 
     def compute(self, data_manager, trace_path):

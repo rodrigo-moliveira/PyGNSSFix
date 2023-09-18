@@ -111,7 +111,7 @@ class GnssSolver:
 
     def _set_solver_info(self, config):
 
-        # TODO: add this to the config object rather than being here
+        # TODO : add this to the config object rather than being here
         # Fetching user options
         MAX_ITER = config.get("solver", "n_iterations")  # maximum number of iterations
         STOP_CRITERIA = config.get("solver", "stop_criteria")  # RMS threshold for stop criteria
@@ -167,28 +167,22 @@ class GnssSolver:
         # available epochs
         epochs = self.obs_data.get_epochs()
 
-        # initialize receiver_position
-        initial_pos = self._info["INITIAL_POS"][0:3]
-        initial_clock = self._info["INITIAL_CLOCK_BIAS"][0]
-        state = GnssStateSpace(position=initial_pos,
-                               clock_bias=initial_clock)
-
         # iterate over all available epochs
         for epoch in epochs:
             # fetch observation data for this epoch
-            obs_data = self.obs_data.get_epoch_data(epoch)
+            obs_for_epoch = self.obs_data.get_epoch_data(epoch)
+            sats_for_epoch = self.obs_data.get_satellites()
 
             # initialize solve-for variables (receiver position and bias) for the present epoch
-            state = GnssStateSpace(position=state.position.copy(),
-                                   clock_bias=state.clock_bias,
-                                   date=epoch)
+            state = self._init_state(epoch, sats_for_epoch)
+
             # call lower level of solve
-            success = self._solve(epoch, obs_data, state)
+            success = self._solve_for_epoch(epoch, obs_for_epoch, state)
 
             if success:
                 # add solution to Output timeseries
                 self.log.info(f"Successfully solved positioning for epoch {str(epoch)} with "
-                              f"RMS = {state.get_solver_info('rms')} [m]")
+                              f"RMS = {state.get_additional_info('rms')} [m]")
 
                 # store data for this epoch
                 self.solution.append(state)
@@ -198,11 +192,29 @@ class GnssSolver:
 
         self.log.info("Successfully ending module GNSS Positioning Solver...")
 
+    def _init_state(self, epoch, sat_list):
+        # initialize GNSS state
+
+        if len(self.solution) == 0:
+            initial_pos = self._info["INITIAL_POS"][0:3]
+            initial_clock = self._info["INITIAL_CLOCK_BIAS"][0]
+            state = GnssStateSpace(position=np.array(initial_pos, dtype=np.float64),
+                                   clock_bias=initial_clock,
+                                   epoch=epoch,
+                                   sat_list=sat_list)
+        else:
+            prev_state = self.solution[-1]
+            state = GnssStateSpace(position=prev_state.position.copy(),
+                                   clock_bias=prev_state.clock_bias,
+                                   epoch=epoch,
+                                   sat_list=sat_list)
+        return state
+
     @staticmethod
     def _stop(rms_old, rms_new, stop_criteria):
         return abs((rms_old - rms_new) / rms_old) <= stop_criteria
 
-    def _solve(self, epoch, obs_data, state):
+    def _solve_for_epoch(self, epoch, obs_data, state):
         # begin iterative process for this epoch
         iteration = 0
         success = False
@@ -210,9 +222,8 @@ class GnssSolver:
         geometry_matrix = cov = prefit_residuals = postfit_residuals = None
 
         # TODO: tmp -> this needs to be revisited
-        # gps_model = self._info['MODEL']['GPS']
-        # gps_obs_model = self._info['COMBINED_OBS_MODEL']['GPS']
         gps_codes = self._info['CODES']['GPS']
+        # gal_codes
 
         # build system geometry for this epoch
         system_geometry = SystemGeometry(self.nav_data, obs_data)
@@ -238,7 +249,7 @@ class GnssSolver:
             # solve the Least Squares
             try:
                 postfit_residuals, geometry_matrix, prefit_residuals, cov = \
-                    self._solve_LS(system_geometry, obs_data, state, epoch)
+                    self._compute(system_geometry, obs_data, state, epoch)
             except PVTComputationFail as e:
                 self.log.warning(f"Least Squares failed for {str(epoch)} on iteration {iteration}."
                                  f"Reason: {e}")
@@ -264,59 +275,36 @@ class GnssSolver:
             return False
 
         # save other iteration data to state variable
-        state.add_solver_info("geometry", system_geometry)
-        state.add_solver_info("geometry_matrix", geometry_matrix)
-        state.add_solver_info("prefit_residuals", prefit_residuals)
-        state.add_solver_info("postfit_residuals", postfit_residuals)
-        state.add_solver_info("cov", cov)
-        state.add_solver_info("sat_list", system_geometry.get_satellites())
+        state.add_additional_info("geometry", system_geometry)
+        state.add_additional_info("geometry_matrix", geometry_matrix)
+        state.add_additional_info("prefit_residuals", prefit_residuals)
+        state.add_additional_info("postfit_residuals", postfit_residuals)
+        state.add_additional_info("rms", rms)
+        state.add_additional_info("cov", cov)
 
         return success
 
-    def _solve_LS(self, system_geometry, obs_data, state, epoch):
+    def _initialize_ls(self, n_sats, state):
         # initializations
-        satellite_list = system_geometry.get_satellites()
-        obs_length = len(satellite_list)  # number of available satellites
         state_length = len(state)  # number of solve for parameters to estimate
 
         # least squares arrays
-        y = np.zeros(obs_length)  # observation vector <=> prefit residuals
-        G = np.ones((obs_length, state_length))  # geometry matrix
-        W = np.eye(obs_length)  # diagonal weight matrix
+        # TODO: Currently this is GPS specific
+        if self._info["MODEL"]["GPS"] == EnumModel.SINGLE_FREQ:
+            y = np.zeros(n_sats)  # observation vector <=> prefit residuals
+            design = np.ones((n_sats, state_length))  # geometry matrix
+            weight = np.eye(n_sats)  # diagonal weight matrix
+        else:
+            y = np.zeros(n_sats * 2)  # observation vector <=> prefit residuals
+            geometry = np.ones((n_sats, 4))  # geometry matrix (state + clock)
+            weight = np.eye(n_sats * 2)  # diagonal weight matrix
+            # aqui deve ser f(main) / f(main)=1 e f(main)/f(second)
+            ionoMatrix1 = np.eye(n_sats) * (f1.freq_value / self._info["MAIN_CODE"].freq.freq_value) ** 2
+            ionoMatrix2 = np.eye(n_sats) * (f1.freq_value / self._info["SECOND_CODE"].freq.freq_value) ** 2
 
-        datatypes = self._info["CODES"]["GPS"]
-        reconstructor = ObservationReconstruction(system_geometry, datatypes,
-                                                  self._info["TROPO"],
-                                                  self._info["IONO"],
-                                                  self.nav_data.header,
-                                                  self._info["REL_CORRECTION"])
+        return y, design, weight
 
-        i = 0
-        for sat in satellite_list:
-            # get observable
-            obs = obs_data.get_observable(sat, datatypes[0])  # main observable
-
-            # fetch valid navigation message (closest to the current epoch)
-            nav_message = self.nav_data.get_sat_data_for_epoch(sat, epoch)
-
-            # compute predicted observation
-            predicted_obs = reconstructor.compute(nav_message, sat, epoch, datatypes[0])
-
-            # prefit residuals (measured observation - predicted observation)
-            prefit_residuals = obs - predicted_obs
-
-            # get LOS vector w.r.t. ECEF frame (column in geometry matrix)
-            line_sight = system_geometry.get_unit_line_of_sight(sat)
-
-            # filling the corresponding entry of data vectors for the Least Squares quantities
-            y[i] = prefit_residuals.value
-            G[i][0:3] = line_sight
-
-            # Weight matrix -> sigma = 1 / e^{-elevation}
-            W[i][i] = get_weight(system_geometry, sat)
-
-            i += 1
-
+    def _solve_ls(self, y, G, W, state):
         # solve LS problem for this iteration
         try:
             solver = WeightedLeastSquares(y, G, W=W)
@@ -337,7 +325,51 @@ class GnssSolver:
         # get post-fit residuals
         post_fit = y - G[:, 0:3] @ dX[0:3]
 
-        return post_fit, G, y, cov
+        return post_fit, cov
+
+    def _compute(self, system_geometry, obs_data, state, epoch):
+        satellite_list = system_geometry.get_satellites()
+        n_sats = len(satellite_list)  # number of available satellites
+
+        y_vec, design_mat, weight_mat = self._initialize_ls(n_sats, state)
+
+        datatypes = self._info["CODES"]["GPS"]
+        reconstructor = ObservationReconstruction(system_geometry, datatypes,
+                                                  self._info["TROPO"],
+                                                  self._info["IONO"],
+                                                  self.nav_data.header,
+                                                  self._info["REL_CORRECTION"])
+
+        iSat = 0
+        for sat in satellite_list:
+            # get observable
+            obs = obs_data.get_observable(sat, datatypes[0])  # main observable
+
+            # fetch valid navigation message (closest to the current epoch)
+            nav_message = self.nav_data.get_sat_data_for_epoch(sat, epoch)
+
+            # compute predicted observation
+            predicted_obs = reconstructor.compute(nav_message, sat, epoch, datatypes[0])
+
+            # prefit residuals (measured observation - predicted observation)
+            prefit_residuals = obs - predicted_obs
+
+            # get LOS vector w.r.t. ECEF frame (column in geometry matrix)
+            line_sight = system_geometry.get_unit_line_of_sight(sat)
+
+            # filling the corresponding entry of data vectors for the Least Squares quantities
+            y_vec[iSat] = prefit_residuals.value
+            design_mat[iSat][0:3] = line_sight
+
+            # Weight matrix -> sigma = 1 / e^{-elevation}
+            weight_mat[iSat][iSat] = get_weight(system_geometry, sat)
+
+            iSat += 1
+
+        # solve LS problem
+        post_fit, cov = self._solve_ls(y_vec, design_mat, weight_mat, state)
+
+        return post_fit, design_mat, y_vec, cov
 
     """def _solve_df_LS(self, system_geometry, obs_data, state, nav_header, epoch):
 

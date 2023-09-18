@@ -38,7 +38,7 @@
       "_comment": "available modes are SPS, SPS_IF",
 
       "GPS": {
-         "observations": ["1C","2W"],
+         "observations": ["1C"],
          "obs_std": [1, 1],
          "elevation_mask": true,
 

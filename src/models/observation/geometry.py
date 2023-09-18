@@ -96,15 +96,15 @@ class SatelliteGeometry(Container):
 
 
 class SystemGeometry:
-    def __init__(self, nav_data, epoch_data):
+    def __init__(self, nav_data, obs_data):
         """
         Args:
             nav_data (src.data_types.containers.NavigationData.NavigationDataMap) : Navigation data map
-            epoch_data (src.data_types.containers.ObservationData.EpochData) : observation epoch data for
+            obs_data (src.data_types.containers.ObservationData.EpochData) : observation epoch data for
         """
-        self._data = dict.fromkeys(epoch_data.get_satellites())
+        self._data = dict.fromkeys(obs_data.get_satellites())
         self.nav_data = nav_data
-        self.epoch_data = epoch_data
+        self.obs_data = obs_data
 
     def _clean(self):
         # reinitialize self._data
@@ -153,7 +153,7 @@ class SystemGeometry:
 
             # fetch pseudorange observation for this satellite at epoch (used in the compute_TX_time algorithm)
             try:
-                main_observation = self.epoch_data.get_observable(sat, main_datatype)
+                main_observation = self.obs_data.get_observable(sat, main_datatype)
             except NonExistentObservable:
                 # could not retrieve this observable
                 _to_remove.append(sat)

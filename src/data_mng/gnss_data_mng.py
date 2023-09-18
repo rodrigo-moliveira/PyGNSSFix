@@ -1,6 +1,7 @@
 from src.constants import OUTPUT_FILENAME_MAP
 from src.data_mng.container import Container
 from src.io.config import config_dict
+from src.io.states.export_states import get_file_header, export_to_file
 
 
 class GnssDataManager(Container):
@@ -71,27 +72,27 @@ class GnssDataManager(Container):
                     # iterate over estimated states
                     for state in sim:
 
-                        week, sow = state.date.gps_time
+                        week, sow = state.epoch.gps_time
                         time_str = f"{week},{sow}"
 
                         # save estimated data for this epoch
-                        estimables = state.get_estimables()
-                        for est in estimables:
+                        exportable_lst = state.get_exportable_lst()
+                        for ext in exportable_lst:
 
                             # add this estimable to the file list (only do this once)
-                            if est not in file_list:
-                                filename = f"{directory}\\{OUTPUT_FILENAME_MAP[est]}"
-                                file_list[est] = open(filename, "w")
-                                file_list[est].write(f"{state.get_header(est)}\n")
+                            if ext not in file_list:
+                                filename = f"{directory}\\{OUTPUT_FILENAME_MAP[ext]}"
+                                file_list[ext] = open(filename, "w")
+                                file_list[ext].write(f"{get_file_header(ext)}\n")
                                 log.info(f"creating output file {filename}")
 
                             # save this epoch data
-                            data = state.export_to_file(est)
+                            data = export_to_file(state, ext)
                             if isinstance(data, str):
-                                file_list[est].write(f"{time_str},{data}\n")
+                                file_list[ext].write(f"{time_str},{data}\n")
                             elif isinstance(data, list):
                                 for entry in data:
-                                    file_list[est].write(f"{time_str},{entry}\n")
+                                    file_list[ext].write(f"{time_str},{entry}\n")
 
     @property
     def available(self):
