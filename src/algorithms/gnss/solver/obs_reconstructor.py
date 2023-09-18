@@ -3,18 +3,17 @@ from src.io.config.enums import EnumOnOff, EnumIono, EnumTropo
 from src.models.frames import cartesian2geodetic
 from src.models.observation.atmosphere_obs import iono_klobuchar, tropo_saastamoinen
 from src.models.observation.clock_obs import gps_broadcast_clock
-from src.data_types.gnss.data_type import L1
+from src.data_types.gnss.data_type import L1, DataType
 from src.data_types.gnss.observation import Observation
 from src import constants
 
 
 class ObservationReconstruction:
-    def __init__(self, system_geometry, datatypes, tropo, iono, nav_header, relativistic_correction):
+    def __init__(self, system_geometry, tropo, iono, nav_header, relativistic_correction):
         self._model = {"tropo": tropo,  # a priori troposphere model
                        "iono": iono,  # a priori ionosphere model
                        "relativistic_correction": relativistic_correction
                        }
-        self._datatypes = datatypes
         self._system_geometry = system_geometry
         self._nav_header = nav_header
 
@@ -41,8 +40,10 @@ class ObservationReconstruction:
         if self._model["relativistic_correction"] == EnumOnOff.ENABLED:
             dt_sat += self._system_geometry.get("dt_rel_correction", sat)
 
-        # correct for satellite clock for TGD (TGD is 0 for iono free observables)
-        dt_sat -= self._system_geometry.get("tgd", sat)
+        # correct for satellite clock for TGD (TGD is 0 for iono free observables (in GPS SPS only...))
+        if not DataType.is_iono_free_smooth_code(datatype) and not DataType.is_iono_free_code(datatype):
+            tgd = (L1.freq_value / datatype.freq.freq_value) ** 2 * self._system_geometry.get("tgd", sat)
+            dt_sat -= tgd
 
         # ionosphere
         if not config_dict.is_iono_free():

@@ -207,7 +207,8 @@ class GnssSolver:
             state = GnssStateSpace(position=prev_state.position.copy(),
                                    clock_bias=prev_state.clock_bias,
                                    epoch=epoch,
-                                   sat_list=sat_list)
+                                   sat_list=sat_list,
+                                   iono=prev_state.iono)
         return state
 
     @staticmethod
@@ -284,27 +285,30 @@ class GnssSolver:
 
         return success
 
-    def _initialize_ls(self, n_sats, state):
+    def _initialize_ls(self, n_sats):
         # initializations
-        state_length = len(state)  # number of solve for parameters to estimate
+        gps_codes = self._info['CODES']['GPS']
 
         # least squares arrays
         # TODO: Currently this is GPS specific
         if self._info["MODEL"]["GPS"] == EnumModel.SINGLE_FREQ:
             y = np.zeros(n_sats)  # observation vector <=> prefit residuals
-            design = np.ones((n_sats, state_length))  # geometry matrix
+            design = np.ones((n_sats, 4))  # geometry matrix
             weight = np.eye(n_sats)  # diagonal weight matrix
         else:
             y = np.zeros(n_sats * 2)  # observation vector <=> prefit residuals
             geometry = np.ones((n_sats, 4))  # geometry matrix (state + clock)
             weight = np.eye(n_sats * 2)  # diagonal weight matrix
-            # aqui deve ser f(main) / f(main)=1 e f(main)/f(second)
-            ionoMatrix1 = np.eye(n_sats) * (f1.freq_value / self._info["MAIN_CODE"].freq.freq_value) ** 2
-            ionoMatrix2 = np.eye(n_sats) * (f1.freq_value / self._info["SECOND_CODE"].freq.freq_value) ** 2
+            ionoMatrix1 = np.eye(n_sats)
+            ionoMatrix2 = np.eye(n_sats) * (gps_codes[0].freq.freq_value / gps_codes[1].freq.freq_value) ** 2
 
+            design = np.block([
+                [geometry, ionoMatrix1],
+                [geometry, ionoMatrix2]]
+            )
         return y, design, weight
 
-    def _solve_ls(self, y, G, W, state):
+    def _solve_ls(self, y, G, W, state, n_sats):
         # solve LS problem for this iteration
         try:
             solver = WeightedLeastSquares(y, G, W=W)
@@ -322,6 +326,13 @@ class GnssSolver:
         state.position += dX[0:3]
         state.clock_bias = dX[3] / constants.SPEED_OF_LIGHT  # receiver clock in seconds
 
+        # if iono is estimated
+        if self._info["MODEL"]["GPS"] == EnumModel.DUAL_FREQ:
+            state.iono = [dX[i + 4] for i in range(n_sats)]
+
+        # if isb is estimated
+        # ...
+
         # get post-fit residuals
         post_fit = y - G[:, 0:3] @ dX[0:3]
 
@@ -331,43 +342,48 @@ class GnssSolver:
         satellite_list = system_geometry.get_satellites()
         n_sats = len(satellite_list)  # number of available satellites
 
-        y_vec, design_mat, weight_mat = self._initialize_ls(n_sats, state)
+        y_vec, design_mat, weight_mat = self._initialize_ls(n_sats)
 
         datatypes = self._info["CODES"]["GPS"]
-        reconstructor = ObservationReconstruction(system_geometry, datatypes,
+        reconstructor = ObservationReconstruction(system_geometry,
                                                   self._info["TROPO"],
                                                   self._info["IONO"],
                                                   self.nav_data.header,
                                                   self._info["REL_CORRECTION"])
 
-        iSat = 0
-        for sat in satellite_list:
-            # get observable
-            obs = obs_data.get_observable(sat, datatypes[0])  # main observable
+        iFreq = 0
+        for datatype in datatypes:
 
-            # fetch valid navigation message (closest to the current epoch)
-            nav_message = self.nav_data.get_sat_data_for_epoch(sat, epoch)
+            iSat = 0
+            for sat in satellite_list:
 
-            # compute predicted observation
-            predicted_obs = reconstructor.compute(nav_message, sat, epoch, datatypes[0])
+                # get observable
+                obs = obs_data.get_observable(sat, datatype)  # main observable
 
-            # prefit residuals (measured observation - predicted observation)
-            prefit_residuals = obs - predicted_obs
+                # fetch valid navigation message (closest to the current epoch)
+                nav_message = self.nav_data.get_sat_data_for_epoch(sat, epoch)
 
-            # get LOS vector w.r.t. ECEF frame (column in geometry matrix)
-            line_sight = system_geometry.get_unit_line_of_sight(sat)
+                # compute predicted observation
+                predicted_obs = reconstructor.compute(nav_message, sat, epoch, datatype)
 
-            # filling the corresponding entry of data vectors for the Least Squares quantities
-            y_vec[iSat] = prefit_residuals.value
-            design_mat[iSat][0:3] = line_sight
+                # prefit residuals (measured observation - predicted observation)
+                prefit_residuals = obs - predicted_obs
 
-            # Weight matrix -> sigma = 1 / e^{-elevation}
-            weight_mat[iSat][iSat] = get_weight(system_geometry, sat)
+                # get LOS vector w.r.t. ECEF frame (column in geometry matrix)
+                line_sight = system_geometry.get_unit_line_of_sight(sat)
 
-            iSat += 1
+                # filling the corresponding entry of data vectors for the Least Squares quantities
+                y_vec[iFreq * n_sats + iSat] = prefit_residuals.value
+                design_mat[iFreq * n_sats + iSat][0:3] = line_sight
+
+                # Weight matrix -> sigma = 1 / e^{-elevation}
+                weight_mat[iFreq * n_sats + iSat][iFreq * n_sats + iSat] = get_weight(system_geometry, sat)
+
+                iSat += 1
+            iFreq += 1
 
         # solve LS problem
-        post_fit, cov = self._solve_ls(y_vec, design_mat, weight_mat, state)
+        post_fit, cov = self._solve_ls(y_vec, design_mat, weight_mat, state, n_sats)
 
         return post_fit, design_mat, y_vec, cov
 

@@ -56,6 +56,9 @@ class SatelliteGeometry(Container):
 
         # get TGD (to use in the compute_tx_time algorithm), and fix it for non L1 users
         # TODO: currently this is GPS dependent, and assumes that second freq is L2
+        #   adicionar uma class para fazer o tratamento dos DCBs (com TGD/BGD das nav messages) + DCB files
+        #   esta classe depois tem um getter -> get_dcb(this_freq) e retorna o dcb para esta freq ou 0 com
+        #   um warning no caso de não haver dados
         if DataType.is_iono_free_smooth_code(PR_obs.datatype) or DataType.is_iono_free_code(PR_obs.datatype):
             TGD = 0  # TGD is 0 for Iono Free observables
         else:
@@ -92,7 +95,7 @@ class SatelliteGeometry(Container):
         self.satellite_position = p_sat
         self.receiver_position = rec_pos
         self.dt_rel_correction = dt_relative
-        self.tgd = TGD
+        self.tgd = nav_message.TGD
 
 
 class SystemGeometry:

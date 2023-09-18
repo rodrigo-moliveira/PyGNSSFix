@@ -49,6 +49,7 @@ POST_RESIDUALS = "postfit_residuals.txt"
 POSITION = "position.txt"
 CLOCK = "clock_bias.txt"
 TIME = "time.txt"
+IONO = "iono.txt"
 OUTPUT_FILENAME_MAP = {
     "satellite_azel": AZEL,
     "dop_ecef": DOP_ECEF,
@@ -58,7 +59,7 @@ OUTPUT_FILENAME_MAP = {
     "position": POSITION,
     "clock_bias": CLOCK,
     "epoch": TIME,
-    "iono": None,
+    "iono": IONO,
     "isb": None,
     "velocity": None
 }

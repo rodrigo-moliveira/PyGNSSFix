@@ -1,3 +1,5 @@
+import numpy as np
+
 from src import constants
 from src.algorithms.gnss.estimators.state_space import GnssStateSpace
 
@@ -8,6 +10,8 @@ def get_file_header(exportable):
                "cov_XZ[m^2],cov_YZ[m^2]"
     elif exportable == "clock_bias":
         return "GPS_Week,GPS_TOW,clock_bias[s],cov[s^2]"
+    elif exportable == "iono":
+        return "GPS_Week,GPS_TOW,sat,iono[m],cov[m^2]"
     elif exportable == "epoch":
         return "GPS_Week,GPS_TOW,Epoch_timetag"
     elif exportable == "prefit_residuals":
@@ -46,6 +50,17 @@ def export_to_file(gnss_state: GnssStateSpace, exportable):
             return f"{gnss_state.clock_bias},{cov_t}"
         else:
             return f"{gnss_state.clock_bias}"
+
+    if exportable == "iono":
+        cov = gnss_state._info.get("cov", None)
+        sat_list = gnss_state._info["geometry"].get_satellites()
+        data = []
+        iono_list = gnss_state.iono
+
+        for sat, iono, cov_iono in zip(sat_list, iono_list, np.diag(cov)[4:]):
+            data.append(f"{sat},{iono},{cov_iono}")
+
+        return data
 
     elif exportable == "prefit_residuals" or exportable == "postfit_residuals":
         residuals = gnss_state._info[exportable]
