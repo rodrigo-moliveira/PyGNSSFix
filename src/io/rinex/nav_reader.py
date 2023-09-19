@@ -75,7 +75,7 @@ class RinexNavReader:
             line = file.readline()
 
             if "RINEX VERSION / TYPE" in line:
-                self.nav.header.rinex_version = float(line[5:10])
+                self.nav.header.rinex_version = utils.to_float(line[5:10])
                 if self.nav.header.rinex_version < 3:
                     raise FileError("The provided rinex file {} is of version {}. Only version 3.00 or "
                                     "higher is supported. Error!".format(file, self.nav.header.rinex_version))
@@ -95,7 +95,8 @@ class RinexNavReader:
 
             elif "IONOSPHERIC CORR" in line:
                 data = line[:utils.RINEX_OBS_END_OF_DATA_HEADER].split()
-                self.nav.header.iono_corrections[data[0]] = [float(i) for i in data[1:]]
+                if data[0] in {"GAL", "GPSA", "GPSB"}:
+                    self.nav.header.iono_corrections[data[0]] = [utils.to_float(i) for i in data[1:]]
 
             elif "END OF HEADER" in line:
                 break
@@ -110,7 +111,7 @@ class RinexNavReader:
             * Cuc, e, Cus, sqrtA                                    [Line 3]
             * Toe, Cic, RAAN0, Cis,                                 [Line 4]
             * i0, crc, omega, RAANDot,                              [Line 5]
-            * iDot, codesL2, toe (sensors week), flagL2,                [Line 6]
+            * iDot, codesL2, toe (sensors week), flagL2,            [Line 6]
             * SV_URA, SV_health, TGD, IODC                          [Line 7]
             * TransmissionTime (seconds of week)                    [Line 8]
 

@@ -6,9 +6,6 @@ from src.data_mng.timeseries import TimeSeries
 from src.data_mng.container import Container
 
 
-# Note: currently only GPS navigation messages are allowed.
-
-
 class NavigationHeader(Container):
     """
     NavigationHeader class, inherits from Container

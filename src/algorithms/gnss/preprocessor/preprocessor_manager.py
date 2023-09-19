@@ -53,6 +53,7 @@ class PreprocessorManager:
             raise PreprocessorError(f"PreprocessorManager -> Error performing Consistency Type filter: {e}")
 
         obs_data_out = ObservationData()
+        obs_data_out.header = self.raw_data.header
 
         # check to compute or not iono free dataset from raw observables
         compute_iono_free = config_dict.is_iono_free()

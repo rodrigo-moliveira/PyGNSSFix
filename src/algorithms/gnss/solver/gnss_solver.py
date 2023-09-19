@@ -353,6 +353,8 @@ class GnssSolver:
 
         iFreq = 0
         for datatype in datatypes:
+            if datatype is None:
+                continue
 
             iSat = 0
             for sat in satellite_list:
