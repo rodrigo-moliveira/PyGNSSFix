@@ -27,16 +27,12 @@ class TimeSeries(OrderedDict):
         self.overwriting = overwriting
 
     # methods to set data
-    def set_data(self, epoch, epoch_data, logger=None):
+    def set_data(self, epoch, epoch_data):
 
         # if not self.overwriting and epoch not in self._epochs:
         if not self.overwriting and epoch in self._epochs:
             # epoch is already defined, and we are in non-overwriting mode -> skip insertion
-            print("epoch is already defined, and we are in non-overwriting mode -> skip insertion")
-            if logger is not None:
-                # TODO: add logger message (warning)
-                pass
-            return
+            raise TimeSeriesError(f"Epoch {epoch} has already been defined. This timeseries is non-overwriting.")
 
         # add data to internal dict
         self._set_data(epoch, epoch_data)

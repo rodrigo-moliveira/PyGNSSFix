@@ -1,6 +1,5 @@
 from src.constants import OUTPUT_FILENAME_MAP
 from src.data_mng.container import Container
-from src.io.config import config_dict
 from src.io.states.export_states import get_file_header, export_to_file
 
 

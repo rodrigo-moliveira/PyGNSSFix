@@ -254,6 +254,7 @@ class EopDb:
         """
         if name in cls._dbs:
             msg = f"'{name}' is already registered for an Eop database. Skipping"
+            print(msg)
             # TODO: raise warning
         else:
             cls._dbs[name] = klass

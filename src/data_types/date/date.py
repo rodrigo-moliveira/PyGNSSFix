@@ -1,7 +1,7 @@
 """Date module
 """
 
-from numpy import sin, radians, ceil
+from numpy import sin, radians
 from datetime import datetime, timedelta, date
 
 from ...errors import DateError, UnknownScaleError
@@ -36,6 +36,10 @@ class Timescale(Node):
     def _scale_tai_minus_gps(self, mjd, eop):
         """Definition of International Atomic Time relatively to GPS time"""
         return 19.0
+
+    def _scale_gpst_minus_gst(self, mjd, eop):
+        """Definition of GPST relatively to GST """
+        return 0.0
 
     def _scale_tdb_minus_tt(self, mjd, eop):
         """Definition of the Barycentric Dynamic Time scale relatively to Terrestrial Time"""
@@ -75,18 +79,20 @@ class Timescale(Node):
         return delta
 
 
-UT1 = Timescale("UT1")  # Universal Time
-GPS = Timescale("GPS")  # GPS Time
-TDB = Timescale("TDB")  # Barycentric Dynamical Time
-UTC = Timescale("UTC")  # Coordinated Universal Time
-TAI = Timescale("TAI")  # International Atomic Time
-TT = Timescale("TT")  # Terrestrial Time
-# TODO: add GALILEO time
+UT1 = Timescale("UT1")      # Universal Time
+GPST = Timescale("GPST")    # GPS Time
+TDB = Timescale("TDB")      # Barycentric Dynamical Time
+UTC = Timescale("UTC")      # Coordinated Universal Time
+TAI = Timescale("TAI")      # International Atomic Time
+TT = Timescale("TT")        # Terrestrial Time
+GST = Timescale("GST")      # Galileo System Time
 
-GPS + TAI + UTC + UT1
+GPST + TAI + UTC + UT1
 TDB + TT + TAI
+GPST + GST
 
-_cache = {"UT1": UT1, "GPS": GPS, "TDB": TDB, "UTC": UTC, "TAI": TAI, "TT": TT}
+_cache = {"UT1": UT1, "GPST": GPST, "TDB": TDB, "UTC": UTC, "TAI": TAI, "TT": TT, "GPS": GPST,
+          "GST": GST, "GAL": GST}
 
 
 def get_scale(name):
@@ -149,7 +155,7 @@ class Epoch:
     J2000 = 2451545.0
     """Offset between JD and J2000"""
 
-    REF_SCALE = "GPS"
+    REF_SCALE = "GPST"
     """Scale used as reference internally"""
 
     DEFAULT_SCALE = "UTC"
@@ -300,6 +306,8 @@ class Epoch:
     def __hash__(self):
         return hash((self._d, self._s))
 
+    # TODO: add just a function to convert between GPST and GST
+
     @classmethod
     def _convert_dt(cls, dt):
         if dt.tzinfo is None:
@@ -420,11 +428,6 @@ class Epoch:
         """
         return self.d + self.s / 86400.0
 
-    @classmethod
-    def range(cls, *args, **kwargs):
-        """See :py:class:`DateRange` for arguments and documentation"""
-        return DateRange(*args, **kwargs)
-
     @property
     def gps_time(self):
         """
@@ -433,7 +436,7 @@ class Epoch:
         """
         if "gps_time" not in self._cache.keys():
             # convert this epoch to GPS Time
-            gps_epoch = self.change_scale("GPS")
+            gps_epoch = self.change_scale(GPST)
             dt = (gps_epoch - Epoch.GPS_ORIGIN).total_seconds()
             week = (dt/3600/24) // 7
             sow = dt - week*3600*24*7

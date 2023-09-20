@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from src.errors import TimeSeriesError
+from src.errors import TimeSeriesError, NavigationError
 from src.data_types.date.date import Epoch
 from src.data_types.gnss.satellite import Satellite
 from src.data_mng.timeseries import TimeSeries
@@ -12,7 +12,7 @@ class NavigationHeader(Container):
     stores relevant data from the header section of a navigation file
     """
     __slots__ = ["rinex_version", "satellite_system",
-                 "iono_corrections", "leap_seconds", "first_epoch"]
+                 "iono_corrections", "leap_seconds"]
 
     def __init__(self):
         super().__init__()
@@ -22,20 +22,8 @@ class NavigationHeader(Container):
 
 
 class NavigationPoint(Container):
-    """
-    NavigationPointGPS class, inherits from Container
-    stores the data contained in a single navigation message for GPS satellites
-    """
-    __slots__ = ["satellite", "toc", "af0", "af1", "af2",
-                 "IODE", "crs", "deltaN", "M0",
-                 "cuc", "eccentricity", "cus", "sqrtA",
-                 "cic", "RAAN0", "cis",
-                 "i0", "crc", "omega", "RAANDot",
-                 "iDot", "codesL2", "toe", "flagL2",
-                 "SV_URA", "SV_health", "TGD", "IODC",
-                 "TransmissionTime"]
 
-    def __init__(self):
+    def __int__(self):
         super().__init__()
         for attr in self.__slots__:
             setattr(self, attr, None)
@@ -48,6 +36,67 @@ class NavigationPoint(Container):
             _allAttrs += atr + "=" + str(getattr(self, atr)) + ", "
         _allAttrs = _allAttrs[0:-2]
         return f'{type(self).__name__}({_allAttrs})'
+
+
+class NavigationPointGPS(NavigationPoint):
+    """
+    NavigationPointGPS class, inherits from Container
+    stores the data contained in a single navigation message for GPS satellites
+    """
+    __slots__ = ["satellite", "toc", "af0", "af1", "af2",       # sv / Toc / sv clk
+                 "IODE", "crs", "deltaN", "M0",                 # BROADCAST ORBIT 1
+                 "cuc", "eccentricity", "cus", "sqrtA",         # BROADCAST ORBIT 2
+                 "cic", "RAAN0", "cis",                         # BROADCAST ORBIT 3
+                 "i0", "crc", "omega", "RAANDot",               # BROADCAST ORBIT 4
+                 "iDot", "codesL2", "toe", "flagL2",            # BROADCAST ORBIT 5
+                 "SV_URA", "SV_health", "TGD", "IODC",          # BROADCAST ORBIT 6
+                 "TransmissionTime"]                            # BROADCAST ORBIT 7
+
+
+class NavigationPointGAL(NavigationPoint):
+    """
+    NavigationPointGPS class, inherits from Container
+    stores the data contained in a single navigation message for GAL satellites
+    """
+    __slots__ = ["satellite", "toc", "af0", "af1", "af2",       # sv / Toc / sv clk
+                 "IODnav", "crs", "deltaN", "M0",               # BROADCAST ORBIT 1
+                 "cuc", "eccentricity", "cus", "sqrtA",         # BROADCAST ORBIT 2
+                 "cic", "RAAN0", "cis",                         # BROADCAST ORBIT 3
+                 "i0", "crc", "omega", "RAANDot",               # BROADCAST ORBIT 4
+                 "iDot", "dataSrc", "toe",                      # BROADCAST ORBIT 5
+                 "SISA", "SV_health", "BGDe5a", "BGDe5b",       # BROADCAST ORBIT 6
+                 "TransmissionTime",                            # BROADCAST ORBIT 7
+                 "nav_type"]
+
+    def __init__(self):
+        super().__init__()
+        self.nav_type = None
+
+    def find_message_type(self):
+        data_source = int(self.dataSrc)
+
+        bit0 = data_source & 0b1  # flag for INAV
+        bit1 = (data_source >> 1) & 0b1  # flag for FNAV
+        bit2 = (data_source >> 2) & 0b1  # flag for INAV
+        bit8 = (data_source >> 8) & 0b1  # flag for E1-E5a clock
+        bit9 = (data_source >> 9) & 0b1  # flag for E1-E5b clock
+
+        hasINAV = bool((bit0 | bit2) & bit9)
+        hasFNAV = bool(bit1 & bit8)
+
+        if hasINAV and hasFNAV:
+            raise NavigationError(f'Invalid galileo navigation message type. It cannot be INAV and FNAV '
+                                  f'simultaneously. Please check field Data Source ({bin(data_source)})')
+        if hasINAV:
+            message_type = 'INAV'
+        elif hasFNAV:
+            message_type = 'FNAV'
+        else:
+            raise NavigationError(f'Invalid galileo navigation message type ({bin(data_source)}). '
+                                  f'No INAV or FNAV message available. Please check field Data Source')
+        self.nav_type = message_type
+
+        return self.nav_type
 
 
 class NavigationData:
@@ -88,7 +137,10 @@ class NavigationData:
                                  f'was provided instead')
 
         if satellite in self._data:
-            self._data[satellite].set_data(epoch, nav_message)
+            try:
+                self._data[satellite].set_data(epoch, nav_message)
+            except TimeSeriesError as e:
+                pass  # TODO: add warning to logger
         else:
             timeseries = TimeSeries()
             timeseries.set_data(epoch, nav_message)

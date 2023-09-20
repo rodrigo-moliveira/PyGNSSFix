@@ -151,3 +151,20 @@ def gps_broadcast_clock(af0: float, af1: float, af2: float, toc: float, tx_raw: 
 
 def gal_broadcast_clock():
     pass
+
+"""
+elif constellation == 'GAL':
+            # Inter-signal correction
+            message_type = updated_nav['MessageType']
+            if message_type == "FNAV":
+                # FNAV MESSAGE
+                BGD = updated_nav['BGDe5a'] * ((f1 / frequency) ** 2)
+            elif message_type == "INAV":
+                # INAV MESSAGE
+                # When using inav we need to check if we are using E5a or E5b
+                if frequency_id == "E5a":
+                    dt_correction_E1E5a = dts - updated_nav['BGDe5b'] + updated_nav['BGDe5a']
+                    dts = dt_correction_E1E5a - updated_nav['BGDe5a'] * ((f1 / frequency) ** 2)
+                elif frequency_id == "E5b" or frequency_id == "E1":
+                    BGD = updated_nav['BGDe5b'] * ((f1 / frequency) ** 2)
+"""
