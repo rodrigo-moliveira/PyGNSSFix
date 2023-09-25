@@ -141,26 +141,32 @@ class PreprocessorManager:
         f.close()
 
     def sv_ura_health_filter(self, observation_data):
-        # TODO: stopped here. need to add the SISA for GAL
-        ura_check = config_dict.get("preprocessor", "satellite_status", "SV_URA")
-        ura_threshold = config_dict.get("preprocessor", "satellite_status", "SV_maximum_URA")
-        health_check = config_dict.get("preprocessor", "satellite_status", "SV_health")
+        gps_ura_check = config_dict.get("preprocessor", "satellite_status", "GPS", "URA")
+        gps_ura_val = config_dict.get("preprocessor", "satellite_status", "GPS", "max_URA")
+        gps_health = config_dict.get("preprocessor", "satellite_status", "GPS", "health")
 
-        if ura_check or health_check:
-            self.log.info(f"Applying Satellite URA and/or Health checks. URA check is {ura_check}, "
-                          f"URA threshold is {ura_threshold}, health check is {health_check}")
+        gal_sisa_check = config_dict.get("preprocessor", "satellite_status", "GAL", "SISA")
+        gal_sisa_val = config_dict.get("preprocessor", "satellite_status", "GAL", "max_SISA")
+        gal_health = config_dict.get("preprocessor", "satellite_status", "GAL", "health")
 
-            ura_filter = SatFilterHealthURA(self.nav_data, ura_check, ura_threshold, health_check, self.log)
-            mapper = FilterMapper(ura_filter)
-            mapper.apply(observation_data)
+        self.log.info(f"Applying GPS URA, GAL SISA and Health Status checks. "
+                      f"GPS URA filter = {gps_ura_check} URA threshold = {gps_ura_val}m, health status check is "
+                      f"{gps_health}. "
+                      f"GAL SISA filter = {gal_sisa_check} SISA threshold = {gal_sisa_val}m, health status check is "
+                      f"{gal_health}")
 
-            # Saving debug data to file
-            self.log.debug(
-                "Writing SV URA and Health Check Observation Data to trace file {}".
-                format("SvURAHealthObservationData.txt"))
-            f = open(self.trace_path + "/SvURAHealthObservationData.txt", "w")
-            f.write(str(observation_data))
-            f.close()
+        ura_filter = SatFilterHealthURA(self.nav_data, gps_ura_check, gps_ura_val, gps_health,
+                                        gal_sisa_check, gal_sisa_val, gal_health, self.log)
+        mapper = FilterMapper(ura_filter)
+        mapper.apply(observation_data)
+
+        # Saving debug data to file
+        self.log.debug(
+            "Writing SV URA and Health Check Observation Data to trace file {}".
+            format("SvURAHealthObservationData.txt"))
+        f = open(self.trace_path + "/SvURAHealthObservationData.txt", "w")
+        f.write(str(observation_data))
+        f.close()
 
     def iono_free(self, raw_data, data_out, constellation):
         functor = IonoFreeFunctor(constellation, self.services[constellation])

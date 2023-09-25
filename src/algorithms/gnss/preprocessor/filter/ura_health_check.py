@@ -3,12 +3,16 @@ from . import Filter
 
 class SatFilterHealthURA(Filter):
 
-    def __init__(self, navigation_data, ura_check, ura_threshold, health_check, log):
+    def __init__(self, navigation_data, gps_ura_check, gps_ura_val, gps_health,
+                 gal_sisa_check, gal_sisa_val, gal_health, log):
         super().__init__()
         self.navigation_data = navigation_data
-        self.ura_check = ura_check
-        self.ura_threshold = ura_threshold
-        self.health_check = health_check
+        self.gps_ura_check = gps_ura_check
+        self.gps_ura_val = gps_ura_val
+        self.gps_health = gps_health
+        self.gal_sisa_check = gal_sisa_check
+        self.gal_sisa_val = gal_sisa_val
+        self.gal_health = gal_health
         self.log = log
         self.warned = []
 
@@ -23,22 +27,30 @@ class SatFilterHealthURA(Filter):
         except:
             # no nav message available for this satellite
             if sat not in self.warned:
-                self.log.warn(f"Unable to perform preprocessing filter SV URA and Health Check for satellite"
-                              f" {sat} due to lack of navigation data")
+                self.log.warn(f"Unable to perform preprocessing filter URA/SISA and Health Check for satellite"
+                              f" {sat} due to lack of navigation data at epoch {epoch}")
                 self.warned.append(sat)
             return False
 
-        # URA check
-        if self.ura_check and nav_message.SV_URA > self.ura_threshold:
-            self.log.debug(f"Satellite {sat} is being discarded at epoch {str(epoch)} due to high "
-                           f"URA value ({nav_message.SV_URA}) compared to threshold {self.ura_threshold}")
-            flagged = True
+        # GPS checks
+        if sat.sat_system == "GPS":
+            if self.gps_ura_check and nav_message.SV_URA > self.gps_ura_val:
+                self.log.debug(f"Satellite {sat} is being discarded at epoch {str(epoch)} due to high "
+                               f"URA value ({nav_message.SV_URA})m compared to threshold {self.gps_ura_val}m")
+                flagged = True
 
-        # Health check
-        if self.health_check and nav_message.SV_health != 0:
-            self.log.debug(f"Satellite {sat} is being discarded at epoch {str(epoch)} due to bad "
-                           f"health flag ({nav_message.SV_health}) in the navigation message")
-            flagged = True
+            # Health check
+            if self.gps_health and nav_message.SV_health != 0:
+                self.log.debug(f"Satellite {sat} is being discarded at epoch {str(epoch)} due to bad "
+                               f"health flag ({nav_message.SV_health}) in the navigation message")
+                flagged = True
+
+        # GAL checks
+        elif sat.sat_system == "GAL":
+            if self.gal_sisa_check and nav_message.SISA > self.gal_sisa_val:
+                self.log.debug(f"Satellite {sat} is being discarded at epoch {str(epoch)} due to high "
+                               f"SISA value ({nav_message.SISA})m compared to threshold {self.gal_sisa_val}m")
+                flagged = True
 
         if flagged:
             v_removable.append(observation)

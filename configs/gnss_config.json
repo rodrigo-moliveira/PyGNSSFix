@@ -38,7 +38,7 @@
       "_comment": "available modes are SPS, SPS_IF",
 
       "GPS": {
-         "observations": ["1C", "2W"],
+         "observations": ["1C"],
          "obs_std": [1, 1],
          "elevation_mask": true,
 
@@ -50,7 +50,7 @@
       },
 
       "GAL": {
-         "observations": ["1C", "5Q"],
+         "observations": ["1C"],
          "obs_std": [1, 1],
 
          "_comment0": "select between INAV or FNAV navigation message",
@@ -75,14 +75,14 @@
       "satellite_status": {
          "_comment": "whether or not to check the SV Accuracy and SV health fields of the navigation message",
          "GPS": {
-            "SV_URA": true,
-            "SV_maximum_URA": 6144.0,
-            "SV_health": true
+            "URA": true,
+            "max_URA": 6144.0,
+            "health": true
          },
          "GAL": {
             "SISA": true,
-            "SV_maximum_SISA": 6144.0,
-            "SV_health": true
+            "max_SISA": 6.0,
+            "health": true
          }
       }
    },
