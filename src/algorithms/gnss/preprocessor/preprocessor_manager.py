@@ -141,6 +141,7 @@ class PreprocessorManager:
         f.close()
 
     def sv_ura_health_filter(self, observation_data):
+        # TODO: stopped here. need to add the SISA for GAL
         ura_check = config_dict.get("preprocessor", "satellite_status", "SV_URA")
         ura_threshold = config_dict.get("preprocessor", "satellite_status", "SV_maximum_URA")
         health_check = config_dict.get("preprocessor", "satellite_status", "SV_health")

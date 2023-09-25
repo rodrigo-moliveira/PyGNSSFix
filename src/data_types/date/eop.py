@@ -6,7 +6,7 @@ from inspect import isclass
 
 from ...errors import EopError, ConfigError
 
-__all__ = ["register", "EopDb", "TaiUtc", "Finals", "Finals2000A"]
+__all__ = ["register", "EopDb", "TaiUtc", "Finals", "Finals2000A", "GGTO"]
 
 
 class TaiUtc:
@@ -54,6 +54,33 @@ class TaiUtc:
             future = (mjd, value)
 
         return past, future
+
+
+class GGTO:
+    def __init__(self):
+        self.data = list()
+        self.global_ggto = 0
+
+    def set_ggto(self, date, ggto):
+        for index, (mjd, value) in enumerate(reversed(self.data)):
+            i = len(self.data) - index
+            if date >= mjd:
+                self.data.insert(i, (date, ggto))
+                return
+        self.data.insert(0, (date, ggto))
+
+    def set_global_ggto(self, global_ggto):
+        self.global_ggto = global_ggto
+
+    def __getitem__(self, date):
+        for mjd, value in reversed(self.data):
+            if mjd <= date:
+                return value
+        return 0.0
+
+    def print(self):
+        for mjd, value in self.data:
+            print(mjd, value)
 
 
 class Finals2000A:
@@ -151,10 +178,11 @@ class Eop:
         self.lod = kwargs.get("lod", 0)
         self.ut1_utc = kwargs.get("ut1_utc", 0)
         self.tai_utc = kwargs.get("tai_utc", 0)
+        self.ggto = kwargs.get("ggto", 0)
 
     def __repr__(self):
         return "{name}(x={x}, y={y}, dx={dx}, dy={dy}, deps={deps}, dpsi={dpsi}, lod={lod}, ut1_utc={ut1_utc}, " \
-               "tai_utc={tai_utc})".format(name=self.__class__.__name__, **self.__dict__)
+               "tai_utc={tai_utc}, ggto={ggto})".format(name=self.__class__.__name__, **self.__dict__)
 
 
 class EopDb:
@@ -351,12 +379,20 @@ class SimpleEopDatabase:
             # self._finals[date].update(f2[date])
 
         self._tai_utc = t.data.copy()
+        self._ggto = GGTO()
 
     def __getitem__(self, mjd):
         data = self.finals(mjd)
         data["tai_utc"] = self.tai_utc(mjd)
+        data["ggto"] = self._ggto[mjd]
 
         return Eop(**data)
+
+    def set_ggto(self, mjd: float, ggto):
+        self._ggto.set_ggto(mjd, ggto)
+
+    def set_global_ggto(self, global_ggto):
+        self._ggto.set_global_ggto(global_ggto)
 
     def finals(self, mjd: float):
         return self._finals[int(mjd)].copy()

@@ -37,9 +37,10 @@ class Timescale(Node):
         """Definition of International Atomic Time relatively to GPS time"""
         return 19.0
 
-    def _scale_gpst_minus_gst(self, mjd, eop):
-        """Definition of GPST relatively to GST """
-        return 0.0
+    def _scale_gst_minus_gpst(self, mjd, eop):
+        """Definition of GST relatively to GPST (GPST = GST + EOP.GGTO)"""
+        # From theory GGTO = GST - GPST is GPS-to-Galileo Time Offset
+        return eop.ggto
 
     def _scale_tdb_minus_tt(self, mjd, eop):
         """Definition of the Barycentric Dynamic Time scale relatively to Terrestrial Time"""

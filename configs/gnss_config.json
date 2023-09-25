@@ -33,7 +33,7 @@
    },
 
    "model": {
-      "constellations": ["GPS"],
+      "constellations": ["GPS", "GAL"],
       "mode": "SPS",
       "_comment": "available modes are SPS, SPS_IF",
 
@@ -52,6 +52,10 @@
       "GAL": {
          "observations": ["1C", "5Q"],
          "obs_std": [1, 1],
+
+         "_comment0": "select between INAV or FNAV navigation message",
+         "nav_type": "INAV",
+
          "elevation_mask": true,
 
          "_comment1": "Select Tropospheric model: 0 - no model, 1 - a priori Saastamoinen model",
@@ -69,10 +73,17 @@
       "snr_filter": 20,
 
       "satellite_status": {
-         "_comment": "whether or not to check the SV Accuracy (URA) and SV health fields of the navigation message",
-         "SV_URA": true,
-         "SV_maximum_URA": 6144.0,
-         "SV_health": true
+         "_comment": "whether or not to check the SV Accuracy and SV health fields of the navigation message",
+         "GPS": {
+            "SV_URA": true,
+            "SV_maximum_URA": 6144.0,
+            "SV_health": true
+         },
+         "GAL": {
+            "SISA": true,
+            "SV_maximum_SISA": 6144.0,
+            "SV_health": true
+         }
       }
    },
 
