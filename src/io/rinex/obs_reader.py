@@ -43,7 +43,7 @@ class RinexObsReader:
 
         self._validate_requested_observations()
 
-        # read observation data
+        # read gnss_obs data
         self._read_obs(f_handler)
 
         f_handler.close()
@@ -117,7 +117,7 @@ class RinexObsReader:
                     if RINEX_SATELLITE_SYSTEM.get(const_code, "") == constellation:
                         _map = {}
 
-                        # iterate over all available observation codes for this constellation
+                        # iterate over all available gnss_obs codes for this constellation
                         for this_obsCode in data[2:]:
                             if len(this_obsCode) == 3:
                                 this_service = this_obsCode[1:]
@@ -149,18 +149,18 @@ class RinexObsReader:
 
     def _read_obs(self, file):
         """
-        Read observation data
+        Read gnss_obs data
 
-        Each observation is stored in a fixed field of 14 characters and
+        Each gnss_obs is stored in a fixed field of 14 characters and
         with three trailing digits after the decimal point. Carrier phase
         and pseudorange observations are furthermore complemented by an
         optional loss-of-lock indicator (0, blank, or 1) and/or a
         single-digit signal-strength indicator in the two cells adjacent
         to the actual measurement value. Although the RINEX format supports
-        the loss-of lock indicator for each observation type, it is common
+        the loss-of lock indicator for each gnss_obs type, it is common
         practice to only indicate it on the phase observations. Likewise,
         the single-digit signal-strength field is often omitted if the
-        signal strength (in dB-Hz) is explicitly provided as an observation
+        signal strength (in dB-Hz) is explicitly provided as an gnss_obs
         type.
 
         Epoch (example):
@@ -170,7 +170,7 @@ class RinexObsReader:
         Data line:
         G01  21169746.382   111247790.951       -2243.909          50.312    21169747.722    86686606.781       -1748.49
 
-        NOTE: if signal strength bit is < 5, then the observation is discarded
+        NOTE: if signal strength bit is < 5, then the gnss_obs is discarded
         """
 
         line = " "
@@ -211,12 +211,12 @@ class RinexObsReader:
                         ignoring = True
                         continue
 
-            # reading observation-data line for the current epoch
+            # reading gnss_obs-data line for the current epoch
             else:
                 if ignoring:
                     continue
                 # Reading observations
-                # Each observation word is 16 characters: 14 (observation) + 1 (loss-of-lock indicator) + 1
+                # Each gnss_obs word is 16 characters: 14 (gnss_obs) + 1 (loss-of-lock indicator) + 1
                 # (signal strength).
                 # the last two are optional -> may be blank. Here they will be discarded.
 

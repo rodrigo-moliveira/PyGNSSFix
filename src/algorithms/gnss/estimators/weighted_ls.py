@@ -4,9 +4,9 @@ import numpy as np
 class WeightedLeastSquares:
     """
     Solve Weighted Least Squares equation of the linear system y = G @ x, where
-        * y - observation vector
+        * y - gnss_obs vector
         * x - state vector
-        * G - state matrix (relates state vector with the observation vector)
+        * G - state matrix (relates state vector with the gnss_obs vector)
 
     Given the vector of observations y, the estimated state x^{hat} is given by:
         * x^{hat} = (G.T @ W @ G)^-1 @ G.T @ W @ y
@@ -16,7 +16,7 @@ class WeightedLeastSquares:
 
 
     in the case of iterated least squares, the system of equations takes the form dy = G @ dx, where
-        * dy are the prefit residuals (observation - predicted_observation)
+        * dy are the prefit residuals (gnss_obs - predicted_observation)
         * dx is the incremental state (to be added to the initial guess)
 
 
@@ -32,7 +32,7 @@ class WeightedLeastSquares:
         """
 
         Args:
-            y (numpy.ndarray) : the observation vector
+            y (numpy.ndarray) : the gnss_obs vector
             G (numpy.ndarray) : the state matrix
             W (numpy.ndarray, optional) : the weight matrix. If not provided, then the solution resorts to a
                                         classical Least Squares, without weighting the observations
@@ -75,7 +75,7 @@ class WeightedLeastSquares:
         if _m_y != _m_G:
             raise AttributeError(f"Parameters 'y' and 'G' should have consistent shapes (mx1 and mxn, respectively)."
                                  f"'y' is of shape {y.shape} and 'G' is of shape {G.shape}")
-        self._m = _m_y  # m (observation dimension)
+        self._m = _m_y  # m (gnss_obs dimension)
         self._n = _n_G  # n (state dimension)
 
         if W is not None:

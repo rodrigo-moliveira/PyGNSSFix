@@ -38,7 +38,7 @@ class SatelliteGeometry(Container):
 
     def compute(self, rec_pos, epoch, rec_bias, nav_message, compute_tx, PR_obs, relativistic_correction):
         """
-        compute satellite-related quantities (tropo, iono, transmission time, etc.) to be used in the PVT observation
+        compute satellite-related quantities (tropo, iono, transmission time, etc.) to be used in the PVT gnss_obs
         reconstruction equation, for a given satellite.
 
         Args:
@@ -48,7 +48,7 @@ class SatelliteGeometry(Container):
             nav_message (src.data_types.containers.NavigationData.NavigationPointGPS) : navigation point for the
                                                                                         satellite under evaluation
             compute_tx (function) : function to compute the transmission time
-            PR_obs (src.data_types.data_types.Observation.Observation) : Code observation to use in some computations
+            PR_obs (src.data_types.data_types.Observation.Observation) : Code gnss_obs to use in some computations
             relativistic_correction (bool) : whether to compute relativistic correction
         """
         # get reception time in GNSS time system ( T_GNSS = T_receiver - t_(receiver_bias) )
@@ -103,7 +103,7 @@ class SystemGeometry:
         """
         Args:
             nav_data (src.data_types.containers.NavigationData.NavigationDataMap) : Navigation data map
-            obs_data (src.data_types.containers.ObservationData.EpochData) : observation epoch data for
+            obs_data (src.data_types.containers.ObservationData.EpochData) : gnss_obs epoch data for
         """
         self._data = dict.fromkeys(obs_data.get_satellites())
         self.nav_data = nav_data
@@ -133,7 +133,7 @@ class SystemGeometry:
     def compute(self, epoch, receiver_position, receiver_clock, compute_tx,
                 main_datatype, relativistic_correction):
         """
-        compute satellite-related quantities (tropo, iono, transmission time, etc.) to be used in the PVT observation
+        compute satellite-related quantities (tropo, iono, transmission time, etc.) to be used in the PVT gnss_obs
         reconstruction equation, for all available satellites.
 
         Args:
@@ -141,7 +141,7 @@ class SystemGeometry:
             receiver_position (src.data_types.state_space.statevector.Position) : Receiver position
             receiver_clock (float) : Receiver clock bias
             compute_tx (function) : function to compute the transmission time
-            main_datatype (DataType) : Code observation to use in some computations
+            main_datatype (DataType) : Code gnss_obs to use in some computations
             relativistic_correction (bool) : whether to compute relativistic correction
         """
         self._clean()
@@ -154,7 +154,7 @@ class SystemGeometry:
             # fetch navigation message for this satellite
             nav_message = self.nav_data.get_sat_data_for_epoch(sat, epoch)
 
-            # fetch pseudorange observation for this satellite at epoch (used in the compute_TX_time algorithm)
+            # fetch pseudorange gnss_obs for this satellite at epoch (used in the compute_TX_time algorithm)
             try:
                 main_observation = self.obs_data.get_observable(sat, main_datatype)
             except NonExistentObservable:

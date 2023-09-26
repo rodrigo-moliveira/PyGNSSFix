@@ -4,13 +4,13 @@ from .data_type import DataType
 class Observation:
     """
     Class Observation
-    Stores a single observation
+    Stores a single gnss_obs
     Attributes
         ----------
         datatype : DataType
-            The DataType (observation type) of this observation
+            The DataType (gnss_obs type) of this gnss_obs
         value : float or int
-            The numeric value for this observation
+            The numeric value for this gnss_obs
     """
 
     def __init__(self, datatype: DataType, value: float):

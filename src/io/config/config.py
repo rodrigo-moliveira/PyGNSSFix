@@ -104,7 +104,7 @@ class Config(dict):
 
     def is_iono_free(self):
         """
-        Returns true if user selected combined observation model (compute iono free observations)
+        Returns true if user selected combined gnss_obs model (compute iono free observations)
         """
         return self["model"]["mode"] == EnumPositioningMode.SPS_IF
 

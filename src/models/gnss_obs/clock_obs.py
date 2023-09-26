@@ -4,7 +4,7 @@ from numpy.linalg import norm
 
 from src.io.config.enums import EnumTransmissionTime
 from src.models.frames.frames import dcm_e_i
-from src.models.observation.ephemeride_propagator import EphemeridePropagator, fix_gps_week_crossovers
+from src.models.gnss_obs.ephemeride_propagator import EphemeridePropagator, fix_gps_week_crossovers
 from src import constants
 
 # utility functions related to navigation clocks

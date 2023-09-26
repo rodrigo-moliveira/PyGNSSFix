@@ -26,7 +26,7 @@ class PreprocessorManager:
                 * Type Consistency Filter -> remove all unnecessary observations and empty satellites
 
             Creating Processed ObservationData:
-                * Compute IonoFree Observation Data -> Compute iono-free observables from the raw observation data,
+                * Compute IonoFree Observation Data -> Compute iono-free observables from the raw gnss_obs data,
                                                         creating a new dataset
                 * Compute (IonoFree) Smooth Observation Data -> Compute smooth code observables
 
@@ -192,12 +192,12 @@ class PreprocessorManager:
         return data"""
 
     def downgrade(self, data):
-        # Downgrade observation data rate
+        # Downgrade gnss_obs data rate
         rate_out = config_dict.get("inputs", "rate")
         rate_in = data.get_rate()
 
         if rate_in != rate_out:
-            self.log.info(f"Downgrading observation data from input rate {rate_in} [s] to output rate "
+            self.log.info(f"Downgrading gnss_obs data from input rate {rate_in} [s] to output rate "
                           f"{rate_out} [s]")
 
             if rate_out % rate_in != 0:

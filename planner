@@ -6,12 +6,13 @@ tasks for preliminary version:
     [ ] limpar o código / solve all TODOs
 
 adicionar GAL SPS
-    [ ] ler dados de navegacao de gal
+    [X] ler dados de navegacao de gal
     [ ] implementar o nequickG
         https://github.com/tpl2go/NequickG
     [ ] melhorar o tratamento dos DCBs (criar uma classe onde tenha um getter...)
     [ ] até posso colocar já aqui o DCB reader
     [ ] implementar o GAL SPS (com ISB estimation)
+    [ ] criar uma class LSQ Engine que faz o preenchimento das matrizes de estado do LSQ, com mapas de indices mais bem feitinhos
 
 ISTO TERMINA A VERSAO PRELIMINAR
 --- ### ---

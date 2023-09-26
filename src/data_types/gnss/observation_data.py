@@ -12,7 +12,7 @@ from src.data_types.gnss.observation import Observation
 class ObservationHeader(Container):
     """
     ObservationHeader class, derived from Container
-    stores relevant data from the header section of a rinex observation file
+    stores relevant data from the header section of a rinex gnss_obs file
     """
     __slots__ = ["rinex_version", "satellite_system", "time_system",
                  "receiver_position", "first_epoch", "last_epoch"]
@@ -32,7 +32,7 @@ class EpochData:
     Attributes
         ----------
         _data : OrderedDict
-            The DataType (observation type) of this observation
+            The DataType (gnss_obs type) of this gnss_obs
     """
 
     def __init__(self):
@@ -40,13 +40,13 @@ class EpochData:
 
     def set_observable(self, satellite: Satellite, observation: Observation):
         """
-        method to set a new observation
+        method to set a new gnss_obs
 
         Args:
             satellite (Satellite)
             observation (Observation)
         Return:
-            bool : true if observation is successfully set. False when this datatype has already been set for
+            bool : true if gnss_obs is successfully set. False when this datatype has already been set for
                 the given satellite and epoch (overwriting is not legal!)
         """
         if satellite in self._data:
@@ -75,7 +75,7 @@ class EpochData:
             sat (Satellite)
             obs (DataType)
         Return:
-            Observation : gets the observation for the provided datatype
+            Observation : gets the gnss_obs for the provided datatype
         Raises:
             NonExistentObservable
         """
@@ -83,7 +83,7 @@ class EpochData:
         for _obs in obs_list:
             if obs == _obs.datatype:
                 return _obs
-        raise NonExistentObservable(f"observation {str(obs)} not found for satellite {str(sat)}")
+        raise NonExistentObservable(f"gnss_obs {str(obs)} not found for satellite {str(sat)}")
 
     def has_observable(self, sat, obs):
         obs_list = self._data[sat]
@@ -154,7 +154,7 @@ class EpochData:
         # self._data = OrderedDict()
         obj = EpochData()
         for sat, obs_list in self._data.items():
-            # construct new observation and set it
+            # construct new gnss_obs and set it
             for obs in obs_list:
                 obj.set_observable(sat, obs.copy())
         return obj
@@ -185,13 +185,13 @@ class ObservationData:
 
     def set_observable(self, epoch: Epoch, satellite: Satellite, obs_type: DataType, value: float):
         """
-        method to set a new observation (read directly from the rinex observation file)
+        method to set a new gnss_obs (read directly from the rinex gnss_obs file)
 
         Args:
             epoch (Epoch) : time at reception of signal (time tag from rinex)
             satellite (Satellite)
-            obs_type (DataType) : the datatype of the observation
-            value (float) : numeric value of the observation
+            obs_type (DataType) : the datatype of the gnss_obs
+            value (float) : numeric value of the gnss_obs
         """
 
         if not isinstance(epoch, Epoch):
@@ -209,7 +209,7 @@ class ObservationData:
         if isinstance(value, int):
             value = float(value)
 
-        # construct observation
+        # construct gnss_obs
         obs = Observation(obs_type, value)
 
         self.set_observation(epoch, satellite, obs)
@@ -306,26 +306,26 @@ class ObservationData:
         try:
             return self._data[epoch].get_observables(sat)
         except KeyError:
-            raise NonExistentObservable(f"Non Existent observation for satellite {str(sat)} "
+            raise NonExistentObservable(f"Non Existent gnss_obs for satellite {str(sat)} "
                                         f"and epoch {str(epoch)}")
 
     def get_observable_at_epoch(self, sat: Satellite, epoch: Epoch, obs: DataType):
         """
-        Fetch the requested observation from the database
+        Fetch the requested gnss_obs from the database
 
         Args:
             sat (Satellite)
             epoch (Epoch)
             obs (DataType)
         Return:
-            Observation : the requested observation
+            Observation : the requested gnss_obs
         Raises:
-            NonExistentObservable : if the observation is not found
+            NonExistentObservable : if the gnss_obs is not found
         """
         try:
             return self._data[epoch].get_observable(sat, obs)
         except KeyError:
-            raise NonExistentObservable(f"Non Existent observation for type {str(obs)}, satellite {str(sat)} "
+            raise NonExistentObservable(f"Non Existent gnss_obs for type {str(obs)}, satellite {str(sat)} "
                                         f"and epoch {str(epoch)}")
 
     def get_epochs(self):

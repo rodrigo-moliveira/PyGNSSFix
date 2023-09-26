@@ -53,7 +53,7 @@ def export_to_file(gnss_state: GnssStateSpace, exportable):
 
     if exportable == "iono":
         cov = gnss_state._info.get("cov", None)
-        sat_list = gnss_state._info["geometry"].get_satellites()
+        sat_list = gnss_state.get_additional_info("geometry").get_satellites()
         data = []
         iono_list = gnss_state.iono
 
@@ -64,7 +64,7 @@ def export_to_file(gnss_state: GnssStateSpace, exportable):
 
     elif exportable == "prefit_residuals" or exportable == "postfit_residuals":
         residuals = gnss_state._info[exportable]
-        sat_list = gnss_state._info["geometry"].get_satellites()
+        sat_list = gnss_state.get_additional_info("geometry").get_satellites()
         data = []
         if len(sat_list) > 0:
             for sat, res in zip(sat_list, residuals):
@@ -72,7 +72,7 @@ def export_to_file(gnss_state: GnssStateSpace, exportable):
         return data
 
     elif exportable == "satellite_azel":
-        geometry = gnss_state._info["geometry"]
+        geometry = gnss_state.get_additional_info("geometry")
         sat_list = geometry.get_satellites()
         data = []
         if len(sat_list) > 0:

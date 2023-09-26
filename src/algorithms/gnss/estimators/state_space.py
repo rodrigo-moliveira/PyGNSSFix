@@ -75,8 +75,9 @@ class GnssStateSpace(Container):
         # additional info
         if "geometry" in self._info.keys():
             exportable_lst.append("satellite_azel")
-        if "geometry_matrix" in self._info.keys():
+        if "dop_ecef" in self._info.keys():
             exportable_lst.append("dop_ecef")
+        if "dop_local" in self._info.keys():
             exportable_lst.append("dop_local")
         if "prefit_residuals" in self._info.keys():
             exportable_lst.append("prefit_residuals")

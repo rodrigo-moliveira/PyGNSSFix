@@ -19,7 +19,7 @@ class SmoothFunctor(Functor):
     def __init__(self, time_constant: float, obs_rate: float):
         """
         :param time_constant: time constant of the filter [seconds]
-        :param obs_rate: observation rate [seconds]
+        :param obs_rate: gnss_obs rate [seconds]
         """
         super().__init__()
         self.rate = obs_rate

@@ -10,7 +10,7 @@ class TypeConsistencyFilter(Filter):
     def is_applicable(self, sat, epoch, observation, **kwargs):
         # return False to keep this observable
 
-        # check if this observation is part of the required observations
+        # check if this gnss_obs is part of the required observations
         ret_val = observation.datatype not in self.types[sat.sat_system]
 
         if not ret_val:

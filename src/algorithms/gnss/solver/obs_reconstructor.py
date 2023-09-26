@@ -1,11 +1,12 @@
 from src.io.config import config_dict
 from src.io.config.enums import EnumOnOff, EnumIono, EnumTropo
 from src.models.frames import cartesian2geodetic
-from src.models.observation.atmosphere_obs import iono_klobuchar, tropo_saastamoinen
-from src.models.observation.clock_obs import gps_broadcast_clock
+from src.models.gnss_obs.iono_klobuchar import iono_klobuchar
+from src.models.gnss_obs.clock_obs import gps_broadcast_clock
 from src.data_types.gnss.data_type import L1, DataType
 from src.data_types.gnss.observation import Observation
 from src import constants
+from src.models.gnss_obs.tropo_saastamoinen import tropo_saastamoinen
 
 
 class ObservationReconstruction:

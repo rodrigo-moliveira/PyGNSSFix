@@ -20,7 +20,7 @@ class SignalCheckFilter(Filter):
             # remove all observables associated with this frequency
             v_observables = self.observation_data.get_observables_at_epoch(epoch, sat)
 
-            # iterate over all observables and flag those with the same frequency as 'observation'
+            # iterate over all observables and flag those with the same frequency as 'gnss_obs'
             for this_obs in v_observables:
                 if this_obs.datatype.freq == observation.datatype.freq:
                     if this_obs not in v_removable:

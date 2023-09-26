@@ -1,14 +1,25 @@
-# Constants
+import numpy as np
+from dataclasses import dataclass
+
+from math import sqrt, asin, cos, sin, degrees, radians, exp
+from src.constants import PI
+from src.models.frames import cartesian2geodetic
+
+# Constants for this model (note that the Earth radius has this specific value for this model) 
 Re_km = 6371
 hI_km = 450
 lat_north_pole_deg = 79.74
 lon_north_pole_deg = -71.78
 
-#https://www.gsc-europa.eu/sites/default/files/NTCM-G_Ionospheric_Model_Description_-_v1.0.pdf
 
-# Values of NTCMG coefficients
+# NTCM-gG class to calculate the ionospheric correction for galileo users
+# More information can be found in :
+# https://www.gsc-europa.eu/sites/default/files/NTCM-G_Ionospheric_Model_Description_-_v1.0.pdf
+
+
+# Values of NTCM-G coefficients
 @dataclass
-class NTCMG_coeff:
+class NTCMG_coefs:
     k1: float = 0.92519
     k2: float = 0.16951
     k3: float = 0.00443
@@ -23,18 +34,13 @@ class NTCMG_coeff:
     k12: float = 0.13985
 
 
-# NTCMG class to calculate the ionospheric correction for galileo users
-# More information can be found in :
-# https://www.gsc-europa.eu/sites/default/files/NTCM-G_Ionospheric_Model_Description_-_v1.0.pdf
-
-class NTCMG():
+class NTCMG:
 
     @staticmethod
     def calculate_azpar(effec_iono: np.array):
         """
-        Description:
-        @param effec_iono: Effective ionisation level coefficients a0 a1 a2
-        @return azpar
+        effec_iono: Effective ionisation level coefficients a0 a1 a2
+        azpar
         """
         a0 = effec_iono[0]
         a1 = effec_iono[1]
@@ -55,7 +61,7 @@ class NTCMG():
         """
         # Calculate the earths central angle delta_pp between the user position and the earth projection of the piercing
         # point
-        lambda_pp_rad = pi / 2 - sat_el_rad - asin((Re_km / (Re_km + hI_km)) * cos(sat_el_rad))
+        lambda_pp_rad = PI / 2 - sat_el_rad - asin((Re_km / (Re_km + hI_km)) * cos(sat_el_rad))
 
         # Calculate pierce point latitude
         lat_pp_rad = asin(
@@ -94,7 +100,7 @@ class NTCMG():
         @return two terms for the solar zenith angle dependence
         """
         cos_solar_zenith_double_star = cos(lat_pp_rad - sun_declination_rad) + 0.4
-        cos_solar_zenith_triple_star = cos(lat_pp_rad - sun_declination_rad) - (2 / pi) * lat_pp_rad * sin(
+        cos_solar_zenith_triple_star = cos(lat_pp_rad - sun_declination_rad) - (2 / PI) * lat_pp_rad * sin(
             sun_declination_rad)
 
         return cos_solar_zenith_double_star, cos_solar_zenith_triple_star
@@ -124,13 +130,13 @@ class NTCMG():
         """
         cos_double_star, cos_triple_star = NTCMG.calculate_solar_zenith_angle_dependence(lat_pp_rad, lon_pp_rad)
         LT = NTCMG.calculate_local_time(lon_pp_rad, universal_time_hour)
-        VD = 2 * pi * (LT - 14) / 24  # Diurnal angular phase
-        VSD = 2 * pi * LT / 12  # Semi-diurnal
-        VTD = 2 * pi * LT / 8  # ter-diurnal
+        VD = 2 * PI * (LT - 14) / 24  # Diurnal angular phase
+        VSD = 2 * PI * LT / 12  # Semi-diurnal
+        VTD = 2 * PI * LT / 8  # ter-diurnal
 
-        F1 = cos_triple_star + cos_double_star * (NTCMG_coeff.k1 * cos(VD) + NTCMG_coeff.k2 * cos(VSD) +
-                                                  NTCMG_coeff.k3 * sin(VSD) + NTCMG_coeff.k4 * cos(VTD) +
-                                                  NTCMG_coeff.k5 * sin(VTD))
+        F1 = cos_triple_star + cos_double_star * (NTCMG_coefs.k1 * cos(VD) + NTCMG_coefs.k2 * cos(VSD) +
+                                                  NTCMG_coefs.k3 * sin(VSD) + NTCMG_coefs.k4 * cos(VTD) +
+                                                  NTCMG_coefs.k5 * sin(VTD))
 
         return F1
 
@@ -141,9 +147,9 @@ class NTCMG():
         @param doy: day of year
         @return F2
         """
-        VA = 2 * pi * (doy - 18) / 365.25
-        VSA = 4 * pi * (doy - 6) / 365.25
-        F2 = 1 + NTCMG_coeff.k6 * cos(VA) + NTCMG_coeff.k7 * cos(VSA)
+        VA = 2 * PI * (doy - 18) / 365.25
+        VSA = 4 * PI * (doy - 6) / 365.25
+        F2 = 1 + NTCMG_coefs.k6 * cos(VA) + NTCMG_coefs.k7 * cos(VSA)
 
         return F2
 
@@ -156,7 +162,7 @@ class NTCMG():
         @return F3
         """
         geo_lat_pp_rad = NTCMG.calculate_geomagnetic_lat_from_geographic(lat_pp_rad, lon_pp_rad)
-        F3 = 1 + NTCMG_coeff.k8 * cos(geo_lat_pp_rad)
+        F3 = 1 + NTCMG_coefs.k8 * cos(geo_lat_pp_rad)
 
         return F3
 
@@ -173,7 +179,7 @@ class NTCMG():
         oc2_2 = 169
         EC1 = - ((geo_lat_pp_deg - 16) ** 2) / (2 * oc1_2)
         EC2 = - ((geo_lat_pp_deg + 10) ** 2) / (2 * oc2_2)
-        F4 = 1 + NTCMG_coeff.k9 * exp(EC1) + NTCMG_coeff.k10 * exp(EC2)
+        F4 = 1 + NTCMG_coefs.k9 * exp(EC1) + NTCMG_coefs.k10 * exp(EC2)
 
         return F4
 
@@ -184,12 +190,12 @@ class NTCMG():
         @param azpar: proxy measure of the solar activity level
         @return F5
         """
-        F5 = NTCMG_coeff.k11 + NTCMG_coeff.k12 * azpar
+        F5 = NTCMG_coefs.k11 + NTCMG_coefs.k12 * azpar
 
         return F5
 
     @staticmethod
-    def compute_vtec(lat_pp_rad: float, lon_pp_rad: float, utc: pd.Timestamp, azpar: float):
+    def compute_vtec(lat_pp_rad: float, lon_pp_rad: float, utc, azpar: float):
         """
         Description: Computes the VTEC
         @param lat_pp_rad: Pierce point latitude in radians
@@ -213,13 +219,14 @@ class NTCMG():
         Description: Computes the VTEC
         @param sat_el_rad: Satellite elevation in radians
         """
-        sinz = (Re_km / (Re_km + hI_km)) * sin(0.9782 * ((pi / 2) - sat_el_rad))
+        sinz = (Re_km / (Re_km + hI_km)) * sin(0.9782 * ((PI / 2) - sat_el_rad))
         return 1 / sqrt(1 - sinz ** 2)
 
     @staticmethod
     def calculate_ionospheric_contribution(utc: np.datetime64, effec_iono: np.array, rec_pos: np.array,
                                            el_rad: float, az_rad: float, frequency: float):
         """
+        main function
         Description: Computes the VTEC
         @param utc: Timestamp
         @param effec_iono: Effective ionisation level coefficients a0 a1 a2
@@ -234,7 +241,7 @@ class NTCMG():
 
         # [X] Calculate satellite elevation E and azimuth angles
         # Calculate ionospheric pierce point location (lat_pp, lon_pp) for user-to-sat link at 450km height
-        llh = xyz2llh(tuple(rec_pos))
+        llh = cartesian2geodetic(tuple(rec_pos))
         user_lat_rad = llh[0]
         user_lon_rad = llh[1]
         lat_pp_rad, lon_pp_rad = NTCMG.calculate_pierce_point_lat_lon(el_rad, az_rad, user_lat_rad, user_lon_rad)

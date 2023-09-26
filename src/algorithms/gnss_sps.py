@@ -16,13 +16,13 @@ class GnssSinglePointSolution(Algorithm):
     def __str__(self):
         return f"{self.name}"
 
-    def compute_dop(self, log, data_manager):
+    @classmethod
+    def compute_dop(cls, log, data_manager):
         log.info("Computing Dilution of Precision (DOP) metrics in ECEF and local (ENU) frames")
         sol = data_manager.get_data("nav_solution")
 
         for state in sol:
-            system_matrix = state.get_additional_info("geometry_matrix")  # this is G matrix in LS
-            dop_matrix = np.linalg.inv(system_matrix.T @ system_matrix)
+            dop_matrix = state.get_additional_info("dop_matrix")  # DOP matrix
 
             # DOPs
             geometry_dop = np.sqrt(dop_matrix[0, 0] + dop_matrix[1, 1] + dop_matrix[2, 2] + dop_matrix[3, 3])
@@ -67,7 +67,7 @@ class GnssSinglePointSolution(Algorithm):
         # perform pre-processing here
         log.info(f"Starting Preprocessor Module")
         preprocessor = PreprocessorManager(trace_path, raw_obs_data, nav_data)
-        obs_data = preprocessor.compute()  # this is the observation data to actually process
+        obs_data = preprocessor.compute()  # this is the gnss_obs data to actually process
 
         # run estimation algorithm
         log.info(f"Running estimation algorithm...")
