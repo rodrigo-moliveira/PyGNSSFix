@@ -34,11 +34,11 @@
 
    "model": {
       "constellations": ["GPS"],
-      "mode": "SPS",
+      "mode": "SPS_IF",
       "_comment": "available modes are SPS, SPS_IF",
 
       "GPS": {
-         "observations": ["1C"],
+         "observations": ["1C", "2W"],
          "obs_std": [1, 1],
          "elevation_mask": true,
 

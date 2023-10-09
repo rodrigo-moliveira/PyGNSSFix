@@ -12,7 +12,8 @@ adicionar GAL SPS
     [ ] melhorar o tratamento dos DCBs (criar uma classe onde tenha um getter...)
     [ ] até posso colocar já aqui o DCB reader
     [ ] implementar o GAL SPS (com ISB estimation)
-    [ ] criar uma class LSQ Engine que faz o preenchimento das matrizes de estado do LSQ, com mapas de indices mais bem feitinhos
+    [X] criar uma class LSQ Engine que faz o preenchimento das matrizes de estado do LSQ, com mapas de indices mais bem feitinhos
+    [ ] tropo wet/dry estimation?
 
 ISTO TERMINA A VERSAO PRELIMINAR
 --- ### ---

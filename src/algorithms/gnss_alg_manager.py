@@ -5,6 +5,7 @@ import traceback
 from src import RUNS_PATH
 from src.data_mng.gnss_data_mng import GnssDataManager
 from src.common_log import set_logs, get_logger
+from src.data_types.gnss.dcb_data import DCBData
 from src.data_types.gnss.observation_data import ObservationData
 from src.io.rinex.nav_reader import RinexNavReader
 from src.io.rinex.obs_reader import RinexObsReader
@@ -51,6 +52,7 @@ class GnssAlgorithmManager:
 
         self.data_manager.add_data("obs_data", obs)
         self.data_manager.add_data("nav_data", nav)
+        self.data_manager.add_data("dcb_data", DCBData())
 
         # trace data files
         trace_dir = f"{self.data_dir}\\trace"

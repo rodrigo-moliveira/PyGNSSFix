@@ -260,7 +260,7 @@ class EopDb:
                 raise
 
             value = Eop(
-                x=0, y=0, dx=0, dy=0, deps=0, dpsi=0, lod=0, ut1_utc=0, tai_utc=0
+                x=0, y=0, dx=0, dy=0, deps=0, dpsi=0, lod=0, ut1_utc=0, tai_utc=0, ggto=0
             )
 
         return value
