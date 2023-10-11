@@ -1,4 +1,4 @@
-class DCBData:
+"""class DCBData:
 
     def __init__(self):
         self._dcb = {"GPS": None, "GAL": None}  # DCB data from DCB files
@@ -15,3 +15,4 @@ class DCBData:
 
     def set_bgd(self, sat, freq, bgd):
         pass
+"""

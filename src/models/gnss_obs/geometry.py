@@ -12,7 +12,7 @@ class SatelliteGeometry(Container):
     __slots__ = ["transit_time", "receiver_position",
                  "time_emission", "time_reception",
                  "true_range", "az", "el", "satellite_position",
-                 "dt_rel_correction", "tgd"]
+                 "dt_rel_correction"]
 
     def __init__(self):
         super().__init__()
@@ -25,7 +25,6 @@ class SatelliteGeometry(Container):
         self.satellite_position = None
         self.receiver_position = None
         self.dt_rel_correction = 0
-        self.tgd = 0
 
     def __str__(self):
         _allAttrs = ""
@@ -54,24 +53,12 @@ class SatelliteGeometry(Container):
         # get reception time in GNSS time system ( T_GNSS = T_receiver - t_(receiver_bias) )
         time_reception = epoch + timedelta(seconds=-rec_bias)
 
-        # get TGD (to use in the compute_tx_time algorithm), and fix it for non L1 users
-        # TODO: currently this is GPS dependent, and assumes that second freq is L2
-        #   adicionar uma class para fazer o tratamento dos DCBs (com TGD/BGD das nav messages) + DCB files
-        #   esta classe depois tem um getter -> get_dcb(this_freq) e retorna o dcb para esta freq ou 0 com
-        #   um warning no caso de não haver dados
-        if DataType.is_iono_free_smooth_code(PR_obs.datatype) or DataType.is_iono_free_code(PR_obs.datatype):
-            TGD = 0  # TGD is 0 for Iono Free observables
-        else:
-            TGD = (L1.freq_value / PR_obs.datatype.freq.freq_value) ** 2 * nav_message.TGD
-        # TODO: add warning for L5 users, that this is not correct TGD to use...
-
         # algorithm to compute Transmission time (in GNSS time)
         time_emission, transit = compute_tx_time(model=compute_tx,
                                                  r_receiver=rec_pos,
                                                  t_reception=epoch,
                                                  dt_receiver=rec_bias,
                                                  nav_message=nav_message,
-                                                 TGD=TGD,
                                                  pseudorange_obs=PR_obs)
 
         # get rho_0 and satellite position at RX ECEF frame
@@ -95,7 +82,6 @@ class SatelliteGeometry(Container):
         self.satellite_position = p_sat
         self.receiver_position = rec_pos
         self.dt_rel_correction = dt_relative
-        self.tgd = nav_message.TGD
 
 
 class SystemGeometry:

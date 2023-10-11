@@ -2,7 +2,7 @@ from src.io.config import config_dict
 from src.io.config.enums import EnumOnOff, EnumIono, EnumTropo
 from src.models.frames import cartesian2geodetic
 from src.models.gnss_obs.iono_klobuchar import iono_klobuchar
-from src.models.gnss_obs.clock_obs import gps_broadcast_clock
+from src.models.gnss_obs.clock_obs import gps_broadcast_clock, nav_sat_clock_correction
 from src.data_types.gnss.data_type import L1, DataType
 from src.data_types.gnss.observation import Observation
 from src import constants
@@ -41,10 +41,8 @@ class ObservationReconstruction:
         if self._model["relativistic_correction"] == EnumOnOff.ENABLED:
             dt_sat += self._system_geometry.get("dt_rel_correction", sat)
 
-        # correct for satellite clock for TGD (TGD is 0 for iono free observables (in GPS SPS only...))
-        if not DataType.is_iono_free_smooth_code(datatype) and not DataType.is_iono_free_code(datatype):
-            tgd = (L1.freq_value / datatype.freq.freq_value) ** 2 * self._system_geometry.get("tgd", sat)
-            dt_sat -= tgd
+        # correct satellite clock for BGDs
+        dt_sat = nav_sat_clock_correction(dt_sat, datatype, nav_message, sat.sat_system)
 
         # ionosphere
         if not config_dict.is_iono_free():

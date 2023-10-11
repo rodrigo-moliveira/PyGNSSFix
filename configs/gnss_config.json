@@ -34,7 +34,7 @@
 
    "model": {
       "constellations": ["GPS"],
-      "mode": "SPS_IF",
+      "mode": "SPS",
       "_comment": "available modes are SPS, SPS_IF",
 
       "GPS": {

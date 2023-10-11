@@ -2,10 +2,13 @@ from datetime import timedelta
 
 from numpy.linalg import norm
 
+from src.data_types.gnss.data_type import L1
+from src.data_types.gnss.navigation_data import NavigationPointGAL, NavigationPointGPS
 from src.io.config.enums import EnumTransmissionTime
 from src.models.frames.frames import dcm_e_i
 from src.models.gnss_obs.ephemeride_propagator import EphemeridePropagator, fix_gps_week_crossovers
 from src import constants
+
 
 # utility functions related to navigation clocks
 
@@ -75,11 +78,11 @@ def tx_time_geometric(r_receiver=None, t_reception=None, dt_receiver=None, nav_m
         N += 1
 
     # compute transmission time, using Eq. (5.9)
-    T_emission = t_reception + timedelta(seconds=-tau-dt_receiver)
+    T_emission = t_reception + timedelta(seconds=-tau - dt_receiver)
     return T_emission, tau
 
 
-def tx_time_pseudorange(pseudorange_obs=None, t_reception=None, nav_message=None, TGD=None, **kwargs):
+def tx_time_pseudorange(pseudorange_obs=None, t_reception=None, nav_message=None, **kwargs):
     """
     Implements the algorithm to compute:
         * transit time (propagation time from signal transmission to reception)
@@ -95,7 +98,6 @@ def tx_time_pseudorange(pseudorange_obs=None, t_reception=None, nav_message=None
         pseudorange_obs (src.data_types.data_types.Observation.Observation): the pseudorange measured observable
         t_reception (src.data_types.basics.Epoch.Epoch): time of signal reception, measured by receiver
                                                 (receiver clock), i.e., RINEX obs time tag -> t(reception)^{receiver}
-        TGD (float): time group delay (TGD) to correct the satellite hardware clock delay to the appropriate frequency
         nav_message (src.data_types.containers.NavigationData.NavigationPointGPS): ephemeride object to use
     Return:
         tuple [src.data_types.basics.Epoch.Epoch, float] : computed TX epoch, computed transit time
@@ -108,8 +110,8 @@ def tx_time_pseudorange(pseudorange_obs=None, t_reception=None, nav_message=None
                                     t_emission.gps_time[1]  # to get seconds of week
                                     )
 
-    # correct for TGD (already corrected for the appropriate frequency, and is 0 for IF observables)
-    dt_sat = dt_sat - TGD
+    # correct satellite clock for BGDs
+    dt_sat = nav_sat_clock_correction(dt_sat, pseudorange_obs.datatype, nav_message, "GPS")
 
     # compute transmission time, using Eq. (5.6)
     T_emission = t_emission + timedelta(seconds=-dt_sat)  # t(emission)^{GPS} = t(emission)^{satellite} - dt_sat
@@ -152,6 +154,7 @@ def gps_broadcast_clock(af0: float, af1: float, af2: float, toc: float, tx_raw: 
 def gal_broadcast_clock():
     pass
 
+
 """
 elif constellation == 'GAL':
             # Inter-signal correction
@@ -168,3 +171,39 @@ elif constellation == 'GAL':
                 elif frequency_id == "E5b" or frequency_id == "E1":
                     BGD = updated_nav['BGDe5b'] * ((f1 / frequency) ** 2)
 """
+
+
+def nav_sat_clock_correction(sat_clock, datatype, nav_message, constellation):
+    if constellation == "GPS":
+        bgd = get_bgd_correction(datatype, nav_message, constellation)
+        sat_clock = sat_clock - bgd
+    elif constellation == "GAL":
+        pass
+
+    return sat_clock
+
+
+def get_bgd_correction(datatype, nav_message, constellation):
+    # NOTE: this function is only called assuming standard SPS Mode, that is, the only BGDs available
+    # are the ones from the navigation message. No extra DCB information is used
+    if constellation == "GPS":
+        if datatype == "PR1" or datatype == "PR2":
+            scale = (L1.freq_value / datatype.freq.freq_value) ** 2
+            return scale * nav_message.TGD
+        elif datatype == "PR12":  # the broadcast clock refers to the L1-L2 iono-free clock -> no correction needed
+            return 0.0
+        else:
+            # TODO: for all other cases (PR5 or PR15) issue warning
+            return 0.0
+    elif constellation == "GAL":
+        pass
+        # if FNAV:
+        # if datatype == PR1 or PR5: return scale * BGDE1E5a
+        # if datatype == PR1-PR5 IF return 0
+        # if INAV
+        # if datatype == PR1 or PR7: return scale * BGDE1E5b
+        # if datatype == PR1-PR7 IF return 0
+        # if datype == PR5 -> apply the transformation
+    else:
+        raise AttributeError(f"Unknown constellation {constellation}")
+    return 0.0

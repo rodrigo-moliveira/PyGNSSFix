@@ -9,8 +9,7 @@ adicionar GAL SPS
     [X] ler dados de navegacao de gal
     [ ] implementar o nequickG
         https://github.com/tpl2go/NequickG
-    [ ] melhorar o tratamento dos DCBs (criar uma classe onde tenha um getter...)
-    [ ] até posso colocar já aqui o DCB reader
+    [X] melhorar o tratamento dos DCBs (criar uma classe onde tenha um getter...)
     [ ] implementar o GAL SPS (com ISB estimation)
     [X] criar uma class LSQ Engine que faz o preenchimento das matrizes de estado do LSQ, com mapas de indices mais bem feitinhos
     [ ] tropo wet/dry estimation?

@@ -194,7 +194,7 @@ class DataType:
 ###############
 
 # GPS Frequencies
-L1 = DataType(data_type="L1/E1", description="Frequency L1 for GPS", freq_value=constants.GPS_L1_FREQ,
+L1 = DataType(data_type="L1", description="Frequency L1 for GPS", freq_value=constants.GPS_L1_FREQ,
               constellation="GPS")
 L2 = DataType(data_type="L2", description="Frequency L2 for GPS", freq_value=constants.GPS_L2_FREQ,
               constellation="GPS")
