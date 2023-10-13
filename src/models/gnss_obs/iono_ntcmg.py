@@ -223,12 +223,12 @@ class NTCMG:
         return 1 / sqrt(1 - sinz ** 2)
 
     @staticmethod
-    def calculate_ionospheric_contribution(utc: np.datetime64, effec_iono: np.array, rec_pos: np.array,
+    def calculate_ionospheric_contribution(ut1, effec_iono: np.array, rec_pos: np.array,
                                            el_rad: float, az_rad: float, frequency: float):
         """
         main function
         Description: Computes the VTEC
-        @param utc: Timestamp
+        @param ut1: Timestamp in UT1
         @param effec_iono: Effective ionisation level coefficients a0 a1 a2
         @param rec_pos: Receiver position
         @param el_rad: Satellite elevation
@@ -247,8 +247,7 @@ class NTCMG:
         lat_pp_rad, lon_pp_rad = NTCMG.calculate_pierce_point_lat_lon(el_rad, az_rad, user_lat_rad, user_lon_rad)
 
         # Call NTCM G to calculate VTEC at pierce point loc and local time LT
-        utc = pd.to_datetime(utc)
-        vtec = NTCMG.compute_vtec(lat_pp_rad, lon_pp_rad, utc, azpar)
+        vtec = NTCMG.compute_vtec(lat_pp_rad, lon_pp_rad, ut1, azpar)
 
         # Ionospheric mapping function MF
         # VTEC to STEC using the ionospheric mapping function

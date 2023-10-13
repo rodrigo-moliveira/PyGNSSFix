@@ -10,6 +10,13 @@ from ...utils.node import Node
 
 __all__ = ["Epoch", "timedelta"]
 
+"""TAI = UTC + LEAPS
+TAI = GPS + 19
+UTC + LEAPS = GPS + 19
+UTC + 37 = GPS + 19
+UTC + 18 = GPS
+UTC = GPS -18"""
+
 
 class Timescale(Node):
     """Definition of a timescale and its interactions with others"""
@@ -33,7 +40,7 @@ class Timescale(Node):
         """Definition of Terrestrial Time relatively to International Atomic Time"""
         return 32.184
 
-    def _scale_tai_minus_gps(self, mjd, eop):
+    def _scale_tai_minus_gpst(self, mjd, eop):
         """Definition of International Atomic Time relatively to GPS time"""
         return 19.0
 
@@ -157,7 +164,7 @@ class Epoch:
     """Offset between JD and J2000"""
 
     REF_SCALE = "GPST"
-    """Scale used as reference internally"""
+    """Scale used internally to store the epoch"""
 
     DEFAULT_SCALE = "UTC"
     """Default scale"""
@@ -165,6 +172,8 @@ class Epoch:
     DEFAULT_FORMAT = "%Y-%m-%d %H:%M:%S"
 
     def __init__(self, *args, scale=DEFAULT_SCALE, **kwargs):
+
+        # TODO: constructor with seconds of week and week number???
 
         if type(scale) is str:
             scale = get_scale(scale.upper())
@@ -416,13 +425,13 @@ class Epoch:
     def _mjd(self):
         """
         Return:
-            float: Date in terms of MJD in the REF_SCALE timescale
+            float: Date in terms of MJD in the REF_SCALE timescale (internal timescale)
         """
         return self._d + self._s / 86400.0
 
     @property
     def mjd(self):
-        """Date in terms of MJD
+        """Date in terms of MJD (in scale defined by the Epoch)
 
         Return:
             float
