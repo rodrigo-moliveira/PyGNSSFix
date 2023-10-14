@@ -204,8 +204,10 @@ class NTCMG:
         @param azpar: azpar
         @return VTEC
         """
-        doy = utc.timetuple().tm_yday
-        universal_time_hour = utc.hour + utc.minute / 60 + utc.second / 3600  # Hour and decimal
+        ut1 = utc.change_scale("UT1").datetime
+        doy = ut1.timetuple().tm_yday
+
+        universal_time_hour = ut1.hour + ut1.minute / 60 + ut1.second / 3600  # Hour and decimal
         F1 = NTCMG.compute_local_time_dependency_F1(lat_pp_rad, lon_pp_rad, universal_time_hour)
         F2 = NTCMG.compute_season_dependency_F2(doy)
         F3 = NTCMG.compute_geomagnetic_field_dependency_F3(lat_pp_rad, lon_pp_rad)
@@ -239,15 +241,12 @@ class NTCMG:
         # INPUT OR CALL calculate_azpar to get azpar
         azpar = NTCMG.calculate_azpar(effec_iono)
 
-        # [X] Calculate satellite elevation E and azimuth angles
         # Calculate ionospheric pierce point location (lat_pp, lon_pp) for user-to-sat link at 450km height
-        llh = cartesian2geodetic(tuple(rec_pos))
-        user_lat_rad = llh[0]
-        user_lon_rad = llh[1]
-        lat_pp_rad, lon_pp_rad = NTCMG.calculate_pierce_point_lat_lon(el_rad, az_rad, user_lat_rad, user_lon_rad)
+        [user_lat, user_lon, _] = cartesian2geodetic(*rec_pos)
+        lat_pp, lon_pp = NTCMG.calculate_pierce_point_lat_lon(el_rad, az_rad, user_lat, user_lon)
 
         # Call NTCM G to calculate VTEC at pierce point loc and local time LT
-        vtec = NTCMG.compute_vtec(lat_pp_rad, lon_pp_rad, ut1, azpar)
+        vtec = NTCMG.compute_vtec(lat_pp, lon_pp, ut1, azpar)
 
         # Ionospheric mapping function MF
         # VTEC to STEC using the ionospheric mapping function

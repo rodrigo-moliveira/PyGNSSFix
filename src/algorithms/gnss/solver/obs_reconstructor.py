@@ -52,6 +52,7 @@ class ObservationReconstruction:
                                       self._nav_header.iono_corrections["GPSB"], time_reception.gps_time[1])
 
                 # fix I for non L1 users (L2 or L5)
+                # TODO: passar isto para dentro do iono_klobuchar
                 if datatype.freq != L1:
                     iono = (L1.freq_value / datatype.freq.freq_value) ** 2 * iono
 
