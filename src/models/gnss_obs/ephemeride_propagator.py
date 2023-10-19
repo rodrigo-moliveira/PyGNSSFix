@@ -2,7 +2,6 @@ from math import sqrt, cos, sin
 
 import numpy as np
 
-from src.algorithms.gnss.estimators.state_space import GnssStateSpace
 from src import constants
 from src.models.frames.frames import dcm_e_i, M2E, E2v
 
@@ -37,8 +36,8 @@ def fix_gps_week_crossovers(time_diff: float) -> float:
 class EphemeridePropagator:
 
     @staticmethod
-    def get_sat_position_and_true_range(nav_message, time_emission, transit, rec_position, relativistic_correction) ->\
-            tuple[GnssStateSpace, np.array, float]:
+    def compute_sat_nav_position_dt_rel(nav_message, time_emission, transit) ->\
+            tuple[np.array, float]:
         """
         Computes:
             * the satellite ephemeride
@@ -52,8 +51,6 @@ class EphemeridePropagator:
             time_emission (src.data_types.basics.Epoch.Epoch) : Signal emission time (wrt GPS time system)
             transit (float) : Computed transit time in seconds. Used to rotate the computed satellite ephemeride to the
                             ECEF frame at reception time
-            rec_position (Position) : the receiver position
-            relativistic_correction (bool) : whether to compute the relativistic correction
 
         Returns:
             tuple [Position, ~numpy.array, float] : returns the computed satellite position at the request epoch, as
@@ -61,7 +58,7 @@ class EphemeridePropagator:
 
         """
         # satellite coordinates in ECEF frame defined at TX time, relativistic correction for satellite clock
-        r_sat, dt_relative = EphemeridePropagator.compute(nav_message, time_emission, relativistic_correction)
+        r_sat, dt_relative = EphemeridePropagator.compute(nav_message, time_emission)
 
         # rotation matrix from ECEF TX to ECEF RX (taking into consideration the signal transmission time)
         _R = dcm_e_i(-transit)
@@ -69,13 +66,10 @@ class EphemeridePropagator:
         # get satellite position vector at ECEF frame defined at RX time (to be compared with receiver position)
         p_sat = _R @ r_sat
 
-        # compute true range
-        rho_0 = np.linalg.norm(p_sat - rec_position)
-
-        return p_sat, rho_0, dt_relative
+        return p_sat, dt_relative
 
     @staticmethod
-    def compute(nav_message, epoch, relativistic_correction, constellation="GPS") -> tuple[np.ndarray, float]:
+    def compute(nav_message, epoch, constellation="GPS") -> tuple[np.ndarray, float]:
         """
         Computes the satellite ephemeris at the requested epoch, given the closest (valid) navigation data point
 
@@ -84,7 +78,6 @@ class EphemeridePropagator:
             nav_message (src.data_types.containers.NavigationData.NavigationPointGPS) : navigation data point object
             epoch (src.data_types.basics.Epoch.Epoch) : Epoch to compute the ephemerides. For a correct implementation,
                                                         should be in GPS time (not SV nor receiver time)
-            relativistic_correction (bool) : whether to compute the relativistic correction
 
         Returns:
             tuple [np.ndarray, float] : returns the computed satellite position at the request epoch, as well as the
@@ -92,13 +85,13 @@ class EphemeridePropagator:
 
         """
         if constellation == "GPS":
-            return EphemeridePropagator._compute_ephemeride_GPS(nav_message, epoch, relativistic_correction)
+            return EphemeridePropagator._compute_ephemeride_GPS(nav_message, epoch)
         else:
             raise NotImplementedError(f"Galileo ephemeride propagator not yet implemented. Only GPS is currently "
                                       f"possible.")
 
     @staticmethod
-    def _compute_ephemeride_GPS(nav_message, epoch, relativistic_correction):
+    def _compute_ephemeride_GPS(nav_message, epoch):
         """
         Implements the updating of GPS ephemerides (position) and the transformation to ECEF frame
 
@@ -183,9 +176,7 @@ class EphemeridePropagator:
         # get StateVector object
         position = np.array([x_ECEF, y_ECEF, z_ECEF])
 
-        # compute relativistic correction
-        rel_correction = 0
-        if relativistic_correction:
-            # Eq 5.19 of **REF[1]**
-            rel_correction = -2 * sqrt(constants.MU) * sqrtA / constants.SPEED_OF_LIGHT ** 2 * eccentricity * sin(E)
+        # compute relativistic correction Eq 5.19 of **REF[1]**
+        rel_correction = -2 * sqrt(constants.MU) * sqrtA / constants.SPEED_OF_LIGHT ** 2 * eccentricity * sin(E)
+
         return position, rel_correction

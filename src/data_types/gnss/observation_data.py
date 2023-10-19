@@ -69,6 +69,19 @@ class EpochData:
         """
         return self._data[sat]
 
+    def get_code_observables(self, sat: Satellite):
+        """
+        Args:
+                sat (Satellite)
+        Return:
+                list : list of all code (pseudorange) observables for the provided satellite (only one epoch)
+        """
+        observables = []
+        for obs in self._data[sat]:
+            if DataType.is_code(obs.datatype):
+                observables.append(obs)
+        return observables
+
     def get_observable(self, sat, obs):
         """
         Args:

@@ -71,7 +71,7 @@ class GnssDataManager(Container):
                     # iterate over estimated states
                     for state in sim:
 
-                        week, sow = state.epoch.gps_time
+                        week, sow = state.epoch.gnss_time
                         time_str = f"{week},{sow}"
 
                         # save estimated data for this epoch

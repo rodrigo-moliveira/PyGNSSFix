@@ -4,6 +4,7 @@ tasks for preliminary version:
     [ ] re-adicionar o filtro de elevation no gnss_solver
     [ ] escrever um traceback dos filtros do preprocessor
     [ ] limpar o código / solve all TODOs
+    [ ] analisar se é mesmo necessário que todos os satélites tenham a segunda freq.
 
 adicionar GAL SPS
     [X] ler dados de navegacao de gal

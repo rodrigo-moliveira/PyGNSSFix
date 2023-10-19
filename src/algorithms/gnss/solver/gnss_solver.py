@@ -111,13 +111,14 @@ class GnssSolver:
         REL_CORRECTION = EnumOnOff(config.get("solver", "relativistic_corrections"))  # 0 disable, 1 enable
         INITIAL_POS = config.get("solver", "initial_pos_std")
         INITIAL_CLOCK_BIAS = config.get("solver", "initial_clock_std")
+        CONSTELLATIONS = list(self.obs_data.get_constellations())
 
         TROPO = {}
         IONO = {}
         MODEL = {}
         CODES = {}
 
-        for const in self.obs_data.get_constellations():
+        for const in CONSTELLATIONS:
             TROPO[const] = EnumTropo(config.get("model", const, "troposphere"))  # 0 - no model, 1 - Saastamoinen
             IONO[const] = EnumIono(config.get("model", const, "ionosphere"))
 
@@ -141,6 +142,7 @@ class GnssSolver:
 
         # fill info dict
         self._info = {
+            "CONSTELLATIONS": CONSTELLATIONS,
             "MAX_ITER": MAX_ITER,
             "STOP_CRITERIA": STOP_CRITERIA,
             "SOLVER": EnumSolver(SOLVER),
@@ -185,7 +187,6 @@ class GnssSolver:
 
     def _init_state(self, epoch, sat_list):
         # initialize GNSS state
-
         if len(self.solution) == 0:
             initial_pos = self._info["INITIAL_POS"][0:3]
             initial_clock = self._info["INITIAL_CLOCK_BIAS"][0]
@@ -194,6 +195,7 @@ class GnssSolver:
                                    epoch=epoch,
                                    sat_list=sat_list)
         else:
+            # initialize from previous state
             prev_state = self.solution[-1]
             state = GnssStateSpace(position=prev_state.position.copy(),
                                    clock_bias=prev_state.clock_bias,
@@ -211,20 +213,13 @@ class GnssSolver:
         iteration = 0
         success = False
         rms = rms_prev = 1
-        geometry_matrix = cov = prefit_residuals = postfit_residuals = dop_matrix = None
-
-        # TODO: tmp -> this needs to be revisited
-        gps_codes = self._info['CODES']['GPS']
-        # gal_codes
+        cov = prefit_residuals = postfit_residuals = dop_matrix = None
 
         # build system geometry for this epoch
         system_geometry = SystemGeometry(self.nav_data, obs_data)
 
         # check data availability for this epoch
-        data_available = self._check_model_availability(system_geometry, obs_data, epoch)
-
-        if not data_available:
-            # the log message is issued in self._check_model_availability
+        if not self._check_model_availability(system_geometry, obs_data, epoch):
             return False  # not enough data to process this epoch
 
         self.log.info(f"Processing epoch {str(epoch)}")
@@ -235,12 +230,11 @@ class GnssSolver:
         # the solver from here...
         while iteration < self._info["MAX_ITER"]:
             # compute geometry-related data for each satellite link
-            system_geometry.compute(epoch, state.position, state.clock_bias, self._info["TX_TIME_ALG"],
-                                    gps_codes[0], self._info["REL_CORRECTION"])
+            system_geometry.compute(epoch, state.position, state.clock_bias, self._info["TX_TIME_ALG"])
 
             # solve the Least Squares
             try:
-                postfit_residuals, geometry_matrix, prefit_residuals, cov, dop_matrix = \
+                postfit_residuals, prefit_residuals, cov, dop_matrix = \
                     self._compute(system_geometry, obs_data, state, epoch)
             except PVTComputationFail as e:
                 self.log.warning(f"Least Squares failed for {str(epoch)} on iteration {iteration}."
@@ -293,11 +287,10 @@ class GnssSolver:
         # solve LS problem
         post_fit, cov, dop_matrix = lsq_engine.solve_ls(state)
 
-        return post_fit, lsq_engine.design_mat, lsq_engine.y_vec, cov, dop_matrix
+        return post_fit, lsq_engine.y_vec, cov, dop_matrix
 
     def _check_model_availability(self, system_geometry, obs_data, epoch):
         """
-        TODO: this docs need to be revised
         Checks if it is possible to perform the dual frequency / single frequency PVT estimation, or, in contrast,
         we have not enough data to perform the computations.
 
@@ -311,31 +304,37 @@ class GnssSolver:
             * if that is not the case, a PVT solution is impossible to be computed -> Warn the user..
 
         """
-        # TODO: currently only GPS is processed. This will need to be revisited
-        # TODO: esta é a ordem certa para dual frequency? se calhar o check tem de ser depois de eliminar os dados
-        model = self._info["MODEL"]["GPS"]
-        codes = self._info["CODES"]["GPS"]
-        MIN_SAT = 4
+        single_const = len(self._info["CONSTELLATIONS"]) == 1  # true if only one constellation
+        MIN_SAT = 4 if single_const else 5
+        sat_list = []
 
-        sat_list = obs_data.get_sats_for_datatypes(codes)
+        for const in self._info["CONSTELLATIONS"]:
+            model = self._info["MODEL"][const]
+            codes = self._info["CODES"][const]
+            sat_list_ = obs_data.get_sats_for_datatypes(codes)
+
+            # Dual Frequency model
+            if model == EnumModel.DUAL_FREQ:
+                # removing satellites with data for only 1 frequency
+                removed = []
+                for sat in obs_data.get_satellites():
+                    if sat not in sat_list_:
+                        system_geometry.remove(sat)
+                        removed.append(sat)
+                if removed:
+                    self.log.info(f"Removing satellites {removed} at epoch {str(epoch)} due to "
+                                  f"inconsistencies in code data for both frequencies")
+
+            sat_list += system_geometry.get_satellites()
+
+        # check number of available satellites
         if len(sat_list) < MIN_SAT:
             self.log.warning(
-                f"Not enough satellites to compute model {model} PVT positioning at {str(epoch)}. "
-                f"Available satellites with data for codes {codes}: "
+                f"Not enough satellites to compute model PVT positioning at {str(epoch)}. "
+                f"Available satellites with data for provided codes: "
                 f"{sat_list}. Minimum number of satellites is {MIN_SAT}. Aborting the solution for this epoch...")
             return False
 
-        # Dual Frequency model
-        if model == EnumModel.DUAL_FREQ:
-            # removing satellites with data for only 1 frequency
-            removed = []
-            for sat in obs_data.get_satellites():
-                if sat not in sat_list:
-                    system_geometry.remove(sat)
-                    removed.append(sat)
-            if removed:
-                self.log.info(f"Removing satellites {removed} at epoch {str(epoch)} due to "
-                              f"inconsistencies in code data for both frequencies")
         return True
 
     def _elevation_filter(self, system_geometry):

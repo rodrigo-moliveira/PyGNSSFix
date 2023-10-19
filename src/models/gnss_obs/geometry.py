@@ -1,11 +1,11 @@
 from datetime import timedelta
 
+import numpy as np
+
 from .clock_obs import compute_tx_time
 from .ephemeride_propagator import EphemeridePropagator
-from src.data_types.gnss.data_type import DataType, L1
 from ..frames.frames import enu2azel, ecef2enu, cartesian2geodetic
 from ...data_mng.container import Container
-from ...errors import NonExistentObservable
 
 
 class SatelliteGeometry(Container):
@@ -35,7 +35,7 @@ class SatelliteGeometry(Container):
     def __repr__(self):
         return str(self)
 
-    def compute(self, rec_pos, epoch, rec_bias, nav_message, compute_tx, PR_obs, relativistic_correction):
+    def compute(self, rec_pos, epoch, rec_bias, nav_message, compute_tx, PR_obs):
         """
         compute satellite-related quantities (tropo, iono, transmission time, etc.) to be used in the PVT gnss_obs
         reconstruction equation, for a given satellite.
@@ -48,7 +48,6 @@ class SatelliteGeometry(Container):
                                                                                         satellite under evaluation
             compute_tx (function) : function to compute the transmission time
             PR_obs (src.data_types.data_types.Observation.Observation) : Code gnss_obs to use in some computations
-            relativistic_correction (bool) : whether to compute relativistic correction
         """
         # get reception time in GNSS time system ( T_GNSS = T_receiver - t_(receiver_bias) )
         time_reception = epoch + timedelta(seconds=-rec_bias)
@@ -61,15 +60,16 @@ class SatelliteGeometry(Container):
                                                  nav_message=nav_message,
                                                  pseudorange_obs=PR_obs)
 
-        # get rho_0 and satellite position at RX ECEF frame
-        p_sat, true_range, dt_relative = EphemeridePropagator.get_sat_position_and_true_range(nav_message,
-                                                                                              time_emission.gps_time,
-                                                                                              transit, rec_pos,
-                                                                                              relativistic_correction)
+        # get and satellite position at RX ECEF frame
+        pos_sat, dt_relative = EphemeridePropagator.compute_sat_nav_position_dt_rel(
+            nav_message, time_emission.gnss_time, transit)
+
+        # compute true range
+        true_range = np.linalg.norm(pos_sat - rec_pos)
 
         # get satellite elevation and azimuth angles (from the receiver), ENU frame
         lat, long, h = cartesian2geodetic(rec_pos[0], rec_pos[1], rec_pos[2])
-        enu_coord = ecef2enu(p_sat[0], p_sat[1], p_sat[2], lat, long, h)
+        enu_coord = ecef2enu(pos_sat[0], pos_sat[1], pos_sat[2], lat, long, h)
         az, el = enu2azel(*enu_coord)
 
         # save results in container
@@ -79,7 +79,7 @@ class SatelliteGeometry(Container):
         self.true_range = true_range
         self.az = az
         self.el = el
-        self.satellite_position = p_sat
+        self.satellite_position = pos_sat
         self.receiver_position = rec_pos
         self.dt_rel_correction = dt_relative
 
@@ -116,8 +116,7 @@ class SystemGeometry:
             return getattr(self._data[sat], attribute)
         return None
 
-    def compute(self, epoch, receiver_position, receiver_clock, compute_tx,
-                main_datatype, relativistic_correction):
+    def compute(self, epoch, receiver_position, receiver_clock, compute_tx):
         """
         compute satellite-related quantities (tropo, iono, transmission time, etc.) to be used in the PVT gnss_obs
         reconstruction equation, for all available satellites.
@@ -127,8 +126,6 @@ class SystemGeometry:
             receiver_position (src.data_types.state_space.statevector.Position) : Receiver position
             receiver_clock (float) : Receiver clock bias
             compute_tx (function) : function to compute the transmission time
-            main_datatype (DataType) : Code gnss_obs to use in some computations
-            relativistic_correction (bool) : whether to compute relativistic correction
         """
         self._clean()
         _to_remove = []
@@ -141,15 +138,17 @@ class SystemGeometry:
             nav_message = self.nav_data.get_sat_data_for_epoch(sat, epoch)
 
             # fetch pseudorange gnss_obs for this satellite at epoch (used in the compute_TX_time algorithm)
-            try:
-                main_observation = self.obs_data.get_observable(sat, main_datatype)
-            except NonExistentObservable:
-                # could not retrieve this observable
+            observable_lst = self.obs_data.get_code_observables(sat)
+            if len(observable_lst) == 0:
                 _to_remove.append(sat)
                 continue
 
+            # pick the first observation
+            observation = observable_lst[0]
+
+            # compute geometry for this satellite
             geometry.compute(receiver_position, epoch, receiver_clock, nav_message,
-                             compute_tx, main_observation, relativistic_correction)
+                             compute_tx, observation)
 
             self._data[sat] = geometry
 

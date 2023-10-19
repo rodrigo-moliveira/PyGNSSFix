@@ -34,8 +34,8 @@ class ObservationReconstruction:
         dt_sat, _ = gps_broadcast_clock(nav_message.af0,
                                         nav_message.af1,
                                         nav_message.af2,
-                                        nav_message.toc.gps_time[1],
-                                        self._system_geometry.get("time_emission", sat).gps_time[1])
+                                        nav_message.toc.gnss_time[1],
+                                        self._system_geometry.get("time_emission", sat).gnss_time[1])
 
         # correct satellite clock for relativistic corrections
         if self._model["relativistic_correction"] == EnumOnOff.ENABLED:
@@ -49,7 +49,7 @@ class ObservationReconstruction:
             if self._model["iono"][sat.sat_system] == EnumIono.KLOBUCHAR:
                 time_reception = self._system_geometry.get("time_reception", sat)
                 iono = iono_klobuchar(lat, long, el, az, self._nav_header.iono_corrections["GPSA"],
-                                      self._nav_header.iono_corrections["GPSB"], time_reception.gps_time[1])
+                                      self._nav_header.iono_corrections["GPSB"], time_reception.gnss_time[1])
 
                 # fix I for non L1 users (L2 or L5)
                 # TODO: passar isto para dentro do iono_klobuchar

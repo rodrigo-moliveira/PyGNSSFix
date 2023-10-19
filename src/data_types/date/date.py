@@ -439,10 +439,16 @@ class Epoch:
         return self.d + self.s / 86400.0
 
     @property
-    def gps_time(self):
+    def gnss_time(self):
         """
         Computes GPS Time GPST (Week number and Seconds of Week) for this Epoch
         The origin of GPST (week = 0, seconds of week = 0) is 6 January 1980 at 00:00 midnight
+
+        In RINEX files the GPS week number is provided as a continuous number, without roll-over
+
+        NOTE: This is also valid for GST (Galileo System Time). According to RINEX documentation,
+        The GAL week number is a continuous number, aligned to (and hence identical to) the
+        continuous GPS week number used in the RINEX navigation message files
         """
         if "gps_time" not in self._cache.keys():
             # convert this epoch to GPS Time
@@ -452,12 +458,6 @@ class Epoch:
             sow = dt - week*3600*24*7
             self._cache["gps_time"] = (int(week), sow)
         return self._cache["gps_time"]
-
-    @property
-    def gal_time(self):
-        """Computes GAL Time GST (Week number and Seconds of Week) for this Epoch"""
-        # TODO implement this
-        return 0, 0
 
     @property
     def doy(self):
