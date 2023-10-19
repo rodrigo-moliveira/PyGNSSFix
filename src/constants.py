@@ -28,10 +28,12 @@ DAYS_PER_WEEK = 7
 AVERAGE_DAYS_IN_YEAR = 365.25
 SECONDS_IN_HOUR = 3600
 
-# Orbital Mechanics and Earth constants (WGS84 values)
-MU = 3.986005E14  # [m^3/sec^2]
+# Orbital Mechanics and Earth constants
+MU_WGS84 = 3.986005E14  # [m^3/sec^2] (WGS84 value, for GPS)
+MU_GTRF = 3.986004418e14  # (GTRF value, for GAL)
 EARTH_ROTATION = 7.292115E-5  # [rad/sec]
 SPEED_OF_LIGHT = 299792458  # [m/s]
+
 
 EARTH_FLATNESS = 1 / 298.257223563
 EARTH_ECCENTRICITY_SQ = 2 * EARTH_FLATNESS - EARTH_FLATNESS * EARTH_FLATNESS

@@ -309,8 +309,8 @@ class RinexNavReader:
                 BGDe5b = utils.to_float(line[61:80])
                 setattr(navMessage, "SISA", SISA)
                 setattr(navMessage, "SV_health", SV_health)
-                setattr(navMessage, "BGDe5a", BGDe5a)
-                setattr(navMessage, "BGDe5b", BGDe5b)
+                setattr(navMessage, "BGDE1E5a", BGDe5a)
+                setattr(navMessage, "BGDE1E5b", BGDe5b)
 
                 # read 8th line
                 line = file.readline()

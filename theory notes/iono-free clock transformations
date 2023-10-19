@@ -64,6 +64,8 @@ We first have to convert the ephemeride clock:
     dt^s(E1,E5a) = dt^s(E1,E5b) - BGD(E1,E5b) + BGD(E1,E5a)
 And then as normal:
     dt^s(E5a) = dt^s(E1,E5a) - BGD(E1,E5a) * ((f(E1) / f(E5a)) ** 2)
+That is:
+    dt^s(E5a) = dt^s(E1,E5b) - BGD(E1,E5b) + BGD(E1,E5a) - BGD(E1,E5a) * ((f(E1) / f(E5a)) ** 2)
 
 see https://files.igs.org/pub/data/format/sinex_bias_100.pdf
 or ESA handbook chapter 5.3.1

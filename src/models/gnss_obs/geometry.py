@@ -6,6 +6,7 @@ from .clock_obs import compute_tx_time
 from .ephemeride_propagator import EphemeridePropagator
 from ..frames.frames import enu2azel, ecef2enu, cartesian2geodetic
 from ...data_mng.container import Container
+from ...errors import TimeSeriesError
 
 
 class SatelliteGeometry(Container):
@@ -134,8 +135,12 @@ class SystemGeometry:
         for sat in sat_list:
             geometry = SatelliteGeometry()
 
-            # fetch navigation message for this satellite
-            nav_message = self.nav_data.get_sat_data_for_epoch(sat, epoch)
+            try:
+                # fetch navigation message for this satellite
+                nav_message = self.nav_data.get_closest_message(sat, epoch)
+            except TimeSeriesError:
+                _to_remove.append(sat)
+                continue
 
             # fetch pseudorange gnss_obs for this satellite at epoch (used in the compute_TX_time algorithm)
             observable_lst = self.obs_data.get_code_observables(sat)
@@ -143,12 +148,9 @@ class SystemGeometry:
                 _to_remove.append(sat)
                 continue
 
-            # pick the first observation
-            observation = observable_lst[0]
-
             # compute geometry for this satellite
             geometry.compute(receiver_position, epoch, receiver_clock, nav_message,
-                             compute_tx, observation)
+                             compute_tx, observable_lst[0])
 
             self._data[sat] = geometry
 

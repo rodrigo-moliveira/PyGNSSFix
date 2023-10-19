@@ -6,7 +6,7 @@ from src import constants
 from src.models.frames.frames import dcm_e_i, M2E, E2v
 
 
-def fix_gps_week_crossovers(time_diff: float) -> float:
+def fix_gnss_week_crossovers(time_diff: float) -> float:
     """
     Repairs over and underflow of GPS time, that is, the time difference must account for beginning or end of week
     crossovers.
@@ -58,7 +58,7 @@ class EphemeridePropagator:
 
         """
         # satellite coordinates in ECEF frame defined at TX time, relativistic correction for satellite clock
-        r_sat, dt_relative = EphemeridePropagator.compute(nav_message, time_emission)
+        r_sat, dt_relative = EphemeridePropagator.compute_nav_sat_pos(nav_message, time_emission)
 
         # rotation matrix from ECEF TX to ECEF RX (taking into consideration the signal transmission time)
         _R = dcm_e_i(-transit)
@@ -69,35 +69,14 @@ class EphemeridePropagator:
         return p_sat, dt_relative
 
     @staticmethod
-    def compute(nav_message, epoch, constellation="GPS") -> tuple[np.ndarray, float]:
-        """
-        Computes the satellite ephemeris at the requested epoch, given the closest (valid) navigation data point
-
-        Args:
-            constellation (src.data_types.data_types.SatelliteSystem) : the constellation to process
-            nav_message (src.data_types.containers.NavigationData.NavigationPointGPS) : navigation data point object
-            epoch (src.data_types.basics.Epoch.Epoch) : Epoch to compute the ephemerides. For a correct implementation,
-                                                        should be in GPS time (not SV nor receiver time)
-
-        Returns:
-            tuple [np.ndarray, float] : returns the computed satellite position at the request epoch, as well as the
-                                      corresponding clock relativistic corrections
-
-        """
-        if constellation == "GPS":
-            return EphemeridePropagator._compute_ephemeride_GPS(nav_message, epoch)
-        else:
-            raise NotImplementedError(f"Galileo ephemeride propagator not yet implemented. Only GPS is currently "
-                                      f"possible.")
-
-    @staticmethod
-    def _compute_ephemeride_GPS(nav_message, epoch):
+    def compute_nav_sat_pos(nav_message, epoch):
         """
         Implements the updating of GPS ephemerides (position) and the transformation to ECEF frame
 
         table 20-III [sec 20.3.3.4.3] of **REF[3]**
         """
-        # TODO: a correcao GPST / GST poderá ser aqui
+        GM = constants.MU_WGS84 if nav_message.constellation == "GPS" else constants.MU_WGS84
+
         # unpack week and seconds of week
         _, sow = epoch
 
@@ -119,22 +98,16 @@ class EphemeridePropagator:
         cis = getattr(nav_message, "cis")
         toe = getattr(nav_message, "toe")[1]  # to get seconds of week for TOE
 
-        # toc = getattr(navPoint, "toc")
-        # af0 = getattr(navPoint, "af0")
-        # af1 = getattr(navPoint, "af1")
-        # af2 = getattr(navPoint, "af2")
-        # TGD = getattr(navPoint, "TGD")
-
         # semi major axis
         A = sqrtA * sqrtA
         A_3 = A * A * A
 
         # mean motion
-        n = sqrt(constants.MU / A_3)
+        n = sqrt(GM / A_3)
 
         # time from ephemeris reference epoch (correct for beginning / end of week crossovers)
         dt = sow - toe
-        dt = fix_gps_week_crossovers(dt)
+        dt = fix_gnss_week_crossovers(dt)
 
         # corrected mean motion
         n = n + deltaN
@@ -173,10 +146,12 @@ class EphemeridePropagator:
         y_ECEF = x_orbital * sin(RAAN) + y_orbital * cos(i) * cos(RAAN)
         z_ECEF = y_orbital * sin(i)
 
+        # TODO: add computation of sat velocities here
+
         # get StateVector object
         position = np.array([x_ECEF, y_ECEF, z_ECEF])
 
         # compute relativistic correction Eq 5.19 of **REF[1]**
-        rel_correction = -2 * sqrt(constants.MU) * sqrtA / constants.SPEED_OF_LIGHT ** 2 * eccentricity * sin(E)
+        rel_correction = -2 * sqrt(GM) * sqrtA / constants.SPEED_OF_LIGHT ** 2 * eccentricity * sin(E)
 
         return position, rel_correction

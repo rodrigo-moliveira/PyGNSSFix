@@ -37,6 +37,10 @@ class NavigationPoint(Container):
         _allAttrs = _allAttrs[0:-2]
         return f'{type(self).__name__}({_allAttrs})'
 
+    @property
+    def constellation(self):
+        return None
+
 
 class NavigationPointGPS(NavigationPoint):
     """
@@ -52,6 +56,10 @@ class NavigationPointGPS(NavigationPoint):
                  "SV_URA", "SV_health", "TGD", "IODC",          # BROADCAST ORBIT 6
                  "TransmissionTime"]                            # BROADCAST ORBIT 7
 
+    @property
+    def constellation(self):
+        return "GPS"
+
 
 class NavigationPointGAL(NavigationPoint):
     """
@@ -64,7 +72,7 @@ class NavigationPointGAL(NavigationPoint):
                  "cic", "RAAN0", "cis",                         # BROADCAST ORBIT 3
                  "i0", "crc", "omega", "RAANDot",               # BROADCAST ORBIT 4
                  "iDot", "dataSrc", "toe",                      # BROADCAST ORBIT 5
-                 "SISA", "SV_health", "BGDe5a", "BGDe5b",       # BROADCAST ORBIT 6
+                 "SISA", "SV_health", "BGDE1E5a", "BGDE1E5b",       # BROADCAST ORBIT 6
                  "TransmissionTime",                            # BROADCAST ORBIT 7
                  "nav_type"]
 
@@ -97,6 +105,10 @@ class NavigationPointGAL(NavigationPoint):
         self.nav_type = message_type
 
         return self.nav_type
+
+    @property
+    def constellation(self):
+        return "GAL"
 
 
 class NavigationData:
@@ -169,7 +181,7 @@ class NavigationData:
         except KeyError:
             raise KeyError(f"Satellite {str(sat)} has no available navigation data")
 
-    def get_sat_data_for_epoch(self, sat, epoch):
+    def get_closest_message(self, sat, epoch):
         """
         gets navigation message closest to the provided epoch
 
@@ -184,7 +196,7 @@ class NavigationData:
         try:
             _epoch = self._data[sat].get_closest_epoch(epoch)
             return self._data[sat].get_data_for_epoch(_epoch)
-        except TimeSeriesError as e:
+        except (TimeSeriesError, KeyError) as e:
             raise TimeSeriesError(f"satellite {str(sat)} has no available navigation data for epoch {str(epoch)}, {e}")
 
     @property

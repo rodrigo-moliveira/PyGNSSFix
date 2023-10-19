@@ -2,7 +2,7 @@ from src.io.config import config_dict
 from src.io.config.enums import EnumOnOff, EnumIono, EnumTropo
 from src.models.frames import cartesian2geodetic
 from src.models.gnss_obs.iono_klobuchar import iono_klobuchar
-from src.models.gnss_obs.clock_obs import gps_broadcast_clock, nav_sat_clock_correction
+from src.models.gnss_obs.clock_obs import broadcast_clock, nav_sat_clock_correction
 from src.data_types.gnss.data_type import L1, DataType
 from src.data_types.gnss.observation import Observation
 from src import constants
@@ -31,11 +31,11 @@ class ObservationReconstruction:
         true_range = self._system_geometry.get("true_range", sat)
 
         # satellite clock
-        dt_sat, _ = gps_broadcast_clock(nav_message.af0,
-                                        nav_message.af1,
-                                        nav_message.af2,
-                                        nav_message.toc.gnss_time[1],
-                                        self._system_geometry.get("time_emission", sat).gnss_time[1])
+        dt_sat, _ = broadcast_clock(nav_message.af0,
+                                    nav_message.af1,
+                                    nav_message.af2,
+                                    nav_message.toc.gnss_time[1],
+                                    self._system_geometry.get("time_emission", sat).gnss_time[1])
 
         # correct satellite clock for relativistic corrections
         if self._model["relativistic_correction"] == EnumOnOff.ENABLED:

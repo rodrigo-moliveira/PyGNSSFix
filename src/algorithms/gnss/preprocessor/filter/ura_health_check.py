@@ -23,7 +23,7 @@ class SatFilterHealthURA(Filter):
 
         try:
             # get closest nav message for this satellite
-            nav_message = self.navigation_data.get_sat_data_for_epoch(sat, epoch)
+            nav_message = self.navigation_data.get_closest_message(sat, epoch)
         except:
             # no nav message available for this satellite
             if sat not in self.warned:
