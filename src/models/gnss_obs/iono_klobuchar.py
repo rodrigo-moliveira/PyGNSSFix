@@ -1,9 +1,10 @@
 from math import sin, cos
 
 from src import constants
+from src.data_types.gnss.data_type import L1
 
 
-def iono_klobuchar(user_lat, user_long, sv_el, sv_az, alfa, beta, gps_sow):
+def iono_klobuchar(user_lat, user_long, sv_el, sv_az, alfa, beta, gps_sow, freq):
     """
     This function computes the ionosphere correction of pseudorange measurements for online single frequency users,
     using the a priori Klobuchar Ionospheric Model
@@ -83,4 +84,8 @@ def iono_klobuchar(user_lat, user_long, sv_el, sv_az, alfa, beta, gps_sow):
 
     # get ionosphere in meters
     iono = iono * constants.SPEED_OF_LIGHT
+
+    # convert from L1 to the user frequency
+    iono = (L1.freq_value / freq.freq_value) ** 2 * iono
+
     return iono

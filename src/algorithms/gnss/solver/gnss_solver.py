@@ -133,12 +133,12 @@ class GnssSolver:
                 # Iono-Free Model
                 self.log.info(f"Selected model for {const} is Iono-Free with gnss_obs {code_types}")
                 MODEL[const] = EnumModel.SINGLE_FREQ  # we process as single frequency
-                CODES[const] = [code_types[0], None]
+                CODES[const] = [code_types[0]]
             else:
                 # Single Frequency Model
                 self.log.info(f"Selected model for {const} is Single Frequency with gnss_obs {code_types[0]}")
                 MODEL[const] = EnumModel.SINGLE_FREQ
-                CODES[const] = [code_types[0], None]
+                CODES[const] = [code_types[0]]
 
         # fill info dict
         self._info = {
@@ -282,7 +282,7 @@ class GnssSolver:
                                                   self._info["REL_CORRECTION"])
 
         # build LSQ Engine matrices for all satellites
-        lsq_engine.build_lsq(epoch, obs_data, reconstructor, system_geometry, self.nav_data)
+        lsq_engine.build_lsq(epoch, obs_data, reconstructor, self.nav_data)
 
         # solve LS problem
         post_fit, cov, dop_matrix = lsq_engine.solve_ls(state)

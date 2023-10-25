@@ -51,11 +51,11 @@ class EnumOnOff(Enum):
 class EnumIono(Enum):
     DISABLED = 0
     KLOBUCHAR = 1
-    NEQUICK = 2
+    NTCMG = 2
 
     @classmethod
     def show_options(cls):
-        return f"[0 - DISABLED, 1 - Klobuchar (for GPS), 2 - NeQuick (for GAL)]"
+        return f"[0 - DISABLED, 1 - Klobuchar (for GPS), 2 - NTCM-G (for GAL)]"
 
 
 class EnumTropo(Enum):
