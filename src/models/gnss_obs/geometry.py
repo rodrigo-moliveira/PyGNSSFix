@@ -166,7 +166,6 @@ class SystemGeometry:
 
         Return:
             list [float, float, float] : Line of sight for [x, y, z] axis of ECEF frame
-
         """
 
         receiver = self.get("receiver_position", sat)

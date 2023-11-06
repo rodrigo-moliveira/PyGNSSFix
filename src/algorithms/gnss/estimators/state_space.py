@@ -70,7 +70,7 @@ class GnssStateSpace(Container):
                 exportable_lst.append(ext)
 
         if self.epoch is not None:
-            exportable_lst.append("epoch")
+            exportable_lst.append("time")
 
         # additional info
         if "geometry" in self._info.keys():

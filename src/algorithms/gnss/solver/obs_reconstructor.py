@@ -53,8 +53,9 @@ class ObservationReconstruction:
                                       self._nav_header.iono_corrections["GPSB"], epoch.gnss_time[1],
                                       datatype.freq)
             elif self._model["iono"][sat.sat_system] == EnumIono.NTCMG:
-                iono = NTCMG.calculate_ionospheric_contribution(ut1, effec_iono, rec_pos,
-                                           el, az, frequency)
+                ut1 = epoch.change_scale("UT1")
+                iono = NTCMG.calculate_ionospheric_contribution(ut1, lat, long, el, az,
+                                                                self._nav_header.iono_corrections["GAL"], datatype.freq)
 
         # troposphere
         if self._model["tropo"][sat.sat_system] == EnumTropo.SAASTAMOINEM:

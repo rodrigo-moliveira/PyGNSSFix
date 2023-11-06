@@ -225,8 +225,8 @@ class NTCMG:
         return 1 / sqrt(1 - sinz ** 2)
 
     @staticmethod
-    def calculate_ionospheric_contribution(ut1, effec_iono: np.array, rec_pos: np.array,
-                                           el_rad: float, az_rad: float, frequency: float):
+    def calculate_ionospheric_contribution(ut1, user_lat, user_lon, el_rad: float, az_rad: float, effec_iono: np.array,
+                                           freq):
         """
         main function
         Description: Computes the VTEC
@@ -235,14 +235,13 @@ class NTCMG:
         @param rec_pos: Receiver position
         @param el_rad: Satellite elevation
         @param az_rad: Satellite azimuth
-        @param frequency: Measure frequency
+        @param freq: Measure frequency
         @return Ionosphere delay
         """
         # INPUT OR CALL calculate_azpar to get azpar
         azpar = NTCMG.calculate_azpar(effec_iono)
 
         # Calculate ionospheric pierce point location (lat_pp, lon_pp) for user-to-sat link at 450km height
-        [user_lat, user_lon, _] = cartesian2geodetic(*rec_pos)
         lat_pp, lon_pp = NTCMG.calculate_pierce_point_lat_lon(el_rad, az_rad, user_lat, user_lon)
 
         # Call NTCM G to calculate VTEC at pierce point loc and local time LT
@@ -253,4 +252,4 @@ class NTCMG:
         stec = vtec * NTCMG.vtec_to_stec_mapping(el_rad)
 
         # There is still a need to multiply 40.3/f**2 by the stec to retrieve the correction
-        return ((40.3 * 1e16) / (frequency ** 2)) * stec
+        return ((40.3 * 1e16) / (freq.freq_value ** 2)) * stec

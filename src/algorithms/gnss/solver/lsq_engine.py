@@ -86,6 +86,7 @@ class LSQ_Engine:
 
     def solve_ls(self, state):
         n_sats = len(self.satellite_list)
+        const = self._constellations[0]
 
         # solve LS problem for this iteration
         try:
@@ -101,14 +102,13 @@ class LSQ_Engine:
             # possible error in the numpy.linalg.inv() function -> solution not possible
             raise PVTComputationFail(e)
 
-        dX = solver.get_solution()
-
         # update state vector with incremental dX
+        dX = solver.get_solution()
         state.position += dX[0:3]
         state.clock_bias = dX[3] / constants.SPEED_OF_LIGHT  # receiver clock in seconds
 
         # if iono is estimated
-        if self.model_config["GPS"] == EnumModel.DUAL_FREQ:
+        if self.model_config[const] == EnumModel.DUAL_FREQ:
             state.iono = [dX[i + 4] for i in range(n_sats)]
 
         # if isb is estimated

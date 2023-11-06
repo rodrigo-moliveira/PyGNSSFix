@@ -12,7 +12,7 @@ def get_file_header(exportable):
         return "GPS_Week,GPS_TOW,clock_bias[s],cov[s^2]"
     elif exportable == "iono":
         return "GPS_Week,GPS_TOW,sat,iono[m],cov[m^2]"
-    elif exportable == "epoch":
+    elif exportable == "time":
         return "GPS_Week,GPS_TOW,Epoch_timetag"
     elif exportable == "prefit_residuals":
         return "GPS_Week,GPS_TOW,sat,prefit_residuals_i[m^2]"
@@ -90,7 +90,7 @@ def export_to_file(gnss_state: GnssStateSpace, exportable):
         dop = gnss_state._info["dop_local"]
         return f"{dop['east']},{dop['north']},{dop['up']},{dop['horizontal']}"
 
-    elif exportable == "epoch":
+    elif exportable == "time":
         return f"{str(gnss_state.epoch)}"
 
     else:

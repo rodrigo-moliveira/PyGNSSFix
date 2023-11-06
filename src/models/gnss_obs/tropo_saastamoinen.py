@@ -22,6 +22,9 @@ P_season = np.array([[0.00, 0.00, 0.00, 0.00e-3, 0.00],
 
 
 def tropo_saastamoinen(h, lat, doy, el):
+
+    # TODO: see https://vmf.geo.tuwien.ac.at/codes/ for GP2W model
+        # see also https://vmf.geo.tuwien.ac.at/codes/Python_Tools_Adavi/gpt3_5_fast.py
     """
     This function computes the tropospheric correction of pseudorange measurements for online users,
     using the a priori Saastamoinen Model

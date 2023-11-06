@@ -60,7 +60,7 @@ OUTPUT_FILENAME_MAP = {
     "postfit_residuals": POST_RESIDUALS,
     "position": POSITION,
     "clock_bias": CLOCK,
-    "epoch": TIME,
+    "time": TIME,
     "iono": IONO,
     "isb": None,
     "velocity": None

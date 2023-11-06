@@ -33,7 +33,7 @@
    },
 
    "model": {
-      "constellations": ["GPS"],
+      "constellations": ["GAL"],
       "mode": "SPS",
       "_comment": "available modes are SPS, SPS_IF",
 
