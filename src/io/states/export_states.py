@@ -4,26 +4,26 @@ from src import constants
 from src.algorithms.gnss.estimators.state_space import GnssStateSpace
 
 
-def get_file_header(exportable):
+def get_file_header(exportable, epoch_system):
     if exportable == "position":
-        return "GPS_Week,GPS_TOW,X_ECEF[m],Y_ECEF[m],Z_ECEF[m],cov_XX[m^2],cov_YY[m^2],cov_ZZ[m^2],cov_XY[m^2]," \
-               "cov_XZ[m^2],cov_YZ[m^2]"
+        return f"Week_Number({epoch_system}),Time_of_Week[s],X_ECEF[m],Y_ECEF[m],Z_ECEF[m]," \
+               f"cov_XX[m^2],cov_YY[m^2],cov_ZZ[m^2],cov_XY[m^2],cov_XZ[m^2],cov_YZ[m^2]"
     elif exportable == "clock_bias":
-        return "GPS_Week,GPS_TOW,clock_bias[s],cov[s^2]"
+        return f"Week_Number({epoch_system}),Time_of_Week[s],clock_bias[s],cov[s^2]"
     elif exportable == "iono":
-        return "GPS_Week,GPS_TOW,sat,iono[m],cov[m^2]"
+        return f"Week_Number({epoch_system}),Time_of_Week[s],sat,iono[m],cov[m^2]"
     elif exportable == "time":
-        return "GPS_Week,GPS_TOW,Epoch_timetag"
+        return f"Week_Number({epoch_system}),Time_of_Week[s],Epoch_timetag"
     elif exportable == "prefit_residuals":
-        return "GPS_Week,GPS_TOW,sat,prefit_residuals_i[m^2]"
+        return f"Week_Number({epoch_system}),Time_of_Week[s],sat,prefit_residuals_i[m^2]"
     elif exportable == "postfit_residuals":
-        return "GPS_Week,GPS_TOW,sat,postfit_residuals_i[m^2]"
+        return f"Week_Number({epoch_system}),Time_of_Week[s],sat,postfit_residuals_i[m^2]"
     elif exportable == "satellite_azel":
-        return "GPS_Week,GPS_TOW,sat,azimuth[deg],elevation[deg]"
+        return f"Week_Number({epoch_system}),Time_of_Week[s],sat,azimuth[deg],elevation[deg]"
     elif exportable == "dop_ecef":
-        return "GPS_Week,GPS_TOW,DOP_x,DOP_y,DOP_z,DOP_t,DOP_geometry,DOP_position"
+        return f"Week_Number({epoch_system}),Time_of_Week[s],DOP_x,DOP_y,DOP_z,DOP_t,DOP_geometry,DOP_position"
     elif exportable == "dop_local":
-        return "GPS_Week,GPS_TOW,DOP_East,DOP_North,DOP_Up,DOP_Horizontal"
+        return f"Week_Number({epoch_system}),Time_of_Week[s],DOP_East,DOP_North,DOP_Up,DOP_Horizontal"
     else:
         raise ValueError(f"Undefined header due to unknown exportable '{exportable}'")
 

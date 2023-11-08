@@ -38,23 +38,6 @@ class GnssStateSpace(Container):
     def __repr__(self):
         return str(self)
 
-    def __len__(self):
-        # return length of state vector (number of solve-for parameters)
-        n = 0
-
-        if self.position is not None:
-            n += len(self.position)
-        if self.clock_bias is not None:
-            n += 1
-        if self.iono is not None:
-            n += len(self.iono)
-        if self.isb is not None:
-            n += 1
-        if self.velocity is not None:
-            n += len(self.velocity)
-
-        return n
-
     def add_additional_info(self, arg, val):
         self._info[arg] = val
 

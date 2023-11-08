@@ -6,7 +6,7 @@ from src.data_types.gnss.data_type import data_type_from_rinex
 from src.data_types.gnss.constellation import get_constellation
 from src.data_types.gnss.observation_data import ObservationData
 from src.data_types.gnss.service_utils import CodeToConstellationMap
-from src.errors import ConfigError, FileError
+from src.errors import ConfigError, FileError, UnknownConstellationError
 from src import WORKSPACE_PATH
 
 from .utils import *
@@ -220,7 +220,10 @@ class RinexObsReader:
                 # (signal strength).
                 # the last two are optional -> may be blank. Here they will be discarded.
 
-                constellation = get_constellation(CodeToConstellationMap[line[0]])
+                try:
+                    constellation = get_constellation(CodeToConstellationMap[line[0]])
+                except (UnknownConstellationError, KeyError):
+                    continue
 
                 if constellation in self._map:
                     # get satellite

@@ -450,14 +450,14 @@ class Epoch:
         The GAL week number is a continuous number, aligned to (and hence identical to) the
         continuous GPS week number used in the RINEX navigation message files
         """
-        if "gps_time" not in self._cache.keys():
+        if "gnss_time" not in self._cache.keys():
             # convert this epoch to GPS Time
             gps_epoch = self.change_scale(GPST)
             dt = (gps_epoch - Epoch.GPS_ORIGIN).total_seconds()
             week = (dt/3600/24) // 7
             sow = dt - week*3600*24*7
-            self._cache["gps_time"] = (int(week), sow)
-        return self._cache["gps_time"]
+            self._cache["gnss_time"] = (int(week), sow)
+        return self._cache["gnss_time"]
 
     @property
     def doy(self):
