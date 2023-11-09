@@ -95,12 +95,12 @@ class GnssSolver:
         self.log.info("Starting module GNSS Positioning Solver...")
 
         # user configurations
-        self._set_solver_info(config_dict)
+        self._set_solver_metadata(config_dict)
 
         # solution dict
         self.solution = []
 
-    def _set_solver_info(self, config):
+    def _set_solver_metadata(self, config):
 
         # TODO : add this to the config object rather than being here
         # Fetching user options
@@ -111,7 +111,7 @@ class GnssSolver:
         REL_CORRECTION = EnumOnOff(config.get("solver", "relativistic_corrections"))  # 0 disable, 1 enable
         INITIAL_POS = config.get("solver", "initial_pos_std")
         INITIAL_CLOCK_BIAS = config.get("solver", "initial_clock_std")
-        CONSTELLATIONS = list(self.obs_data.get_constellations())
+        CONSTELLATIONS = config.get("model", "constellations")
 
         TROPO = {}
         IONO = {}
@@ -141,7 +141,7 @@ class GnssSolver:
                 CODES[const] = [code_types[0]]
 
         # fill info dict
-        self._info = {
+        self._metadata = {
             "CONSTELLATIONS": CONSTELLATIONS,
             "MAX_ITER": MAX_ITER,
             "STOP_CRITERIA": STOP_CRITERIA,
@@ -188,21 +188,19 @@ class GnssSolver:
     def _init_state(self, epoch, sat_list):
         # initialize GNSS state
         if len(self.solution) == 0:
-            initial_pos = self._info["INITIAL_POS"][0:3]
-            initial_clock = self._info["INITIAL_CLOCK_BIAS"][0]
-            state = GnssStateSpace(position=np.array(initial_pos, dtype=np.float64),
-                                   clock_bias=initial_clock,
-                                   epoch=epoch,
-                                   sat_list=sat_list)
+            position = np.array(self._metadata["INITIAL_POS"][0:3], dtype=np.float64)
+            clock = self._metadata["INITIAL_CLOCK_BIAS"][0]
         else:
             # initialize from previous state
             prev_state = self.solution[-1]
-            state = GnssStateSpace(position=prev_state.position.copy(),
-                                   clock_bias=prev_state.clock_bias,
-                                   epoch=epoch,
-                                   sat_list=sat_list,
-                                   iono=prev_state.iono)
-        return state
+            position = prev_state.position.copy()
+            clock = prev_state.clock_bias
+
+        return GnssStateSpace(self._metadata,
+                              position=position,
+                              clock_bias=clock,
+                              epoch=epoch,
+                              sat_list=sat_list)
 
     @staticmethod
     def _stop(rms_old, rms_new, stop_criteria):
@@ -228,9 +226,9 @@ class GnssSolver:
         # Iterated Least-Squares algorithm
         # Note: in the eventuality of implementing other filters, e.g.: Kalman Filter, then we need to branch
         # the solver from here...
-        while iteration < self._info["MAX_ITER"]:
+        while iteration < self._metadata["MAX_ITER"]:
             # compute geometry-related data for each satellite link
-            system_geometry.compute(epoch, state.position, state.clock_bias, self._info["TX_TIME_ALG"])
+            system_geometry.compute(epoch, state.position, state.clock_bias, self._metadata)
 
             # solve the Least Squares
             try:
@@ -245,7 +243,7 @@ class GnssSolver:
             rms = np.linalg.norm(postfit_residuals)
 
             # check stop condition
-            if self._stop(rms_prev, rms, self._info["STOP_CRITERIA"]):
+            if self._stop(rms_prev, rms, self._metadata["STOP_CRITERIA"]):
                 self.log.debug(f"Least Squares was successful. Reached convergence at iteration {iteration}")
                 success = True
                 break
@@ -255,7 +253,7 @@ class GnssSolver:
             iteration += 1
 
         # end of iterative procedure
-        if iteration == self._info["MAX_ITER"]:
+        if iteration == self._metadata["MAX_ITER"]:
             self.log.warning(f"PVT failed to converge for epoch {str(epoch)}, with RMS={rms}. "
                              f"No solution will be computed for this epoch.")
             return False
@@ -273,7 +271,7 @@ class GnssSolver:
     def _compute(self, system_geometry, obs_data, state, epoch):
         satellite_list = system_geometry.get_satellites()
 
-        lsq_engine = LSQ_Engine(satellite_list, self._info["MODEL"], self._info["CODES"])
+        lsq_engine = LSQ_Engine(satellite_list, self._metadata["MODEL"], self._metadata["CODES"])
 
         reconstructor = ObservationReconstruction(system_geometry,
                                                   self._info["TROPO"],

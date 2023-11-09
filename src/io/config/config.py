@@ -92,10 +92,9 @@ class Config(dict):
         # iterate over all active constellations
         constellations = self.get("model", "constellations")
         for constellation in constellations:
-            if constellation.upper() == "GPS":
-                services["GPS"] = self.get("model", "GPS", "observations")
-            elif constellation.upper() == "GAL":
-                services["GAL"] = self.get("model", "GAL", "observations")
+            const_upper = constellation.upper()
+            if const_upper == "GPS" or const_upper == "GAL":
+                services[const_upper] = self.get("model", const_upper, "observations")
 
         return services
 

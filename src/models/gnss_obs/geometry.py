@@ -117,7 +117,7 @@ class SystemGeometry:
             return getattr(self._data[sat], attribute)
         return None
 
-    def compute(self, epoch, receiver_position, receiver_clock, compute_tx):
+    def compute(self, epoch, receiver_position, receiver_clock, metadata):
         """
         compute satellite-related quantities (tropo, iono, transmission time, etc.) to be used in the PVT gnss_obs
         reconstruction equation, for all available satellites.
@@ -126,7 +126,7 @@ class SystemGeometry:
             epoch (src.data_types.basics.Epoch.Epoch) : epoch under evaluation
             receiver_position (src.data_types.state_space.statevector.Position) : Receiver position
             receiver_clock (float) : Receiver clock bias
-            compute_tx (function) : function to compute the transmission time
+            metadata (dict) : function to compute the transmission time
         """
         self._clean()
         _to_remove = []
@@ -150,7 +150,7 @@ class SystemGeometry:
 
             # compute geometry for this satellite
             geometry.compute(receiver_position, epoch, receiver_clock, nav_message,
-                             compute_tx, observable_lst[0])
+                             metadata["TX_TIME_ALG"], observable_lst[0])
 
             self._data[sat] = geometry
 

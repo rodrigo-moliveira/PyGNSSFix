@@ -54,7 +54,7 @@ class LSQ_Engine:
         iFreq = 0
         const = self._constellations[0]
         for datatype in self.services[const]:
-            if datatype is None:
+            if datatype is None:  # TODO or datatype is not pseudorange
                 continue
 
             iSat = 0

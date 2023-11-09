@@ -206,7 +206,6 @@ class ObservationData:
             obs_type (DataType) : the datatype of the gnss_obs
             value (float) : numeric value of the gnss_obs
         """
-
         if not isinstance(epoch, Epoch):
             raise TypeError(f'First argument should be a valid Epoch object. Type {type(epoch)} was provided instead')
         if not isinstance(satellite, Satellite):
