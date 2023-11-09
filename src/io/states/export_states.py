@@ -29,6 +29,7 @@ def get_file_header(exportable, epoch_system):
 
 
 def export_to_file(gnss_state: GnssStateSpace, exportable):
+    print("parei a imprimir os estados de iono e residuals...");exit()
     if exportable == "position":
         cov = gnss_state._info.get("cov", None)
         if cov is not None:

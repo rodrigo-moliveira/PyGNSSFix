@@ -12,11 +12,9 @@ from src.models.gnss_obs.tropo_saastamoinen import tropo_saastamoinen
 
 
 class ObservationReconstruction:
-    def __init__(self, system_geometry, tropo, iono, nav_header, relativistic_correction):
-        self._model = {"tropo": tropo,  # a priori troposphere model
-                       "iono": iono,  # a priori ionosphere model
-                       "relativistic_correction": relativistic_correction
-                       }
+    def __init__(self, system_geometry, metadata, state, nav_header):
+        self._metadata = metadata
+        self._state = state
         self._system_geometry = system_geometry
         self._nav_header = nav_header
 
@@ -40,7 +38,7 @@ class ObservationReconstruction:
                                     self._system_geometry.get("time_emission", sat).gnss_time[1])
 
         # correct satellite clock for relativistic corrections
-        if self._model["relativistic_correction"] == EnumOnOff.ENABLED:
+        if self._metadata["REL_CORRECTION"] == EnumOnOff.ENABLED:
             dt_sat += self._system_geometry.get("dt_rel_correction", sat)
 
         # correct satellite clock for BGDs
@@ -48,17 +46,17 @@ class ObservationReconstruction:
 
         # ionosphere
         if not config_dict.is_iono_free():
-            if self._model["iono"][sat.sat_system] == EnumIono.KLOBUCHAR:
+            if self._metadata["IONO"][sat.sat_system] == EnumIono.KLOBUCHAR:
                 iono = iono_klobuchar(lat, long, el, az, self._nav_header.iono_corrections["GPSA"],
                                       self._nav_header.iono_corrections["GPSB"], epoch.gnss_time[1],
                                       datatype.freq)
-            elif self._model["iono"][sat.sat_system] == EnumIono.NTCMG:
+            elif self._metadata["IONO"][sat.sat_system] == EnumIono.NTCMG:
                 ut1 = epoch.change_scale("UT1")
                 iono = NTCMG.calculate_ionospheric_contribution(ut1, lat, long, el, az,
                                                                 self._nav_header.iono_corrections["GAL"], datatype.freq)
 
         # troposphere
-        if self._model["tropo"][sat.sat_system] == EnumTropo.SAASTAMOINEM:
+        if self._metadata["TROPO"][sat.sat_system] == EnumTropo.SAASTAMOINEM:
             tropo = tropo_saastamoinen(height, lat, epoch.doy, el)
 
         # finally, construct obs

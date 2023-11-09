@@ -69,12 +69,6 @@ class GnssStateSpace(Container):
     def __repr__(self):
         return str(self)
 
-    def apply_state_correction(self, dX):
-        pass
-
-    def get_geometry_matrix(self):
-        pass
-
     def add_additional_info(self, arg, val):
         self._info[arg] = val
 

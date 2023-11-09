@@ -7,34 +7,32 @@ from src.io.config.enums import EnumModel
 
 
 class LSQ_Engine:
-    def __init__(self, satellite_list, model_config, services):
-        self.y_vec = None       # observation vector
+    def __init__(self, satellite_list, metadata):
+        self.y_vec = None  # observation vector
         self.design_mat = None  # design matrix
         self.weight_mat = None  # weight matrix
-        self._available = []
-        self._constellations = list(model_config.keys())
 
-        self._initialize_ls(len(satellite_list), model_config, services)
-        self.services = services
-        self.model_config = model_config
+        self._metadata = metadata
+        self._initialize_ls(len(satellite_list))
         self.satellite_list = satellite_list
 
-    def _initialize_ls(self, n_sats, model_config, services):
-        nr_consts = len(self._constellations)
+    def _initialize_ls(self, n_sats):
+        nr_consts = len(self._metadata["CONSTELLATIONS"])
 
         if nr_consts == 1:
-            const = self._constellations[0]
+            const = self._metadata["CONSTELLATIONS"][0]
 
-            if model_config[const] == EnumModel.SINGLE_FREQ:
-                self.y_vec = np.zeros(n_sats)           # gnss_obs vector <=> prefit residuals
+            if self._metadata["MODEL"][const] == EnumModel.SINGLE_FREQ:
+                self.y_vec = np.zeros(n_sats)  # gnss_obs vector <=> prefit residuals
                 self.design_mat = np.ones((n_sats, 4))  # geometry matrix
-                self.weight_mat = np.eye(n_sats)        # diagonal weight matrix
+                self.weight_mat = np.eye(n_sats)  # diagonal weight matrix
             else:
-                self.y_vec = np.zeros(n_sats * 2)       # gnss_obs vector <=> prefit residuals
-                self.weight_mat = np.eye(n_sats * 2)    # diagonal weight matrix
-                geometry = np.ones((n_sats, 4))         # geometry matrix (state + clock)
-                ionoMatrix1 = np.eye(n_sats)            # iono matrices for freq 1 and freq 2
-                factor = (services[const][0].freq.freq_value / services[const][1].freq.freq_value) ** 2
+                self.y_vec = np.zeros(n_sats * 2)  # gnss_obs vector <=> prefit residuals
+                self.weight_mat = np.eye(n_sats * 2)  # diagonal weight matrix
+                geometry = np.ones((n_sats, 4))  # geometry matrix (state + clock)
+                ionoMatrix1 = np.eye(n_sats)  # iono matrices for freq 1 and freq 2
+                factor = (self._metadata["CODES"][const][0].freq.freq_value /
+                          self._metadata["CODES"][const][1].freq.freq_value) ** 2
                 ionoMatrix2 = np.eye(n_sats) * factor
 
                 self.design_mat = np.block([
@@ -46,14 +44,15 @@ class LSQ_Engine:
 
     def build_lsq(self, epoch, obs_data, reconstructor, nav_data):
         n_sats = len(self.satellite_list)
-        nr_consts = len(self._constellations)
+        constellations = self._metadata["CONSTELLATIONS"]
+        nr_consts = len(constellations)
 
         if nr_consts != 1:
             raise PVTComputationFail("Currently only 1 constellation is possible!")
 
         iFreq = 0
-        const = self._constellations[0]
-        for datatype in self.services[const]:
+        const = constellations[0]
+        for datatype in self._metadata["CODES"][const]:
             if datatype is None:  # TODO or datatype is not pseudorange
                 continue
 
@@ -85,8 +84,8 @@ class LSQ_Engine:
             iFreq += 1
 
     def solve_ls(self, state):
-        n_sats = len(self.satellite_list)
-        const = self._constellations[0]
+        constellations = self._metadata["CONSTELLATIONS"]
+        const = constellations[0]
 
         # solve LS problem for this iteration
         try:
@@ -108,14 +107,36 @@ class LSQ_Engine:
         state.clock_bias = dX[3] / constants.SPEED_OF_LIGHT  # receiver clock in seconds
 
         # if iono is estimated
-        if self.model_config[const] == EnumModel.DUAL_FREQ:
-            state.iono = [dX[i + 4] for i in range(n_sats)]
+        if self._metadata["MODEL"][const] == EnumModel.DUAL_FREQ:
+            iSat = 0
+            for sat in self.satellite_list:
+                state.iono[const][sat] = dX[iSat + 4]
+                iSat += 1
 
         # if isb is estimated
         # ...
 
         # get post-fit residuals
         post_fit = self.y_vec - self.design_mat[:, 0:3] @ dX[0:3]
+        norm = np.linalg.norm(post_fit)
 
-        return post_fit, cov, dop_matrix
+        # form residual dicts for output
+        pre_fit_dict = self.get_residuals(self.y_vec)
+        post_fit_dict = self.get_residuals(post_fit)
 
+        return pre_fit_dict, post_fit_dict, cov, dop_matrix, norm
+
+    def get_residuals(self, residual_vec):
+        constellations = self._metadata["CONSTELLATIONS"]
+        n_sats = len(self.satellite_list)
+
+        res_dict = dict()
+        for const in constellations:
+            res_dict[const] = dict()
+
+            for iSat, sat in enumerate(self.satellite_list):
+                res_dict[const][sat] = dict()
+
+                for iFreq, datatype in enumerate(self._metadata["CODES"][const]):
+                    res_dict[const][sat][datatype] = residual_vec[iFreq * n_sats + iSat]
+        return res_dict

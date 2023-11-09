@@ -56,7 +56,10 @@ class DataType:
     def __eq__(self, other):
         if isinstance(other, str):
             other = get_data_type(other)
-        return self.data_type == other.data_type
+        return hash(self) == hash(other)
+
+    def __hash__(self):
+        return hash(self.description)
 
     def __ne__(self, other):
         return not self.data_type == other.data_type
@@ -78,6 +81,8 @@ class DataType:
     def constellation(self):
         if hasattr(self, "_constellation"):
             return self._constellation
+        elif hasattr(self, "_freq"):
+            return self._freq._constellation
         else:
             raise AttributeError(f"The provided datatype {str(self)} has no attribute '_constellation'")
 

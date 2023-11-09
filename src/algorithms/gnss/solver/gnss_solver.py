@@ -1,4 +1,3 @@
-from numpy.linalg import norm
 import numpy as np
 
 from src.algorithms.gnss.estimators.state_space import GnssStateSpace
@@ -134,6 +133,7 @@ class GnssSolver:
                 self.log.info(f"Selected model for {const} is Iono-Free with gnss_obs {code_types}")
                 MODEL[const] = EnumModel.SINGLE_FREQ  # we process as single frequency
                 CODES[const] = [code_types[0]]
+                IONO[const] = EnumIono.DISABLED
             else:
                 # Single Frequency Model
                 self.log.info(f"Selected model for {const} is Single Frequency with gnss_obs {code_types[0]}")
@@ -224,23 +224,18 @@ class GnssSolver:
         self.log.debug(f"Available Satellites: {system_geometry.get_satellites()}")
 
         # Iterated Least-Squares algorithm
-        # Note: in the eventuality of implementing other filters, e.g.: Kalman Filter, then we need to branch
-        # the solver from here...
         while iteration < self._metadata["MAX_ITER"]:
             # compute geometry-related data for each satellite link
-            system_geometry.compute(epoch, state.position, state.clock_bias, self._metadata)
+            system_geometry.compute(epoch, state, self._metadata)
 
             # solve the Least Squares
             try:
-                postfit_residuals, prefit_residuals, cov, dop_matrix = \
+                postfit_residuals, prefit_residuals, cov, dop_matrix, rms = \
                     self._compute(system_geometry, obs_data, state, epoch)
             except PVTComputationFail as e:
                 self.log.warning(f"Least Squares failed for {str(epoch)} on iteration {iteration}."
                                  f"Reason: {e}")
                 break
-
-            # update RMS for this iteration
-            rms = np.linalg.norm(postfit_residuals)
 
             # check stop condition
             if self._stop(rms_prev, rms, self._metadata["STOP_CRITERIA"]):
@@ -271,21 +266,18 @@ class GnssSolver:
     def _compute(self, system_geometry, obs_data, state, epoch):
         satellite_list = system_geometry.get_satellites()
 
-        lsq_engine = LSQ_Engine(satellite_list, self._metadata["MODEL"], self._metadata["CODES"])
+        lsq_engine = LSQ_Engine(satellite_list, self._metadata)
 
         reconstructor = ObservationReconstruction(system_geometry,
-                                                  self._info["TROPO"],
-                                                  self._info["IONO"],
-                                                  self.nav_data.header,
-                                                  self._info["REL_CORRECTION"])
+                                                  self._metadata,
+                                                  state,
+                                                  self.nav_data.header)
 
         # build LSQ Engine matrices for all satellites
         lsq_engine.build_lsq(epoch, obs_data, reconstructor, self.nav_data)
 
         # solve LS problem
-        post_fit, cov, dop_matrix = lsq_engine.solve_ls(state)
-
-        return post_fit, lsq_engine.y_vec, cov, dop_matrix
+        return lsq_engine.solve_ls(state)
 
     def _check_model_availability(self, system_geometry, obs_data, epoch):
         """
@@ -302,13 +294,13 @@ class GnssSolver:
             * if that is not the case, a PVT solution is impossible to be computed -> Warn the user..
 
         """
-        single_const = len(self._info["CONSTELLATIONS"]) == 1  # true if only one constellation
+        single_const = len(self._metadata["CONSTELLATIONS"]) == 1  # true if only one constellation
         MIN_SAT = 4 if single_const else 5
         sat_list = []
 
-        for const in self._info["CONSTELLATIONS"]:
-            model = self._info["MODEL"][const]
-            codes = self._info["CODES"][const]
+        for const in self._metadata["CONSTELLATIONS"]:
+            model = self._metadata["MODEL"][const]
+            codes = self._metadata["CODES"][const]
             sat_list_ = obs_data.get_sats_for_datatypes(codes)
 
             # Dual Frequency model
