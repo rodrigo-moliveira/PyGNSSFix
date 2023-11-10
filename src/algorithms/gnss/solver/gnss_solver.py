@@ -211,7 +211,7 @@ class GnssSolver:
         iteration = 0
         success = False
         rms = rms_prev = 1
-        cov = prefit_residuals = postfit_residuals = dop_matrix = None
+        prefit_residuals = postfit_residuals = dop_matrix = None
 
         # build system geometry for this epoch
         system_geometry = SystemGeometry(self.nav_data, obs_data)
@@ -230,7 +230,7 @@ class GnssSolver:
 
             # solve the Least Squares
             try:
-                postfit_residuals, prefit_residuals, cov, dop_matrix, rms = \
+                postfit_residuals, prefit_residuals, dop_matrix, rms = \
                     self._compute(system_geometry, obs_data, state, epoch)
             except PVTComputationFail as e:
                 self.log.warning(f"Least Squares failed for {str(epoch)} on iteration {iteration}."
@@ -258,7 +258,6 @@ class GnssSolver:
         state.add_additional_info("prefit_residuals", prefit_residuals)
         state.add_additional_info("postfit_residuals", postfit_residuals)
         state.add_additional_info("rms", rms)
-        state.add_additional_info("cov", cov)
         state.add_additional_info("dop_matrix", dop_matrix)
 
         return success

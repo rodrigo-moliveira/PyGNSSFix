@@ -347,6 +347,7 @@ def get_data_type(datatype: str):
 
 
 def data_type_from_rinex(data_type: str, constellation: str):
+    # return a datatype object given the data type string in RINEX format (ex: C1C, C2W, ...)
     if constellation == "GPS":
         return cGPSObsSignals[data_type[0]][data_type[1]]
     elif constellation == "GAL":

@@ -84,6 +84,7 @@ class LSQ_Engine:
             iFreq += 1
 
     def solve_ls(self, state):
+        # TODO this function needs to be cleaned
         constellations = self._metadata["CONSTELLATIONS"]
         const = constellations[0]
 
@@ -108,10 +109,8 @@ class LSQ_Engine:
 
         # if iono is estimated
         if self._metadata["MODEL"][const] == EnumModel.DUAL_FREQ:
-            iSat = 0
-            for sat in self.satellite_list:
+            for iSat, sat in enumerate(self.satellite_list):
                 state.iono[const][sat] = dX[iSat + 4]
-                iSat += 1
 
         # if isb is estimated
         # ...
@@ -124,7 +123,15 @@ class LSQ_Engine:
         pre_fit_dict = self.get_residuals(self.y_vec)
         post_fit_dict = self.get_residuals(post_fit)
 
-        return pre_fit_dict, post_fit_dict, cov, dop_matrix, norm
+        # unpack covariance matrices
+        state.cov_position = cov[0:3, 0:3]
+        state.cov_clock_bias = cov[3, 3] / (constants.SPEED_OF_LIGHT ** 2)  # in seconds^2
+        # if iono is estimated
+        if self._metadata["MODEL"][const] == EnumModel.DUAL_FREQ:
+            for iSat, sat in enumerate(self.satellite_list):
+                state.cov_iono[const][sat] = dX[iSat + 4]
+
+        return pre_fit_dict, post_fit_dict, dop_matrix, norm
 
     def get_residuals(self, residual_vec):
         constellations = self._metadata["CONSTELLATIONS"]

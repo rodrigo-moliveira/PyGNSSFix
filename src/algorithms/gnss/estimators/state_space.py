@@ -6,7 +6,8 @@ from src.io.config.enums import EnumModel
 
 class GnssStateSpace(Container):
     __states__ = ["position", "clock_bias", "iono", "isb"]
-    __slots__ = __states__ + ["epoch", "_info"]
+    __covs__ = ["cov_position", "cov_clock_bias", "cov_iono", "cov_isb"]
+    __slots__ = __states__ + __covs__ + ["epoch", "_info"]
 
     def __init__(self, metadata, **kwargs):
         super().__init__()
@@ -26,9 +27,11 @@ class GnssStateSpace(Container):
 
         # position
         self.position = np.array(kwargs.get("position", [0, 0, 0]))
+        self.cov_position = np.zeros((3, 3))
 
         # clock
         self.clock_bias = kwargs.get("clock_bias", 0)
+        self.cov_clock_bias = 0
 
         # iono (optional -> in case there are 2 frequencies for this constellation)
         self.iono = dict()
@@ -44,15 +47,19 @@ class GnssStateSpace(Container):
                     self.iono.pop(constellation)
         if len(self.iono) >= 1:
             _states.append("iono")
+            self.cov_iono = self.iono.copy()
         else:
             self.iono = None
+            self.cov_iono = None
 
         # isb (optional -> in case there are 2 constellations)
         if len(metadata["CONSTELLATIONS"]) > 1:
             self.isb = kwargs.get("isb", 0)
+            self.cov_isb = 0
             _states.append("isb")
         else:
             self.isb = None
+            self.cov_isb = None
 
         self.add_additional_info("states", _states)
 
