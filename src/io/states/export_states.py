@@ -14,11 +14,10 @@ def get_file_header(exportable, epoch_system):
         return f"Week_Number({epoch_system}),Time_of_Week[s],sat,iono[m],cov[m^2]"
     elif exportable == "time":
         return f"Week_Number({epoch_system}),Time_of_Week[s],Epoch_timetag"
-    # TODO: os residuos têm que ser iterados por observável
     elif exportable == "prefit_residuals":
-        return f"Week_Number({epoch_system}),Time_of_Week[s],sat,prefit_residuals_i[m^2]"
+        return f"Week_Number({epoch_system}),Time_of_Week[s],constellation,sat,data_type,residual[m]"
     elif exportable == "postfit_residuals":
-        return f"Week_Number({epoch_system}),Time_of_Week[s],sat,postfit_residuals_i[m^2]"
+        return f"Week_Number({epoch_system}),Time_of_Week[s],constellation,sat,data_type,residual[m]"
     elif exportable == "satellite_azel":
         return f"Week_Number({epoch_system}),Time_of_Week[s],sat,azimuth[deg],elevation[deg]"
     elif exportable == "dop_ecef":
@@ -55,12 +54,13 @@ def export_to_file(gnss_state: GnssStateSpace, exportable):
         return data
 
     elif exportable == "prefit_residuals" or exportable == "postfit_residuals":
-        residuals = gnss_state._info[exportable]
-        sat_list = gnss_state.get_additional_info("geometry").get_satellites()
+        residuals = gnss_state.get_additional_info(exportable)
         data = []
-        #if len(sat_list) > 0:
-        #    for sat, res in zip(sat_list, residuals):
-        #        data.append(f"{sat},{res}")
+
+        for constellation, dict1 in residuals.items():
+            for sat, dict2 in dict1.items():
+                for observable, residual in dict2.items():
+                    data.append(f"{constellation},{sat},{observable.data_type},{residual}")
         return data
 
     elif exportable == "satellite_azel":
