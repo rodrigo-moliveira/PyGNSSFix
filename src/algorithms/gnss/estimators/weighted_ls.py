@@ -99,3 +99,6 @@ class WeightedLeastSquares:
 
     def get_solution(self):
         return self._x
+
+    def get_cov(self):
+        return self._S

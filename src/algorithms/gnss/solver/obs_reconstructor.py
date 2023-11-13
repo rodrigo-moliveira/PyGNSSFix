@@ -1,7 +1,7 @@
 import numpy as np
 
 from src.io.config import config_dict
-from src.io.config.enums import EnumOnOff, EnumIono, EnumTropo
+from src.io.config.enums import EnumOnOff, EnumIono, EnumTropo, EnumModel
 from src.models.frames import cartesian2geodetic
 from src.models.gnss_obs.iono_klobuchar import iono_klobuchar
 from src.models.gnss_obs.iono_ntcmg import NTCMG
@@ -22,13 +22,15 @@ class ObservationReconstruction:
         iono = 0.0
         tropo = 0.0
 
-        receiver_position = self._system_geometry.get("receiver_position", sat)
         az = self._system_geometry.get("az", sat)  # satellite azimuth from receiver
         el = self._system_geometry.get("el", sat)  # satellite elevation from receiver
-        [lat, long, height] = cartesian2geodetic(*receiver_position)  # user lat, long and height
+        [lat, long, height] = cartesian2geodetic(*self._state.position)  # user lat, long and height
 
         # true range
         true_range = self._system_geometry.get("true_range", sat)
+
+        # user clock in meters
+        dt_rec = self._state.clock_bias * constants.SPEED_OF_LIGHT
 
         # satellite clock
         dt_sat, _ = broadcast_clock(nav_message.af0,
@@ -54,18 +56,27 @@ class ObservationReconstruction:
                 ut1 = epoch.change_scale("UT1")
                 iono = NTCMG.calculate_ionospheric_contribution(ut1, lat, long, el, az,
                                                                 self._nav_header.iono_corrections["GAL"], datatype.freq)
+        # iono estimated correction dI
+        dI = 0.0
+        if self._metadata["MODEL"][sat.sat_system] == EnumModel.DUAL_FREQ:
+            try:
+                factor = (self._metadata["CODES"][sat.sat_system][0].freq.freq_value /
+                          datatype.freq.freq_value) ** 2
+                dI = factor * self._state.iono[sat.sat_system][sat]
+            except KeyError:
+                pass
 
         # troposphere
         if self._metadata["TROPO"][sat.sat_system] == EnumTropo.SAASTAMOINEM:
             tropo = tropo_saastamoinen(height, lat, epoch.doy, el)
 
         # finally, construct obs
-        obs = true_range - dt_sat * constants.SPEED_OF_LIGHT + iono + tropo
+        obs = true_range + dt_rec - dt_sat * constants.SPEED_OF_LIGHT + iono + tropo + dI
 
         return Observation(datatype, obs)
 
     def get_unit_line_of_sight(self, sat):
-        return self._system_geometry.get_unit_line_of_sight(sat)
+        return self._system_geometry.get_unit_line_of_sight(self._state, sat)
 
     def get_weight(self, sat):
         # TODO: need to add here the user defined sigmas as a multiplication factor

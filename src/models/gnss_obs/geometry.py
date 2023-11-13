@@ -10,7 +10,7 @@ from ...errors import TimeSeriesError
 
 
 class SatelliteGeometry(Container):
-    __slots__ = ["transit_time", "receiver_position",
+    __slots__ = ["transit_time",
                  "time_emission", "time_reception",
                  "true_range", "az", "el", "satellite_position",
                  "dt_rel_correction"]
@@ -24,7 +24,6 @@ class SatelliteGeometry(Container):
         self.az = 0
         self.el = 0
         self.satellite_position = None
-        self.receiver_position = None
         self.dt_rel_correction = 0
 
     def __str__(self):
@@ -81,7 +80,6 @@ class SatelliteGeometry(Container):
         self.az = az
         self.el = el
         self.satellite_position = pos_sat
-        self.receiver_position = rec_pos
         self.dt_rel_correction = dt_relative
 
 
@@ -156,7 +154,7 @@ class SystemGeometry:
         for sat in _to_remove:
             self.remove(sat)
 
-    def get_unit_line_of_sight(self, sat):
+    def get_unit_line_of_sight(self, state, sat):
         """
         Computes the line of sight vector between the receiver and the satellite, used in the PVT geometry matrix.
 
@@ -167,11 +165,10 @@ class SystemGeometry:
             list [float, float, float] : Line of sight for [x, y, z] axis of ECEF frame
         """
 
-        receiver = self.get("receiver_position", sat)
         satellite = self.get("satellite_position", sat)
         true_range = self.get("true_range", sat)
 
-        return [(receiver[i] - satellite[i]) / true_range for i in (0, 1, 2)]
+        return [(state.position[i] - satellite[i]) / true_range for i in (0, 1, 2)]
 
     def __str__(self):
         return str(self._data)

@@ -35,19 +35,22 @@ class GnssStateSpace(Container):
 
         # iono (optional -> in case there are 2 frequencies for this constellation)
         self.iono = dict()
+        self.cov_iono = dict()
         for constellation in metadata["CONSTELLATIONS"]:
             if metadata["MODEL"][constellation] == EnumModel.DUAL_FREQ:
                 self.iono[constellation] = dict()
+                self.cov_iono[constellation] = dict()
                 for sat in sat_list:
                     if sat.sat_system == constellation:
                         self.iono[constellation][sat] = 0  # initialize iono for this satellite
+                        self.cov_iono[constellation][sat] = 0
 
                 # remove this constellation if no satellite was actually inserted
                 if len(self.iono[constellation]) == 0:
                     self.iono.pop(constellation)
+                    self.cov_iono.pop(constellation)
         if len(self.iono) >= 1:
             _states.append("iono")
-            self.cov_iono = self.iono.copy()
         else:
             self.iono = None
             self.cov_iono = None
@@ -71,7 +74,7 @@ class GnssStateSpace(Container):
         if "iono" in self.get_additional_info("states"):
             _str += f", iono = {self.iono}"
 
-        return f'{type(self).__name__}[{str(self.date)}]({_str})'
+        return f'{type(self).__name__}[{str(self.epoch)}]({_str})'
 
     def __repr__(self):
         return str(self)
