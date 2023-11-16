@@ -9,7 +9,16 @@ class EnumSolver(Enum):
 
     @classmethod
     def show_options(cls):
-        return f"[0 - LEAST SQUARES, 1 - WEIGHTED LEAST SQUARES]"
+        return f"[ LS, WSL ]"
+
+    @classmethod
+    def init_model(cls, model_str: str):
+        if model_str.lower() == "wsl":
+            return EnumSolver.WLS
+        elif model_str.lower() == "ls":
+            return EnumSolver.LS
+        else:
+            raise EnumError(f"Unsupported Solver Model {model_str}. Available options are {cls.show_options()}")
 
 
 class EnumPositioningMode(Enum):
@@ -27,7 +36,7 @@ class EnumPositioningMode(Enum):
 
     @classmethod
     def show_options(cls):
-        return f"[0 - SPS, 1 - SPS (Iono-Free) ]"
+        return f"[SPS, SPS_IF ]"
 
 
 class EnumModel(Enum):
@@ -55,7 +64,18 @@ class EnumIono(Enum):
 
     @classmethod
     def show_options(cls):
-        return f"[0 - DISABLED, 1 - Klobuchar (for GPS), 2 - NTCM-G (for GAL)]"
+        return f"[ NONE, Klobuchar, NTCM-G]"
+
+    @classmethod
+    def init_model(cls, model_str: str):
+        if model_str.lower() == "none":
+            return EnumIono.DISABLED
+        elif model_str.lower() == "klobuchar":
+            return EnumIono.KLOBUCHAR
+        elif model_str.lower() == "ntcm-g" or model_str.lower() == "ntcmg":
+            return EnumIono.NTCMG
+        else:
+            raise EnumError(f"Unsupported Ionospheric Model {model_str}. Available options are {cls.show_options()}")
 
 
 class EnumTropo(Enum):
@@ -63,8 +83,17 @@ class EnumTropo(Enum):
     SAASTAMOINEM = 1
 
     @classmethod
+    def init_model(cls, model_str: str):
+        if model_str.lower() == "none":
+            return EnumTropo.DISABLED
+        elif model_str.lower() == "saastamoinen":
+            return EnumTropo.SAASTAMOINEM
+        else:
+            raise EnumError(f"Unsupported Tropospheric Model {model_str}. Available options are {cls.show_options()}")
+
+    @classmethod
     def show_options(cls):
-        return f"[0 - DISABLED, 1 - SAASTAMOINEM MODEL]"
+        return f"[ NONE, Saastamoinen]"
 
 
 class EnumTransmissionTime(Enum):

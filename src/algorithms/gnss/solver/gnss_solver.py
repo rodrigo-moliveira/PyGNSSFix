@@ -105,7 +105,7 @@ class GnssSolver:
         # Fetching user options
         MAX_ITER = config.get("solver", "n_iterations")  # maximum number of iterations
         STOP_CRITERIA = config.get("solver", "stop_criteria")  # RMS threshold for stop criteria
-        SOLVER = config.get("solver", "algorithm")  # 0 - LS, 1 - WLS
+        SOLVER = EnumSolver.init_model(config.get("solver", "algorithm"))
         TX_TIME_ALG = config.get("solver", "transmission_time_alg")
         REL_CORRECTION = EnumOnOff(config.get("solver", "relativistic_corrections"))  # 0 disable, 1 enable
         INITIAL_POS = config.get("solver", "initial_pos_std")
@@ -119,8 +119,8 @@ class GnssSolver:
         CODES = {}
 
         for const in CONSTELLATIONS:
-            TROPO[const] = EnumTropo(config.get("model", const, "troposphere"))  # 0 - no model, 1 - Saastamoinen
-            IONO[const] = EnumIono(config.get("model", const, "ionosphere"))
+            TROPO[const] = EnumTropo.init_model(config.get("model", const, "troposphere"))
+            IONO[const] = EnumIono.init_model(config.get("model", const, "ionosphere"))
 
             # check if the model is single frequency or dual frequency
             code_types = self.obs_data.get_code_types(const)
@@ -148,7 +148,7 @@ class GnssSolver:
             "CONSTELLATIONS": CONSTELLATIONS,
             "MAX_ITER": MAX_ITER,
             "STOP_CRITERIA": STOP_CRITERIA,
-            "SOLVER": EnumSolver(SOLVER),
+            "SOLVER": SOLVER,
             "TROPO": TROPO,
             "IONO": IONO,
             "MODEL": MODEL,
