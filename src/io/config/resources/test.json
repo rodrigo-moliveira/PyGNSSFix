@@ -1,0 +1,6 @@
+{
+  "name": "My name",
+  "age": 30,
+  "email": "john.doe@example.com",
+  "logLevel": "DEBUG"
+}

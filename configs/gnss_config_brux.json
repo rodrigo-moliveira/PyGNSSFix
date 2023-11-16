@@ -34,35 +34,35 @@
 
    "model": {
       "constellations": ["GPS"],
-      "mode": "SPS",
+      "mode": "SPS_IF",
       "_comment": "available modes are SPS, SPS_IF",
 
       "GPS": {
          "observations": ["1C", "2W"],
-         "obs_std": [1, 1],
+         "pr_obs_std": [1, 1],
          "elevation_mask": true,
 
-         "_comment1": "Select Tropospheric model: 0 - no model, 1 - a priori Saastamoinen model",
-         "troposphere": 1,
+         "_comment1": "Select Tropospheric model. Available models are 'NONE', 'Saastamoinen'",
+         "troposphere": "Saastamoinen",
 
-         "_comment2": "Select Ionospheric model: 0 - no model, 1 - Klobuchar model, 2 - NTCM-G Model",
-         "ionosphere": 1
+         "_comment2": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G' ",
+         "ionosphere": "Klobuchar"
       },
 
       "GAL": {
          "observations": ["1C"],
-         "obs_std": [1],
+         "pr_obs_std": [1],
 
          "_comment0": "select between INAV or FNAV navigation message",
          "nav_type": "INAV",
 
          "elevation_mask": true,
 
-         "_comment1": "Select Tropospheric model: 0 - no model, 1 - a priori Saastamoinen model",
-         "troposphere": 1,
+         "_comment1": "Select Tropospheric model. Available models are 'NONE', 'Saastamoinen'",
+         "troposphere": "Saastamoinen",
 
-         "_comment2": "Select Ionospheric model: 0 - no model, 1 - Klobuchar model, 2 - NTCM-G Model",
-         "ionosphere": 2
+         "_comment2": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G' ",
+         "ionosphere": "NTCM-G"
       }
    },
 
@@ -88,8 +88,8 @@
    },
 
    "solver": {
-      "_comment1": "0 - Least Squares, 1 - Weighted Least Squares",
-      "algorithm": 1,
+      "_comment1": "Select Algorithm. Available is 'WSL' - Weighted Least Squares",
+      "algorithm": "WSL",
 
       "_comment2": "maximum number of iterations in iterative procedure",
       "n_iterations": 10,
@@ -119,12 +119,8 @@
 
    "performance_evaluation": {
       "static": true,
-      "true_static_position": {
-         "_comment": "True receiver coordinates with respect to ECEF frame [meters]",
-         "x_ecef": 4027881.6280,
-         "y_ecef": 306998.5370,
-         "z_ecef": 4919498.9840
-      }
+
+      "_comment": "True receiver coordinates with respect to ECEF frame [meters]",
+      "true_static_position": [4027881.6280, 306998.5370, 4919498.9840]
    }
 }
-

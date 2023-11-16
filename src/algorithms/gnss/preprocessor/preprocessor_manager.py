@@ -3,6 +3,7 @@ from src.data_types.gnss.data_type import data_type_from_rinex
 from src.io.config import config_dict
 from src.data_types.gnss.observation_data import ObservationData
 from src.errors import PreprocessorError
+from src.io.config.enums import EnumPositioningMode
 from .filter import FilterMapper, TypeConsistencyFilter, RateDowngradeFilter, SignalCheckFilter
 from src.algorithms.gnss.preprocessor.functor.constellation_filter import ConstellationFunctor
 from .filter.ura_health_check import SatFilterHealthURA
@@ -56,7 +57,7 @@ class PreprocessorManager:
         obs_data_out.header = self.raw_data.header
 
         # check to compute or not iono free dataset from raw observables
-        compute_iono_free = config_dict.is_iono_free()
+        compute_iono_free = (config_dict.get_model() == EnumPositioningMode.SPS_IF)
         for constellation in self.services.keys():
             if compute_iono_free:
                 obs_list = config_dict.get("model", constellation, "observations")

@@ -4,7 +4,7 @@ from src.algorithms.gnss.estimators.state_space import GnssStateSpace
 from src.algorithms.gnss.solver.lsq_engine import LSQ_Engine
 from src.algorithms.gnss.solver.obs_reconstructor import ObservationReconstruction
 from src.common_log import get_logger
-from src.errors import PVTComputationFail
+from src.errors import PVTComputationFail, ConfigError
 from src.io.config import config_dict
 from src.io.config.enums import *
 from src.models.gnss_obs.geometry import SystemGeometry
@@ -111,6 +111,7 @@ class GnssSolver:
         INITIAL_POS = config.get("solver", "initial_pos_std")
         INITIAL_CLOCK_BIAS = config.get("solver", "initial_clock_std")
         CONSTELLATIONS = config.get("model", "constellations")
+        _model = config.get_model()
 
         TROPO = {}
         IONO = {}
@@ -123,22 +124,24 @@ class GnssSolver:
 
             # check if the model is single frequency or dual frequency
             code_types = self.obs_data.get_code_types(const)
-            if len(code_types) > 1 and not config_dict.is_iono_free():
+            if len(code_types) == 2 and (_model != EnumPositioningMode.SPS_IF):
                 # Dual-Frequency Model
                 self.log.info(f"Selected model for {const} is Dual-Frequency Uncombined with observations {code_types}")
                 MODEL[const] = EnumModel.DUAL_FREQ
                 CODES[const] = [code_types[0], code_types[1]]  # setting main and second code type
-            elif config_dict.is_iono_free():
+            elif len(code_types) == 1 and _model == EnumPositioningMode.SPS_IF:
                 # Iono-Free Model
                 self.log.info(f"Selected model for {const} is Iono-Free with gnss_obs {code_types}")
                 MODEL[const] = EnumModel.SINGLE_FREQ  # we process as single frequency
                 CODES[const] = [code_types[0]]
                 IONO[const] = EnumIono.DISABLED
-            else:
+            elif len(code_types) == 1:
                 # Single Frequency Model
                 self.log.info(f"Selected model for {const} is Single Frequency with gnss_obs {code_types[0]}")
                 MODEL[const] = EnumModel.SINGLE_FREQ
                 CODES[const] = [code_types[0]]
+            else:
+                raise ConfigError(f"Unable to initialize GNSS Solver Model for constellation {const}. Check configs.")
 
         # fill info dict
         self._metadata = {

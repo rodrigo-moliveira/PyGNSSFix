@@ -4,16 +4,16 @@ from src.io.states.export_states import get_file_header, export_to_file
 
 
 class GnssDataManager(Container):
-    __slots__ = ["nav_data", "obs_data", "nav_solution", "_to_save",
+    __slots__ = ["nav_data", "obs_data", "isb_data", "dcb_data", "nav_solution", "_to_save",
                  "_available", "_do_not_save"]
 
     def __init__(self):
         super().__init__()
 
-        # Input Navigation Data
-        self.nav_data = None
-        # Input Observation Data
-        self.obs_data = None
+        self.nav_data = None  # Input Navigation Data
+        self.obs_data = None  # Input Observation Data
+        self.isb_data = None  # ISB (Inter-system bias) data
+        self.dcb_data = None  # DCB or BGD/TGD data
 
         # available data for the current simulation
         self._available = []

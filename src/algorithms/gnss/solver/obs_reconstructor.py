@@ -1,5 +1,6 @@
 import numpy as np
 
+from src.data_types.gnss.data_type import DataType
 from src.io.config import config_dict
 from src.io.config.enums import EnumOnOff, EnumIono, EnumTropo, EnumModel
 from src.models.frames import cartesian2geodetic
@@ -47,7 +48,7 @@ class ObservationReconstruction:
         dt_sat = nav_sat_clock_correction(dt_sat, datatype, nav_message)
 
         # ionosphere
-        if not config_dict.is_iono_free():
+        if not DataType.is_iono_free_code(datatype):
             if self._metadata["IONO"][sat.sat_system] == EnumIono.KLOBUCHAR:
                 iono = iono_klobuchar(lat, long, el, az, self._nav_header.iono_corrections["GPSA"],
                                       self._nav_header.iono_corrections["GPSB"], epoch.gnss_time[1],
@@ -78,11 +79,14 @@ class ObservationReconstruction:
     def get_unit_line_of_sight(self, sat):
         return self._system_geometry.get_unit_line_of_sight(self._state, sat)
 
-    def get_weight(self, sat):
+    def get_obs_std(self, sat, datatype):
         # TODO: need to add here the user defined sigmas as a multiplication factor
         # "obs_std", and can add the possibility of this mask as well.
         elevation = self._system_geometry.get("el", sat)
         sigma_elevation = np.e ** (-elevation)
-        w = (1 / sigma_elevation) ** 2
+        std = sigma_elevation
 
-        return w
+        print(config_dict.get_obs_std())
+        exit()
+
+        return std

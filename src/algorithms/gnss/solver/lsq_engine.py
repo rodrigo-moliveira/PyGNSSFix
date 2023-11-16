@@ -71,8 +71,9 @@ class LSQ_Engine:
                 self.y_vec[iFreq * self.n_sats + iSat] = prefit_residuals.value
                 self.design_mat[iFreq * self.n_sats + iSat][0:3] = line_sight
 
-                # Weight matrix -> sigma = 1 / e^{-elevation}
-                self.weight_mat[iFreq * self.n_sats + iSat][iFreq * self.n_sats + iSat] = reconstructor.get_weight(sat)
+                # Weight matrix -> as 1/(obs_std^2)
+                self.weight_mat[iFreq * self.n_sats + iSat][iFreq * self.n_sats + iSat] = \
+                    1 / (reconstructor.get_obs_std(sat)**2)
 
     def solve_ls(self, state):
         """solves the LS problem for this iteration"""

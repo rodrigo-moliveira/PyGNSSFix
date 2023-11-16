@@ -3,7 +3,7 @@
 The configuration is a simple dictionary. See :ref:`configuration` for
 details.
 """
-
+from src.data_types.gnss.data_type import data_type_from_rinex
 from src.errors import ConfigError
 from src.io.config.enums import EnumPositioningMode
 
@@ -26,8 +26,12 @@ class Config(dict):
     def init(self, initial_dict):
         super().__init__()  # Call the parent class (dict) constructor
         self.update(initial_dict)  # Update the dictionary with the values from initial_dict
-        self["model"]["mode"] = EnumPositioningMode.init_model(self["model"]["mode"])
+
         # TODO: add config validation
+        #   see https://towardsdatascience.com/how-to-use-json-schema-to-validate-json-documents-ae9d8d1db344
+
+        # model initializations
+        self["model"]["mode"] = EnumPositioningMode.init_model(self["model"]["mode"])
 
     def get(self, *keys, fallback=ConfigError):
         """Retrieve a value in the config, if the value is not available
@@ -87,25 +91,41 @@ class Config(dict):
         subdict[last_key] = value
 
     def get_services(self):
-        services = {}
-
-        # iterate over all active constellations
-        constellations = self.get("model", "constellations")
-        for constellation in constellations:
-            const_upper = constellation.upper()
-            if const_upper == "GPS" or const_upper == "GAL":
-                services[const_upper] = self.get("model", const_upper, "observations")
-
-        return services
+        if "services" not in self:
+            services = {}
+            # iterate over all active constellations
+            constellations = self.get("model", "constellations")
+            for constellation in constellations:
+                const_upper = constellation.upper()
+                if const_upper == "GPS" or const_upper == "GAL":
+                    services[const_upper] = self.get("model", const_upper, "observations")
+                    self.set("services", services)
+        return self["services"]
 
     def get_model(self):
         return self["model"]["mode"]
 
-    def is_iono_free(self):
-        """
-        Returns true if user selected combined gnss_obs model (compute iono free observations)
-        """
-        return self["model"]["mode"] == EnumPositioningMode.SPS_IF
+    def get_obs_std(self):
+        if "obs_std" not in self:
+            obs_dict = {}
+            service_dict = self.get_services()
+            for constellation, services in service_dict.items():
+                obs_std_list = self.get("model", constellation, "pr_obs_std")
+                obs_dict[constellation] = {}
+                for index, service in enumerate(services):
+                    datatype = data_type_from_rinex(f"C{service}", constellation)
+                    obs_dict[constellation][datatype] = obs_std_list[index]
+            self.set("obs_std", obs_dict)
+
+        return self["obs_std"]
+
+    def set_obs_std(self, constellation, datatype, std):
+        # first build the obs_std dict
+        self.get_obs_std()
+
+        if constellation not in self["obs_std"]:
+            self["obs_std"][constellation] = {}
+        self["obs_std"][constellation][datatype] = std
 
 
 config_dict = Config()

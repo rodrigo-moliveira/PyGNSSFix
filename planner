@@ -1,10 +1,18 @@
 tasks for preliminary version:
+    [ ] initializar o GNSSState a partir de um gnss state
     [ ] re-adicionar o filtro de elevation no gnss_solver
     [ ] adicionar aos weights LS o PR_std do user
-    [ ] escrever um traceback dos filtros do preprocessor
+    [ ] adicionar um ISB manager que leia um ISB
+    [ ] adicionar um DCB Manager
     [ ] adicionar o dual constellation SPS (com ISB est.)
+    [ ] adicionar o GPT2W model
+    [ ] estimar a troposfera -> considera-se T = m_d * T_D + m_w * T_w em que T_D (dry) vem do modelo a-priori e T_w
+            é colocado no vetor de estados. m_w é o mapa, que é colocado na matriz da geometria. Ver Eq. (21.71) e (21.72)
+    [ ] escrever um traceback dos filtros do preprocessor
+
     [ ] tropo wet/dry estimation?
     [ ] limpar o código / solve all TODOs
+    [ ] add validation of input json file
 
 post-processing tasks:
     [ ] plot Iono states
