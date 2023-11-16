@@ -3,6 +3,10 @@
 The configuration is a simple dictionary. See :ref:`configuration` for
 details.
 """
+import json
+from jsonschema import validate, ValidationError
+
+from src import PROJECT_PATH
 from src.data_types.gnss.data_type import data_type_from_rinex
 from src.errors import ConfigError
 from src.io.config.enums import EnumPositioningMode
@@ -25,13 +29,23 @@ class Config(dict):
 
     def init(self, initial_dict):
         super().__init__()  # Call the parent class (dict) constructor
+
+        # validate config file
+        self._validate(initial_dict)
+
         self.update(initial_dict)  # Update the dictionary with the values from initial_dict
-
-        # TODO: add config validation
-        #   see https://towardsdatascience.com/how-to-use-json-schema-to-validate-json-documents-ae9d8d1db344
-
         # model initializations
         self["model"]["mode"] = EnumPositioningMode.init_model(self["model"]["mode"])
+
+    def _validate(self, initial_dict):
+        # Read the schema from the file
+        with open(PROJECT_PATH / "src/io/config/resources/schema.json") as schema_file:
+            schema = json.load(schema_file)
+
+        try:
+            validate(initial_dict, schema)
+        except ValidationError as e:
+            raise ConfigError(f"Error validating config file: {e}")
 
     def get(self, *keys, fallback=ConfigError):
         """Retrieve a value in the config, if the value is not available
