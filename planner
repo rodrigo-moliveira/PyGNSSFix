@@ -1,42 +1,46 @@
 tasks for preliminary version:
-    [ ] initializar o GNSSState a partir de um gnss state
-    [ ] re-adicionar o filtro de elevation no gnss_solver
-    [ ] adicionar aos weights LS o PR_std do user
+    [X] initializar o GNSSState a partir de um gnss state
+    [ ] adicionar o dual constellation SPS (com ISB est.)
     [ ] adicionar um ISB manager que leia um ISB
     [ ] adicionar um DCB Manager
-    [ ] adicionar o dual constellation SPS (com ISB est.)
-    [ ] adicionar o GPT2W model
+        [ ] read DCB files
+        [ ] understand different kind of DCB corrections (read papers)
+        [ ] develop code accordingly for each DCB type
+        [ ] ler sat DCBs e criar uma classe que substitua o modelo atual
+    [ ] adicionar o GPT2 model
     [ ] estimar a troposfera -> considera-se T = m_d * T_D + m_w * T_w em que T_D (dry) vem do modelo a-priori e T_w
             é colocado no vetor de estados. m_w é o mapa, que é colocado na matriz da geometria. Ver Eq. (21.71) e (21.72)
+    [ ] re-adicionar o filtro de elevation no gnss_solver
     [ ] escrever um traceback dos filtros do preprocessor
-
     [ ] limpar o código / solve all TODOs
     [X] add validation of input json file
+    [X] adicionar aos weights LS o PR_std do user
 
-post-processing tasks:
+plot updates:
     [ ] plot Iono states
     [ ] compute mean and std of pre/postfit residuals -> mean should be zero. STD should be sigma_URE (user range error). This should be computed for each satellite
     [ ] plot residuals
     [ ] plot position covariance (3D plot, 2D surfaces, etc...)
     [ ] plot 3d sigma of estimation error
-    [ ] compute allan variance of clock bias
+    [ ] compute allan variance of clock bias and plot it
 
     [ ] revisão final do repositório. Update readme
 
-ISTO TERMINA A VERSAO PRELIMINAR
+Release 0.1
 --- ### ---
 
 caminhar para PPPP:
     [ ] criar um config field com o modo (SPS ou PPPP)
     [ ] Adicionar Leitura e Modelo de Clocks, Sp3, IONEX (criar um PPPP)
     [ ] substituir alguns modelos do SPS pelos respetivos do PPPP
-    [ ] ler sat DCBs e criar uma classe que substitua o modelo atual
     [ ] outras correçoes: PCVs...
 
 finalizar o GNSS user positioning com:
     [ ] Adicionar Kalman filter com user dynamics
     [ ] process doppler measurements to estimate velocity
+    [ ] ver código para calcular vetor velocidade a partir da mensagem de navegação
 
+Release 1.0
 
 loosely coupled:
     [ ] attitude basics

@@ -34,12 +34,12 @@
 
    "model": {
       "constellations": ["GPS"],
-      "mode": "SPS_IF",
+      "mode": "SPS",
       "_comment": "available modes are SPS, SPS_IF",
 
       "GPS": {
          "observations": ["1C", "2W"],
-         "pr_obs_std": [1, 1],
+         "pr_obs_std": [1.1, 0.8],
          "elevation_mask": true,
 
          "_comment1": "Select Tropospheric model. Available models are 'NONE', 'Saastamoinen'",

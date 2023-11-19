@@ -63,7 +63,7 @@ class ObservationReconstruction:
             try:
                 factor = (self._metadata["CODES"][sat.sat_system][0].freq.freq_value /
                           datatype.freq.freq_value) ** 2
-                dI = factor * self._state.iono[sat.sat_system][sat]
+                dI = factor * self._state.iono[sat]
             except KeyError:
                 pass
 
@@ -80,13 +80,15 @@ class ObservationReconstruction:
         return self._system_geometry.get_unit_line_of_sight(self._state, sat)
 
     def get_obs_std(self, sat, datatype):
-        # TODO: need to add here the user defined sigmas as a multiplication factor
-        # "obs_std", and can add the possibility of this mask as well.
-        elevation = self._system_geometry.get("el", sat)
-        sigma_elevation = np.e ** (-elevation)
-        std = sigma_elevation
-
-        print(config_dict.get_obs_std())
-        exit()
-
-        return std
+        elevation_mask = config_dict.get("model", sat.sat_system, "elevation_mask")
+        std = 1.0
+        if elevation_mask:
+            elevation = self._system_geometry.get("el", sat)
+            sigma_elevation = np.e ** (-elevation)
+            std = sigma_elevation
+        try:
+            obs_std = config_dict.get_obs_std()[sat.sat_system][datatype]
+        except KeyError:
+            # TODO add logger message
+            obs_std = 1
+        return std * obs_std

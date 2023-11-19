@@ -9,69 +9,75 @@ class GnssStateSpace(Container):
     __covs__ = ["cov_position", "cov_clock_bias", "cov_iono", "cov_isb"]
     __slots__ = __states__ + __covs__ + ["epoch", "_info"]
 
-    def __init__(self, metadata, **kwargs):
+    def __init__(self, metadata=None, position=None, clock_bias=None, epoch=None, sat_list=None):
         super().__init__()
 
         # dict to store state information
         self._info = dict()
 
         # initialize system solve-for states
-        self._init_states(metadata, kwargs)
+        self._init_states(metadata, position, clock_bias, sat_list)
 
         # epoch
-        self.epoch = kwargs.get("epoch", None)
+        self.epoch = epoch
 
-    def _init_states(self, metadata, kwargs):
+    def clone(self):
+        _states = self.get_additional_info("states")
+        state = GnssStateSpace(position=self.position, clock_bias=self.clock_bias,
+                               epoch=self.epoch)
+
+        if "iono" in _states:
+            for sat, iono in self.iono.items():
+                state.iono[sat] = iono
+
+        if "isb" in _states:
+            state.isb = self.isb
+
+        state.add_additional_info("states", _states)
+        return state
+
+    def _init_states(self, metadata, position, clock_bias, sat_list):
         _states = ["position", "clock_bias"]  # mandatory states
-        sat_list = kwargs.get("sat_list", [])
 
-        # position
-        self.position = np.array(kwargs.get("position", [0, 0, 0]))
+        # position (with default to [0, 0, 0])
+        self.position = np.array(position if position is not None else [0, 0, 0])
         self.cov_position = np.zeros((3, 3))
 
-        # clock
-        self.clock_bias = kwargs.get("clock_bias", 0)
-        self.cov_clock_bias = 0
+        # clock with default to 0
+        self.clock_bias = clock_bias if clock_bias is not None else 0.0
+        self.cov_clock_bias = 0.0
 
-        # iono (optional -> in case there are 2 frequencies for this constellation)
+        # iono dict (if dual-frequency mode is selected) with default to None
         self.iono = dict()
         self.cov_iono = dict()
-        for constellation in metadata["CONSTELLATIONS"]:
-            if metadata["MODEL"][constellation] == EnumModel.DUAL_FREQ:
-                self.iono[constellation] = dict()
-                self.cov_iono[constellation] = dict()
-                for sat in sat_list:
-                    if sat.sat_system == constellation:
-                        self.iono[constellation][sat] = 0  # initialize iono for this satellite
-                        self.cov_iono[constellation][sat] = 0
-
-                # remove this constellation if no satellite was actually inserted
-                if len(self.iono[constellation]) == 0:
-                    self.iono.pop(constellation)
-                    self.cov_iono.pop(constellation)
+        if metadata is not None and sat_list is not None:
+            for constellation in metadata["CONSTELLATIONS"]:
+                if metadata["MODEL"][constellation] == EnumModel.DUAL_FREQ:
+                    # initialize iono vector for the available satellites of this constellation
+                    for sat in sat_list:
+                        if sat.sat_system == constellation:
+                            self.iono[sat] = 0.0
+                            self.cov_iono[sat] = 0.0
         if len(self.iono) >= 1:
             _states.append("iono")
-        else:
-            self.iono = None
-            self.cov_iono = None
 
         # isb (optional -> in case there are 2 constellations)
-        if len(metadata["CONSTELLATIONS"]) > 1:
-            self.isb = kwargs.get("isb", 0)
-            self.cov_isb = 0
+        self.isb = None
+        self.cov_isb = None
+        if metadata is not None and len(metadata["CONSTELLATIONS"]) > 1:
+            self.isb = 0.0
+            self.cov_isb = 0.0
             _states.append("isb")
-        else:
-            self.isb = None
-            self.cov_isb = None
 
         self.add_additional_info("states", _states)
 
     def __str__(self):
+        _states = self.get_additional_info("states")
         _str = f"position = {self.position}, " \
                f"clock bias = {self.clock_bias}"
-        if "isb" in self.get_additional_info("states"):
+        if "isb" in _states:
             _str += f", ISB = {self.isb}"
-        if "iono" in self.get_additional_info("states"):
+        if "iono" in _states:
             _str += f", iono = {self.iono}"
 
         return f'{type(self).__name__}[{str(self.epoch)}]({_str})'

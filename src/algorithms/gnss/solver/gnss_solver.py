@@ -193,17 +193,17 @@ class GnssSolver:
         if len(self.solution) == 0:
             position = np.array(self._metadata["INITIAL_POS"][0:3], dtype=np.float64)
             clock = self._metadata["INITIAL_CLOCK_BIAS"][0]
+            state = GnssStateSpace(self._metadata,
+                                   position=position,
+                                   clock_bias=clock,
+                                   epoch=epoch,
+                                   sat_list=sat_list)
         else:
             # initialize from previous state
             prev_state = self.solution[-1]
-            position = prev_state.position.copy()
-            clock = prev_state.clock_bias
-
-        return GnssStateSpace(self._metadata,
-                              position=position,
-                              clock_bias=clock,
-                              epoch=epoch,
-                              sat_list=sat_list)
+            state = prev_state.clone()
+            state.epoch = epoch
+        return state
 
     @staticmethod
     def _stop(rms_old, rms_new, stop_criteria):

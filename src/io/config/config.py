@@ -36,6 +36,7 @@ class Config(dict):
         self.update(initial_dict)  # Update the dictionary with the values from initial_dict
         # model initializations
         self["model"]["mode"] = EnumPositioningMode.init_model(self["model"]["mode"])
+        self.get_obs_std()
 
     def _validate(self, initial_dict):
         # Read the schema from the file
@@ -46,6 +47,8 @@ class Config(dict):
             validate(initial_dict, schema)
         except ValidationError as e:
             raise ConfigError(f"Error validating config file: {e}")
+
+        # TODO: enforce consistency between solution (SPS, SPS_IF), observations and pr_obs_stds
 
     def get(self, *keys, fallback=ConfigError):
         """Retrieve a value in the config, if the value is not available
@@ -113,7 +116,7 @@ class Config(dict):
                 const_upper = constellation.upper()
                 if const_upper == "GPS" or const_upper == "GAL":
                     services[const_upper] = self.get("model", const_upper, "observations")
-                    self.set("services", services)
+            self.set("services", services)
         return self["services"]
 
     def get_model(self):
@@ -125,6 +128,9 @@ class Config(dict):
             service_dict = self.get_services()
             for constellation, services in service_dict.items():
                 obs_std_list = self.get("model", constellation, "pr_obs_std")
+                if len(obs_std_list) < len(services):
+                    raise ConfigError(f"Inconsistency between number of signals for {constellation}: {services} and"
+                                      f" the correspondent obs std list {obs_std_list}. Please fix the configuration.")
                 obs_dict[constellation] = {}
                 for index, service in enumerate(services):
                     datatype = data_type_from_rinex(f"C{service}", constellation)

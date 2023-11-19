@@ -73,7 +73,7 @@ class LSQ_Engine:
 
                 # Weight matrix -> as 1/(obs_std^2)
                 self.weight_mat[iFreq * self.n_sats + iSat][iFreq * self.n_sats + iSat] = \
-                    1 / (reconstructor.get_obs_std(sat)**2)
+                    1 / (reconstructor.get_obs_std(sat, datatype)**2)  # PAREI AQUI
 
     def solve_ls(self, state):
         """solves the LS problem for this iteration"""
@@ -115,7 +115,7 @@ class LSQ_Engine:
         # if iono is estimated
         if self._metadata["MODEL"][const] == EnumModel.DUAL_FREQ:
             for iSat, sat in enumerate(self.satellite_list):
-                state.iono[const][sat] += float(dX[iSat + 4])
+                state.iono[sat] += float(dX[iSat + 4])
 
         # if isb is estimated
         # ...
@@ -127,7 +127,7 @@ class LSQ_Engine:
         # if iono is estimated
         if self._metadata["MODEL"][const] == EnumModel.DUAL_FREQ:
             for iSat, sat in enumerate(self.satellite_list):
-                state.cov_iono[const][sat] = cov[iSat + 4, iSat + 4]
+                state.cov_iono[sat] = cov[iSat + 4, iSat + 4]
 
     def get_residuals(self, residual_vec):
         constellations = self._metadata["CONSTELLATIONS"]

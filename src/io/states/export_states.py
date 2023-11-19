@@ -44,13 +44,11 @@ def export_to_file(gnss_state: GnssStateSpace, exportable):
         return f"{gnss_state.clock_bias},{gnss_state.cov_clock_bias}"
 
     if exportable == "iono":
-        iono = gnss_state.iono
         cov = gnss_state.cov_iono
 
         data = []
-        for constellation, iono_dict in iono.items():
-            for sat, iono_data in iono_dict.items():
-                data.append(f"{sat},{iono_data},{cov[constellation][sat]}")
+        for sat, iono_data in gnss_state.iono.items():
+            data.append(f"{sat},{iono_data},{cov[sat]}")
         return data
 
     elif exportable == "prefit_residuals" or exportable == "postfit_residuals":
