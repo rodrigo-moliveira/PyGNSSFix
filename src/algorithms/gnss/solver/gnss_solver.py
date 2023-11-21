@@ -268,15 +268,13 @@ class GnssSolver:
     def _compute(self, system_geometry, obs_data, state, epoch):
         satellite_list = system_geometry.get_satellites()
 
-        lsq_engine = LSQ_Engine(satellite_list, self._metadata)
-
         reconstructor = ObservationReconstruction(system_geometry,
                                                   self._metadata,
                                                   state,
                                                   self.nav_data.header)
 
         # build LSQ Engine matrices for all satellites
-        lsq_engine.build_lsq(epoch, obs_data, reconstructor, self.nav_data)
+        lsq_engine = LSQ_Engine(satellite_list, self._metadata, epoch, obs_data, reconstructor, self.nav_data)
 
         # solve LS problem
         return lsq_engine.solve_ls(state)
