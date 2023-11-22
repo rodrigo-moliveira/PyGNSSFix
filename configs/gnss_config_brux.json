@@ -33,7 +33,7 @@
    },
 
    "model": {
-      "constellations": ["GPS"],
+      "constellations": ["GPS", "GAL"],
       "mode": "SPS",
       "_comment": "available modes are SPS, SPS_IF",
 
@@ -50,8 +50,8 @@
       },
 
       "GAL": {
-         "observations": ["1C"],
-         "pr_obs_std": [1],
+         "observations": ["1C", "5Q"],
+         "pr_obs_std": [1, 1],
 
          "_comment0": "select between INAV or FNAV navigation message",
          "nav_type": "INAV",

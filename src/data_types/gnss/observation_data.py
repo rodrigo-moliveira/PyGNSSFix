@@ -108,6 +108,9 @@ class EpochData:
     def get_satellites(self):
         return list(self._data.keys())
 
+    def get_satellites_for_constellation(self, constellation):
+        return [sat for sat in list(self._data.keys()) if constellation == sat.sat_system]
+
     def get_sats_for_datatypes(self, datatype_list):
         sat_list = []
 

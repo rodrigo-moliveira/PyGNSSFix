@@ -13,7 +13,7 @@ class SatelliteGeometry(Container):
     __slots__ = ["transit_time",
                  "time_emission", "time_reception",
                  "true_range", "az", "el", "satellite_position",
-                 "dt_rel_correction"]
+                 "dt_rel_correction", "los"]
 
     def __init__(self):
         super().__init__()
@@ -25,6 +25,7 @@ class SatelliteGeometry(Container):
         self.el = 0
         self.satellite_position = None
         self.dt_rel_correction = 0
+        self.los = None
 
     def __str__(self):
         _allAttrs = ""
@@ -50,6 +51,8 @@ class SatelliteGeometry(Container):
             PR_obs (src.data_types.data_types.Observation.Observation) : Code gnss_obs to use in some computations
         """
         # get reception time in GNSS time system ( T_GNSS = T_receiver - t_(receiver_bias) )
+        # TODO: o ISB vai ter que entrar aqui para a slave constellation
+        # para a slave constellation: rec_bias += ISB
         time_reception = epoch + timedelta(seconds=-rec_bias)
 
         # algorithm to compute Transmission time (in GNSS time)
@@ -72,6 +75,9 @@ class SatelliteGeometry(Container):
         enu_coord = ecef2enu(pos_sat[0], pos_sat[1], pos_sat[2], lat, long, h)
         az, el = enu2azel(*enu_coord)
 
+        # line of sight
+        los = [(rec_pos[i] - pos_sat[i]) / true_range for i in (0, 1, 2)]
+
         # save results in container
         self.transit_time = transit
         self.time_emission = time_emission
@@ -81,6 +87,7 @@ class SatelliteGeometry(Container):
         self.el = el
         self.satellite_position = pos_sat
         self.dt_rel_correction = dt_relative
+        self.los = los
 
 
 class SystemGeometry:
@@ -154,7 +161,7 @@ class SystemGeometry:
         for sat in _to_remove:
             self.remove(sat)
 
-    def get_unit_line_of_sight(self, state, sat):
+    def get_unit_line_of_sight(self, sat):
         """
         Computes the line of sight vector between the receiver and the satellite, used in the PVT geometry matrix.
 
@@ -164,11 +171,7 @@ class SystemGeometry:
         Return:
             list [float, float, float] : Line of sight for [x, y, z] axis of ECEF frame
         """
-
-        satellite = self.get("satellite_position", sat)
-        true_range = self.get("true_range", sat)
-
-        return [(state.position[i] - satellite[i]) / true_range for i in (0, 1, 2)]
+        return self.get("los", sat)
 
     def __str__(self):
         return str(self._data)

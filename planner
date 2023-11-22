@@ -1,20 +1,25 @@
 tasks for preliminary version:
     [X] initializar o GNSSState a partir de um gnss state
     [ ] adicionar o dual constellation SPS (com ISB est.)
+        [ ] adicionar o ISB ao LSQEngine e ao ObservationReconstructor e GNSSState
+        [ ] usar o ISB para re-calcular o dt_sat nas computações do SystemGeometry
     [ ] adicionar um ISB manager que leia um ISB
-    [ ] adicionar um DCB Manager
-        [ ] read DCB files
-        [ ] understand different kind of DCB corrections (read papers)
-        [ ] develop code accordingly for each DCB type
-        [ ] ler sat DCBs e criar uma classe que substitua o modelo atual
+        [ ] ler o ISB da mensagem de nav. ou do ficheiro SINEX ISB
     [ ] adicionar o GPT2 model
     [ ] estimar a troposfera -> considera-se T = m_d * T_D + m_w * T_w em que T_D (dry) vem do modelo a-priori e T_w
             é colocado no vetor de estados. m_w é o mapa, que é colocado na matriz da geometria. Ver Eq. (21.71) e (21.72)
     [ ] re-adicionar o filtro de elevation no gnss_solver
     [ ] escrever um traceback dos filtros do preprocessor
     [ ] limpar o código / solve all TODOs
-    [X] add validation of input json file
-    [X] adicionar aos weights LS o PR_std do user
+    [ ] update documentation
+
+    THIS FINISHES FIRST RELEASE
+
+    [ ] adicionar um DCB Manager
+        [ ] read DCB files
+        [ ] understand different kind of DCB corrections (read papers)
+        [ ] develop code accordingly for each DCB type
+        [ ] ler sat DCBs e criar uma classe que substitua o modelo atual
 
 plot updates:
     [ ] plot Iono states

@@ -63,7 +63,6 @@ class LSQ_Engine:
         self.y_vec = np.zeros(n_observables)
         self.design_mat = np.zeros((n_observables, n_states))
         self.weight_mat = np.eye(n_observables)
-        return
 
     @staticmethod
     def compute_residual_los(nav_data, sat, epoch, datatype, obs_data, reconstructor):
@@ -85,31 +84,32 @@ class LSQ_Engine:
     def _build_lsq(self, epoch, obs_data, reconstructor, nav_data):
         """build the LS matrices y_vec, design_mat, weight_mat"""
 
-        n_consts = len(self.constellations)
+        iono_offset = 0
+        obs_offset = 0
         for iConst, const in enumerate(self.constellations):
 
-            n_freqs = len(self._metadata["CODES"][const])
+            n_sats = len(self.sat_list[const])
             for iFreq, datatype in enumerate(self._metadata["CODES"][const]):
 
-                n_sats = len(self.sat_list[const])
                 for iSat, sat in enumerate(self.sat_list[const]):
-
                     residual, los = self.compute_residual_los(nav_data, sat, epoch, datatype, obs_data, reconstructor)
 
                     # filling the LS matrices
-                    self.y_vec[iFreq * n_sats + iSat] = residual
-
-                    self.design_mat[iFreq * n_sats + iSat][0:3] = los  # position
-                    self.design_mat[iFreq * n_sats + iSat, 3] = 1.0  # clock
+                    self.y_vec[obs_offset + iSat] = residual
+                    self.design_mat[obs_offset + iSat][0:3] = los  # position
+                    self.design_mat[obs_offset + iSat, 3] = 1.0  # clock
                     if self._metadata["MODEL"][const] == EnumModel.DUAL_FREQ:
                         factor = (self._metadata["CODES"][const][0].freq.freq_value / datatype.freq.freq_value) ** 2
-                        self.design_mat[iFreq * n_sats + iSat, 4 + iSat] = 1.0 * factor  # iono
+                        self.design_mat[obs_offset + iSat, 4 + iono_offset + iSat] = 1.0 * factor  # iono
                     if iConst > 0:
-                        self.design_mat[iFreq * n_sats + iSat, -1] = 1.0  # ISB
+                        self.design_mat[obs_offset + iSat, -1] = 1.0  # ISB
 
                     # Weight matrix -> as 1/(obs_std^2)
-                    self.weight_mat[iFreq * n_sats + iSat, iFreq * n_sats + iSat] = \
+                    self.weight_mat[obs_offset + iSat, obs_offset + iSat] = \
                         1 / (reconstructor.get_obs_std(sat, datatype)**2)
+
+                obs_offset += n_sats
+            iono_offset += n_sats
 
     def solve_ls(self, state):
         """solves the LS problem for this iteration"""
@@ -122,7 +122,8 @@ class LSQ_Engine:
 
             # possible error in the numpy.linalg.inv() function -> solution not possible
             raise PVTComputationFail(e)
-
+        print("solved with success")
+        exit()
         # update state vector with incremental dX
         dX = solver.get_solution()
         cov = solver.get_cov()

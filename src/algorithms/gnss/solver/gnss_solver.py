@@ -284,15 +284,6 @@ class GnssSolver:
         Checks if it is possible to perform the dual frequency / single frequency PVT estimation, or, in contrast,
         we have not enough data to perform the computations.
 
-        If the user selected Dual Frequency model this functions:
-            * checks if there are at least 4 satellites with dual frequency data
-            * if that is the case, then eliminate satellites with single frequency data only (will be discarded)
-            * if that is not the case, then fall back to the single frequency case
-
-        If the user selected the Single frequency case (or we fell back to this model):
-            * checks if, for the main code datatype, we have at least 4 satellites available
-            * if that is not the case, a PVT solution is impossible to be computed -> Warn the user..
-
         """
         single_const = len(self._metadata["CONSTELLATIONS"]) == 1  # true if only one constellation
         MIN_SAT = 4 if single_const else 5
@@ -307,7 +298,7 @@ class GnssSolver:
             if model == EnumModel.DUAL_FREQ:
                 # removing satellites with data for only 1 frequency
                 removed = []
-                for sat in obs_data.get_satellites():
+                for sat in obs_data.get_satellites_for_constellation(const):
                     if sat not in sat_list_:
                         system_geometry.remove(sat)
                         removed.append(sat)

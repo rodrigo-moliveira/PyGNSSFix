@@ -77,7 +77,7 @@ class ObservationReconstruction:
         return Observation(datatype, obs)
 
     def get_unit_line_of_sight(self, sat):
-        return self._system_geometry.get_unit_line_of_sight(self._state, sat)
+        return self._system_geometry.get_unit_line_of_sight(sat)
 
     def get_obs_std(self, sat, datatype):
         elevation_mask = config_dict.get("model", sat.sat_system, "elevation_mask")
