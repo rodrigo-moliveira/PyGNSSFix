@@ -1,7 +1,7 @@
 tasks for preliminary version:
     [X] initializar o GNSSState a partir de um gnss state
     [ ] adicionar o dual constellation SPS (com ISB est.)
-        [ ] adicionar o ISB ao LSQEngine e ao ObservationReconstructor e GNSSState
+        [X] adicionar o ISB ao LSQEngine e ao ObservationReconstructor e GNSSState
         [ ] usar o ISB para re-calcular o dt_sat nas computações do SystemGeometry
     [ ] adicionar um ISB manager que leia um ISB
         [ ] ler o ISB da mensagem de nav. ou do ficheiro SINEX ISB

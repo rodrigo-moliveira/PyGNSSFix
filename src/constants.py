@@ -52,6 +52,7 @@ POSITION = "position.txt"
 CLOCK = "clock_bias.txt"
 TIME = "time.txt"
 IONO = "iono.txt"
+ISB = "isb.txt"
 OUTPUT_FILENAME_MAP = {
     "satellite_azel": AZEL,
     "dop_ecef": DOP_ECEF,
@@ -62,6 +63,6 @@ OUTPUT_FILENAME_MAP = {
     "clock_bias": CLOCK,
     "time": TIME,
     "iono": IONO,
-    "isb": None,
+    "isb": ISB,
     "velocity": None
 }

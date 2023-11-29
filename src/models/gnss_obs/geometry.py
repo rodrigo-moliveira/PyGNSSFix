@@ -36,23 +36,24 @@ class SatelliteGeometry(Container):
     def __repr__(self):
         return str(self)
 
-    def compute(self, rec_pos, epoch, rec_bias, nav_message, compute_tx, PR_obs):
+    def compute(self, epoch, state, constellation, nav_message, compute_tx, PR_obs):
         """
         compute satellite-related quantities (tropo, iono, transmission time, etc.) to be used in the PVT gnss_obs
         reconstruction equation, for a given satellite.
 
         Args:
-            rec_pos (numpy.ndarray) : Receiver position
             epoch (src.data_types.basics.Epoch.Epoch) : epoch under evaluation
-            rec_bias (float) : Receiver clock bias
+            state (State) : state
+            constellation (Constellation) : constellation
             nav_message (src.data_types.containers.NavigationData.NavigationPointGPS) : navigation point for the
                                                                                         satellite under evaluation
             compute_tx (function) : function to compute the transmission time
             PR_obs (src.data_types.data_types.Observation.Observation) : Code gnss_obs to use in some computations
         """
+        rec_pos = state.position
+        rec_bias = state.get_clock_bias(constellation)
+
         # get reception time in GNSS time system ( T_GNSS = T_receiver - t_(receiver_bias) )
-        # TODO: o ISB vai ter que entrar aqui para a slave constellation
-        # para a slave constellation: rec_bias += ISB
         time_reception = epoch + timedelta(seconds=-rec_bias)
 
         # algorithm to compute Transmission time (in GNSS time)
@@ -153,7 +154,7 @@ class SystemGeometry:
                 continue
 
             # compute geometry for this satellite
-            geometry.compute(state.position, epoch, state.clock_bias, nav_message,
+            geometry.compute(epoch, state, sat.sat_system, nav_message,
                              metadata["TX_TIME_ALG"], observable_lst[0])
 
             self._data[sat] = geometry

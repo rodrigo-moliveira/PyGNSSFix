@@ -34,6 +34,9 @@ class GnssStateSpace(Container):
             state.isb = self.isb
 
         state.add_additional_info("states", _states)
+        state.add_additional_info("clock_master", self.get_additional_info("clock_master"))
+        state.add_additional_info("clock_slave", self.get_additional_info("clock_slave"))
+
         return state
 
     def _init_states(self, metadata, position, clock_bias, sat_list):
@@ -67,7 +70,12 @@ class GnssStateSpace(Container):
         if metadata is not None and len(metadata["CONSTELLATIONS"]) > 1:
             self.isb = 0.0
             self.cov_isb = 0.0
+            self.add_additional_info("clock_master", metadata["CONSTELLATIONS"][0])
+            self.add_additional_info("clock_slave", metadata["CONSTELLATIONS"][1])
             _states.append("isb")
+        else:
+            self.add_additional_info("clock_master", None)
+            self.add_additional_info("clock_slave", None)
 
         self.add_additional_info("states", _states)
 
@@ -84,6 +92,16 @@ class GnssStateSpace(Container):
 
     def __repr__(self):
         return str(self)
+
+    def get_clock_bias(self, constellation):
+        if "isb" in self.get_additional_info("states"):
+            if constellation == self.get_additional_info("clock_master"):
+                clock = self.clock_bias
+            else:
+                clock = self.clock_bias + self.isb
+        else:
+            clock = self.clock_bias
+        return clock
 
     def add_additional_info(self, arg, val):
         self._info[arg] = val

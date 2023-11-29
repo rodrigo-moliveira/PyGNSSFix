@@ -30,8 +30,8 @@ class ObservationReconstruction:
         # true range
         true_range = self._system_geometry.get("true_range", sat)
 
-        # user clock in meters
-        dt_rec = self._state.clock_bias * constants.SPEED_OF_LIGHT
+        # user clock in meters (with proper ISB applied, if necessary)
+        dt_rec = self._state.get_clock_bias(sat.sat_system) * constants.SPEED_OF_LIGHT
 
         # satellite clock
         dt_sat, _ = broadcast_clock(nav_message.af0,
@@ -73,7 +73,6 @@ class ObservationReconstruction:
 
         # finally, construct obs
         obs = true_range + dt_rec - dt_sat * constants.SPEED_OF_LIGHT + iono + tropo + dI
-
         return Observation(datatype, obs)
 
     def get_unit_line_of_sight(self, sat):

@@ -4,12 +4,14 @@ from src import constants
 from src.algorithms.gnss.estimators.state_space import GnssStateSpace
 
 
-def get_file_header(exportable, epoch_system):
+def get_file_header(exportable, state):
+    epoch_system = state.epoch.scale
     if exportable == "position":
         return f"Week_Number({epoch_system}),Time_of_Week[s],X_ECEF[m],Y_ECEF[m],Z_ECEF[m]," \
                f"cov_XX[m^2],cov_YY[m^2],cov_ZZ[m^2],cov_XY[m^2],cov_XZ[m^2],cov_YZ[m^2]"
     elif exportable == "clock_bias":
-        return f"Week_Number({epoch_system}),Time_of_Week[s],clock_bias[s],cov[s^2]"
+        master = state.get_additional_info("clock_master")
+        return f"Week_Number({epoch_system}),Time_of_Week[s],clock_bias(master={master})[s],cov[s^2]"
     elif exportable == "iono":
         return f"Week_Number({epoch_system}),Time_of_Week[s],sat,iono[m],cov[m^2]"
     elif exportable == "time":
@@ -24,6 +26,10 @@ def get_file_header(exportable, epoch_system):
         return f"Week_Number({epoch_system}),Time_of_Week[s],DOP_x,DOP_y,DOP_z,DOP_t,DOP_geometry,DOP_position"
     elif exportable == "dop_local":
         return f"Week_Number({epoch_system}),Time_of_Week[s],DOP_East,DOP_North,DOP_Up,DOP_Horizontal"
+    elif exportable == "isb":
+        master = state.get_additional_info("clock_master")
+        slave = state.get_additional_info("clock_slave")
+        return f"Week_Number({epoch_system}),Time_of_Week[s],ISB(master={master},slave={slave})[s],cov[s^2]"
     else:
         raise ValueError(f"Undefined header due to unknown exportable '{exportable}'")
 
@@ -42,6 +48,9 @@ def export_to_file(gnss_state: GnssStateSpace, exportable):
 
     if exportable == "clock_bias":
         return f"{gnss_state.clock_bias},{gnss_state.cov_clock_bias}"
+
+    if exportable == "isb":
+        return f"{gnss_state.isb},{gnss_state.cov_isb}"
 
     if exportable == "iono":
         cov = gnss_state.cov_iono

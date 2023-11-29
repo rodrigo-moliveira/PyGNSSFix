@@ -72,7 +72,6 @@ class GnssDataManager(Container):
                     for state in sim:
 
                         week, sow = state.epoch.gnss_time
-                        epoch_system = state.epoch.scale
                         time_str = f"{week},{sow}"
 
                         # save estimated data for this epoch
@@ -83,7 +82,7 @@ class GnssDataManager(Container):
                             if ext not in file_list:
                                 filename = f"{directory}\\{OUTPUT_FILENAME_MAP[ext]}"
                                 file_list[ext] = open(filename, "w")
-                                file_list[ext].write(f"{get_file_header(ext, epoch_system)}\n")
+                                file_list[ext].write(f"{get_file_header(ext, state)}\n")
                                 log.info(f"creating output file {filename}")
 
                             # save this epoch data

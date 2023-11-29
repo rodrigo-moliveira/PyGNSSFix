@@ -109,7 +109,8 @@ class LSQ_Engine:
                         1 / (reconstructor.get_obs_std(sat, datatype)**2)
 
                 obs_offset += n_sats
-            iono_offset += n_sats
+            if self._metadata["MODEL"][const] == EnumModel.DUAL_FREQ:
+                iono_offset += n_sats
 
     def solve_ls(self, state):
         """solves the LS problem for this iteration"""
@@ -122,8 +123,7 @@ class LSQ_Engine:
 
             # possible error in the numpy.linalg.inv() function -> solution not possible
             raise PVTComputationFail(e)
-        print("solved with success")
-        exit()
+
         # update state vector with incremental dX
         dX = solver.get_solution()
         cov = solver.get_cov()
@@ -143,27 +143,26 @@ class LSQ_Engine:
 
     def apply_corrections(self, state, dX, cov):
         """applies corrections to the state vector"""
-        const = self.constellations[0]
 
         state.position += dX[0:3]
         state.clock_bias += dX[3] / constants.SPEED_OF_LIGHT  # receiver clock in seconds
 
         # if iono is estimated
-        if self._metadata["MODEL"][const] == EnumModel.DUAL_FREQ:
-            for iSat, sat in enumerate(self.sat_list[const]):
-                state.iono[sat] += float(dX[iSat + 4])
+        iono_offset = 0
+        for const in self.constellations:
+            if self._metadata["MODEL"][const] == EnumModel.DUAL_FREQ:
+                for iSat, sat in enumerate(self.sat_list[const]):
+                    state.iono[sat] += float(dX[iono_offset + iSat + 4])
+                    state.cov_iono[sat] = cov[iono_offset + iSat + 4, iono_offset + iSat + 4]
+                iono_offset += len(self.sat_list[const])
 
-        # if isb is estimated
-        # ...
+        if len(self.constellations) > 1:
+            state.isb += dX[-1] / constants.SPEED_OF_LIGHT  # ISB between master and slave constellations
+            state.cov_isb = float(cov[-1, -1]) / (constants.SPEED_OF_LIGHT ** 2)  # in seconds^2
 
         # unpack covariance matrices
         state.cov_position = np.array(cov[0:3, 0:3])
         state.cov_clock_bias = float(cov[3, 3]) / (constants.SPEED_OF_LIGHT ** 2)  # in seconds^2
-
-        # if iono is estimated
-        if self._metadata["MODEL"][const] == EnumModel.DUAL_FREQ:
-            for iSat, sat in enumerate(self.sat_list[const]):
-                state.cov_iono[sat] = cov[iSat + 4, iSat + 4]
 
     def get_residuals(self, residual_vec):
 
@@ -178,26 +177,3 @@ class LSQ_Engine:
                 for iFreq, datatype in enumerate(self._metadata["CODES"][const]):
                     res_dict[const][sat][datatype] = residual_vec[iFreq * n_sats + iSat]
         return res_dict
-
-
-"""if self.n_consts == 1:
-const = self._metadata["CONSTELLATIONS"][0]
-
-if self._metadata["MODEL"][const] == EnumModel.SINGLE_FREQ:
-    self.y_vec = np.zeros(self.n_sats)  # gnss_obs vector <=> prefit residuals
-    self.design_mat = np.ones((self.n_sats, 4))  # geometry matrix
-    self.weight_mat = np.eye(self.n_sats)  # diagonal weight matrix
-else:
-    self.y_vec = np.zeros(self.n_sats * 2)  # gnss_obs vector <=> prefit residuals
-    self.weight_mat = np.eye(self.n_sats * 2)  # diagonal weight matrix
-    geometry = np.ones((self.n_sats, 4))  # geometry matrix (state + clock)
-    ionoMatrix1 = np.eye(self.n_sats)  # iono matrices for freq 1 and freq 2
-    factor = (self._metadata["CODES"][const][0].freq.freq_value /
-              self._metadata["CODES"][const][1].freq.freq_value) ** 2
-    ionoMatrix2 = np.eye(self.n_sats) * factor
-
-    self.design_mat = np.block([
-        [geometry, ionoMatrix1],
-        [geometry, ionoMatrix2]]
-    )
-"""
