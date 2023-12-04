@@ -11,6 +11,7 @@ from src import constants
 
 # utility functions related to navigation clocks
 
+_ggto_cache = {}
 
 def compute_tx_time(model=None, **kwargs):
     if model == EnumTransmissionTime.GEOMETRIC:
@@ -196,6 +197,17 @@ def get_bgd_correction(datatype, nav_message):
     return 0.0
 
 
-def compute_ggto(nav_header, epoch):
-    # apply this eq. GGTO(t_sow) = a0 + a1 * (t_sow - T + 604800 * (week - Week_ref) )
-    return 0
+def compute_ggto(time_correction, epoch):
+    if epoch not in _ggto_cache:
+        week, sow = epoch.gnss_time
+        # fetch data
+        a0 = time_correction["GGTO"][0]
+        a1 = time_correction["GGTO"][1]
+        sow_ref = time_correction["GGTO"][2]
+        week_ref = time_correction["GGTO"][3]
+
+        # apply this eq. GGTO(t_sow) = a0 + a1 * (t_sow - T + 604800 * (week - Week_ref) )
+        _ggto_cache[epoch] = a0 + a1 * (sow - sow_ref + constants.SECONDS_IN_GNSS_WEEK * (week - week_ref))
+    return _ggto_cache[epoch]
+
+

@@ -81,14 +81,13 @@ class ObservationReconstruction:
 
     def get_obs_std(self, sat, datatype):
         elevation_mask = config_dict.get("model", sat.sat_system, "elevation_mask")
-        std = 1.0
+        el_std = 1.0
         if elevation_mask:
             elevation = self._system_geometry.get("el", sat)
-            sigma_elevation = np.e ** (-elevation)
-            std = sigma_elevation
+            el_std = np.e ** (-elevation)
         try:
             obs_std = config_dict.get_obs_std()[sat.sat_system][datatype]
         except KeyError:
             # TODO add logger message
             obs_std = 1
-        return std * obs_std
+        return el_std * obs_std

@@ -3,6 +3,7 @@ import numpy as np
 from src.data_mng.container import Container
 from src.io.config.enums import EnumModel
 from src.models.gnss_obs.clock_obs import compute_ggto
+from src.io.config.config import config_dict
 
 
 class GnssStateSpace(Container):
@@ -106,14 +107,19 @@ class GnssStateSpace(Container):
         return clock
 
     def get_isb(self, constellation, time_correction):
-        ggto = compute_ggto(time_correction, self.epoch)
-        # if estimate_ggto is false
-        #       if constellation is slave
-        #           if constellation is GPS
-        #               ggto = -ggt0
-        #       return self.isb - ggto
-        # else
-        return self.isb
+        estimate_ggto = config_dict.get("model", "estimate_ggto")
+
+        if estimate_ggto is False:
+            ggto = compute_ggto(time_correction, self.epoch)  # compute GGTO from broadcast message
+            # TODO: add GGTO to trace file
+            if constellation == self.get_additional_info("clock_slave"):
+                if constellation == "GPS":
+                    # in case the slave constellation is GPS, we need to fix the GGTO
+                    ggto = -ggto
+        else:
+            ggto = 0.0
+
+        return self.isb - ggto
 
     def add_additional_info(self, arg, val):
         self._info[arg] = val

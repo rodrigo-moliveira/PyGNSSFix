@@ -33,15 +33,15 @@
    },
 
    "model": {
-      "constellations": ["GPS","GAL"],
+      "constellations": ["GAL","GPS"],
       "mode": "SPS",
       "_comment": "available modes are SPS, SPS_IF",
 
-      "estimate_ggto": true,
+      "estimate_ggto": false,
       "_comment2": "Select `true` to estimate GGTO or `false` to use the broadcast GGTO",
 
       "GPS": {
-         "observations": ["1C", "2W"],
+         "observations": ["1C"],
          "pr_obs_std": [1.1, 0.8],
          "elevation_mask": true,
 
@@ -53,7 +53,7 @@
       },
 
       "GAL": {
-         "observations": ["1C", "5Q"],
+         "observations": ["1C"],
          "pr_obs_std": [1, 1],
 
          "_comment0": "select between INAV or FNAV navigation message",

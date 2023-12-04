@@ -3,11 +3,11 @@ tasks for preliminary version:
     [X] adicionar o dual constellation SPS (com ISB est.)
         [X] adicionar o ISB ao LSQEngine e ao ObservationReconstructor e GNSSState
         [X] usar o ISB para re-calcular o dt_sat nas computações do SystemGeometry
-    [ ] adicionar um ISB manager que leia um ISB
+    [X] adicionar um ISB manager que leia um ISB
         [X] o ISB só vem da mensagem de navegação (RINEX NAV)
         [X] ler o GGTO para a classe com os dados navegação
         [X] adicionar um campo na configuraçao que permite usar o GGTO lido
-        [ ] subtrair este GGTO na reconstrução do observável (aquando da aplicação do ISB)
+        [X] subtrair este GGTO na reconstrução do observável (aquando da aplicação do ISB)
     [ ] adicionar o GPT2 model
     [ ] estimar a troposfera -> considera-se T = m_d * T_D + m_w * T_w em que T_D (dry) vem do modelo a-priori e T_w
             é colocado no vetor de estados. m_w é o mapa, que é colocado na matriz da geometria. Ver Eq. (21.71) e (21.72)
