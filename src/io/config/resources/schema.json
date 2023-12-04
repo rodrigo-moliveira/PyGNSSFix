@@ -37,6 +37,7 @@
       "properties": {
         "constellations": {"type": "array", "items": {"type": "string", "enum": ["GPS", "GAL"]}},
         "mode": {"type": "string", "enum": ["SPS", "SPS_IF"]},
+        "estimate_ggto": {"type": "boolean"},
         "GPS": {
           "type": "object",
           "properties": {
@@ -61,7 +62,7 @@
           "required": ["observations", "pr_obs_std", "elevation_mask", "troposphere", "ionosphere", "nav_type"]
         }
       },
-      "required": ["constellations", "mode", "GPS", "GAL"]
+      "required": ["constellations", "mode", "estimate_ggto","GPS", "GAL"]
     },
     "preprocessor": {
       "type": "object",

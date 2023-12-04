@@ -194,3 +194,8 @@ def get_bgd_correction(datatype, nav_message):
     else:
         raise AttributeError(f"Unknown constellation {nav_message.constellation}")
     return 0.0
+
+
+def compute_ggto(nav_header, epoch):
+    # apply this eq. GGTO(t_sow) = a0 + a1 * (t_sow - T + 604800 * (week - Week_ref) )
+    return 0

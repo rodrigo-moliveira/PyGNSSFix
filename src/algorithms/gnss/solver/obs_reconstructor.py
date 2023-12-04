@@ -31,7 +31,8 @@ class ObservationReconstruction:
         true_range = self._system_geometry.get("true_range", sat)
 
         # user clock in meters (with proper ISB applied, if necessary)
-        dt_rec = self._state.get_clock_bias(sat.sat_system) * constants.SPEED_OF_LIGHT
+        dt_rec = self._state.get_clock_bias(sat.sat_system, self._nav_header.time_correction) * constants.\
+            SPEED_OF_LIGHT
 
         # satellite clock
         dt_sat, _ = broadcast_clock(nav_message.af0,

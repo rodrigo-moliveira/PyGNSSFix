@@ -12,13 +12,14 @@ class NavigationHeader(Container):
     stores relevant data from the header section of a navigation file
     """
     __slots__ = ["rinex_version", "satellite_system",
-                 "iono_corrections", "leap_seconds"]
+                 "iono_corrections", "leap_seconds", "time_correction"]
 
     def __init__(self):
         super().__init__()
         for attr in self.__slots__:
             setattr(self, attr, None)
         self.iono_corrections = {}
+        self.time_correction = {}
 
 
 class NavigationPoint(Container):

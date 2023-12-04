@@ -1,10 +1,13 @@
 tasks for preliminary version:
     [X] initializar o GNSSState a partir de um gnss state
-    [ ] adicionar o dual constellation SPS (com ISB est.)
+    [X] adicionar o dual constellation SPS (com ISB est.)
         [X] adicionar o ISB ao LSQEngine e ao ObservationReconstructor e GNSSState
-        [ ] usar o ISB para re-calcular o dt_sat nas computações do SystemGeometry
+        [X] usar o ISB para re-calcular o dt_sat nas computações do SystemGeometry
     [ ] adicionar um ISB manager que leia um ISB
-        [ ] ler o ISB da mensagem de nav. ou do ficheiro SINEX ISB
+        [X] o ISB só vem da mensagem de navegação (RINEX NAV)
+        [X] ler o GGTO para a classe com os dados navegação
+        [X] adicionar um campo na configuraçao que permite usar o GGTO lido
+        [ ] subtrair este GGTO na reconstrução do observável (aquando da aplicação do ISB)
     [ ] adicionar o GPT2 model
     [ ] estimar a troposfera -> considera-se T = m_d * T_D + m_w * T_w em que T_D (dry) vem do modelo a-priori e T_w
             é colocado no vetor de estados. m_w é o mapa, que é colocado na matriz da geometria. Ver Eq. (21.71) e (21.72)
@@ -26,6 +29,7 @@ plot updates:
     [ ] compute mean and std of pre/postfit residuals -> mean should be zero. STD should be sigma_URE (user range error). This should be computed for each satellite
     [ ] plot residuals
     [ ] plot position covariance (3D plot, 2D surfaces, etc...)
+    [ ] consistency of residuals. Residuals divided by covariance matrix? See Tapler book and maybe my thesis, if I remember well
     [ ] plot 3d sigma of estimation error
     [ ] compute allan variance of clock bias and plot it
 

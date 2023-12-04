@@ -46,6 +46,7 @@ class RinexNavReader:
             * RINEX VERSION / TYPE  -> rinex_version and satellite_system
             * IONOSPHERIC CORR      -> iono_corrections
             * LEAP SECONDS          -> leap_seconds
+            * TIME SYSTEM CORR      -> read GPGA field (GPS-to-Galileo time offset)
             * END OF HEADER         -> end of header section
         """
         line = " "
@@ -76,6 +77,15 @@ class RinexNavReader:
                 data = line[:utils.RINEX_OBS_END_OF_DATA_HEADER].split()
                 if data[0] in {"GAL", "GPSA", "GPSB"}:
                     self.nav.header.iono_corrections[data[0]] = [utils.to_float(i) for i in data[1:]]
+
+            elif "TIME SYSTEM CORR" in line:
+                # only save GPGA (or GGTO)
+                if "GPGA" in line:
+                    a0 = utils.to_float(line[5:22])
+                    a1 = utils.to_float(line[22:40])
+                    T_ref = int(line[39:46])
+                    week_ref = int(line[46:53])
+                    self.nav.header.time_correction["GGTO"] = [a0, a1, T_ref, week_ref]
 
             elif "END OF HEADER" in line:
                 break

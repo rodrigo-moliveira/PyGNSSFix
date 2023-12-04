@@ -2,6 +2,7 @@ import numpy as np
 
 from src.data_mng.container import Container
 from src.io.config.enums import EnumModel
+from src.models.gnss_obs.clock_obs import compute_ggto
 
 
 class GnssStateSpace(Container):
@@ -93,15 +94,26 @@ class GnssStateSpace(Container):
     def __repr__(self):
         return str(self)
 
-    def get_clock_bias(self, constellation):
+    def get_clock_bias(self, constellation, time_correction):
         if "isb" in self.get_additional_info("states"):
             if constellation == self.get_additional_info("clock_master"):
                 clock = self.clock_bias
             else:
-                clock = self.clock_bias + self.isb
+                isb = self.get_isb(constellation, time_correction)
+                clock = self.clock_bias + isb
         else:
             clock = self.clock_bias
         return clock
+
+    def get_isb(self, constellation, time_correction):
+        ggto = compute_ggto(time_correction, self.epoch)
+        # if estimate_ggto is false
+        #       if constellation is slave
+        #           if constellation is GPS
+        #               ggto = -ggt0
+        #       return self.isb - ggto
+        # else
+        return self.isb
 
     def add_additional_info(self, arg, val):
         self._info[arg] = val

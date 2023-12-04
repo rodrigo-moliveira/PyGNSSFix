@@ -36,7 +36,7 @@ class SatelliteGeometry(Container):
     def __repr__(self):
         return str(self)
 
-    def compute(self, epoch, state, constellation, nav_message, compute_tx, PR_obs):
+    def compute(self, epoch, state, constellation, nav_message, compute_tx, PR_obs, nav_header):
         """
         compute satellite-related quantities (tropo, iono, transmission time, etc.) to be used in the PVT gnss_obs
         reconstruction equation, for a given satellite.
@@ -49,9 +49,10 @@ class SatelliteGeometry(Container):
                                                                                         satellite under evaluation
             compute_tx (function) : function to compute the transmission time
             PR_obs (src.data_types.data_types.Observation.Observation) : Code gnss_obs to use in some computations
+            nav_header () : navigation header
         """
         rec_pos = state.position
-        rec_bias = state.get_clock_bias(constellation)
+        rec_bias = state.get_clock_bias(constellation, nav_header.time_correction)
 
         # get reception time in GNSS time system ( T_GNSS = T_receiver - t_(receiver_bias) )
         time_reception = epoch + timedelta(seconds=-rec_bias)
@@ -155,7 +156,7 @@ class SystemGeometry:
 
             # compute geometry for this satellite
             geometry.compute(epoch, state, sat.sat_system, nav_message,
-                             metadata["TX_TIME_ALG"], observable_lst[0])
+                             metadata["TX_TIME_ALG"], observable_lst[0], self.nav_data._header)
 
             self._data[sat] = geometry
 

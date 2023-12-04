@@ -37,6 +37,9 @@
       "mode": "SPS",
       "_comment": "available modes are SPS, SPS_IF",
 
+      "estimate_ggto": true,
+      "_comment2": "Select `true` to estimate GGTO or `false` to use the broadcast GGTO",
+
       "GPS": {
          "observations": ["1C", "2W"],
          "obs_std": [1, 1],
