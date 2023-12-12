@@ -47,7 +47,7 @@ caminhar para PPPP:
 finalizar o GNSS user positioning com:
     [ ] Adicionar Kalman filter com user dynamics
     [ ] process doppler measurements to estimate velocity
-    [ ] ver código para calcular vetor velocidade a partir da mensagem de navegação
+    [ ] ver código para calcular vetor velocidade a partir da mensagem de navegação (livro da ESA)
 
 Release 1.0
 

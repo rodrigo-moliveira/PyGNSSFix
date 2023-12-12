@@ -40,12 +40,15 @@
       "estimate_ggto": false,
       "_comment2": "Select `true` to estimate GGTO or `false` to use the broadcast GGTO",
 
+      "estimate_tropo_wet": false,
+      "_comment3": "Select `true` to estimate tropospheric wet delay or `false` to disable tropo estimation",
+
       "GPS": {
          "observations": ["1C"],
          "pr_obs_std": [1.1, 0.8],
          "elevation_mask": true,
 
-         "_comment1": "Select Tropospheric model. Available models are 'NONE', 'Saastamoinen'",
+         "_comment1": "Select Tropospheric model. Available models are 'NONE', 'Saastamoinen', 'GPT2'",
          "troposphere": "Saastamoinen",
 
          "_comment2": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G' ",
@@ -61,7 +64,7 @@
 
          "elevation_mask": true,
 
-         "_comment1": "Select Tropospheric model. Available models are 'NONE', 'Saastamoinen'",
+         "_comment1": "Select Tropospheric model. Available models are 'NONE', 'Saastamoinen', 'GPT2'",
          "troposphere": "Saastamoinen",
 
          "_comment2": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G' ",

@@ -9,7 +9,7 @@ from src.models.gnss_obs.iono_ntcmg import NTCMG
 from src.models.gnss_obs.clock_obs import broadcast_clock, nav_sat_clock_correction
 from src.data_types.gnss.observation import Observation
 from src import constants
-from src.models.gnss_obs.tropo_saastamoinen import tropo_saastamoinen
+from src.models.gnss_obs.troposphere.tropo_saastamoinen import tropo_saastamoinen
 
 
 class ObservationReconstruction:
