@@ -10,3 +10,4 @@ pyparsing==3.0.9
 python-dateutil==2.8.2
 six==1.16.0
 jsonschema~=4.19.2
+pandas~=2.1.3

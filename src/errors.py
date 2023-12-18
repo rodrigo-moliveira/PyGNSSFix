@@ -188,3 +188,12 @@ class EnumError(PyGNSSFixError):
         # Call the base class constructor with the parameters it needs
         message = "Enum Error -> " + message
         super().__init__(message)
+
+
+class UnknownModel(PyGNSSFixError):
+    __module__ = MODULE
+
+    def __init__(self, message):
+        # Call the base class constructor with the parameters it needs
+        message = "Unknown Model Error -> " + message
+        super().__init__(message)
