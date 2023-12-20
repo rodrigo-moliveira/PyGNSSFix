@@ -6,10 +6,10 @@
 #              Vienna University of Technology. This code has been adapted for use in this project
 import numpy as np
 import pandas as pd
-from math import cos
+from math import cos, floor
 
 from src.errors import UnknownModel
-from src.models.gnss_obs.troposphere.mapping_function import VMF1
+from src.models.gnss_obs.troposphere.mapping_function import VMF1, VMF3
 
 
 class GPTModel:
@@ -23,12 +23,17 @@ class GPTModel:
     R = 8.3143  # universal gas constant in J/K/mol
     Rd = R / dMtr  # specific gas constant for dry constituents
 
-    def __init__(self, map_fct='VMF1', grid_file='gpt3_5.grd'):
+    def __init__(self, map_fct='VMF3', grid_file='gpt3_5.grd'):
         self.gpt3_grid = {}
         self.gpt3_5_fast_readGrid(grid_file)
         self.map = None
+        self.map_fct = None
         if map_fct == "VMF1":
+            self.map_fct = map_fct
             self.map = VMF1()
+        elif map_fct == "VMF3":
+            self.map = VMF3()
+            self.map_fct = map_fct
         else:
             raise UnknownModel(f"Unknown Tropo Mapping Function {map_fct}. Available options are: 'VMF1'")
 
@@ -98,7 +103,7 @@ class GPTModel:
 
     def compute(self, mjd, lat, lon, h_ell, zd, it=0):
         p, T, dT, Tm, e, ah, aw, la, undu, Gn_h, Ge_h, Gn_w, Ge_w = self.gpt3_5_fast(
-            mjd=mjd, lat=[lat], lon=[lon], h_ell=[h_ell], it=it)
+            mjd=mjd, lat=[lat], lon=[lon], h_ell=[h_ell], it=1)
 
         # compute ZHD
         zhd = self.saasthyd(p[0][0], lat, h_ell)
@@ -107,7 +112,7 @@ class GPTModel:
         zwd = self.asknewet(e[0][0], Tm[0][0], la[0][0])
 
         # compute mapping coefficients
-        vmf1h, vmf1w = self.map.compute(ah=ah, aw=aw, dmjd=mjd, dlat=lat, ht=h_ell, zd=zd)
+        vmf1h, vmf1w = self.map.compute(ah, aw, mjd, lat, lon, h_ell, zd)
 
         # compute ZTD
         return zhd * vmf1h[0][0] + zwd * vmf1w[0][0]
@@ -166,14 +171,12 @@ class GPTModel:
 
         # convert mjd to doy
 
+        # convert mjd to doy
         hour = int(np.floor((mjd - int(np.floor(mjd))) * 24))
-
         minu = int(np.floor((((mjd - int(np.floor(mjd))) * 24) - hour) * 60))
-
         sec = (((((mjd - int(np.floor(mjd))) * 24) - hour) * 60) - minu) * 60
 
         # change secs, min hour whose sec==60
-
         if sec == 60:
             minu = minu + 1
             sec = 0
@@ -189,28 +192,31 @@ class GPTModel:
             hour = 0
 
         # integer julian date
-        jd_int = int(np.floor(jd + 0.5))
+        jd_int = floor(jd + 0.5)
+
         aa = jd_int + 32044
-        bb = int(np.floor((4 * aa + 3) / 146097))
-        cc = aa - int(np.floor((bb * 146097) / 4))
-        dd = int(np.floor((4 * cc + 3) / 1461))
-        ee = cc - int(np.floor((1461 * dd) / 4))
-        mm = int(np.floor((5 * ee + 2) / 153))
-        day = ee - int(np.floor((153 * mm + 2) / 5)) + 1
-        month = mm + 3 - 12 * int(np.floor(mm / 10))
-        year = bb * 100 + dd - 4800 + int(np.floor(mm / 10))
-        # first check if the specified year is leap year or not (logical output)
-        leapYear = (np.logical_or((np.mod(year, 4) == np.logical_and(0, np.mod(year, 100)) != 0),
-                                  np.mod(year, 400)) == 0)
-        days = np.array([31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31])
-        doy = sum(days[range(0, month - 1)]) + day
-        if leapYear == 1 and month > 2:
+        bb = floor((4 * aa + 3) / 146097)
+        cc = aa - floor((bb * 146097) / 4)
+        dd = floor((4 * cc + 3) / 1461)
+        ee = cc - floor((1461 * dd) / 4)
+        mm = floor((5 * ee + 2) / 153)
+
+        day = ee - floor((153 * mm + 2) / 5) + 1
+        month = mm + 3 - 12 * floor(mm / 10)
+        year = bb * 100 + dd - 4800 + floor(mm / 10)
+
+        # First, check if the specified year is a leap year or not (logical output)
+        leap_year = ((year % 4 == 0 and year % 100 != 0) or year % 400 == 0)
+
+        days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        doy = sum(days[0:month - 1]) + day
+
+        if leap_year == 1 and month > 2:
             doy = doy + 1
 
-        doy = doy + mjd - int(np.floor(mjd))
+        doy = doy + mjd - floor(mjd)  # add decimal places
 
         # determine the troposphere coefficients
-
         # mean gravity in m/s**2
         gm = 9.80665
         # molar mass of dry air in kg/mol
