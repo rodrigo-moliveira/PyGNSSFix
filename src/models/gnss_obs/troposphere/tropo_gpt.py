@@ -1,19 +1,23 @@
-# troposphere-5 Tropospheric Model
+# Tropospheric Model GPT3 5x5 grid
 # (c) Department of Geodesy and Geoinformation, Vienna University of Technology, 2017
 # Source: https://vmf.geo.tuwien.ac.at/codes/Python_Tools_Adavi/
 # This troposphere model has been adapted from the reference above
 # Disclaimer: All credits for the original code go to the Department of Geodesy and Geoinformation,
 #              Vienna University of Technology. This code has been adapted for use in this project
+#
+# I made the decision of keeping the code as is, minimizing the amount of fixes and code cleanup
+# As a consequence, this class does not follow the "architecture" of the rest of the project
+
 import numpy as np
 import pandas as pd
 from math import cos, floor
 
 from src.errors import UnknownModel
-from src.models.gnss_obs.troposphere.mapping_function import VMF1, VMF3
+from src.models.gnss_obs.troposphere.mapping_function import VMF1, VMF3, GMF
 
 
-class GPTModel:
-    # coefficients
+class GPT3:
+    # static constants for GPT3
     k1 = 77.604  # K/hPa
     k2 = 64.79  # K/hPa
     k2p = k2 - k1 * 18.0152E0 / 28.9644e0  # K/hPa
@@ -27,15 +31,15 @@ class GPTModel:
         self.gpt3_grid = {}
         self.gpt3_5_fast_readGrid(grid_file)
         self.map = None
-        self.map_fct = None
+        self.map_fct = map_fct
         if map_fct == "VMF1":
-            self.map_fct = map_fct
             self.map = VMF1()
         elif map_fct == "VMF3":
             self.map = VMF3()
-            self.map_fct = map_fct
+        elif map_fct == "GMF":
+            self.map = GMF()
         else:
-            raise UnknownModel(f"Unknown Tropo Mapping Function {map_fct}. Available options are: 'VMF1'")
+            raise UnknownModel(f"Unknown Tropo Mapping Function {map_fct}. Available options are: 'VMF1', 'VMF3', 'GMF'")
 
     def gpt3_5_fast_readGrid(self, filename):
         # =============================================================================
@@ -103,7 +107,7 @@ class GPTModel:
 
     def compute(self, mjd, lat, lon, h_ell, zd, it=0):
         p, T, dT, Tm, e, ah, aw, la, undu, Gn_h, Ge_h, Gn_w, Ge_w = self.gpt3_5_fast(
-            mjd=mjd, lat=[lat], lon=[lon], h_ell=[h_ell], it=1)
+            mjd=mjd, lat=[lat], lon=[lon], h_ell=[h_ell], it=it)
 
         # compute ZHD
         zhd = self.saasthyd(p[0][0], lat, h_ell)
@@ -112,7 +116,7 @@ class GPTModel:
         zwd = self.asknewet(e[0][0], Tm[0][0], la[0][0])
 
         # compute mapping coefficients
-        vmf1h, vmf1w = self.map.compute(ah, aw, mjd, lat, lon, h_ell, zd)
+        vmf1h, vmf1w = self.compute_map(ah, aw, mjd, lat, lon, h_ell, zd)
 
         # compute ZTD
         return zhd * vmf1h[0][0] + zwd * vmf1w[0][0]
@@ -495,7 +499,7 @@ class GPTModel:
         zwd:  zenith wet delay in meter
         """
 
-        return 1.0e-6 * (GPTModel.k2p + GPTModel.k3 / Tm) * GPTModel.Rd / (lamb + 1.0) / GPTModel.gm * e
+        return 1.0e-6 * (GPT3.k2p + GPT3.k3 / Tm) * GPT3.Rd / (lamb + 1.0) / GPT3.gm * e
 
     def saasthyd(self, p, lat, hell):
         """
@@ -525,3 +529,13 @@ class GPTModel:
 
         # calculate the zenith hydrostatic delay
         return 0.0022768*p/f
+
+    def compute_map(self, ah, aw, mjd, lat, lon, h_ell, zd):
+        if isinstance(self.map, VMF1):
+            return self.map.compute(ah, aw, mjd, lat, h_ell, zd)
+        elif isinstance(self.map, VMF3):
+            return self.map.compute(ah, aw, mjd, lat, lon, h_ell, zd)
+        elif isinstance(self.map, GMF):
+            return self.map.compute(mjd, lat, lon, h_ell, zd)
+        else:
+            return 0.0, 0.0

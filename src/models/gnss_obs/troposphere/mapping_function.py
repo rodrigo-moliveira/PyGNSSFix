@@ -5,7 +5,7 @@ import pandas as pd
 
 class VMF1:
     @staticmethod
-    def compute(ah, aw, dmjd, dlat, dlon, ht, zd):
+    def compute(ah, aw, dmjd, dlat, ht, zd):
         # =============================================================================
         #     !!! This is the version with height correction !!!
         #     !!! It has to be used with the grid !!!
@@ -349,7 +349,7 @@ class GMF:
          - 3.861e-05, - 2.268e-05, + 1.454e-06, + 3.86e-07, - 1.068e-07, + 0.0, - 0.02658, - 0.001947, + 0.0007131,
          - 3.506e-05, + 1.885e-07, + 5.792e-07, + 3.99e-08, + 2e-08, - 5.7e-09])
     @staticmethod
-    def gmf(dmjd=None, dlat=None, dlon=None, dhgt=None, zd=None):
+    def compute(dmjd, dlat, dlon, dhgt, zd):
         # =============================================================================
         #     This subroutine determines the Global Mapping Functions GMF
         #     Reference: Boehm, J., A.E. Niell, P. Tregoning, H. Schuh (2006),
@@ -383,7 +383,7 @@ class GMF:
 
         # degree n and order m
         nmax = 9
-        mmax = 9
+
         # unit vector
         x = np.cos(dlat) * np.cos(dlon)
         y = np.cos(dlat) * np.sin(dlon)
@@ -411,7 +411,6 @@ class GMF:
                 W.loc[n, m] = ((2 * n - 1) * z * W.loc[n - 1, m] - (n + m - 1) * W.loc[n - 2, m]) / (n - m)
 
         # (1) hydrostatic mf
-
         bh = 0.0029
         c0h = 0.062
         if (dlat < 0):

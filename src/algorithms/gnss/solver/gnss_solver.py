@@ -9,6 +9,7 @@ from src.io.config import config_dict
 from src.io.config.enums import *
 from src.models.gnss_obs.geometry import SystemGeometry
 from src import constants
+from src.models.gnss_obs.troposphere.tropo_manager import TropoManager
 
 np.set_printoptions(linewidth=np.inf)
 
@@ -111,15 +112,14 @@ class GnssSolver:
         INITIAL_POS = config.get("solver", "initial_pos_std")
         INITIAL_CLOCK_BIAS = config.get("solver", "initial_clock_std")
         CONSTELLATIONS = config.get("model", "constellations")
+        TROPO = TropoManager(config)
         _model = config.get_model()
 
-        TROPO = {}
         IONO = {}
         MODEL = {}
         CODES = {}
 
         for const in CONSTELLATIONS:
-            TROPO[const] = EnumTropo.init_model(config.get("model", const, "troposphere"))
             IONO[const] = EnumIono.init_model(config.get("model", const, "ionosphere"))
 
             # check if the model is single frequency or dual frequency

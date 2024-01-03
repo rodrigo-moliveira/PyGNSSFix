@@ -2,14 +2,13 @@ import numpy as np
 
 from src.data_types.gnss.data_type import DataType
 from src.io.config import config_dict
-from src.io.config.enums import EnumOnOff, EnumIono, EnumTropo, EnumModel
+from src.io.config.enums import EnumOnOff, EnumIono, EnumModel
 from src.models.frames import cartesian2geodetic
-from src.models.gnss_obs.iono_klobuchar import iono_klobuchar
-from src.models.gnss_obs.iono_ntcmg import NTCMG
+from src.models.gnss_obs.ionosphere.iono_klobuchar import iono_klobuchar
+from src.models.gnss_obs.ionosphere.iono_ntcmg import NTCMG
 from src.models.gnss_obs.clock_obs import broadcast_clock, nav_sat_clock_correction
 from src.data_types.gnss.observation import Observation
 from src import constants
-from src.models.gnss_obs.troposphere.tropo_saastamoinen import tropo_saastamoinen
 
 
 class ObservationReconstruction:
@@ -21,7 +20,6 @@ class ObservationReconstruction:
 
     def compute(self, nav_message, sat, epoch, datatype):
         iono = 0.0
-        tropo = 0.0
 
         az = self._system_geometry.get("az", sat)  # satellite azimuth from receiver
         el = self._system_geometry.get("el", sat)  # satellite elevation from receiver
@@ -69,8 +67,8 @@ class ObservationReconstruction:
                 pass
 
         # troposphere
-        if self._metadata["TROPO"][sat.sat_system] == EnumTropo.SAASTAMOINEM:
-            tropo = tropo_saastamoinen(height, lat, epoch.doy, el)
+        tropo = self._metadata["TROPO"].compute_tropo_delay()
+        # tropo = tropo_saastamoinen(height, lat, epoch.doy, el)
 
         # finally, construct obs
         obs = true_range + dt_rec - dt_sat * constants.SPEED_OF_LIGHT + iono + tropo + dI

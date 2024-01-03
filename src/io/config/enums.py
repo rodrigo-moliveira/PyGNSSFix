@@ -78,22 +78,50 @@ class EnumIono(Enum):
             raise EnumError(f"Unsupported Ionospheric Model {model_str}. Available options are {cls.show_options()}")
 
 
-class EnumTropo(Enum):
+class EnumTropoModel(Enum):
     DISABLED = 0
     SAASTAMOINEM = 1
+    GPT3 = 2
 
     @classmethod
     def init_model(cls, model_str: str):
         if model_str.lower() == "none":
-            return EnumTropo.DISABLED
+            return EnumTropoModel.DISABLED
         elif model_str.lower() == "saastamoinen":
-            return EnumTropo.SAASTAMOINEM
+            return EnumTropoModel.SAASTAMOINEM
+        elif model_str.lower() == "gpt3":
+            return EnumTropoModel.GPT3
         else:
             raise EnumError(f"Unsupported Tropospheric Model {model_str}. Available options are {cls.show_options()}")
 
     @classmethod
     def show_options(cls):
-        return f"[ NONE, Saastamoinen]"
+        return f"[ NONE, Saastamoinen, GPT3]"
+
+
+class EnumTropoMask(Enum):
+    SAASTAMOINEM = 0
+    GMF = 1
+    VMF1 = 2
+    VMF3 = 3
+
+    @classmethod
+    def init_model(cls, model_str: str):
+        if model_str.lower() == "saastamoinen":
+            return EnumTropoMask.SAASTAMOINEM
+        elif model_str.lower() == "gmf":
+            return EnumTropoMask.GMF
+        elif model_str.lower() == "vmf1":
+            return EnumTropoMask.VMF1
+        elif model_str.lower() == "vmf3":
+            return EnumTropoMask.VMF3
+        else:
+            raise EnumError(f"Unsupported Tropospheric Mask Function {model_str}. "
+                            f"Available options are {cls.show_options()}")
+
+    @classmethod
+    def show_options(cls):
+        return f"[ Saastamoinen, GMF, VMF1, VMF3]"
 
 
 class EnumTransmissionTime(Enum):

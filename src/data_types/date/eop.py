@@ -15,14 +15,18 @@ class TaiUtc:
     This file could be retrieved `here <http://maia.usno.navy.mil/ser7/tai-utc.dat>`
     """
 
-    def __init__(self, path, encoding="ascii"):
+    def __init__(self, path):
 
         self.path = Path(path)
         self.data = []
 
-        with self.path.open(encoding=encoding) as fhandler:
-            lines = fhandler.read().splitlines()
+        try:
+            f_handler = open(self.path, 'r')
+        except OSError:
+            raise FileNotFoundError(f"Could not open/read file: {self.path}", )
 
+        with f_handler:
+            lines = f_handler.read().splitlines()
         for line in lines:
             if not line:
                 continue
@@ -54,6 +58,10 @@ class TaiUtc:
             future = (mjd, value)
 
         return past, future
+
+    def set_leap_seconds_rinex(self):
+        pass
+        # TODO: add this
 
 
 class GGTO:
@@ -97,13 +105,18 @@ class Finals2000A:
 
     deltas = ("dx", "dy")
 
-    def __init__(self, path, encoding="ascii"):
+    def __init__(self, path):
 
         self.path = Path(path)
         d1, d2 = self.deltas
 
-        with self.path.open(encoding=encoding) as fp:
-            lines = fp.read().splitlines()
+        try:
+            f_handler = open(self.path, 'r')
+        except OSError:
+            raise FileNotFoundError(f"Could not open/read file: {self.path}", )
+
+        with f_handler:
+            lines = f_handler.read().splitlines()
 
         self.data = {}
         for line in lines:
@@ -231,7 +244,7 @@ class EopDb:
                 cls._dbs[dbname] = e
 
         if isinstance(cls._dbs[dbname], Exception):
-            raise EopError("Problem at database instantiation") from cls._dbs[dbname]
+            raise EopError(f"Problem at database instantiation: {cls._dbs[dbname]}")
 
         return cls._dbs[dbname]
 
@@ -248,16 +261,12 @@ class EopDb:
         """
         try:
             value = cls.db(dbname)[mjd]
-        except (EopError, KeyError) as e:
-            if isinstance(e, KeyError):
-                msg = f"Missing EOP data for mjd = '{e}'"
-            else:
-                msg = str(e)
+        except KeyError as e:
+            msg = f"Missing EOP data for mjd = '{e}'"
             if cls.policy() == cls.WARN:
-                pass
-                # TODO log.warning(msg)
+                print(msg)  # TODO print warning log.warning(msg)
             elif cls.policy() == cls.ERROR:
-                raise
+                raise e
 
             value = Eop(
                 x=0, y=0, dx=0, dy=0, deps=0, dpsi=0, lod=0, ut1_utc=0, tai_utc=0, ggto=0
@@ -282,8 +291,7 @@ class EopDb:
         """
         if name in cls._dbs:
             msg = f"'{name}' is already registered for an Eop database. Skipping"
-            print(msg)
-            # TODO: raise warning
+            print(msg)  # TODO: raise warning
         else:
             cls._dbs[name] = klass
 

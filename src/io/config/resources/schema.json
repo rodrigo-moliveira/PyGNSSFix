@@ -38,17 +38,26 @@
         "constellations": {"type": "array", "items": {"type": "string", "enum": ["GPS", "GAL"]}},
         "mode": {"type": "string", "enum": ["SPS", "SPS_IF"]},
         "estimate_ggto": {"type": "boolean"},
-        "estimate_tropo_wet": {"type": "boolean"},
+
+        "troposphere": {
+          "type": "object",
+          "properties": {
+            "model": {"type": "string", "enum": ["NONE", "Saastamoinen", "GPT3"]},
+            "mask": {"type": "string", "enum": ["Saastamoinen", "GMF", "VMF1", "VMF3"]},
+            "estimate_tropo_wet": {"type": "boolean"}
+          },
+          "required": ["model", "mask", "estimate_tropo_wet"]
+        },
+
         "GPS": {
           "type": "object",
           "properties": {
             "observations": {"type": "array", "items": {"type": "string"}},
             "pr_obs_std": {"type": "array", "items": {"type": "number"}},
             "elevation_mask": {"type": "boolean"},
-            "troposphere": {"type": "string", "enum": ["NONE", "Saastamoinen", "GPT2"]},
             "ionosphere": {"type": "string", "enum": ["NONE", "Klobuchar", "NTCM-G"]}
           },
-          "required": ["observations", "pr_obs_std", "elevation_mask", "troposphere", "ionosphere"]
+          "required": ["observations", "pr_obs_std", "elevation_mask", "ionosphere"]
         },
         "GAL": {
           "type": "object",
@@ -56,14 +65,13 @@
             "observations": {"type": "array", "items": {"type": "string"}},
             "pr_obs_std": {"type": "array", "items": {"type": "number"}},
             "elevation_mask": {"type": "boolean"},
-            "troposphere": {"type": "string", "enum": ["NONE", "Saastamoinen", "GPT2"]},
             "ionosphere": {"type": "string", "enum": ["NONE", "Klobuchar", "NTCM-G"]},
             "nav_type": {"type": "string", "enum": ["INAV", "FNAV"]}
           },
-          "required": ["observations", "pr_obs_std", "elevation_mask", "troposphere", "ionosphere", "nav_type"]
+          "required": ["observations", "pr_obs_std", "elevation_mask", "ionosphere", "nav_type"]
         }
       },
-      "required": ["constellations", "mode", "estimate_ggto","estimate_tropo_wet","GPS", "GAL"]
+      "required": ["constellations", "mode", "estimate_ggto","GPS", "GAL"]
     },
     "preprocessor": {
       "type": "object",
