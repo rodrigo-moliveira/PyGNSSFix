@@ -469,3 +469,11 @@ class GMF:
         topcon = (1 + aw / (1 + bw / (1 + cw)))
         gmfw = topcon / (sine + gamma)
         return gmfh, gmfw
+
+
+class SaastamoinenMap:
+    @staticmethod
+    def compute(el):
+        saast_map = 1.001 / np.sqrt(0.002001 + (np.sin(el)) ** 2)
+        return saast_map, saast_map
+

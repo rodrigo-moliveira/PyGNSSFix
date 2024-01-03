@@ -10,13 +10,12 @@
 
 import numpy as np
 import pandas as pd
-from math import cos, floor
+from math import floor
 
-from src.errors import UnknownModel
-from src.models.gnss_obs.troposphere.mapping_function import VMF1, VMF3, GMF
+from src.models.gnss_obs.troposphere.tropo_saastamoinen import SaastamoinenTropo
 
 
-class GPT3:
+class GPT3Tropo:
     # static constants for GPT3
     k1 = 77.604  # K/hPa
     k2 = 64.79  # K/hPa
@@ -27,19 +26,9 @@ class GPT3:
     R = 8.3143  # universal gas constant in J/K/mol
     Rd = R / dMtr  # specific gas constant for dry constituents
 
-    def __init__(self, map_fct='VMF3', grid_file='gpt3_5.grd'):
+    def __init__(self, grid_file='gpt3_5.grd'):
         self.gpt3_grid = {}
         self.gpt3_5_fast_readGrid(grid_file)
-        self.map = None
-        self.map_fct = map_fct
-        if map_fct == "VMF1":
-            self.map = VMF1()
-        elif map_fct == "VMF3":
-            self.map = VMF3()
-        elif map_fct == "GMF":
-            self.map = GMF()
-        else:
-            raise UnknownModel(f"Unknown Tropo Mapping Function {map_fct}. Available options are: 'VMF1', 'VMF3', 'GMF'")
 
     def gpt3_5_fast_readGrid(self, filename):
         # =============================================================================
@@ -105,21 +94,20 @@ class GPT3:
         self.gpt3_grid[12] = Gn_w_grid
         self.gpt3_grid[13] = Ge_w_grid
 
-    def compute(self, mjd, lat, lon, h_ell, zd, it=0):
+    def compute(self, mjd, lat, lon, h_ell, it=0):
         p, T, dT, Tm, e, ah, aw, la, undu, Gn_h, Ge_h, Gn_w, Ge_w = self.gpt3_5_fast(
             mjd=mjd, lat=[lat], lon=[lon], h_ell=[h_ell], it=it)
 
         # compute ZHD
-        zhd = self.saasthyd(p[0][0], lat, h_ell)
+        zhd, _ = SaastamoinenTropo.saasthyd(p[0][0], lat, e, T, h_ell)
 
         # compute ZWD
         zwd = self.asknewet(e[0][0], Tm[0][0], la[0][0])
 
         # compute mapping coefficients
-        vmf1h, vmf1w = self.compute_map(ah, aw, mjd, lat, lon, h_ell, zd)
+        # vmf1h, vmf1w = self.compute_map(ah, aw, mjd, lat, lon, h_ell, zd)
 
-        # compute ZTD
-        return zhd * vmf1h[0][0] + zwd * vmf1w[0][0]
+        return zhd, zwd
 
     def gpt3_5_fast(self, mjd=None, lat=None, lon=None, h_ell=None, it=None):
         #    (c) Department of Geodesy and Geoinformation, Vienna University of Technology, 2017
@@ -499,43 +487,4 @@ class GPT3:
         zwd:  zenith wet delay in meter
         """
 
-        return 1.0e-6 * (GPT3.k2p + GPT3.k3 / Tm) * GPT3.Rd / (lamb + 1.0) / GPT3.gm * e
-
-    def saasthyd(self, p, lat, hell):
-        """
-        This subroutine determines the zenith hydrostatic delay based on the
-        equation by Saastamoinen (1972) as refined by Davis et al. (1985)
-
-        Reference:
-        Saastamoinen, J., Atmospheric correction for the troposphere and
-        stratosphere in radio ranging of satellites. The use of artificial
-        satellites for geodesy, Geophys. Monogr. Ser. 15, Amer. Geophys. Union,
-        pp. 274-251, 1972.
-        Davis, J.L, T.A. Herring, I.I. Shapiro, A.E.E. Rogers, and G. Elgered,
-        Geodesy by Radio Interferometry: Effects of Atmospheric Modeling Errors
-        on Estimates of Baseline Length, Radio Science, Vol. 20, No. 6,
-        pp. 1593-1607, 1985.
-
-        input parameters:
-        p:     pressure in hPa
-        lat:  ellipsoidal latitude in radians
-        hell:  ellipsoidal height in m
-
-        output parameters:
-        zhd:  zenith hydrostatic delay in meter
-        """
-        # calculate denominator f
-        f = 1 - 0.00266 * cos(2 * lat) - 0.00000028 * hell
-
-        # calculate the zenith hydrostatic delay
-        return 0.0022768*p/f
-
-    def compute_map(self, ah, aw, mjd, lat, lon, h_ell, zd):
-        if isinstance(self.map, VMF1):
-            return self.map.compute(ah, aw, mjd, lat, h_ell, zd)
-        elif isinstance(self.map, VMF3):
-            return self.map.compute(ah, aw, mjd, lat, lon, h_ell, zd)
-        elif isinstance(self.map, GMF):
-            return self.map.compute(mjd, lat, lon, h_ell, zd)
-        else:
-            return 0.0, 0.0
+        return 1.0e-6 * (GPT3Tropo.k2p + GPT3Tropo.k3 / Tm) * GPT3Tropo.Rd / (lamb + 1.0) / GPT3Tropo.gm * e

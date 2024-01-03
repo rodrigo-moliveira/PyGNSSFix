@@ -68,7 +68,6 @@ class ObservationReconstruction:
 
         # troposphere
         tropo = self._metadata["TROPO"].compute_tropo_delay()
-        # tropo = tropo_saastamoinen(height, lat, epoch.doy, el)
 
         # finally, construct obs
         obs = true_range + dt_rec - dt_sat * constants.SPEED_OF_LIGHT + iono + tropo + dI
