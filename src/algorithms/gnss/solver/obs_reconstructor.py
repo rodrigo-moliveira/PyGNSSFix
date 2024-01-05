@@ -67,7 +67,8 @@ class ObservationReconstruction:
                 pass
 
         # troposphere
-        tropo = self._metadata["TROPO"].compute_tropo_delay()
+        tropo = self._metadata["TROPO"].compute_tropo_delay(lat, long, height, el, epoch)
+        print(epoch, sat, tropo)
 
         # finally, construct obs
         obs = true_range + dt_rec - dt_sat * constants.SPEED_OF_LIGHT + iono + tropo + dI

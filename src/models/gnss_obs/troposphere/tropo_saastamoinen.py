@@ -109,4 +109,3 @@ class SaastamoinenTropo:
         D_z_wet = (0.002277 * (1255 / T + 0.05) * e) / f
 
         return D_z_dry, D_z_wet
-

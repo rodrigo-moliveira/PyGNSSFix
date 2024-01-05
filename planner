@@ -1,16 +1,20 @@
 tasks for preliminary version:
-    [X] adicionar o GPT3 model e as mapping functions
-    [ ] add GGTO to the EOP database
-    [ ] add leapseconds from rinex file to EOP database, when there is no file
-    [ ] integrar a tropo com o resto do código
     [ ] estimar a troposfera -> considera-se T = m_d * T_D + m_w * T_w em que T_D (dry) vem do modelo a-priori e T_w
             é colocado no vetor de estados. m_w é o mapa, que é colocado na matriz da geometria. Ver Eq. (21.71) e (21.72)
-    [ ] o GGTO/ISB não estõa muito bem integrados no código da class Epoch.
     [ ] re-adicionar o filtro de elevation no gnss_solver
     [ ] re-adicionar o smoothing, tendo em conta que afinal é necessário converter carrier de ciclos para metros! (no cycle slip detection yet)
+    [ ] add velocity in computation of satellite ephemerides
+    [ ] add GGTO to the EOP database
+    [ ] add leapseconds from rinex file to EOP database, when there is no file
+    [ ] o GGTO/ISB não estõa muito bem integrados no código da class Epoch.
+    [ ] add shapiro correction (Eq. 19.14 of handbook)
+
+    code cleanup:
     [ ] escrever um traceback dos filtros do preprocessor
     [ ] limpar o código / solve all TODOs
     [ ] update documentation
+    [ ] add trace file with tropo, iono, clock delays, etc... that form the observable
+
 
     melhorar o modulo de post processing:
     [ ] plot Iono states
@@ -24,6 +28,11 @@ tasks for preliminary version:
     [ ] revisão final do repositório. Update readme
 
     ---> THIS FINISHES FIRST RELEASE 1.0<---
+
+
+nice to have:
+    [ ] add gradients to the GPT3 model (local east, north, west, south gradients)
+
 --- ### ---
 
 # Release 1.1 (PPPP Mode)

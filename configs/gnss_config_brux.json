@@ -26,7 +26,7 @@
          "_comment1": "Select first and last epochs in estimation arc in format YYYY-MM-DD hh:mm:ss",
          "_comment2": "Select false to deactivate fields",
          "first_epoch": "2019-01-14 06:15:00",
-         "last_epoch": "2019-01-14 06:16:02"
+         "last_epoch": "2019-01-14 06:15:10"
       },
 
       "_comment3": "Select the input data rate (in seconds). The rate must be consistent with the RINEX OBS rate. Select false to disable.",
@@ -34,7 +34,7 @@
    },
 
    "model": {
-      "constellations": ["GAL","GPS"],
+      "constellations": ["GPS"],
       "mode": "SPS",
       "_comment": "available modes are SPS, SPS_IF",
 
@@ -43,10 +43,10 @@
 
       "troposphere": {
          "_comment1": "Select Tropospheric model. Available models are 'NONE', 'Saastamoinen', 'GPT3'",
-         "model": "Saastamoinen",
+         "model": "GPT3",
 
-         "_comment2": "Select Tropospheric mask function. Available masks are 'Saastamoinen', 'GMF', 'VMF1', 'VMF3'",
-         "mask": "Saastamoinen",
+         "_comment2": "Select Tropospheric mask function for model GPT3. Available masks are 'Saastamoinen', 'GMF', 'VMF1', 'VMF3'",
+         "mask": "VMF3",
 
          "_comment3": "Select `true` to estimate tropospheric wet delay or `false` to disable tropo estimation",
          "estimate_tropo_wet": false

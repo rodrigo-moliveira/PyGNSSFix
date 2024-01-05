@@ -4,7 +4,7 @@
 from pathlib import Path
 from inspect import isclass
 
-from ...errors import EopError, ConfigError
+from ...errors import EopError, ConfigError, FileError
 
 __all__ = ["register", "EopDb", "TaiUtc", "Finals", "Finals2000A", "GGTO"]
 
@@ -23,7 +23,7 @@ class TaiUtc:
         try:
             f_handler = open(self.path, 'r')
         except OSError:
-            raise FileNotFoundError(f"Could not open/read file: {self.path}", )
+            raise FileError(f"Could not open/read file: {self.path}", )
 
         with f_handler:
             lines = f_handler.read().splitlines()
@@ -113,7 +113,7 @@ class Finals2000A:
         try:
             f_handler = open(self.path, 'r')
         except OSError:
-            raise FileNotFoundError(f"Could not open/read file: {self.path}", )
+            raise FileError(f"Could not open/read file: {self.path}", )
 
         with f_handler:
             lines = f_handler.read().splitlines()
@@ -244,7 +244,7 @@ class EopDb:
                 cls._dbs[dbname] = e
 
         if isinstance(cls._dbs[dbname], Exception):
-            raise EopError(f"Problem at database instantiation: {cls._dbs[dbname]}")
+            raise cls._dbs[dbname]
 
         return cls._dbs[dbname]
 

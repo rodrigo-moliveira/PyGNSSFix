@@ -72,6 +72,8 @@ class SatelliteGeometry(Container):
         # compute true range
         true_range = np.linalg.norm(pos_sat - rec_pos)
 
+        # TODO: apply shapiro correction here
+
         # get satellite elevation and azimuth angles (from the receiver), ENU frame
         lat, long, h = cartesian2geodetic(rec_pos[0], rec_pos[1], rec_pos[2])
         enu_coord = ecef2enu(pos_sat[0], pos_sat[1], pos_sat[2], lat, long, h)

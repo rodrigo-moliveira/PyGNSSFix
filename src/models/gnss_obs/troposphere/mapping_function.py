@@ -278,7 +278,7 @@ class VMF3:
         ht_corr = ht_corr_coeff * h_ell_km
         mfh = mfh + ht_corr
 
-        return mfh, mfw
+        return mfh[0], mfw[0]
 
 
 class GMF:

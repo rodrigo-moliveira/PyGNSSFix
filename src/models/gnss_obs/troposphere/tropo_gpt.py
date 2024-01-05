@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 from math import floor
 
+from src.errors import FileError
 from src.models.gnss_obs.troposphere.tropo_saastamoinen import SaastamoinenTropo
 
 
@@ -26,7 +27,7 @@ class GPT3Tropo:
     R = 8.3143  # universal gas constant in J/K/mol
     Rd = R / dMtr  # specific gas constant for dry constituents
 
-    def __init__(self, grid_file='gpt3_5.grd'):
+    def __init__(self, grid_file):
         self.gpt3_grid = {}
         self.gpt3_5_fast_readGrid(grid_file)
 
@@ -45,10 +46,13 @@ class GPT3Tropo:
         # =============================================================================
 
         # read grid file
-        file = open(filename)
-        C = pd.read_csv(file, skiprows=[i for i in range(0, 1)], sep='\s+', skipfooter=0, skip_blank_lines=True,
-                        header=None, index_col=False)
-        file.close()
+        try:
+            file = open(filename)
+            C = pd.read_csv(file, skiprows=[i for i in range(0, 1)], sep='\s+', skipfooter=0, skip_blank_lines=True,
+                            header=None, index_col=False)
+            file.close()
+        except:
+            raise FileError(f"Could not open/read file: {filename}")
 
         p_grid = C.loc[:, np.arange(2, 7)]
 
@@ -104,10 +108,7 @@ class GPT3Tropo:
         # compute ZWD
         zwd = self.asknewet(e[0][0], Tm[0][0], la[0][0])
 
-        # compute mapping coefficients
-        # vmf1h, vmf1w = self.compute_map(ah, aw, mjd, lat, lon, h_ell, zd)
-
-        return zhd, zwd
+        return zhd, zwd, ah[0][0], aw[0][0]
 
     def gpt3_5_fast(self, mjd=None, lat=None, lon=None, h_ell=None, it=None):
         #    (c) Department of Geodesy and Geoinformation, Vienna University of Technology, 2017

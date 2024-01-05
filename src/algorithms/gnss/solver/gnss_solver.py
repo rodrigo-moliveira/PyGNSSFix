@@ -165,6 +165,7 @@ class GnssSolver:
 
         # iterate over all available epochs
         for epoch in epochs:
+            print(f"processing epoch {epoch}...")
             # fetch gnss_obs data for this epoch
             obs_for_epoch = self.obs_data.get_epoch_data(epoch)
             sats_for_epoch = self.obs_data.get_satellites()
