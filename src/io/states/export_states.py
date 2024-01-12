@@ -1,5 +1,3 @@
-import numpy as np
-
 from src import constants
 from src.algorithms.gnss.estimators.state_space import GnssStateSpace
 
@@ -14,6 +12,8 @@ def get_file_header(exportable, state):
         return f"Week_Number({epoch_system}),Time_of_Week[s],clock_bias(master={master})[s],cov[s^2]"
     elif exportable == "iono":
         return f"Week_Number({epoch_system}),Time_of_Week[s],sat,iono[m],cov[m^2]"
+    elif exportable == "tropo_wet":
+        return f"Week_Number({epoch_system}),Time_of_Week[s],tropo_wet[m],cov[m^2]"
     elif exportable == "time":
         return f"Week_Number({epoch_system}),Time_of_Week[s],Epoch_timetag"
     elif exportable == "prefit_residuals":
@@ -48,6 +48,9 @@ def export_to_file(gnss_state: GnssStateSpace, exportable):
 
     if exportable == "clock_bias":
         return f"{gnss_state.clock_bias},{gnss_state.cov_clock_bias}"
+
+    if exportable == "tropo_wet":
+        return f"{gnss_state.tropo_wet},{gnss_state.cov_tropo_wet}"
 
     if exportable == "isb":
         return f"{gnss_state.isb},{gnss_state.cov_isb}"

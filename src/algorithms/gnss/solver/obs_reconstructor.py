@@ -46,7 +46,7 @@ class ObservationReconstruction:
         # correct satellite clock for BGDs
         dt_sat = nav_sat_clock_correction(dt_sat, datatype, nav_message)
 
-        # ionosphere
+        # ionosphere (a-priori correction)
         if not DataType.is_iono_free_code(datatype):
             if self._metadata["IONO"][sat.sat_system] == EnumIono.KLOBUCHAR:
                 iono = iono_klobuchar(lat, long, el, az, self._nav_header.iono_corrections["GPSA"],
@@ -68,7 +68,6 @@ class ObservationReconstruction:
 
         # troposphere
         tropo = self._metadata["TROPO"].compute_tropo_delay(lat, long, height, el, epoch)
-        print(epoch, sat, tropo)
 
         # finally, construct obs
         obs = true_range + dt_rec - dt_sat * constants.SPEED_OF_LIGHT + iono + tropo + dI

@@ -1,14 +1,14 @@
 import numpy as np
 
 from src.data_mng.container import Container
-from src.io.config.enums import EnumModel
+from src.io.config.enums import EnumModel, EnumOnOff
 from src.models.gnss_obs.clock_obs import compute_ggto
 from src.io.config.config import config_dict
 
 
 class GnssStateSpace(Container):
-    __states__ = ["position", "clock_bias", "iono", "isb"]
-    __covs__ = ["cov_position", "cov_clock_bias", "cov_iono", "cov_isb"]
+    __states__ = ["position", "clock_bias", "iono", "tropo_wet", "isb"]
+    __covs__ = ["cov_position", "cov_clock_bias", "cov_iono", "cov_tropo_wet", "cov_isb"]
     __slots__ = __states__ + __covs__ + ["epoch", "_info"]
 
     def __init__(self, metadata=None, position=None, clock_bias=None, epoch=None, sat_list=None):
@@ -34,6 +34,9 @@ class GnssStateSpace(Container):
 
         if "isb" in _states:
             state.isb = self.isb
+
+        if "tropo_wet" in _states:
+            state.tropo_wet = self.tropo_wet
 
         state.add_additional_info("states", _states)
         state.add_additional_info("clock_master", self.get_additional_info("clock_master"))
@@ -79,6 +82,15 @@ class GnssStateSpace(Container):
             self.add_additional_info("clock_master", None)
             self.add_additional_info("clock_slave", None)
 
+        # tropo wet delay (optional -> in case the user defined it)
+        self.tropo_wet = None
+        self.cov_tropo_wet = None
+
+        if metadata is not None and metadata["TROPO"].estimate_tropo_wet == EnumOnOff.ENABLED:
+            self.tropo_wet = 0.0
+            self.cov_tropo_wet = 0.0
+            _states.append("tropo_wet")
+
         self.add_additional_info("states", _states)
 
     def __str__(self):
@@ -89,6 +101,8 @@ class GnssStateSpace(Container):
             _str += f", ISB = {self.isb}"
         if "iono" in _states:
             _str += f", iono = {self.iono}"
+        if "tropo_wet" in _states:
+            _str += f", tropo_wet = {self.tropo_wet}"
 
         return f'{type(self).__name__}[{str(self.epoch)}]({_str})'
 

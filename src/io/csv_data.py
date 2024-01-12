@@ -1,4 +1,3 @@
-import csv
 import numpy as np
 
 from src.utils.units import convert_unit

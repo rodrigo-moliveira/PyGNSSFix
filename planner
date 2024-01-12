@@ -1,6 +1,8 @@
 tasks for preliminary version:
     [ ] estimar a troposfera -> considera-se T = m_d * T_D + m_w * T_w em que T_D (dry) vem do modelo a-priori e T_w
-            é colocado no vetor de estados. m_w é o mapa, que é colocado na matriz da geometria. Ver Eq. (21.71) e (21.72)
+            é colocado no vetor de estados. m_w é o mapa, que é colocado na matriz da geometria. Ver Eqs. (21.71) e (21.72)
+            [ ] no obs_reconstructor/tropo_manager -> construir T (wet + dry) usando o wet apropriado (modelo ou state.tropo consoante o caso)
+            [ ] no lsq_engine/GNSS_State colocar a nova variável de estado
     [ ] re-adicionar o filtro de elevation no gnss_solver
     [ ] re-adicionar o smoothing, tendo em conta que afinal é necessário converter carrier de ciclos para metros! (no cycle slip detection yet)
     [ ] add velocity in computation of satellite ephemerides
