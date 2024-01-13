@@ -41,6 +41,7 @@ class LSQ_Engine:
         #   * (Single + Dual) Frequency Dual Constellation:
         #       -> States: position, clock, iono, isb. Design matrix is Design matrix is [2*m_S1+m_S2, 4+m_S1+1]
         #       -> Observation vector is [2*m_S1+m_S2,1]
+        #  When tropo is added, a new state is incremented, that is 4 -> 4 + 1 in the dimensions above
 
         n_observables = 0  # number of rows
         n_states = 3  # number of columns (default is 3 - position)
@@ -57,8 +58,8 @@ class LSQ_Engine:
             else:
                 n_observables += n_sats
 
-        # add tropo...
-        # pass
+        if self._metadata["TROPO"].estimate_tropo():
+            n_states += 1
 
         self.y_vec = np.zeros(n_observables)
         self.design_mat = np.zeros((n_observables, n_states))
@@ -86,6 +87,9 @@ class LSQ_Engine:
 
         iono_offset = 0
         obs_offset = 0
+        estimate_tropo = self._metadata["TROPO"].estimate_tropo()
+        tropo_offset = 1 if estimate_tropo else 0
+
         for iConst, const in enumerate(self.constellations):
 
             n_sats = len(self.sat_list[const])
@@ -98,9 +102,12 @@ class LSQ_Engine:
                     self.y_vec[obs_offset + iSat] = residual
                     self.design_mat[obs_offset + iSat][0:3] = los  # position
                     self.design_mat[obs_offset + iSat, 3] = 1.0  # clock
+                    if estimate_tropo:
+                        map_wet = reconstructor._system_geometry.get("tropo_map_wet", sat)
+                        self.design_mat[obs_offset + iSat, 4] = map_wet
                     if self._metadata["MODEL"][const] == EnumModel.DUAL_FREQ:
                         factor = (self._metadata["CODES"][const][0].freq.freq_value / datatype.freq.freq_value) ** 2
-                        self.design_mat[obs_offset + iSat, 4 + iono_offset + iSat] = 1.0 * factor  # iono
+                        self.design_mat[obs_offset + iSat, 4 + tropo_offset + iono_offset + iSat] = 1.0 * factor  # iono
                     if iConst > 0:
                         self.design_mat[obs_offset + iSat, -1] = 1.0  # ISB
 
@@ -144,6 +151,9 @@ class LSQ_Engine:
     def apply_corrections(self, state, dX, cov):
         """applies corrections to the state vector"""
 
+        estimate_tropo = self._metadata["TROPO"].estimate_tropo()
+        tropo_offset = 1 if estimate_tropo else 0
+
         state.position += dX[0:3]
         state.clock_bias += dX[3] / constants.SPEED_OF_LIGHT  # receiver clock in seconds
 
@@ -152,13 +162,20 @@ class LSQ_Engine:
         for const in self.constellations:
             if self._metadata["MODEL"][const] == EnumModel.DUAL_FREQ:
                 for iSat, sat in enumerate(self.sat_list[const]):
-                    state.iono[sat] += float(dX[iono_offset + iSat + 4])
-                    state.cov_iono[sat] = cov[iono_offset + iSat + 4, iono_offset + iSat + 4]
+                    state.iono[sat] += float(dX[iono_offset + iSat + 4 + tropo_offset])
+                    state.cov_iono[sat] = cov[iono_offset + iSat + 4 + tropo_offset, iono_offset + iSat + 4 + tropo_offset]
                 iono_offset += len(self.sat_list[const])
 
+        # ISB
         if len(self.constellations) > 1:
             state.isb += dX[-1] / constants.SPEED_OF_LIGHT  # ISB between master and slave constellations
             state.cov_isb = float(cov[-1, -1]) / (constants.SPEED_OF_LIGHT ** 2)  # in seconds^2
+
+        # tropo
+        if estimate_tropo:
+            state.tropo_wet += dX[4]
+            state.cov_tropo_wet = cov[4, 4]
+            print("tropo", state.tropo_wet)
 
         # unpack covariance matrices
         state.cov_position = np.array(cov[0:3, 0:3])

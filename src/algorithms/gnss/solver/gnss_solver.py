@@ -221,7 +221,7 @@ class GnssSolver:
         system_geometry = SystemGeometry(self.nav_data, obs_data)
 
         # check data availability for this epoch
-        if not self._check_model_availability(system_geometry, obs_data, epoch):
+        if not self._check_model_availability(system_geometry, epoch):
             return False  # not enough data to process this epoch
 
         self.log.info(f"Processing epoch {str(epoch)}")
@@ -280,16 +280,21 @@ class GnssSolver:
         # solve LS problem
         return lsq_engine.solve_ls(state)
 
-    def _check_model_availability(self, system_geometry, obs_data, epoch):
+    def _check_model_availability(self, system_geometry, epoch):
         """
         Checks if it is possible to perform the dual frequency / single frequency PVT estimation, or, in contrast,
         we have not enough data to perform the computations.
 
         """
-        single_const = len(self._metadata["CONSTELLATIONS"]) == 1  # true if only one constellation
-        MIN_SAT = 4 if single_const else 5
-        sat_list = []
+        MIN_SAT = 4  # default: estimate position + clock (dimension 4)
+        if len(self._metadata["CONSTELLATIONS"]) != 1:
+            MIN_SAT += 1  # estimate ISB
+        if self._metadata["TROPO"].estimate_tropo():
+            MIN_SAT += 1  # estimate tropo
+        sat_list = system_geometry.get_satellites()
 
+        """
+        This is to be removed!!! The consistency filter is already applied in the Preprocessor
         for const in self._metadata["CONSTELLATIONS"]:
             model = self._metadata["MODEL"][const]
             codes = self._metadata["CODES"][const]
@@ -306,8 +311,7 @@ class GnssSolver:
                 if removed:
                     self.log.info(f"Removing satellites {removed} at epoch {str(epoch)} due to "
                                   f"inconsistencies in code data for both frequencies")
-
-            sat_list += system_geometry.get_satellites()
+        """
 
         # check number of available satellites
         if len(sat_list) < MIN_SAT:

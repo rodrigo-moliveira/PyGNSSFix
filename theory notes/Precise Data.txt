@@ -1,3 +1,20 @@
+# IGS Clock Products (pag 1007 of handbook):
+The GPS clock parameters provided by the IGS
+refer (by convention) to the ionosphere-free linear combination of the L1 P(Y) and L2 P(Y) signals. However
+several geodetic GPS receivers only track the C/A code
+on L1. Therefore, DCBs between the different types of
+signals have to be considered (Sect. 19.6.1). One can
+either estimate the DCB parameters, as done by the
+CODE AC, or one can correct for the DCBs, for example, with the cc2noncc tool utilizing the CODE DCB
+estimates [34.79]. Users of IGS clock products must ensure consistency between the clock parameters on the
+one hand and the observation types on the other hand
+by applying the corresponding DCBs. Further sources
+for DCBs are the Time Group Delay (TGD) parameters of the GPS navigation message (Sect. 7.4.3), the
+Inter Signal Corrections (ISCs) of the GPS Civil Navigation Message CNAV [34.80], and the IGS MGEX
+DCB product [34.81].
+
+For GAL it is E1/E5a
+
 ### DCB Files
 
 

@@ -32,7 +32,7 @@ class ObservationReconstruction:
         dt_rec = self._state.get_clock_bias(sat.sat_system, self._nav_header.time_correction) * constants.\
             SPEED_OF_LIGHT
 
-        # satellite clock
+        # satellite clock (+ ISB)
         dt_sat, _ = broadcast_clock(nav_message.af0,
                                     nav_message.af1,
                                     nav_message.af2,
@@ -67,7 +67,8 @@ class ObservationReconstruction:
                 pass
 
         # troposphere
-        tropo = self._metadata["TROPO"].compute_tropo_delay(lat, long, height, el, epoch)
+        tropo, map_wet = self._metadata["TROPO"].compute_tropo_delay(lat, long, height, el, epoch, self._state)
+        self._system_geometry.set("tropo_map_wet", map_wet, sat)
 
         # finally, construct obs
         obs = true_range + dt_rec - dt_sat * constants.SPEED_OF_LIGHT + iono + tropo + dI

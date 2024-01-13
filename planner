@@ -1,11 +1,11 @@
 tasks for preliminary version:
-    [ ] estimar a troposfera -> considera-se T = m_d * T_D + m_w * T_w em que T_D (dry) vem do modelo a-priori e T_w
+    [X] estimar a troposfera -> considera-se T = m_d * T_D + m_w * T_w em que T_D (dry) vem do modelo a-priori e T_w
             é colocado no vetor de estados. m_w é o mapa, que é colocado na matriz da geometria. Ver Eqs. (21.71) e (21.72)
-            [ ] no obs_reconstructor/tropo_manager -> construir T (wet + dry) usando o wet apropriado (modelo ou state.tropo consoante o caso)
-            [ ] no lsq_engine/GNSS_State colocar a nova variável de estado
+            [X] no obs_reconstructor/tropo_manager -> construir T (wet + dry) usando o wet apropriado (modelo ou state.tropo consoante o caso)
+            [X] no lsq_engine/GNSS_State colocar a nova variável de estado
     [ ] re-adicionar o filtro de elevation no gnss_solver
     [ ] re-adicionar o smoothing, tendo em conta que afinal é necessário converter carrier de ciclos para metros! (no cycle slip detection yet)
-    [ ] add velocity in computation of satellite ephemerides
+    [ ] add velocity in computation of satellite ephemerides (ver prototype e livro da ESA)
     [ ] add GGTO to the EOP database
     [ ] add leapseconds from rinex file to EOP database, when there is no file
     [ ] o GGTO/ISB não estõa muito bem integrados no código da class Epoch.
@@ -52,7 +52,6 @@ caminhar para PPPP:
 finalizar o GNSS user positioning com:
     [ ] Adicionar Kalman filter com user dynamics
     [ ] process doppler measurements to estimate velocity
-    [ ] ver código para calcular vetor velocidade a partir da mensagem de navegação (livro da ESA)
 
 
 # Relase 1.2 (INS - IMU Emulator - Loosely Coupled)

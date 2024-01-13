@@ -13,7 +13,7 @@ class SatelliteGeometry(Container):
     __slots__ = ["transit_time",
                  "time_emission", "time_reception",
                  "true_range", "az", "el", "satellite_position",
-                 "dt_rel_correction", "los"]
+                 "dt_rel_correction", "los", "tropo_map_wet"]
 
     def __init__(self):
         super().__init__()
@@ -23,6 +23,7 @@ class SatelliteGeometry(Container):
         self.true_range = 0
         self.az = 0
         self.el = 0
+        self.tropo_map_wet = 0
         self.satellite_position = None
         self.dt_rel_correction = 0
         self.los = None
@@ -125,6 +126,12 @@ class SystemGeometry:
         if sat in self._data:
             return getattr(self._data[sat], attribute)
         return None
+
+    def set(self, attribute, value, sat):
+        if sat in self._data:
+            setattr(self._data[sat], attribute, value)
+        else:
+            raise TimeSeriesError(f"Satellite {sat} not in SystemGeometry data structure")
 
     def compute(self, epoch, state, metadata):
         """

@@ -1,7 +1,7 @@
 import numpy as np
 
 from src.data_mng.container import Container
-from src.io.config.enums import EnumModel, EnumOnOff
+from src.io.config.enums import EnumModel
 from src.models.gnss_obs.clock_obs import compute_ggto
 from src.io.config.config import config_dict
 
@@ -86,7 +86,7 @@ class GnssStateSpace(Container):
         self.tropo_wet = None
         self.cov_tropo_wet = None
 
-        if metadata is not None and metadata["TROPO"].estimate_tropo_wet == EnumOnOff.ENABLED:
+        if metadata is not None and metadata["TROPO"].estimate_tropo():
             self.tropo_wet = 0.0
             self.cov_tropo_wet = 0.0
             _states.append("tropo_wet")

@@ -34,7 +34,7 @@
    },
 
    "model": {
-      "constellations": ["GPS"],
+      "constellations": ["GPS", "GAL"],
       "mode": "SPS",
       "_comment": "available modes are SPS, SPS_IF",
 
@@ -43,7 +43,7 @@
 
       "troposphere": {
          "_comment1": "Select Tropospheric model. Available models are 'NONE', 'Saastamoinen', 'GPT3'",
-         "model": "Saastamoinen",
+         "model": "GPT3",
 
          "_comment2": "Select Tropospheric mask function for model GPT3. Available masks are 'Saastamoinen', 'GMF', 'VMF1', 'VMF3'",
          "mask": "VMF3",
@@ -53,7 +53,7 @@
       },
 
       "GPS": {
-         "observations": ["1C"],
+         "observations": ["1C", "2W"],
          "pr_obs_std": [1.1, 0.8],
          "elevation_mask": true,
 
@@ -62,7 +62,7 @@
       },
 
       "GAL": {
-         "observations": ["1C"],
+         "observations": ["1C", "5Q"],
          "pr_obs_std": [1, 1],
          "elevation_mask": true,
 

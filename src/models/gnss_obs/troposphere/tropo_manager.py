@@ -9,7 +9,7 @@ class TropoManager:
     def __init__(self, config):
         tropo_model_enum = EnumTropoModel.init_model(config.get("model", "troposphere", "model"))
         tropo_mask_enum = EnumTropoMask.init_model(config.get("model", "troposphere", "mask"))
-        self.estimate_tropo_wet = EnumOnOff(config.get("model", "troposphere", "estimate_tropo_wet"))
+        self._estimate_tropo_wet = EnumOnOff(config.get("model", "troposphere", "estimate_tropo_wet"))
 
         if tropo_model_enum == EnumTropoModel.SAASTAMOINEM:
             self.tropo_model = SaastamoinenTropo()
@@ -36,9 +36,12 @@ class TropoManager:
         else:
             raise UnknownModel(f'Unknown tropo mask function {config.get("model", "troposphere", "mask")}')
 
-    def compute_tropo_delay(self, lat, long, height, el, epoch):
+    def estimate_tropo(self):
+        return self._estimate_tropo_wet == EnumOnOff.ENABLED
+
+    def compute_tropo_delay(self, lat, long, height, el, epoch, state):
         if self.tropo_model is None:
-            return 0.0
+            return 0.0, 0.0
 
         # fix height: in the estimation process, the initial state is usually [0, 0, 0] in xyz components
         # which may lead to lat,long,height=[0,0,-6378137]
@@ -46,15 +49,18 @@ class TropoManager:
         height = -height if height < -1000000 else height
 
         # get hydrostatic and wet delays from model
-        zhd, zwd, ah, aw = self.compute_model(lat, long, height, epoch)
+        zhd, zwd, ah, aw = self._compute_model(lat, long, height, epoch)
+
+        if self.estimate_tropo():
+            zwd = state.tropo_wet  # fetch zwd from state
 
         # compute mapping function coefficients
-        map_hydro, map_wet = self.compute_mask(ah, aw, epoch.mjd, lat, long, height, el)
+        map_hydro, map_wet = self._compute_mask(ah, aw, epoch.mjd, lat, long, height, el)
 
         # compute total delay
-        return zhd * map_hydro + zwd * map_wet
+        return zhd * map_hydro + zwd * map_wet, map_wet
 
-    def compute_mask(self, ah, aw, mjd, lat, lon, h_ell, el):
+    def _compute_mask(self, ah, aw, mjd, lat, lon, h_ell, el):
         map_hydro = 0.0
         map_wet = 0.0
         zd = np.pi / 2.0 - el  # convert elevation to zenith angle
@@ -70,7 +76,7 @@ class TropoManager:
 
         return map_hydro, map_wet
 
-    def compute_model(self, lat, long, height, epoch):
+    def _compute_model(self, lat, long, height, epoch):
         zhd = 0.0
         zwd = 0.0
         ah = 0.0
