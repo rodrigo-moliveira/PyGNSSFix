@@ -3,7 +3,7 @@ tasks for preliminary version:
             é colocado no vetor de estados. m_w é o mapa, que é colocado na matriz da geometria. Ver Eqs. (21.71) e (21.72)
             [X] no obs_reconstructor/tropo_manager -> construir T (wet + dry) usando o wet apropriado (modelo ou state.tropo consoante o caso)
             [X] no lsq_engine/GNSS_State colocar a nova variável de estado
-    [ ] re-adicionar o filtro de elevation no gnss_solver
+    [X] re-adicionar o filtro de elevation no gnss_solver
     [ ] re-adicionar o smoothing, tendo em conta que afinal é necessário converter carrier de ciclos para metros! (no cycle slip detection yet)
     [ ] add velocity in computation of satellite ephemerides (ver prototype e livro da ESA)
     [ ] add GGTO to the EOP database

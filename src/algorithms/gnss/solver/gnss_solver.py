@@ -112,6 +112,7 @@ class GnssSolver:
         INITIAL_POS = config.get("solver", "initial_pos_std")
         INITIAL_CLOCK_BIAS = config.get("solver", "initial_clock_std")
         CONSTELLATIONS = config.get("model", "constellations")
+        ELEVATION_FILTER = config.get("solver", "elevation_filter")
         TROPO = TropoManager(config)
         _model = config.get_model()
 
@@ -156,7 +157,8 @@ class GnssSolver:
             "REL_CORRECTION": REL_CORRECTION,
             "TX_TIME_ALG": EnumTransmissionTime(TX_TIME_ALG),
             "INITIAL_POS": INITIAL_POS,
-            "INITIAL_CLOCK_BIAS": INITIAL_CLOCK_BIAS
+            "INITIAL_CLOCK_BIAS": INITIAL_CLOCK_BIAS,
+            "ELEVATION_FILTER": ELEVATION_FILTER
         }
 
     def solve(self):
@@ -213,9 +215,9 @@ class GnssSolver:
     def _solve_for_epoch(self, epoch, obs_data, state):
         # begin iterative process for this epoch
         iteration = 0
-        success = False
         rms = rms_prev = 1
         prefit_residuals = postfit_residuals = dop_matrix = None
+        apply_elevation_filter = False if self._metadata["ELEVATION_FILTER"] is False else True
 
         # build system geometry for this epoch
         system_geometry = SystemGeometry(self.nav_data, obs_data)
@@ -239,17 +241,35 @@ class GnssSolver:
             except PVTComputationFail as e:
                 self.log.warning(f"Least Squares failed for {str(epoch)} on iteration {iteration}."
                                  f"Reason: {e}")
-                break
+                return False
 
             # check stop condition
             if self._stop(rms_prev, rms, self._metadata["STOP_CRITERIA"]):
                 self.log.debug(f"Least Squares was successful. Reached convergence at iteration {iteration}")
-                success = True
                 break
 
             # increase iteration counter
             rms_prev = rms
             iteration += 1
+
+        # perform additional iteration after elevation filter
+        if apply_elevation_filter:
+            self.log.info(f"Applying elevation filter with threshold {self._metadata['ELEVATION_FILTER']} [deg] "
+                          f"and performing additional iteration")
+            self._elevation_filter(system_geometry, self._metadata["ELEVATION_FILTER"])
+
+            # check data availability for this epoch
+            if not self._check_model_availability(system_geometry, epoch):
+                return False  # not enough data to process this epoch
+
+            # solve the Least Squares
+            try:
+                postfit_residuals, prefit_residuals, dop_matrix, rms = \
+                    self._compute(system_geometry, obs_data, state, epoch)
+            except PVTComputationFail as e:
+                self.log.warning(f"Least Squares failed for {str(epoch)} on additional iteration (elevation filter). "
+                                 f"Reason: {e}")
+                return False
 
         # end of iterative procedure
         if iteration == self._metadata["MAX_ITER"]:
@@ -264,7 +284,7 @@ class GnssSolver:
         state.add_additional_info("rms", rms)
         state.add_additional_info("dop_matrix", dop_matrix)
 
-        return success
+        return True
 
     def _compute(self, system_geometry, obs_data, state, epoch):
         satellite_list = system_geometry.get_satellites()
@@ -293,26 +313,6 @@ class GnssSolver:
             MIN_SAT += 1  # estimate tropo
         sat_list = system_geometry.get_satellites()
 
-        """
-        This is to be removed!!! The consistency filter is already applied in the Preprocessor
-        for const in self._metadata["CONSTELLATIONS"]:
-            model = self._metadata["MODEL"][const]
-            codes = self._metadata["CODES"][const]
-            sat_list_ = obs_data.get_sats_for_datatypes(codes)
-
-            # Dual Frequency model
-            if model == EnumModel.DUAL_FREQ:
-                # removing satellites with data for only 1 frequency
-                removed = []
-                for sat in obs_data.get_satellites_for_constellation(const):
-                    if sat not in sat_list_:
-                        system_geometry.remove(sat)
-                        removed.append(sat)
-                if removed:
-                    self.log.info(f"Removing satellites {removed} at epoch {str(epoch)} due to "
-                                  f"inconsistencies in code data for both frequencies")
-        """
-
         # check number of available satellites
         if len(sat_list) < MIN_SAT:
             self.log.warning(
@@ -323,24 +323,20 @@ class GnssSolver:
 
         return True
 
-    def _elevation_filter(self, system_geometry):
-        # TODO re-add this on last iteration
-
+    def _elevation_filter(self, system_geometry, cutoff):
         # get elevation threshold in radians
         sats_to_remove = []
-        threshold = self._info["ELEVATION_FILTER"]
         for sat, sat_info in system_geometry.items():
 
-            if sat_info.el * constants.RAD2DEG < threshold:
+            if sat_info.el * constants.RAD2DEG < cutoff:
                 sats_to_remove.append(sat)
-                # self.log.debug(f"Removing satellite {sat} in iteration {iteration} due to elevation filter. "
-                #               f"Minimum threshold is {threshold} "
-                #               f"[deg], computed elevation is {sat_info.el * Constant.RAD2DEG} [deg]")
+                self.log.debug(f"Removing satellite {sat} due to elevation filter. Minimum threshold is {cutoff} "
+                               f"[deg], computed elevation is {sat_info.el * constants.RAD2DEG} [deg]")
 
         # remove flagged satellites
         for sat in sats_to_remove:
             system_geometry.remove(sat)
 
         if sats_to_remove:
-            self.log.debug(f"Removing satellites {sats_to_remove} in due to "
-                           f"elevation filter. ")
+            self.log.debug(f"Removing satellites {sats_to_remove} due to elevation filter. ")
+

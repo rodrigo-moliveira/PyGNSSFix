@@ -43,13 +43,13 @@
 
       "troposphere": {
          "_comment1": "Select Tropospheric model. Available models are 'NONE', 'Saastamoinen', 'GPT3'",
-         "model": "GPT3",
+         "model": "Saastamoinen",
 
          "_comment2": "Select Tropospheric mask function for model GPT3. Available masks are 'Saastamoinen', 'GMF', 'VMF1', 'VMF3'",
          "mask": "VMF3",
 
          "_comment3": "Select `true` to estimate tropospheric wet delay or `false` to disable tropo estimation",
-         "estimate_tropo_wet": true
+         "estimate_tropo_wet": false
       },
 
       "GPS": {
@@ -112,7 +112,7 @@
       "relativistic_corrections": 1,
 
       "_comment5": "Elevation filter. Select the value of minimum elevation angle to consider, in degree. Select false to turn off",
-      "elevation_filter": 15,
+      "elevation_filter": 10,
 
       "_comment7": "Initial position (m), velocity (m/s) and clock (s)",
       "initial_pos_std": [0, 0, 0, 1, 1, 1],
