@@ -79,12 +79,11 @@ class PreprocessorManager:
                 mapper = FunctorMapper(functor)
                 mapper.apply(self.raw_data, obs_data_out)
 
-        """Currently, the Smooth Algorithm is turned off. Further investigation is needed to fix it"""
         # Get Smooth Observation Data
-        #try:
-        #    obs_data_out = self.smooth(obs_data_out)
-        #except Exception as e:
-        #    raise PreprocessorError(f"Error computing Smooth Observation Data: {e}")
+        try:
+            obs_data_out = self.smooth(obs_data_out)
+        except Exception as e:
+            raise PreprocessorError(f"Error computing Smooth Observation Data: {e}")
 
         # Prepare ObservationData for output (downgrade output rate)
         try:

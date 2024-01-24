@@ -7,11 +7,6 @@ from src.data_types.gnss.data_type import DataType
 from src.data_types.gnss.observation import Observation
 from src.errors import NonExistentObservable
 
-# NOTE: The Smooth (Hatch Filter) algorithm did not work very well. It is probably because we first need to apply some
-# kind of preprocessing on the carrier data (maybe correct for phase wind up, or something).
-# Anyways, this algorithm is working correctly, but the PVT results are bad
-# In the future, try to fix this
-
 # The SmoothFunctor class implements the Hatch filter, which smooths pseudorange observables using time differences
 # of carrier-phase observables, thus reducing raw pseudorange noise.
 
@@ -29,7 +24,7 @@ class SmoothFunctor(Functor):
     @staticmethod
     def _get_carrier(v_obs, freq):
         for obs in v_obs:
-            if DataType.is_carrier(obs.datatype):
+            if DataType.is_carrier(obs.datatype) or DataType.is_iono_free_carrier(obs.datatype):
                 if obs.datatype.freq_number == freq:
                     return obs
         return None
@@ -77,7 +72,7 @@ class SmoothFunctor(Functor):
     def smooth_function(self, obs_data_in, sat, epoch, epoch_prev, pseudorange, carrier):
 
         # get SPR datatype (C1 + L1 = SPR1, C2 + L2 = SPR2, C12 + L12 = SPR12, ...)
-        smooth_type = DataType.get_smooth_pseudorange(pseudorange.datatype)
+        smooth_type = DataType.get_smooth_datatype(pseudorange.datatype)
 
         try:
             # SPR(t_{i-1})

@@ -32,7 +32,7 @@ class ObservationReconstruction:
         dt_rec = self._state.get_clock_bias(sat.sat_system, self._nav_header.time_correction) * constants.\
             SPEED_OF_LIGHT
 
-        # satellite clock (+ ISB)
+        # satellite clock
         dt_sat, _ = broadcast_clock(nav_message.af0,
                                     nav_message.af1,
                                     nav_message.af2,
@@ -47,7 +47,7 @@ class ObservationReconstruction:
         dt_sat = nav_sat_clock_correction(dt_sat, datatype, nav_message)
 
         # ionosphere (a-priori correction)
-        if not DataType.is_iono_free_code(datatype):
+        if not DataType.is_iono_free_code(datatype) and not DataType.is_iono_free_smooth_code(datatype):
             if self._metadata["IONO"][sat.sat_system] == EnumIono.KLOBUCHAR:
                 iono = iono_klobuchar(lat, long, el, az, self._nav_header.iono_corrections["GPSA"],
                                       self._nav_header.iono_corrections["GPSB"], epoch.gnss_time[1],
@@ -87,5 +87,5 @@ class ObservationReconstruction:
             obs_std = config_dict.get_obs_std()[sat.sat_system][datatype]
         except KeyError:
             # TODO add logger message
-            obs_std = 1
+            obs_std = 1.0
         return el_std * obs_std

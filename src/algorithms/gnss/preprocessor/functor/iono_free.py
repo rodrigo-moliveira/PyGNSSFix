@@ -18,33 +18,33 @@ class IonoFreeFunctor(Functor):
             raise AttributeError(f"Problem getting base and second frequencies in Iono Free Computation for "
                                  f"constellation {self.constellation}, observations provided are {self.observations}. "
                                  f"Traceback Reason: {e}")
-        self.compute_iono_std()
 
-    def compute_iono_std(self):
-        for constellation, std_dict in config_dict.get_obs_std().items():
+        self.compute_iono_std(constellation)
 
-            datatypes = list(std_dict.keys())
-            if len(datatypes) != 2:
-                raise AttributeError(f"Error computing observation stds for constellation {constellation}: "
-                                     f"There should be 2 datatypes defined in std list {config_dict.get_obs_std()}")
-            datatype_1 = datatypes[0]
-            pr_std_1 = std_dict[datatype_1]
-            f1 = datatype_1.freq.freq_value
+    def compute_iono_std(self, constellation):
+        std_dict = config_dict.get_obs_std()[constellation]
+        datatypes = list(std_dict.keys())
+        if len(datatypes) != 2:
+            raise AttributeError(f"Error computing observation stds for constellation {constellation}: "
+                                 f"There should be 2 datatypes defined in std list {config_dict.get_obs_std()}")
+        datatype_1 = datatypes[0]
+        pr_std_1 = std_dict[datatype_1]
+        f1 = datatype_1.freq.freq_value
 
-            datatype_2 = datatypes[1]
-            pr_std_2 = std_dict[datatype_2]
-            f2 = datatype_2.freq.freq_value
+        datatype_2 = datatypes[1]
+        pr_std_2 = std_dict[datatype_2]
+        f2 = datatype_2.freq.freq_value
 
-            gama1 = f1 * f1 / (f1 * f1 - f2 * f2)
-            gama2 = f2 * f2 / (f1 * f1 - f2 * f2)
+        gama1 = f1 * f1 / (f1 * f1 - f2 * f2)
+        gama2 = f2 * f2 / (f1 * f1 - f2 * f2)
 
-            pr_std_if = gama1 * pr_std_1 - gama2 * pr_std_2
-            datatype_if = DataType.get_iono_free_pseudorange(datatype_1, datatype_2)
-            config_dict.set_obs_std(constellation, datatype_if, pr_std_if)
+        pr_std_if = gama1 * pr_std_1 - gama2 * pr_std_2
+        datatype_if = DataType.get_iono_free_datatype(datatype_1, datatype_2, constellation)
+        config_dict.set_obs_std(constellation, datatype_if, pr_std_if)
 
-            # TODO: add log message "computing observation std for observations...."
-            #print(f"Computing iono-free observation std for constellation {constellation}. {datatype_1}: {pr_std_1} - "
-            #      f"{datatype_2}: {pr_std_2} -> {datatype_if}: {pr_std_if}")
+        # TODO: add log message "computing observation std for observations...."
+        print(f"Computing iono-free observation std for constellation {constellation}. {datatype_1}: {pr_std_1} - "
+              f"{datatype_2}: {pr_std_2} -> {datatype_if}: {pr_std_if}")
 
     def get_iono_free_datatype(self, v_obs_in):
         # get code and carrier for first frequency (C1, L1)
@@ -87,18 +87,17 @@ class IonoFreeFunctor(Functor):
 
         # get iono free code
         if C1 is not None and C2 is not None:
-            C12 = DataType.get_iono_free_pseudorange(C1.datatype, C2.datatype)
+            C12 = DataType.get_iono_free_datatype(C1.datatype, C2.datatype, C1.datatype.constellation)
 
             # get iono-free value
             iono_free = self.compute_iono_free(C1, C2)
             v_obs_out.append(Observation(C12, iono_free))
 
-        # get iono free carrier
-        # if L1 is not None and L2 is not None:
-        #    L12 = DataType.get_iono_free_carrier_phase(L1.datatype, L2.datatype)
+        if L1 is not None and L2 is not None:
+            L12 = DataType.get_iono_free_datatype(L1.datatype, L2.datatype, L1.datatype.constellation)
 
             # get iono-free value
-            # iono_free = self.compute_iono_free(L1, L2)
-            # v_obs_out.append(Observation(L12, iono_free))
+            iono_free = self.compute_iono_free(L1, L2)
+            v_obs_out.append(Observation(L12, iono_free))
 
         return v_obs_out
