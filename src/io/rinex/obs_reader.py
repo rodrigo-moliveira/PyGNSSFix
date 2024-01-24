@@ -2,11 +2,12 @@ from math import floor
 
 from src.data_types.date.date import Epoch
 from src.data_types.gnss.satellite import get_satellite
-from src.data_types.gnss.data_type import data_type_from_rinex
+from src.data_types.gnss.data_type import data_type_from_rinex, DataType
 from src.data_types.gnss.constellation import get_constellation
 from src.data_types.gnss.observation_data import ObservationData
 from src.data_types.gnss.service_utils import CodeToConstellationMap
 from src.errors import ConfigError, FileError, UnknownConstellationError
+from src.constants import SPEED_OF_LIGHT
 from src import WORKSPACE_PATH
 
 from .utils import *
@@ -254,6 +255,11 @@ class RinexObsReader:
                                     continue
                             except ValueError:
                                 pass
+
+                            # convert carrier phase from cycles to meters
+                            if DataType.is_carrier(this_type):
+                                wavelength = SPEED_OF_LIGHT / this_type.freq_value
+                                observable = observable * wavelength
 
                             # set observable
                             self._obs.set_observable(this_epoch, this_sat, this_type, observable)

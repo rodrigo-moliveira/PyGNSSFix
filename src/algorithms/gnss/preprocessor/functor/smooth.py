@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from . import Functor
 
 from src.data_types.gnss.observation_data import ObservationData
@@ -17,10 +19,6 @@ from src.errors import NonExistentObservable
 class SmoothFunctor(Functor):
 
     def __init__(self, time_constant: float, obs_rate: float):
-        """
-        :param time_constant: time constant of the filter [seconds]
-        :param obs_rate: gnss_obs rate [seconds]
-        """
         super().__init__()
         self.rate = obs_rate
         self.time_constant = time_constant
@@ -31,18 +29,18 @@ class SmoothFunctor(Functor):
     @staticmethod
     def _get_carrier(v_obs, freq):
         for obs in v_obs:
-            if DataType.is_carrier(obs.datatype) or DataType.is_iono_free_carrier(obs.datatype):
+            if DataType.is_carrier(obs.datatype):
                 if obs.datatype.freq_number == freq:
                     return obs
         return None
 
     def get_alfa(self, t, t_prev, t_0):
         """
-        alfa = (t_i - t_{i-1}) / (t_i - t_0 + t_i - t_{i-1}) if t_i - t_0 < Tc
-        alfa = (t_i - t_{i-1}) / (t_C + t_i - t_{i-1}) if t_i - t_0 >= Tc
+        alfa = (t_i - t_{i-1}) / (t_i - t_0) if t_i - t_0 < Tc
+        alfa = (t_i - t_{i-1}) / Tc if t_i - t_0 >= Tc
         """
-        delta_initial = t - t_0
-        delta = t - t_prev
+        delta_initial = (t - t_0).total_seconds()
+        delta = (t - t_prev).total_seconds()
 
         if delta_initial < self.time_constant:
             return delta / delta_initial
@@ -52,9 +50,8 @@ class SmoothFunctor(Functor):
     def __call__(self, obs_data_in, epoch, sat):
         # smooth function:
         # SPR(t_i) = alfa PR(t_i) + (1 - alfa) * (SPR(t_{i-1}) + L(t_i) - L(t_{i-1})
-
         v_obs_out = []
-        epoch_prev = epoch + (-self.rate)
+        epoch_prev = epoch + timedelta(seconds=-self.rate)
 
         # get observations at this epoch and previous epoch (Input Raw ObservationData)
         try:
@@ -66,44 +63,44 @@ class SmoothFunctor(Functor):
         # iterate over all observations and only process codes
         for obs in raw_obs:
             if DataType.is_code(obs.datatype) or DataType.is_iono_free_code(obs.datatype):
-                PR = obs  # PR(t_i)
-                carrier = self._get_carrier(raw_obs, PR.datatype.freq_number)  # L(t_i)
+                pseudorange = obs  # PR(t_i)
+                carrier = self._get_carrier(raw_obs, pseudorange.datatype.freq_number)  # L(t_i)
 
                 # compute smooth observable
-                smooth_obs = self.smooth_function(obs_data_in, self._SPRs, sat, epoch, epoch_prev, PR, carrier)
+                smooth_obs = self.smooth_function(obs_data_in, sat, epoch, epoch_prev, pseudorange, carrier)
 
                 # append it to output list
                 v_obs_out.append(smooth_obs)
 
         return v_obs_out
 
-    def smooth_function(self, obs_data_in, smooth_data, sat, epoch, epoch_prev, PR, carrier):
+    def smooth_function(self, obs_data_in, sat, epoch, epoch_prev, pseudorange, carrier):
 
         # get SPR datatype (C1 + L1 = SPR1, C2 + L2 = SPR2, C12 + L12 = SPR12, ...)
-        SPR = DataType.get_smooth_datatype(PR.datatype)
+        smooth_type = DataType.get_smooth_pseudorange(pseudorange.datatype)
 
         try:
-            # get carrier at previous epoch
+            # SPR(t_{i-1})
+            spr_prev = self._SPRs.get_observable_at_epoch(sat, epoch_prev, smooth_type)
             carrier_prev = obs_data_in.get_observable_at_epoch(sat, epoch_prev, carrier.datatype)  # L(t_{i-1})
 
-            SPR_prev = self._SPRs.get_observable_at_epoch(sat, epoch_prev, SPR)  # SPR(t_{i-1})
-
-            # get alfa weight
+            # get alfa weight # TODO: review this
             alfa = self.get_alfa(epoch, epoch_prev, obs_data_in.get_first_arc_epoch(sat, epoch, self.rate))
 
             # smooth computation
             carrier_diff = carrier.value - carrier_prev.value
-            smooth_code = alfa * PR.value + (1 - alfa) * (SPR_prev.value + carrier_diff)
-            smooth_obs = Observation(SPR, smooth_code)
+            value = alfa * pseudorange.value + (1 - alfa) * (spr_prev.value + carrier_diff)
+            smooth_obs = Observation(smooth_type, value)
 
         except:
-            # an exception was raised in one of the above functions (possible reasons: no smooth data at previous epoch,
-            # available, no carrier data available...)
+            # an exception was raised in one of the above functions.
+            # possible reasons:
+            #   * first epoch (no previous-epoch data)
 
             # set smooth data equal to raw pseudorange (unfiltered)
-            smooth_obs = Observation(SPR, PR.value)
+            smooth_obs = Observation(smooth_type, pseudorange.value)
 
         # save this SPR in the local functor memory
-        smooth_data.set_observation(epoch, sat, smooth_obs)
+        self._SPRs.set_observation(epoch, sat, smooth_obs)
 
         return smooth_obs

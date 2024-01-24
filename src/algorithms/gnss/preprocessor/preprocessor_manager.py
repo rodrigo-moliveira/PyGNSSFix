@@ -7,7 +7,7 @@ from src.io.config.enums import EnumPositioningMode
 from .filter import FilterMapper, TypeConsistencyFilter, RateDowngradeFilter, SignalCheckFilter
 from src.algorithms.gnss.preprocessor.functor.constellation_filter import ConstellationFunctor
 from .filter.ura_health_check import SatFilterHealthURA
-from .functor import FunctorMapper, IonoFreeFunctor
+from .functor import FunctorMapper, IonoFreeFunctor, SmoothFunctor
 
 
 class PreprocessorManager:
@@ -54,7 +54,6 @@ class PreprocessorManager:
             raise PreprocessorError(f"PreprocessorManager -> Error performing Consistency Type filter: {e}")
 
         obs_data_out = ObservationData()
-        obs_data_out.header = self.raw_data.header
 
         # check to compute or not iono free dataset from raw observables
         compute_iono_free = (config_dict.get_model() == EnumPositioningMode.SPS_IF)
@@ -82,9 +81,9 @@ class PreprocessorManager:
 
         """Currently, the Smooth Algorithm is turned off. Further investigation is needed to fix it"""
         # Get Smooth Observation Data
-        # try:
-        #    _data_out = self.smooth(_data_out)
-        # except Exception as e:
+        #try:
+        #    obs_data_out = self.smooth(obs_data_out)
+        #except Exception as e:
         #    raise PreprocessorError(f"Error computing Smooth Observation Data: {e}")
 
         # Prepare ObservationData for output (downgrade output rate)
@@ -92,6 +91,9 @@ class PreprocessorManager:
             self.downgrade(obs_data_out)
         except Exception as e:
             raise PreprocessorError(f"PreprocessorManager -> Error performing Downgrade Rate filter: {e}")
+
+        # save header
+        obs_data_out.header = self.raw_data.header
 
         # Saving Output Observation Data to File
         self.log.debug(
@@ -107,13 +109,16 @@ class PreprocessorManager:
         self.log.info("Applying consistency filter to remove unnecessary datatypes and data-less satellites")
         datatypes = {}
 
-        # NOTE: currently we filter out Signal and Carrier Observables -> only need Pseudorange
+        # NOTE: currently we filter out Signal and Doppler Observables -> only need Pseudorange and Carrier Phase
         for constellation, services in self.services.items():
             datatypes[constellation] = []
             for service in services:
-                datatype = data_type_from_rinex(f"C{service}", constellation)
-                if datatype is not None:
-                    datatypes[constellation].append(datatype)
+                pr = data_type_from_rinex(f"C{service}", constellation)
+                if pr is not None:
+                    datatypes[constellation].append(pr)
+                cp = data_type_from_rinex(f"L{service}", constellation)
+                if cp is not None:
+                    datatypes[constellation].append(cp)
 
         type_filter = TypeConsistencyFilter(datatypes)
         mapper = FilterMapper(type_filter)
@@ -174,11 +179,10 @@ class PreprocessorManager:
         mapper = FunctorMapper(functor)
         mapper.apply(raw_data, data_out)
 
-    """def smooth(self, data):
+    def smooth(self, data):
         self.log.info("Computing smooth data")
-
-        smooth_functor = SmoothFunctor(config["model"]["smooth"]["time_constant"],
-                                       data.get_rate())
+        time_constant = 300.0
+        smooth_functor = SmoothFunctor(time_constant, data.get_rate())
         mapper = FunctorMapper(smooth_functor)
         smooth_data = ObservationData()
         mapper.apply(data, smooth_data)
@@ -188,9 +192,7 @@ class PreprocessorManager:
         f.write(str(smooth_data))
         f.close()
 
-        # change pointer of _data_out
-        data = smooth_data
-        return data"""
+        return smooth_data
 
     def downgrade(self, data):
         # Downgrade gnss_obs data rate

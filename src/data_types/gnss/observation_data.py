@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from datetime import timedelta
 
 from src.data_types.gnss.data_type import DataType
 from src.data_types.date.date import Epoch
@@ -374,10 +375,10 @@ class ObservationData:
         while True:
             try:
                 self.get_observables_at_epoch(epoch, sat)
-                epoch = epoch + (-rate)
+                epoch = epoch + timedelta(seconds=-rate)
 
             except NonExistentObservable:
-                return epoch + rate
+                return epoch + timedelta(seconds=rate)
 
     def copy(self):
         """ return a copy of this object"""

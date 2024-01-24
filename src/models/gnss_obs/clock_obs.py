@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from numpy.linalg import norm
 
-from src.data_types.gnss.data_type import L1, E1
+from src.data_types.gnss.data_type import *
 from src.io.config.enums import EnumTransmissionTime
 from src.models.frames.frames import dcm_e_i
 from src.models.gnss_obs.ephemeride_propagator import EphemeridePropagator, fix_gnss_week_crossovers
@@ -12,6 +12,13 @@ from src import constants
 # utility functions related to navigation clocks
 
 _ggto_cache = {}
+L1 = get_data_type("L1", "GPS")
+L2 = get_data_type("L2", "GPS")
+
+E1 = get_data_type("E1", "GAL")
+E5a = get_data_type("E5a", "GAL")
+E5b = get_data_type("E5b", "GAL")
+
 
 def compute_tx_time(model=None, **kwargs):
     if model == EnumTransmissionTime.GEOMETRIC:
@@ -158,42 +165,44 @@ def nav_sat_clock_correction(sat_clock, datatype, nav_message):
 def get_bgd_correction(datatype, nav_message):
     # NOTE: this function is only called assuming standard SPS Mode, that is, the only BGDs available
     # are the ones from the navigation message. No extra DCB information is used
-    if nav_message.constellation == "GPS":
-        if datatype == "PR1" or datatype == "PR2":
+    if nav_message.constellation == "GPS" and datatype.constellation == "GPS":
+        if datatype.freq_number == 1 or datatype.freq_number == 2:
             scale = (L1.freq_value / datatype.freq.freq_value) ** 2
             return scale * nav_message.TGD
-        elif datatype == "PR12":  # the broadcast clock refers to the L1-L2 iono-free clock -> no correction needed
+        elif datatype.freq_number == 12:
+            # the broadcast clock refers to the L1-L2 iono-free clock -> no correction needed
             return 0.0
         else:
             # TODO: for all other cases (PR5 or PR15) issue warning
             return 0.0
-    elif nav_message.constellation == "GAL":
+    elif nav_message.constellation == "GAL" and datatype.constellation == "GAL":
         nav_type = nav_message.nav_type
 
         if nav_type == "FNAV":
-            if datatype == "PR1" or datatype == "PR5":
+            if datatype.freq_number == 1 or datatype.freq_number == 5:
                 scale = (E1.freq_value / datatype.freq.freq_value) ** 2
                 return scale * nav_message.BGDE1E5a
-            elif datatype == "PR15":
+            elif datatype.freq_number == 15:
                 return 0.0
             else:
                 return 0.0  # TODO: issue warning
         elif nav_type == "INAV":
-            if datatype == "PR1" or datatype == "PR7":
+            if datatype.freq_number == 1 or datatype.freq_number == 7:
                 scale = (E1.freq_value / datatype.freq.freq_value) ** 2
                 return scale * nav_message.BGDE1E5b
-            elif datatype == "PR17":
+            elif datatype.freq_number == 17:
                 return 0.0
-            elif datatype == "PR5":
+            elif datatype.freq_number == 5:
                 scale = (E1.freq_value / datatype.freq.freq_value) ** 2
                 return nav_message.BGDE1E5b - nav_message.BGDE1E5a + nav_message.BGDE1E5a * scale
-            elif datatype == "PR15":
+            elif datatype.freq_number == 15:
                 return nav_message.BGDE1E5b - nav_message.BGDE1E5a
             else:
                 return 0.0  # TODO: issue warning
 
     else:
-        raise AttributeError(f"Unknown constellation {nav_message.constellation}")
+        raise AttributeError(f"Mismatch between navigation message constellation ({nav_message.constellation}) and "
+                             f" datatype {repr(datatype)}")
     return 0.0
 
 
@@ -209,5 +218,3 @@ def compute_ggto(time_correction, epoch):
         # apply this eq. GGTO(t_sow) = a0 + a1 * (t_sow - T + 604800 * (week - Week_ref) )
         _ggto_cache[epoch] = a0 + a1 * (sow - sow_ref + constants.SECONDS_IN_GNSS_WEEK * (week - week_ref))
     return _ggto_cache[epoch]
-
-

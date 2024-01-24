@@ -1,7 +1,7 @@
 from src import constants
 from src.errors import DataTypeError
 
-__all__ = ["get_data_type"]
+__all__ = ["get_data_type", "data_type_from_rinex"]
 
 
 class DataType:
@@ -55,7 +55,7 @@ class DataType:
     # conditional operations for use of ´in´ keyword in lists
     def __eq__(self, other):
         if isinstance(other, str):
-            other = get_data_type(other)
+            other = get_data_type(other, self.constellation)
         return hash(self) == hash(other)
 
     def __hash__(self):
@@ -97,6 +97,8 @@ class DataType:
     def freq_value(self):
         if hasattr(self, "_freq_value"):
             return self._freq_value
+        elif hasattr(self, "_freq"):
+            return self._freq._freq_value
         else:
             raise AttributeError(f"The provided datatype {str(self)} has no attribute 'freq_value'")
 
@@ -116,7 +118,8 @@ class DataType:
 
     @staticmethod
     def is_code(data_type):
-        return data_type in cAvailableCodes or data_type in cAvailableIonoFreeCodes
+        return data_type in cAvailableCodes or data_type in cAvailableIonoFreeCodes or \
+            data_type in cAvailableSmoothCodes or data_type in cAvailableIonoFreeSmoothCodes
 
     @staticmethod
     def is_iono_free_code(data_type):
@@ -153,7 +156,7 @@ class DataType:
         return list_out
 
     @staticmethod
-    def get_iono_free_pseudorange(datatype1, datatype2):
+    def get_iono_free_pseudorange(datatype1, datatype2, constellation):
         """
         mix data types to get the associated iono free datatype
         get_iono_free_datatype(PR1, PR1) => PR12
@@ -161,7 +164,7 @@ class DataType:
         if DataType.is_code(datatype1) and DataType.is_code(datatype2):
             index1 = datatype1.freq_number
             index2 = datatype2.freq_number
-            return get_data_type(f"PR{min(index1, index2)}{max(index1, index2)}")
+            return get_data_type(f"PR{min(index1, index2)}{max(index1, index2)}", constellation)
 
         # if DataType.is_carrier(datatype1) and DataType.is_carrier(datatype2):
         #    index1 = datatype1.freq_number
@@ -181,12 +184,7 @@ class DataType:
         if DataType.is_code(datatype):
             # datatype = PR1 -> return SPR1
             index = datatype.freq_number
-            return get_data_type(f"SPR{index}")
-
-        if DataType.is_iono_free_code(datatype):
-            # datatype = PR12 -> return SPR12
-            index = datatype.freq_number
-            return get_data_type(f"SPR{index}")
+            return get_data_type(f"SPR{index}", datatype.constellation)
 
         raise DataTypeError(f"Unable to create smooth pseudorange from "
                             f"data type {str(datatype)}")
@@ -223,88 +221,140 @@ E6 = DataType(data_type="E6", description="Frequency E6 (GAL)", freq_value=const
 ###################
 
 # GPS Code, Carrier, Signal and DOPs
-PR1_GPS = DataType(data_type="PR1", description="PseudoRange in L1 (GPS)", freq=L1, freq_number=1)
-PR2_GPS = DataType(data_type="PR2", description="PseudoRange in L2 (GPS)", freq=L2, freq_number=2)
-PR5_GPS = DataType(data_type="PR5", description="PseudoRange in L5 (GPS)", freq=L5, freq_number=5)
+PR1_GPS = DataType(data_type="PR1", description="PseudoRange in L1 (GPS)", freq=L1, freq_number=1,
+                   constellation="GPS")
+PR2_GPS = DataType(data_type="PR2", description="PseudoRange in L2 (GPS)", freq=L2, freq_number=2,
+                   constellation="GPS")
+PR5_GPS = DataType(data_type="PR5", description="PseudoRange in L5 (GPS)", freq=L5, freq_number=5,
+                   constellation="GPS")
 
-CP1_GPS = DataType(data_type="CP1", description="Carrier Phase in L1 (GPS)", freq=L1, freq_number=1)
-CP2_GPS = DataType(data_type="CP2", description="Carrier Phase in L2 (GPS)", freq=L2, freq_number=2)
-CP5_GPS = DataType(data_type="CP5", description="Carrier Phase in L5 (GPS)", freq=L5, freq_number=5)
+CP1_GPS = DataType(data_type="CP1", description="Carrier Phase in L1 (GPS)", freq=L1, freq_number=1,
+                   constellation="GPS")
+CP2_GPS = DataType(data_type="CP2", description="Carrier Phase in L2 (GPS)", freq=L2, freq_number=2,
+                   constellation="GPS")
+CP5_GPS = DataType(data_type="CP5", description="Carrier Phase in L5 (GPS)", freq=L5, freq_number=5,
+                   constellation="GPS")
 
-S1_GPS = DataType(data_type="S1", description="Signal Strength in L1 (GPS)", freq=L1, freq_number=1)
-S2_GPS = DataType(data_type="S2", description="Signal Strength in L2 (GPS)", freq=L2, freq_number=2)
-S5_GPS = DataType(data_type="S5", description="Signal Strength in L5 (GPS)", freq=L5, freq_number=5)
+S1_GPS = DataType(data_type="S1", description="Signal Strength in L1 (GPS)", freq=L1, freq_number=1,
+                  constellation="GPS")
+S2_GPS = DataType(data_type="S2", description="Signal Strength in L2 (GPS)", freq=L2, freq_number=2,
+                  constellation="GPS")
+S5_GPS = DataType(data_type="S5", description="Signal Strength in L5 (GPS)", freq=L5, freq_number=5,
+                  constellation="GPS")
 
-D1_GPS = DataType(data_type="D1", description="Doppler in L1 (GPS)", freq=L1, freq_number=1)
-D2_GPS = DataType(data_type="D2", description="Doppler in L2 (GPS)", freq=L2, freq_number=2)
-D5_GPS = DataType(data_type="D5", description="Doppler in L5 (GPS)", freq=L5, freq_number=5)
+D1_GPS = DataType(data_type="D1", description="Doppler in L1 (GPS)", freq=L1, freq_number=1,
+                  constellation="GPS")
+D2_GPS = DataType(data_type="D2", description="Doppler in L2 (GPS)", freq=L2, freq_number=2,
+                  constellation="GPS")
+D5_GPS = DataType(data_type="D5", description="Doppler in L5 (GPS)", freq=L5, freq_number=5,
+                  constellation="GPS")
 
 # GAL Code, Carrier, Signal and DOPs
-PR1_GAL = DataType(data_type="PR1", description="PseudoRange in E1 (GAL)", freq=E1, freq_number=1)
-PR5_GAL = DataType(data_type="PR5", description="PseudoRange in E5a (GAL)", freq=E5a, freq_number=5)
-PR7_GAL = DataType(data_type="PR7", description="PseudoRange in E5b (GAL)", freq=E5b, freq_number=7)
-PR8_GAL = DataType(data_type="PR8", description="PseudoRange in E5AltBOC (GAL)", freq=E5ALTBOC, freq_number=8)
-PR6_GAL = DataType(data_type="PR6", description="PseudoRange in E6 (GAL)", freq=E6, freq_number=6)
+PR1_GAL = DataType(data_type="PR1", description="PseudoRange in E1 (GAL)", freq=E1, freq_number=1,
+                   constellation="GAL")
+PR5_GAL = DataType(data_type="PR5", description="PseudoRange in E5a (GAL)", freq=E5a, freq_number=5,
+                   constellation="GAL")
+PR7_GAL = DataType(data_type="PR7", description="PseudoRange in E5b (GAL)", freq=E5b, freq_number=7,
+                   constellation="GAL")
+PR8_GAL = DataType(data_type="PR8", description="PseudoRange in E5AltBOC (GAL)", freq=E5ALTBOC, freq_number=8,
+                   constellation="GAL")
+PR6_GAL = DataType(data_type="PR6", description="PseudoRange in E6 (GAL)", freq=E6, freq_number=6,
+                   constellation="GAL")
 
-CP1_GAL = DataType(data_type="CP1", description="Carrier Phase in E1 (GAL)", freq=E1, freq_number=1)
-CP5_GAL = DataType(data_type="CP5", description="Carrier Phase in E5a (GAL)", freq=E5a, freq_number=5)
-CP7_GAL = DataType(data_type="CP7", description="Carrier Phase in E5b (GAL)", freq=E5b, freq_number=7)
-CP8_GAL = DataType(data_type="CP8", description="Carrier Phase in E5AltBOC (GAL)", freq=E5ALTBOC, freq_number=8)
-CP6_GAL = DataType(data_type="CP6", description="Carrier Phase in E6 (GAL)", freq=E6, freq_number=6)
+CP1_GAL = DataType(data_type="CP1", description="Carrier Phase in E1 (GAL)", freq=E1, freq_number=1,
+                   constellation="GAL")
+CP5_GAL = DataType(data_type="CP5", description="Carrier Phase in E5a (GAL)", freq=E5a, freq_number=5,
+                   constellation="GAL")
+CP7_GAL = DataType(data_type="CP7", description="Carrier Phase in E5b (GAL)", freq=E5b, freq_number=7,
+                   constellation="GAL")
+CP8_GAL = DataType(data_type="CP8", description="Carrier Phase in E5AltBOC (GAL)", freq=E5ALTBOC, freq_number=8,
+                   constellation="GAL")
+CP6_GAL = DataType(data_type="CP6", description="Carrier Phase in E6 (GAL)", freq=E6, freq_number=6,
+                   constellation="GAL")
 
-S1_GAL = DataType(data_type="S1", description="Signal Strength in E1 (GAL)", freq=E1, freq_number=1)
-S5_GAL = DataType(data_type="S5", description="Signal Strength in E5a (GAL)", freq=E5a, freq_number=5)
-S7_GAL = DataType(data_type="S7", description="Signal Strength in E5b (GAL)", freq=E5b, freq_number=7)
-S8_GAL = DataType(data_type="S8", description="Signal Strength in E5AltBOC (GAL)", freq=E5ALTBOC, freq_number=8)
-S6_GAL = DataType(data_type="S6", description="Signal Strength in E6 (GAL)", freq=E6, freq_number=6)
+S1_GAL = DataType(data_type="S1", description="Signal Strength in E1 (GAL)", freq=E1, freq_number=1,
+                  constellation="GAL")
+S5_GAL = DataType(data_type="S5", description="Signal Strength in E5a (GAL)", freq=E5a, freq_number=5,
+                  constellation="GAL")
+S7_GAL = DataType(data_type="S7", description="Signal Strength in E5b (GAL)", freq=E5b, freq_number=7,
+                  constellation="GAL")
+S8_GAL = DataType(data_type="S8", description="Signal Strength in E5AltBOC (GAL)", freq=E5ALTBOC, freq_number=8,
+                  constellation="GAL")
+S6_GAL = DataType(data_type="S6", description="Signal Strength in E6 (GAL)", freq=E6, freq_number=6,
+                  constellation="GAL")
 
-D1_GAL = DataType(data_type="D1", description="Doppler in E1 (GAL)", freq=E1, freq_number=1)
-D5_GAL = DataType(data_type="D5", description="Doppler in E5a (GAL)", freq=E5a, freq_number=5)
-D7_GAL = DataType(data_type="D7", description="Doppler in E5b (GAL)", freq=E5b, freq_number=7)
-D8_GAL = DataType(data_type="D8", description="Doppler in E5AltBOC (GAL)", freq=E5ALTBOC, freq_number=8)
-D6_GAL = DataType(data_type="D6", description="Doppler in E6 (GAL)", freq=E6, freq_number=6)
+D1_GAL = DataType(data_type="D1", description="Doppler in E1 (GAL)", freq=E1, freq_number=1,
+                  constellation="GAL")
+D5_GAL = DataType(data_type="D5", description="Doppler in E5a (GAL)", freq=E5a, freq_number=5,
+                  constellation="GAL")
+D7_GAL = DataType(data_type="D7", description="Doppler in E5b (GAL)", freq=E5b, freq_number=7,
+                  constellation="GAL")
+D8_GAL = DataType(data_type="D8", description="Doppler in E5AltBOC (GAL)", freq=E5ALTBOC, freq_number=8,
+                  constellation="GAL")
+D6_GAL = DataType(data_type="D6", description="Doppler in E6 (GAL)", freq=E6, freq_number=6,
+                  constellation="GAL")
 
 #####################################
 # Iono Free PseudoRange Observables #
 #####################################
 # NOTE: currently, only allow for combinations between L1/E1 and secondary frequencies (L1/E1 must be present)
 # GPS
-PR12_GPS = DataType(data_type="PR12", description="L1-L2 Iono-Free PseudoRange (GPS)", freq_number=12)
-PR15_GPS = DataType(data_type="PR15", description="L1-L5 Iono-Free PseudoRange (GPS)", freq_number=15)
+PR12_GPS = DataType(data_type="PR12", description="L1-L2 Iono-Free PseudoRange (GPS)", freq_number=12,
+                    constellation="GPS")
+PR15_GPS = DataType(data_type="PR15", description="L1-L5 Iono-Free PseudoRange (GPS)", freq_number=15,
+                    constellation="GPS")
 
 # GAL
-PR15_GAL = DataType(data_type="PR15", description="E1-E5a Iono-Free PseudoRange (GAL)", freq_number=15)
-PR17_GAL = DataType(data_type="PR17", description="E1-E5b Iono-Free PseudoRange (GAL)", freq_number=17)
-PR18_GAL = DataType(data_type="PR18", description="E1-E5AltBOC Iono-Free PseudoRange (GAL)", freq_number=18)
-PR16_GAL = DataType(data_type="PR16", description="E1-E6 Iono-Free PseudoRange (GAL)", freq_number=16)
+PR15_GAL = DataType(data_type="PR15", description="E1-E5a Iono-Free PseudoRange (GAL)", freq_number=15,
+                    constellation="GAL")
+PR17_GAL = DataType(data_type="PR17", description="E1-E5b Iono-Free PseudoRange (GAL)", freq_number=17,
+                    constellation="GAL")
+PR18_GAL = DataType(data_type="PR18", description="E1-E5AltBOC Iono-Free PseudoRange (GAL)", freq_number=18,
+                    constellation="GAL")
+PR16_GAL = DataType(data_type="PR16", description="E1-E6 Iono-Free PseudoRange (GAL)", freq_number=16,
+                    constellation="GAL")
 
 ##################################
 # Smooth PseudoRange Observables #
 ##################################
 # GPS
-SPR1_GPS = DataType(data_type="SPR1", description="Smooth PseudoRange in L1 (GPS)", freq=L1, freq_number=1)
-SPR2_GPS = DataType(data_type="SPR2", description="Smooth PseudoRange in L2 (GPS)", freq=L2, freq_number=2)
-SPR5_GPS = DataType(data_type="SPR5", description="Smooth PseudoRange in L5 (GPS)", freq=L5, freq_number=5)
+SPR1_GPS = DataType(data_type="SPR1", description="Smooth PseudoRange in L1 (GPS)", freq=L1, freq_number=1,
+                    constellation="GPS")
+SPR2_GPS = DataType(data_type="SPR2", description="Smooth PseudoRange in L2 (GPS)", freq=L2, freq_number=2,
+                    constellation="GPS")
+SPR5_GPS = DataType(data_type="SPR5", description="Smooth PseudoRange in L5 (GPS)", freq=L5, freq_number=5,
+                    constellation="GPS")
 
 # GAL
-SPR1_GAL = DataType(data_type="SPR1", description="Smooth PseudoRange in E1 (GAL)", freq=E1, freq_number=1)
-SPR5_GAL = DataType(data_type="SPR5", description="Smooth PseudoRange in E5a (GAL)", freq=E5a, freq_number=5)
-SPR7_GAL = DataType(data_type="SPR7", description="Smooth PseudoRange in E5b (GAL)", freq=E5b, freq_number=7)
-SPR8_GAL = DataType(data_type="SPR8", description="Smooth PseudoRange in E5AltBOC (GAL)", freq=E5ALTBOC, freq_number=8)
-SPR6_GAL = DataType(data_type="SPR6", description="Smooth PseudoRange in E6 (GAL)", freq=E6, freq_number=6)
+SPR1_GAL = DataType(data_type="SPR1", description="Smooth PseudoRange in E1 (GAL)", freq=E1, freq_number=1,
+                    constellation="GAL")
+SPR5_GAL = DataType(data_type="SPR5", description="Smooth PseudoRange in E5a (GAL)", freq=E5a, freq_number=5,
+                    constellation="GAL")
+SPR7_GAL = DataType(data_type="SPR7", description="Smooth PseudoRange in E5b (GAL)", freq=E5b, freq_number=7,
+                    constellation="GAL")
+SPR8_GAL = DataType(data_type="SPR8", description="Smooth PseudoRange in E5AltBOC (GAL)", freq=E5ALTBOC, freq_number=8,
+                    constellation="GAL")
+SPR6_GAL = DataType(data_type="SPR6", description="Smooth PseudoRange in E6 (GAL)", freq=E6, freq_number=6,
+                    constellation="GAL")
 
 ################################
 # Smooth Iono-Free Observables #
 ################################
 # GPS
-SPR12_GPS = DataType(data_type="SPR12", description="L1-L2 Iono-Free Smooth PseudoRange (GPS)", freq_number=12)
-SPR15_GPS = DataType(data_type="SPR15", description="L1-L5 Iono-Free Smooth PseudoRange (GPS)", freq_number=15)
+SPR12_GPS = DataType(data_type="SPR12", description="L1-L2 Iono-Free Smooth PseudoRange (GPS)", freq_number=12,
+                     constellation="GPS")
+SPR15_GPS = DataType(data_type="SPR15", description="L1-L5 Iono-Free Smooth PseudoRange (GPS)", freq_number=15,
+                     constellation="GPS")
 
 # GAL
-SPR15_GAL = DataType(data_type="SPR15", description="E1-E5a Iono-Free Smooth PseudoRange (GAL)", freq_number=15)
-SPR17_GAL = DataType(data_type="SPR17", description="E1-E5b Iono-Free Smooth PseudoRange (GAL)", freq_number=17)
-SPR18_GAL = DataType(data_type="SPR18", description="E1-E5AltBOC Iono-Free Smooth PseudoRange (GAL)", freq_number=18)
-SPR16_GAL = DataType(data_type="SPR16", description="E1-E6 Iono-Free Smooth PseudoRange (GAL)", freq_number=16)
+SPR15_GAL = DataType(data_type="SPR15", description="E1-E5a Iono-Free Smooth PseudoRange (GAL)", freq_number=15,
+                     constellation="GAL")
+SPR17_GAL = DataType(data_type="SPR17", description="E1-E5b Iono-Free Smooth PseudoRange (GAL)", freq_number=17,
+                     constellation="GAL")
+SPR18_GAL = DataType(data_type="SPR18", description="E1-E5AltBOC Iono-Free Smooth PseudoRange (GAL)", freq_number=18,
+                     constellation="GAL")
+SPR16_GAL = DataType(data_type="SPR16", description="E1-E6 Iono-Free Smooth PseudoRange (GAL)", freq_number=16,
+                     constellation="GAL")
 
 # Unknown
 UN = DataType(data_type="UN", description="Unknown inputs type")
@@ -319,6 +369,7 @@ cAvailableFrequencies = [L1, L2, L5, E1, E5a, E5b, E5ALTBOC, E6]
 cAvailableSmoothCodes = [SPR1_GPS, SPR2_GPS, SPR5_GPS, SPR1_GAL, SPR5_GAL, SPR6_GAL, PR7_GAL, PR8_GAL]
 cAvailableIonoFreeSmoothCodes = [SPR12_GPS, SPR15_GPS, SPR15_GAL, SPR16_GAL, SPR17_GAL, SPR18_GAL]
 cAvailableIonoFreeCodes = [PR12_GPS, PR15_GPS, PR15_GAL, PR16_GAL, PR17_GAL, PR18_GAL]
+# cAvailableIonoFreeCarrier = [CP12_GPS, CP15_GPS, CP15_GAL, PR16_GAL, PR17_GAL, PR18_GAL]
 
 cGPSObsSignals = {"C": {"1": PR1_GPS, "2": PR2_GPS, "5": PR5_GPS},
                   "L": {"1": CP1_GPS, "2": CP2_GPS, "5": CP5_GPS},
@@ -328,20 +379,21 @@ cGALObsSignals = {"C": {"1": PR1_GAL, "5": PR5_GAL, "6": PR6_GAL, "7": PR7_GAL, 
                   "S": {"1": S1_GAL, "5": S5_GAL, "6": S6_GAL, "7": S7_GAL, "8": S8_GAL}}
 
 
-def get_data_type(datatype: str):
+def get_data_type(datatype: str, constellation: str):
     """
     Factory for inputs types. Receives a string representing the type of the datatype and returns the associated
     DataType instance
 
     Args:
         datatype (str): string with the short descriptor of the datatype to fetch (ex: C1, L5,...)
+        constellation (str): constellation associated with the datatype
     Return:
          DataType : returns the corresponding DataType instance
     """
     for container in [cAvailableCodes, cAvailableSignals, cAvailableFrequencies, cAvailableCarriers,
                       cAvailableSmoothCodes, cAvailableIonoFreeCodes, cAvailableIonoFreeSmoothCodes]:
         for _type in container:
-            if _type.data_type == datatype:
+            if _type.data_type == datatype and constellation == _type.constellation:
                 return _type
     return UN
 

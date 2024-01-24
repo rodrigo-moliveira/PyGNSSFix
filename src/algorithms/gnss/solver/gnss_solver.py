@@ -135,6 +135,7 @@ class GnssSolver:
                 self.log.info(f"Selected model for {const} is Iono-Free with gnss_obs {code_types}")
                 MODEL[const] = EnumModel.SINGLE_FREQ  # we process as single frequency
                 CODES[const] = [code_types[0]]
+                # TODO: raise exception if code_types[0] is not IonoFree
                 IONO[const] = EnumIono.DISABLED
             elif len(code_types) == 1:
                 # Single Frequency Model
@@ -213,6 +214,7 @@ class GnssSolver:
         return abs((rms_old - rms_new) / rms_old) <= stop_criteria
 
     def _solve_for_epoch(self, epoch, obs_data, state):
+        # TODO: limpar o código duplicado devido ao elevation filter
         # begin iterative process for this epoch
         iteration = 0
         rms = rms_prev = 1
