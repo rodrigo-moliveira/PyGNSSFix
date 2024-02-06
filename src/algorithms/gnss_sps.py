@@ -66,9 +66,9 @@ class GnssSinglePointSolution(Algorithm):
 
         # perform pre-processing here
         log.info(f"Starting Preprocessor Module")
-        preprocessor = PreprocessorManager(trace_path, raw_obs_data, nav_data)
-        obs_data = preprocessor.compute()  # this is the gnss_obs data to actually process
-
+        preprocessor = PreprocessorManager(trace_path, data_manager)
+        preprocessor.compute()  # this is the gnss_obs data to actually process
+        exit()
         # run estimation algorithm
         log.info(f"Running estimation algorithm...")
         solver = GnssSolver(obs_data, nav_data)

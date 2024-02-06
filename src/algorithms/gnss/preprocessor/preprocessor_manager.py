@@ -5,18 +5,17 @@ from src.data_types.gnss.observation_data import ObservationData
 from src.errors import PreprocessorError
 from src.io.config.enums import EnumPositioningMode
 from .filter import FilterMapper, TypeConsistencyFilter, RateDowngradeFilter, SignalCheckFilter
-from src.algorithms.gnss.preprocessor.functor.constellation_filter import ConstellationFunctor
+from .filter.constellation_filter import ConstellationFilter
 from .filter.ura_health_check import SatFilterHealthURA
 from .functor import FunctorMapper, IonoFreeFunctor, SmoothFunctor
 
 
 class PreprocessorManager:
 
-    def __init__(self, trace_path, raw_data, nav_data):
+    def __init__(self, trace_path, data_manager):
         self.log = get_logger("PREPROCESSOR")
         self.trace_path = trace_path
-        self.raw_data = raw_data
-        self.nav_data = nav_data
+        self.data_manager = data_manager
         self.services = config_dict.get_services()
 
     def compute(self):
@@ -37,28 +36,34 @@ class PreprocessorManager:
         # SNR Check Filter
         # TODO: write a filter report (x% of data was removed, etc.)
         # TODO: add log messages to all filters... (removed obs for epoch...)
+        obs_data = self.data_manager.get_data("obs_data")
         try:
-            self.snr_filter(self.raw_data)
+            self.snr_filter(obs_data)
         except Exception as e:
             raise PreprocessorError(f"PreprocessorManager -> Error performing SNR filter: {e}")
 
         try:
-            self.sv_ura_health_filter(self.raw_data)
+            self.sv_ura_health_filter(obs_data)
         except Exception as e:
             raise PreprocessorError(f"PreprocessorManager -> Error performing SV URA and Health filter: {e}")
 
         # Type Consistency Filter
         try:
-            self.consistency_filter(self.raw_data)
+            self.consistency_filter(obs_data)
         except Exception as e:
             raise PreprocessorError(f"PreprocessorManager -> Error performing Consistency Type filter: {e}")
 
-        obs_data_out = ObservationData()
+        # Prepare ObservationData for output (downgrade output rate)
+        try:
+            self.downgrade(obs_data)
+        except Exception as e:
+            raise PreprocessorError(f"PreprocessorManager -> Error performing Downgrade Rate filter: {e}")
 
         # check to compute or not iono free dataset from raw observables
         compute_iono_free = (config_dict.get_model() == EnumPositioningMode.SPS_IF)
-        for constellation in self.services.keys():
-            if compute_iono_free:
+        if compute_iono_free:
+            iono_free_data = self.data_manager.get_data("iono_free_obs_data")
+            for constellation in self.services.keys():
                 obs_list = config_dict.get("model", constellation, "observations")
                 n_obs = len(obs_list)
                 if n_obs != 2:
@@ -68,41 +73,41 @@ class PreprocessorManager:
                     self.log.info(f"Computing iono free data for constellation {constellation} with observations "
                                   f"{obs_list}")
                     try:
-                        self.iono_free(self.raw_data, obs_data_out, constellation)
+                        self.iono_free(obs_data, iono_free_data, constellation)
                     except Exception as e:
                         raise PreprocessorError(
                             f"PreprocessorManager -> Error computing Iono Free Observation Data: {e}")
-            else:
-                self.log.info(f"Iono free data not computed for {constellation} due to user choice")
-                # select raw observables for this constellation
-                functor = ConstellationFunctor(constellation)
-                mapper = FunctorMapper(functor)
-                mapper.apply(self.raw_data, obs_data_out)
+        else:
+            self.log.info(f"Iono free data not computed due to user choice")
+            # select raw observables for this constellation
+            constellation_filter = ConstellationFilter(self.services.keys())
+            mapper = FilterMapper(constellation_filter)
+            mapper.apply(obs_data)
 
         # Get Smooth Observation Data
-        try:
-            obs_data_out = self.smooth(obs_data_out)
-        except Exception as e:
-            raise PreprocessorError(f"Error computing Smooth Observation Data: {e}")
-
-        # Prepare ObservationData for output (downgrade output rate)
-        try:
-            self.downgrade(obs_data_out)
-        except Exception as e:
-            raise PreprocessorError(f"PreprocessorManager -> Error performing Downgrade Rate filter: {e}")
-
-        # save header
-        obs_data_out.header = self.raw_data.header
+        compute_smooth = True
+        if compute_smooth:
+            try:
+                data = self.data_manager.get_data("iono_free_obs_data") if compute_iono_free else obs_data
+                self.smooth(data)
+            except Exception as e:
+                raise PreprocessorError(f"Error computing Smooth Observation Data: {e}")
 
         # Saving Output Observation Data to File
         self.log.debug(
             "Writing Preprocessor output Observation Data to trace file {}".format("PreprocessedObservationData.txt"))
         f = open(self.trace_path + "/PreprocessedObservationData.txt", "w")
-        f.write(str(obs_data_out))
+        f.write(str(obs_data))
         f.close()
 
+        if compute_iono_free:
+            self.log.debug(
+                "Writing IonoFree Observation Data to trace file {}".format("IonoFreeObservationData.txt"))
+            f = open(self.trace_path + "/IonoFreeObservationData.txt", "w")
+            f.write(str(self.data_manager.get_data("iono_free_obs_data")))
+            f.close()
+
         self.log.info("End of module Preprocessor")
-        return obs_data_out
 
     def consistency_filter(self, observation_data):
         self.log.info("Applying consistency filter to remove unnecessary datatypes and data-less satellites")
@@ -160,7 +165,8 @@ class PreprocessorManager:
                       f"GAL SISA filter = {gal_sisa_check} SISA threshold = {gal_sisa_val}m, health status check is "
                       f"{gal_health}")
 
-        ura_filter = SatFilterHealthURA(self.nav_data, gps_ura_check, gps_ura_val, gps_health,
+        nav_data = self.data_manager.get_data("nav_data")
+        ura_filter = SatFilterHealthURA(nav_data, gps_ura_check, gps_ura_val, gps_health,
                                         gal_sisa_check, gal_sisa_val, gal_health, self.log)
         mapper = FilterMapper(ura_filter)
         mapper.apply(observation_data)
@@ -183,15 +189,13 @@ class PreprocessorManager:
         time_constant = 300.0
         smooth_functor = SmoothFunctor(time_constant, data.get_rate())
         mapper = FunctorMapper(smooth_functor)
-        smooth_data = ObservationData()
+        smooth_data = self.data_manager.get_data("smooth_obs_data")
         mapper.apply(data, smooth_data)
 
         self.log.debug("Writing Smooth Observation Data to trace file {}".format("SmoothObservationData.txt"))
         f = open(self.trace_path + "/SmoothObservationData.txt", "w")
         f.write(str(smooth_data))
         f.close()
-
-        return smooth_data
 
     def downgrade(self, data):
         # Downgrade gnss_obs data rate

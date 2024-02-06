@@ -68,7 +68,7 @@ def tx_time_geometric(r_receiver=None, t_reception=None, dt_receiver=None, nav_m
     while residual > residual_th and N < max_iter:
         # 2. Get satellite coordinates
         t = t_reception + timedelta(seconds=-tau)
-        r_satellite, _ = EphemeridePropagator.compute_nav_sat_pos(nav_message, t.gnss_time)
+        r_satellite, _, _ = EphemeridePropagator.compute_nav_sat_pos(nav_message, t.gnss_time)
 
         # 3. Compute pseudorange (in ECEF frame associated to t_receiver epoch)
         _R = dcm_e_i(-tau)

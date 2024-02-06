@@ -4,8 +4,9 @@ tasks for preliminary version:
             [X] no obs_reconstructor/tropo_manager -> construir T (wet + dry) usando o wet apropriado (modelo ou state.tropo consoante o caso)
             [X] no lsq_engine/GNSS_State colocar a nova variável de estado
     [X] re-adicionar o filtro de elevation no gnss_solver
-    [ ] re-adicionar o smoothing, tendo em conta que afinal é necessário converter carrier de ciclos para metros! (no cycle slip detection yet)
-    [ ] add velocity in computation of satellite ephemerides (ver prototype e livro da ESA)
+    [X] re-adicionar o smoothing, tendo em conta que afinal é necessário converter carrier de ciclos para metros! (no cycle slip detection yet)
+    [X] add velocity in computation of satellite ephemerides (ver prototype e livro da ESA)
+    [ ] process doppler measurements to estimate velocity
     [ ] add GGTO to the EOP database
     [ ] add leapseconds from rinex file to EOP database, when there is no file
     [ ] o GGTO/ISB não estõa muito bem integrados no código da class Epoch.
@@ -51,7 +52,7 @@ caminhar para PPPP:
 
 finalizar o GNSS user positioning com:
     [ ] Adicionar Kalman filter com user dynamics
-    [ ] process doppler measurements to estimate velocity
+
 
 
 # Relase 1.2 (INS - IMU Emulator - Loosely Coupled)
@@ -64,5 +65,4 @@ loosely coupled:
 ...
 # Release 1.3
     [ ] cycle slip detection
-    [ ] ambiguity fixing and resolution
-    [ ] adicionar processamento de carrier phase - PPP
+    [ ] PPP e PPP-AR com OSBs

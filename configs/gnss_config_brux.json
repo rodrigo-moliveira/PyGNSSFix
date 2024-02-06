@@ -34,8 +34,8 @@
    },
 
    "model": {
-      "constellations": ["GPS", "GAL"],
-      "mode": "SPS_IF",
+      "constellations": ["GPS"],
+      "mode": "SPS",
       "_comment": "available modes are SPS, SPS_IF",
 
       "estimate_ggto": false,

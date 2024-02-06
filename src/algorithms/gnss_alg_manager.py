@@ -43,14 +43,9 @@ class GnssAlgorithmManager:
         last_epoch = config_dict.get("inputs", "arc", "last_epoch")
         snr_check = config_dict.get("inputs", "snr_control")
 
-        nav = NavigationData()
-        obs = ObservationData()
-
-        RinexNavReader(nav_file, nav)
-        RinexObsReader(obs, obs_file, services, logger, first_epoch, last_epoch, snr_check)
-
-        self.data_manager.add_data("obs_data", obs)
-        self.data_manager.add_data("nav_data", nav)
+        RinexNavReader(nav_file, self.data_manager.get_data("nav_data"))
+        RinexObsReader(self.data_manager.get_data("obs_data"), obs_file, services, logger, first_epoch, last_epoch,
+                       snr_check)
 
         # trace data files
         trace_dir = f"{self.data_dir}\\trace"
