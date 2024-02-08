@@ -5,10 +5,8 @@ import traceback
 from src import RUNS_PATH
 from src.data_mng.gnss_data_mng import GnssDataManager
 from src.common_log import set_logs, get_logger
-from src.data_types.gnss.observation_data import ObservationData
 from src.io.rinex.nav_reader import RinexNavReader
 from src.io.rinex.obs_reader import RinexObsReader
-from src.data_types.gnss.navigation_data import NavigationData
 from src.io.config import config_dict
 
 

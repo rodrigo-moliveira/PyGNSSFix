@@ -60,7 +60,10 @@ def export_to_file(gnss_state: GnssStateSpace, exportable):
 
         data = []
         for sat, iono_data in gnss_state.iono.items():
-            data.append(f"{sat},{iono_data},{cov[sat]}")
+            try:
+                data.append(f"{sat},{iono_data},{cov[sat]}")
+            except KeyError:
+                pass
         return data
 
     elif exportable == "prefit_residuals" or exportable == "postfit_residuals":

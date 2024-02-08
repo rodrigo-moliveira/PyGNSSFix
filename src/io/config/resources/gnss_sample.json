@@ -15,8 +15,9 @@
       "clk_files": [""],
       "sp3_files": [""],
 
-      "leap_file": "time_data/tai-utc.dat",
-      "finals_file": "time_data/finals1980.data.txt",
+      "leap_file": "geo_time_data/tai-utc.dat",
+      "finals_file": "geo_time_data/finals1980.data.txt",
+      "tropo_file": "geo_time_data/gpt3_5.grd",
 
       "_comment2": "snr threshold to discard RINEX observables (compare with snr control digit). [1-4]: bad, [5:8]: good, 9: excellent",
       "snr_control": 1,
@@ -42,10 +43,10 @@
 
       "troposphere": {
          "_comment1": "Select Tropospheric model. Available models are 'NONE', 'Saastamoinen', 'GPT2'",
-         "model": "",
+         "model": "Saastamoinen",
 
          "_comment2": "Select Tropospheric mask function. Available masks are 'Saastamoinen', 'GMF', 'VMF1', 'VMF3'",
-         "mask": "",
+         "mask": "Saastamoinen",
 
          "_comment3": "Select `true` to estimate tropospheric wet delay or `false` to disable tropo estimation",
          "estimate_tropo_wet": false
@@ -91,7 +92,8 @@
             "max_SISA": 6.0,
             "health": true
          }
-      }
+      },
+      "compute_smooth": true
    },
 
    "solver": {

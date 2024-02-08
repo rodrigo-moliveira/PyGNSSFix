@@ -101,9 +101,10 @@
             }
           },
           "required": ["GPS", "GAL"]
-        }
+        },
+        "compute_smooth": {"type": "boolean"}
       },
-      "required": ["trace_files", "snr_filter", "satellite_status"]
+      "required": ["trace_files", "snr_filter", "satellite_status", "compute_smooth"]
     },
     "solver": {
       "type": "object",

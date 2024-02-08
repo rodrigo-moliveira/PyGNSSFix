@@ -92,7 +92,8 @@
             "max_SISA": 6.0,
             "health": true
          }
-      }
+      },
+      "compute_smooth": true
    },
 
    "solver": {

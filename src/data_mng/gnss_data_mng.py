@@ -2,6 +2,8 @@ from src.constants import OUTPUT_FILENAME_MAP
 from src.data_mng.container import Container
 from src.data_types.gnss.navigation_data import NavigationData
 from src.data_types.gnss.observation_data import ObservationData
+from src.io.config import config_dict
+from src.io.config.enums import EnumPositioningMode
 from src.io.states.export_states import get_file_header, export_to_file
 
 
@@ -56,6 +58,13 @@ class GnssDataManager(Container):
                 return getattr(self, data_name)
             else:
                 raise ValueError(f'{data_name} is not available.')
+
+    def get_clean_obs_data(self):
+        # either return obs_data, smooth or iono, depending on configuration...
+        if config_dict.get_model() == EnumPositioningMode.SPS_IF:
+            return self.iono_free_obs_data
+        else:
+            return self.obs_data
 
     def save_data(self, directory, log):
         log.info(f"storing data to {directory}...")

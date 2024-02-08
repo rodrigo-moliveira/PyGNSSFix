@@ -1,11 +1,9 @@
 from src.common_log import get_logger
 from src.data_types.gnss.data_type import data_type_from_rinex
 from src.io.config import config_dict
-from src.data_types.gnss.observation_data import ObservationData
 from src.errors import PreprocessorError
 from src.io.config.enums import EnumPositioningMode
 from .filter import FilterMapper, TypeConsistencyFilter, RateDowngradeFilter, SignalCheckFilter
-from .filter.constellation_filter import ConstellationFilter
 from .filter.ura_health_check import SatFilterHealthURA
 from .functor import FunctorMapper, IonoFreeFunctor, SmoothFunctor
 
@@ -77,12 +75,17 @@ class PreprocessorManager:
                     except Exception as e:
                         raise PreprocessorError(
                             f"PreprocessorManager -> Error computing Iono Free Observation Data: {e}")
+            self.log.debug(
+                "Writing IonoFree Observation Data to trace file {}".format("IonoFreeObservationData.txt"))
+            f = open(self.trace_path + "/IonoFreeObservationData.txt", "w")
+            f.write(str(iono_free_data))
+            f.close()
         else:
             self.log.info(f"Iono free data not computed due to user choice")
             # select raw observables for this constellation
-            constellation_filter = ConstellationFilter(self.services.keys())
-            mapper = FilterMapper(constellation_filter)
-            mapper.apply(obs_data)
+            # constellation_filter = ConstellationFilter(self.services.keys())
+            # mapper = FilterMapper(constellation_filter)
+            # mapper.apply(obs_data)
 
         # Get Smooth Observation Data
         compute_smooth = True
@@ -99,13 +102,6 @@ class PreprocessorManager:
         f = open(self.trace_path + "/PreprocessedObservationData.txt", "w")
         f.write(str(obs_data))
         f.close()
-
-        if compute_iono_free:
-            self.log.debug(
-                "Writing IonoFree Observation Data to trace file {}".format("IonoFreeObservationData.txt"))
-            f = open(self.trace_path + "/IonoFreeObservationData.txt", "w")
-            f.write(str(self.data_manager.get_data("iono_free_obs_data")))
-            f.close()
 
         self.log.info("End of module Preprocessor")
 

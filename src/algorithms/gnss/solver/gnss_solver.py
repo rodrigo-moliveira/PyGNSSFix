@@ -171,7 +171,7 @@ class GnssSolver:
             print(f"processing epoch {epoch}...")
             # fetch gnss_obs data for this epoch
             obs_for_epoch = self.obs_data.get_epoch_data(epoch)
-            sats_for_epoch = self.obs_data.get_satellites()
+            sats_for_epoch = obs_for_epoch.get_satellites()
 
             # initialize solve-for variables (receiver position and bias) for the present epoch
             state = self._init_state(epoch, sats_for_epoch)

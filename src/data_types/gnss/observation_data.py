@@ -347,21 +347,13 @@ class ObservationData:
     def get_epochs(self):
         return self._data.get_all_epochs()
 
-    def get_satellites(self):
-        return self._satellites
-
     def get_types(self, constellation):
         return self._types[constellation]
 
     def get_code_types(self, constellation):
         types = list(self.get_types(constellation))
-        for t in types:
-            if not DataType.is_code(t):
-                types.remove(t)
-        return types
-
-    def get_satellite_list(self):
-        return [str(sat) for sat in self._satellites]
+        code_types = [x for x in types if DataType.is_code(x)]
+        return code_types
 
     def get_rate(self):
         epochs = self.get_epochs()
@@ -404,9 +396,3 @@ class ObservationData:
                     for obs in observables:
                         self.set_observation(epoch, sat, obs)
 
-    def get_constellations(self):
-        consts = []
-        for sat in self.get_satellites():
-            if sat.sat_system not in consts:
-                consts.append(sat.sat_system)
-        return consts
