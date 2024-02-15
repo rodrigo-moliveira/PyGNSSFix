@@ -17,7 +17,8 @@ RINEX_SATELLITE_SYSTEM = {"G": "GPS",
 RINEX_OBS_END_OF_DATA_HEADER = 60
 RINEX_OBS_TYPES_TO_READ = {"C",  # pseudo range
                            "L",  # carrier phase
-                           "S"}  # signal-to-noise ratio
+                           "S",  # signal-to-noise ratio
+                           "D"}  # doppler
 
 
 def to_float(nmb: str):
