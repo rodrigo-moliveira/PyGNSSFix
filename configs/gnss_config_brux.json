@@ -33,10 +33,37 @@
       "rate": 1
    },
 
+   "preprocessor": {
+      "trace_files": true,
+
+      "_comment4": "Signal strength (SNR) filter. Select value of SNR (dBHz) threshold. Select false to turn off",
+      "snr_filter": 20,
+
+      "satellite_status": {
+         "_comment": "whether or not to check the SV Accuracy and SV health fields of the navigation message",
+         "GPS": {
+            "URA": true,
+            "max_URA": 6144.0,
+            "health": true
+         },
+         "GAL": {
+            "SISA": true,
+            "max_SISA": 6.0,
+            "health": true
+         }
+      },
+
+      "compute_smooth": false,
+      "smooth_time_constant_secs": 300
+   },
+
    "model": {
       "constellations": ["GPS", "GAL"],
-      "mode": "SPS_IF",
-      "_comment": "available modes are SPS, SPS_IF",
+      "mode": "SPS",
+      "_comment": "available modes are SPS, SPS",
+
+      "estimate_velocity": true,
+      "_comment1": "Use Doppler measurements to estimate velocity",
 
       "estimate_ggto": false,
       "_comment2": "Select `true` to estimate GGTO or `false` to use the broadcast GGTO",
@@ -72,30 +99,6 @@
          "_comment2": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G' ",
          "ionosphere": "NTCM-G"
       }
-   },
-
-   "preprocessor": {
-      "trace_files": true,
-
-      "_comment4": "Signal strength (SNR) filter. Select value of SNR (dBHz) threshold. Select false to turn off",
-      "snr_filter": 20,
-
-      "satellite_status": {
-         "_comment": "whether or not to check the SV Accuracy and SV health fields of the navigation message",
-         "GPS": {
-            "URA": true,
-            "max_URA": 6144.0,
-            "health": true
-         },
-         "GAL": {
-            "SISA": true,
-            "max_SISA": 6.0,
-            "health": true
-         }
-      },
-
-      "compute_smooth": true,
-      "smooth_time_constant_secs": 300
    },
 
    "solver": {

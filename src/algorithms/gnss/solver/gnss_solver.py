@@ -179,6 +179,11 @@ class GnssSolver:
             # call lower level of solve
             success = self._solve_for_epoch(epoch, obs_for_epoch, state)
 
+            # TODO: after solve for epoch, insert here solve_velocity with DOppler
+            #   posso usar a geometria, porque já está calculada...
+            #   Tentar reaproveitar o máximo de código possivel
+            #
+
             if success:
                 # add solution to Output timeseries
                 self.log.info(f"Successfully solved positioning for epoch {str(epoch)} with "

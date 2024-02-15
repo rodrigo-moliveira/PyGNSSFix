@@ -401,10 +401,12 @@ cAvailableIonoFreeCarrier = [CP12_GPS, CP15_GPS, CP15_GAL, PR16_GAL, PR17_GAL, P
 
 cGPSObsSignals = {"C": {"1": PR1_GPS, "2": PR2_GPS, "5": PR5_GPS},
                   "L": {"1": CP1_GPS, "2": CP2_GPS, "5": CP5_GPS},
-                  "S": {"1": S1_GPS, "2": S2_GPS, "5": S5_GPS}}
+                  "S": {"1": S1_GPS, "2": S2_GPS, "5": S5_GPS},
+                  "D": {"1": D1_GPS, "2": D2_GPS, "5": D5_GPS}}
 cGALObsSignals = {"C": {"1": PR1_GAL, "5": PR5_GAL, "6": PR6_GAL, "7": PR7_GAL, "8": PR8_GAL},
                   "L": {"1": CP1_GAL, "5": CP5_GAL, "6": CP6_GAL, "7": CP7_GAL, "8": CP8_GAL},
-                  "S": {"1": S1_GAL, "5": S5_GAL, "6": S6_GAL, "7": S7_GAL, "8": S8_GAL}}
+                  "S": {"1": S1_GAL, "5": S5_GAL, "6": S6_GAL, "7": S7_GAL, "8": S8_GAL},
+                  "D": {"1": D1_GAL, "5": D5_GAL, "6": D6_GAL, "7": D7_GAL, "8": D8_GAL}}
 
 
 def get_data_type(datatype: str, constellation: str):

@@ -107,20 +107,26 @@ class PreprocessorManager:
 
     def consistency_filter(self, observation_data):
         self.log.info("Applying consistency filter to remove unnecessary datatypes and data-less satellites")
-        datatypes = {}
+        required_datatypes = {}
 
-        # NOTE: currently we filter out Signal and Doppler Observables -> only need Pseudorange and Carrier Phase
+        # NOTE: Doppler is not mandatory. If it is missing, velocity estimation is not triggered
+
+        keep_doppler = config_dict.get("model", "estimate_velocity")
         for constellation, services in self.services.items():
-            datatypes[constellation] = []
+            required_datatypes[constellation] = []
             for service in services:
                 pr = data_type_from_rinex(f"C{service}", constellation)
                 if pr is not None:
-                    datatypes[constellation].append(pr)
+                    required_datatypes[constellation].append(pr)
                 cp = data_type_from_rinex(f"L{service}", constellation)
                 if cp is not None:
-                    datatypes[constellation].append(cp)
+                    required_datatypes[constellation].append(cp)
+                if keep_doppler:
+                    doppler = data_type_from_rinex(f"D{service}", constellation)
+                    if doppler is not None:
+                        required_datatypes[constellation].append(doppler)
 
-        type_filter = TypeConsistencyFilter(datatypes)
+        type_filter = TypeConsistencyFilter(required_datatypes)
         mapper = FilterMapper(type_filter)
         mapper.apply(observation_data)
 

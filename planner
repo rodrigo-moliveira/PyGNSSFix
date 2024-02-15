@@ -6,7 +6,6 @@ tasks for preliminary version:
     [X] re-adicionar o filtro de elevation no gnss_solver
     [X] re-adicionar o smoothing, tendo em conta que afinal é necessário converter carrier de ciclos para metros! (no cycle slip detection yet)
     [X] add velocity in computation of satellite ephemerides (ver prototype e livro da ESA)
-    [ ] o que acontece quando um satélite entra ou sai a meio?
     [ ] process doppler measurements to estimate velocity
     [ ] add GGTO to the EOP database
     [ ] add leapseconds from rinex file to EOP database, when there is no file
@@ -21,6 +20,8 @@ tasks for preliminary version:
 
 
     melhorar o modulo de post processing:
+    [ ]  mover a config do PPT (post processing tool) para um json proprio
+    [ ] fazer plot do observation data
     [ ] plot Iono states
     [ ] compute mean and std of pre/postfit residuals -> mean should be zero. STD should be sigma_URE (user range error). This should be computed for each satellite
     [ ] plot residuals
