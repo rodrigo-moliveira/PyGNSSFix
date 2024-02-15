@@ -10,13 +10,13 @@
       "trace_files": true,
 
       "_comment1": "Input data files",
-      "obs_files": ["datasets/gnss/ZIM/ZIM300CHE_S_20182901600_15M_01S_MO.rnx"],
-      "nav_files": ["datasets/gnss/ZIM/BRDC00IGS_R_20182900000_01D_MN.rnx"],
+      "obs_files": ["datasets/gnss/BRUX/BRUX00BEL_S_20190140615_15M_01S_MO.rnx"],
+      "nav_files": ["datasets/gnss/BRUX/BRDC00IGS_R_20190140000_01D_MN.rnx"],
       "clk_files": [""],
-      "sp3_files": [""],
+      "sp3_files": ["datasets/gnss/BRUX/ESA0MGNFIN_20190140000_01D_05M_ORB.SP3"],
 
       "leap_file": "geo_time_data/tai-utc.dat",
-      "finals_file": "geo_time_data/finals1980.data.txt",
+      "finals_file": "geo_time_data/finals1980.all",
       "tropo_file": "geo_time_data/gpt3_5.grd",
 
       "_comment2": "snr threshold to discard RINEX observables (compare with snr control digit). [1-4]: bad, [5:8]: good, 9: excellent",
@@ -25,8 +25,8 @@
       "arc": {
          "_comment1": "Select first and last epochs in estimation arc in format YYYY-MM-DD hh:mm:ss",
          "_comment2": "Select false to deactivate fields",
-         "first_epoch": "2018-10-17 16:00:00",
-         "last_epoch": "2018-10-17 16:00:30"
+         "first_epoch": "2019-01-14 06:15:00",
+         "last_epoch": "2019-01-14 06:15:10"
       },
 
       "_comment3": "Select the input data rate (in seconds). The rate must be consistent with the RINEX OBS rate. Select false to disable.",
@@ -34,26 +34,26 @@
    },
 
    "model": {
-      "constellations": ["GPS"],
-      "mode": "SPS",
+      "constellations": ["GPS", "GAL"],
+      "mode": "SPS_IF",
       "_comment": "available modes are SPS, SPS_IF",
 
-      "estimate_ggto": true,
+      "estimate_ggto": false,
       "_comment2": "Select `true` to estimate GGTO or `false` to use the broadcast GGTO",
 
       "troposphere": {
-         "_comment1": "Select Tropospheric model. Available models are 'NONE', 'Saastamoinen', 'GPT2'",
+         "_comment1": "Select Tropospheric model. Available models are 'NONE', 'Saastamoinen', 'GPT3'",
          "model": "Saastamoinen",
 
-         "_comment2": "Select Tropospheric mask function. Available masks are 'Saastamoinen', 'GMF', 'VMF1', 'VMF3'",
-         "mask": "Saastamoinen",
+         "_comment2": "Select Tropospheric mask function for model GPT3. Available masks are 'Saastamoinen', 'GMF', 'VMF1', 'VMF3'",
+         "mask": "VMF3",
 
          "_comment3": "Select `true` to estimate tropospheric wet delay or `false` to disable tropo estimation",
          "estimate_tropo_wet": false
       },
 
       "GPS": {
-         "observations": ["1C"],
+         "observations": ["1C", "2W"],
          "pr_obs_std": [1.1, 0.8],
          "elevation_mask": true,
 
@@ -62,12 +62,12 @@
       },
 
       "GAL": {
-         "observations": ["1C"],
-         "pr_obs_std": [1, 1],
+         "observations": ["1C", "5Q"],
+         "pr_obs_std": [1.1, 0.7],
          "elevation_mask": true,
 
          "_comment0": "select between INAV or FNAV navigation message",
-         "nav_type": "INAV",
+         "nav_type": "FNAV",
 
          "_comment2": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G' ",
          "ionosphere": "NTCM-G"
@@ -93,12 +93,14 @@
             "health": true
          }
       },
-      "compute_smooth": true
+
+      "compute_smooth": true,
+      "smooth_time_constant_secs": 300
    },
 
    "solver": {
-      "_comment1": "0 - Least Squares, 1 - Weighted Least Squares",
-      "algorithm": 1,
+      "_comment1": "Select Algorithm. Available is 'WSL' - Weighted Least Squares",
+      "algorithm": "WSL",
 
       "_comment2": "maximum number of iterations in iterative procedure",
       "n_iterations": 10,
@@ -113,7 +115,7 @@
       "relativistic_corrections": 1,
 
       "_comment5": "Elevation filter. Select the value of minimum elevation angle to consider, in degree. Select false to turn off",
-      "elevation_filter": 15,
+      "elevation_filter": 10,
 
       "_comment7": "Initial position (m), velocity (m/s) and clock (s)",
       "initial_pos_std": [0, 0, 0, 1, 1, 1],
@@ -128,12 +130,8 @@
 
    "performance_evaluation": {
       "static": true,
-      "true_static_position": {
-         "_comment": "True receiver coordinates with respect to ECEF frame [meters]",
-         "x_ecef": 4027881.6280,
-         "y_ecef": 306998.5370,
-         "z_ecef": 4919498.9840
-      }
+
+      "_comment": "True receiver coordinates with respect to ECEF frame [meters]",
+      "true_static_position": [4027881.6280, 306998.5370, 4919498.9840]
    }
 }
-

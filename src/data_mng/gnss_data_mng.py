@@ -61,7 +61,9 @@ class GnssDataManager(Container):
 
     def get_clean_obs_data(self):
         # either return obs_data, smooth or iono, depending on configuration...
-        if config_dict.get_model() == EnumPositioningMode.SPS_IF:
+        if config_dict.get("preprocessor", "compute_smooth"):
+            return self.smooth_obs_data
+        elif config_dict.get_model() == EnumPositioningMode.SPS_IF:
             return self.iono_free_obs_data
         else:
             return self.obs_data

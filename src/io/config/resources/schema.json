@@ -102,9 +102,10 @@
           },
           "required": ["GPS", "GAL"]
         },
-        "compute_smooth": {"type": "boolean"}
+        "compute_smooth": {"type": "boolean"},
+        "smooth_time_constant_secs": {"type": "integer", "minimum": 1}
       },
-      "required": ["trace_files", "snr_filter", "satellite_status", "compute_smooth"]
+      "required": ["trace_files", "snr_filter", "satellite_status", "compute_smooth", "smooth_time_constant_secs"]
     },
     "solver": {
       "type": "object",

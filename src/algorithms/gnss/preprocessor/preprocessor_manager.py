@@ -88,7 +88,7 @@ class PreprocessorManager:
             # mapper.apply(obs_data)
 
         # Get Smooth Observation Data
-        compute_smooth = True
+        compute_smooth = config_dict.get("preprocessor", "compute_smooth")
         if compute_smooth:
             try:
                 data = self.data_manager.get_data("iono_free_obs_data") if compute_iono_free else obs_data
@@ -181,8 +181,10 @@ class PreprocessorManager:
         mapper.apply(raw_data, data_out)
 
     def smooth(self, data):
-        self.log.info("Computing smooth data")
-        time_constant = 300.0
+        time_constant = config_dict.get("preprocessor", "smooth_time_constant_secs")
+        rate = data.get_rate()
+        self.log.info(f"Computing smooth data with time constant set to {time_constant}[s]. Data rate is {rate}")
+
         smooth_functor = SmoothFunctor(time_constant, data.get_rate())
         mapper = FunctorMapper(smooth_functor)
         smooth_data = self.data_manager.get_data("smooth_obs_data")

@@ -94,7 +94,8 @@
          }
       },
 
-      "compute_smooth": true
+      "compute_smooth": true,
+      "smooth_time_constant_secs": 300
    },
 
    "solver": {
