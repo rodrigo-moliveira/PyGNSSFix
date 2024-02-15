@@ -60,7 +60,7 @@ class GnssDataManager(Container):
                 raise ValueError(f'{data_name} is not available.')
 
     def get_clean_obs_data(self):
-        # either return obs_data, smooth or iono, depending on configuration...
+        # return the observation data for the PVT processing, depending on user configuration
         if config_dict.get("preprocessor", "compute_smooth"):
             return self.smooth_obs_data
         elif config_dict.get_model() == EnumPositioningMode.SPS_IF:
