@@ -7,6 +7,9 @@ def get_file_header(exportable, state):
     if exportable == "position":
         return f"Week_Number({epoch_system}),Time_of_Week[s],X_ECEF[m],Y_ECEF[m],Z_ECEF[m]," \
                f"cov_XX[m^2],cov_YY[m^2],cov_ZZ[m^2],cov_XY[m^2],cov_XZ[m^2],cov_YZ[m^2]"
+    if exportable == "velocity":
+        return f"Week_Number({epoch_system}),Time_of_Week[s],VX_ECEF[m/s],VY_ECEF[m/s],VZ_ECEF[m/s]," \
+               f"cov_XX[m^2/s^2],cov_YY[m^2/s^2],cov_ZZ[m^2/s^2],cov_XY[m^2/s^2],cov_XZ[m^2/s^2],cov_YZ[m^2/s^2]"
     elif exportable == "clock_bias":
         master = state.get_additional_info("clock_master")
         return f"Week_Number({epoch_system}),Time_of_Week[s],clock_bias(master={master})[s],cov[s^2]"
@@ -44,6 +47,17 @@ def export_to_file(gnss_state: GnssStateSpace, exportable):
         cov_xz = cov[0, 2]
         cov_yz = cov[1, 2]
         return f"{gnss_state.position[0]},{gnss_state.position[1]},{gnss_state.position[2]},{cov_xx},{cov_yy}," \
+               f"{cov_zz},{cov_xy},{cov_xz},{cov_yz}"
+
+    if exportable == "velocity":
+        cov = gnss_state.cov_velocity
+        cov_xx = cov[0, 0]
+        cov_yy = cov[1, 1]
+        cov_zz = cov[2, 2]
+        cov_xy = cov[0, 1]
+        cov_xz = cov[0, 2]
+        cov_yz = cov[1, 2]
+        return f"{gnss_state.velocity[0]},{gnss_state.velocity[1]},{gnss_state.velocity[2]},{cov_xx},{cov_yy}," \
                f"{cov_zz},{cov_xy},{cov_xz},{cov_yz}"
 
     if exportable == "clock_bias":

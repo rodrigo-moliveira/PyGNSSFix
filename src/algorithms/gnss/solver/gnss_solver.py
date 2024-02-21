@@ -110,9 +110,11 @@ class GnssSolver:
         TX_TIME_ALG = config.get("solver", "transmission_time_alg")
         REL_CORRECTION = EnumOnOff(config.get("solver", "relativistic_corrections"))  # 0 disable, 1 enable
         INITIAL_POS = config.get("solver", "initial_pos_std")
+        INITIAL_VEL = config.get("solver", "initial_vel_std")
         INITIAL_CLOCK_BIAS = config.get("solver", "initial_clock_std")
         CONSTELLATIONS = config.get("model", "constellations")
         ELEVATION_FILTER = config.get("solver", "elevation_filter")
+        VELOCITY_EST = config.get("model", "estimate_velocity")
         TROPO = TropoManager(config)
         _model = config.get_model()
 
@@ -158,8 +160,10 @@ class GnssSolver:
             "REL_CORRECTION": REL_CORRECTION,
             "TX_TIME_ALG": EnumTransmissionTime(TX_TIME_ALG),
             "INITIAL_POS": INITIAL_POS,
+            "INITIAL_VEL": INITIAL_VEL,
             "INITIAL_CLOCK_BIAS": INITIAL_CLOCK_BIAS,
-            "ELEVATION_FILTER": ELEVATION_FILTER
+            "ELEVATION_FILTER": ELEVATION_FILTER,
+            "VELOCITY_EST": VELOCITY_EST
         }
 
     def solve(self):
@@ -179,15 +183,13 @@ class GnssSolver:
             # call lower level of solve
             success = self._solve_for_epoch(epoch, obs_for_epoch, state)
 
-            # TODO: after solve for epoch, insert here solve_velocity with DOppler
-            #   posso usar a geometria, porque já está calculada...
-            #   Tentar reaproveitar o máximo de código possivel
-            #
-
             if success:
                 # add solution to Output timeseries
                 self.log.info(f"Successfully solved positioning for epoch {str(epoch)} with "
                               f"RMS = {state.get_additional_info('rms')} [m]")
+
+                if self._metadata["VELOCITY_EST"]:
+                    self._estimate_velocity(state, epoch, obs_for_epoch)
 
                 # store data for this epoch
                 self.solution.append(state)
@@ -201,9 +203,11 @@ class GnssSolver:
         # initialize GNSS state
         if len(self.solution) == 0:
             position = np.array(self._metadata["INITIAL_POS"][0:3], dtype=np.float64)
+            velocity = np.array(self._metadata["INITIAL_VEL"][0:3], dtype=np.float64)
             clock = self._metadata["INITIAL_CLOCK_BIAS"][0]
             state = GnssStateSpace(self._metadata,
                                    position=position,
+                                   velocity=velocity,
                                    clock_bias=clock,
                                    epoch=epoch,
                                    sat_list=sat_list)
@@ -347,3 +351,79 @@ class GnssSolver:
         if sats_to_remove:
             self.log.debug(f"Removing satellites {sats_to_remove} due to elevation filter. ")
 
+    def _estimate_velocity(self, state, epoch, obs_for_epoch):
+        # begin iterative process for this epoch
+        iteration = 0
+        rms = rms_prev = 1
+        prefit_residuals = postfit_residuals = None
+
+        # get system geometry for this epoch
+        system_geometry = state.get_additional_info("geometry")
+        state.cov_velocity = np.zeros((3,3))
+        return
+        print(system_geometry)
+        exit()
+
+        # check data availability for this epoch
+        if not self._check_model_availability(system_geometry, epoch):
+            return False  # not enough data to process this epoch
+
+        self.log.info(f"Processing epoch {str(epoch)}")
+        self.log.debug(f"Available Satellites: {system_geometry.get_satellites()}")
+
+        # Iterated Least-Squares algorithm
+        while iteration < self._metadata["MAX_ITER"]:
+            # compute geometry-related data for each satellite link
+            system_geometry.compute(epoch, state, self._metadata)
+
+            # solve the Least Squares
+            try:
+                postfit_residuals, prefit_residuals, dop_matrix, rms = \
+                    self._compute(system_geometry, obs_data, state, epoch)
+            except PVTComputationFail as e:
+                self.log.warning(f"Least Squares failed for {str(epoch)} on iteration {iteration}."
+                                 f"Reason: {e}")
+                return False
+
+            # check stop condition
+            if self._stop(rms_prev, rms, self._metadata["STOP_CRITERIA"]):
+                self.log.debug(f"Least Squares was successful. Reached convergence at iteration {iteration}")
+                break
+
+            # increase iteration counter
+            rms_prev = rms
+            iteration += 1
+
+        # perform additional iteration after elevation filter
+        if apply_elevation_filter:
+            self.log.info(f"Applying elevation filter with threshold {self._metadata['ELEVATION_FILTER']} [deg] "
+                          f"and performing additional iteration")
+            self._elevation_filter(system_geometry, self._metadata["ELEVATION_FILTER"])
+
+            # check data availability for this epoch
+            if not self._check_model_availability(system_geometry, epoch):
+                return False  # not enough data to process this epoch
+
+            # solve the Least Squares
+            try:
+                postfit_residuals, prefit_residuals, dop_matrix, rms = \
+                    self._compute(system_geometry, obs_data, state, epoch)
+            except PVTComputationFail as e:
+                self.log.warning(f"Least Squares failed for {str(epoch)} on additional iteration (elevation filter). "
+                                 f"Reason: {e}")
+                return False
+
+        # end of iterative procedure
+        if iteration == self._metadata["MAX_ITER"]:
+            self.log.warning(f"PVT failed to converge for epoch {str(epoch)}, with RMS={rms}. "
+                             f"No solution will be computed for this epoch.")
+            return False
+
+        # save other iteration data to state variable
+        state.add_additional_info("geometry", system_geometry)
+        state.add_additional_info("prefit_residuals", prefit_residuals)
+        state.add_additional_info("postfit_residuals", postfit_residuals)
+        state.add_additional_info("rms", rms)
+        state.add_additional_info("dop_matrix", dop_matrix)
+
+        return True

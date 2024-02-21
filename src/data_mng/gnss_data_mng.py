@@ -1,4 +1,4 @@
-from src.constants import OUTPUT_FILENAME_MAP
+from src.io.states.filename_utils import OUTPUT_FILENAME_MAP
 from src.data_mng.container import Container
 from src.data_types.gnss.navigation_data import NavigationData
 from src.data_types.gnss.observation_data import ObservationData
