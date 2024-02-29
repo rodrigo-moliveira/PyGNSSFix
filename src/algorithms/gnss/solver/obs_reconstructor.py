@@ -11,7 +11,7 @@ from src.data_types.gnss.observation import Observation
 from src import constants
 
 
-class ObservationReconstruction:
+class PseudorangeReconstructor:
     def __init__(self, system_geometry, metadata, state, nav_header):
         self._metadata = metadata
         self._state = state
@@ -29,7 +29,7 @@ class ObservationReconstruction:
         true_range = self._system_geometry.get("true_range", sat)
 
         # user clock in meters (with proper ISB applied, if necessary)
-        dt_rec = self._state.get_clock_bias(sat.sat_system, self._nav_header.time_correction) * constants.\
+        dt_rec = self._state.get_clock_bias(sat.sat_system, self._nav_header.time_correction) * constants. \
             SPEED_OF_LIGHT
 
         # satellite clock
@@ -89,3 +89,13 @@ class ObservationReconstruction:
             # TODO add logger message
             obs_std = 1.0
         return el_std * obs_std
+
+
+class DopplerReconstructor:
+    def __init__(self, system_geometry, metadata, state):
+        self._metadata = metadata
+        self._state = state
+        self._system_geometry = system_geometry
+
+    def compute(self, nav_message, sat, epoch, datatype):
+        return 0.0

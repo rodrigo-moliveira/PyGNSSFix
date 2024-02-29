@@ -68,6 +68,9 @@ class GnssDataManager(Container):
         else:
             return self.obs_data
 
+    def get_raw_obs_data(self):
+        return self.obs_data
+
     def save_data(self, directory, log):
         log.info(f"storing data to {directory}...")
         file_list = {}

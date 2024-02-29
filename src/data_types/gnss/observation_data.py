@@ -306,21 +306,26 @@ class ObservationData:
         except KeyError:
             raise NonExistentObservable(f"Non Existent observations for epoch {str(epoch)}")
 
-    def get_observables_at_epoch(self, epoch: Epoch, sat: Satellite):
+    def get_observables_at_epoch(self, epoch: Epoch, sat: Satellite, datatypes: list = None):
         """
         Fetch a list of observations for the requested satellite and epoch
 
         Args:
             sat (Satellite)
             epoch (Epoch)
+            datatypes (list)
         Return:
-            list : list of observables for the provided sat and epoch
+            list : list of observables for the provided sat and epoch. If the datatype list is provided, then the return
+            list is filtered accordingly
         Raise:
             NonExistentObservable : if the observations are not found
         """
 
         try:
-            return self._data[epoch].get_observables(sat)
+            out_list = self._data[epoch].get_observables(sat)
+            if datatypes is None:
+                return out_list
+            return [obs for obs in out_list if obs in datatypes]
         except KeyError:
             raise NonExistentObservable(f"Non Existent gnss_obs for satellite {str(sat)} "
                                         f"and epoch {str(epoch)}")
@@ -353,6 +358,11 @@ class ObservationData:
     def get_code_types(self, constellation):
         types = list(self.get_types(constellation))
         code_types = [x for x in types if DataType.is_code(x)]
+        return code_types
+
+    def get_doppler_types(self, constellation):
+        types = list(self.get_types(constellation))
+        code_types = [x for x in types if DataType.is_doppler(x)]
         return code_types
 
     def get_rate(self):

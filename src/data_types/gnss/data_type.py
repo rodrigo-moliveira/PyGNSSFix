@@ -142,6 +142,10 @@ class DataType:
         return data_type in cAvailableSignals
 
     @staticmethod
+    def is_doppler(data_type):
+        return data_type in cAvailableDoppler
+
+    @staticmethod
     def get_code_datatypes(datatype_list):
         list_out = []
         for obs in datatype_list:
@@ -398,6 +402,7 @@ cAvailableSmoothCodes = [SPR1_GPS, SPR2_GPS, SPR5_GPS, SPR1_GAL, SPR5_GAL, SPR6_
 cAvailableIonoFreeSmoothCodes = [SPR12_GPS, SPR15_GPS, SPR15_GAL, SPR16_GAL, SPR17_GAL, SPR18_GAL]
 cAvailableIonoFreeCodes = [PR12_GPS, PR15_GPS, PR15_GAL, PR16_GAL, PR17_GAL, PR18_GAL]
 cAvailableIonoFreeCarrier = [CP12_GPS, CP15_GPS, CP15_GAL, PR16_GAL, PR17_GAL, PR18_GAL]
+cAvailableDoppler = [D1_GPS, D2_GPS, D5_GPS, D1_GAL, D5_GAL, D6_GAL, D7_GAL, D8_GAL]
 
 cGPSObsSignals = {"C": {"1": PR1_GPS, "2": PR2_GPS, "5": PR5_GPS},
                   "L": {"1": CP1_GPS, "2": CP2_GPS, "5": CP5_GPS},

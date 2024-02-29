@@ -1,8 +1,8 @@
 import numpy as np
 
 from src.algorithms.gnss.estimators.state_space import GnssStateSpace
-from src.algorithms.gnss.solver.lsq_engine import LSQ_Engine
-from src.algorithms.gnss.solver.obs_reconstructor import ObservationReconstruction
+from src.algorithms.gnss.solver.lsq_engine import LSQ_Engine, LSQ_Engine_Vel
+from src.algorithms.gnss.solver.obs_reconstructor import PseudorangeReconstructor, DopplerReconstructor
 from src.common_log import get_logger
 from src.errors import PVTComputationFail, ConfigError
 from src.io.config import config_dict
@@ -82,13 +82,15 @@ class GnssSolver:
 
     """
 
-    def __init__(self, obs_data, nav_data):
+    def __init__(self, processed_obs_data, raw_obs_data, nav_data):
         """
         Args:
-            obs_data : gnss_obs data
+            processed_obs_data : gnss_obs data processed (to be used in the positioning)
+            raw_obs_data : gnss_obs data to be used in the velocity estimation (contains the doppler measurements)
             nav_data : navigation data
         """
-        self.obs_data = obs_data
+        self.obs_data = processed_obs_data
+        self.raw_obs_data = raw_obs_data
         self.nav_data = nav_data
 
         self.log = get_logger("GNSS_SOLVER")
@@ -121,12 +123,14 @@ class GnssSolver:
         IONO = {}
         MODEL = {}
         CODES = {}
+        DOPPLER = {}
 
         for const in CONSTELLATIONS:
             IONO[const] = EnumIono.init_model(config.get("model", const, "ionosphere"))
 
             # check if the model is single frequency or dual frequency
             code_types = self.obs_data.get_code_types(const)
+            doppler_types = self.raw_obs_data.get_doppler_types(const)
             if len(code_types) == 2 and (_model != EnumPositioningMode.SPS_IF):
                 # Dual-Frequency Model
                 self.log.info(f"Selected model for {const} is Dual-Frequency Uncombined with observations {code_types}")
@@ -147,6 +151,10 @@ class GnssSolver:
             else:
                 raise ConfigError(f"Unable to initialize GNSS Solver Model for constellation {const}. Check configs.")
 
+            if len(doppler_types) == 0:
+                self.log.error(f"No Doppler observations for constellation {const} are available")
+            DOPPLER[const] = doppler_types
+
         # fill info dict
         self._metadata = {
             "CONSTELLATIONS": CONSTELLATIONS,
@@ -157,6 +165,7 @@ class GnssSolver:
             "IONO": IONO,
             "MODEL": MODEL,
             "CODES": CODES,
+            "DOPPLER": DOPPLER,
             "REL_CORRECTION": REL_CORRECTION,
             "TX_TIME_ALG": EnumTransmissionTime(TX_TIME_ALG),
             "INITIAL_POS": INITIAL_POS,
@@ -189,7 +198,8 @@ class GnssSolver:
                               f"RMS = {state.get_additional_info('rms')} [m]")
 
                 if self._metadata["VELOCITY_EST"]:
-                    self._estimate_velocity(state, epoch, obs_for_epoch)
+                    raw_obs_data = self.raw_obs_data.get_epoch_data(epoch)
+                    self._estimate_velocity(state, epoch)
 
                 # store data for this epoch
                 self.solution.append(state)
@@ -300,13 +310,27 @@ class GnssSolver:
     def _compute(self, system_geometry, obs_data, state, epoch):
         satellite_list = system_geometry.get_satellites()
 
-        reconstructor = ObservationReconstruction(system_geometry,
-                                                  self._metadata,
-                                                  state,
-                                                  self.nav_data.header)
+        reconstructor = PseudorangeReconstructor(system_geometry,
+                                                 self._metadata,
+                                                 state,
+                                                 self.nav_data.header)
 
         # build LSQ Engine matrices for all satellites
         lsq_engine = LSQ_Engine(satellite_list, self._metadata, epoch, obs_data, reconstructor, self.nav_data)
+
+        # solve LS problem
+        return lsq_engine.solve_ls(state)
+
+    def _compute_vel(self, system_geometry, obs_data, state, epoch):
+        # TODO: continuar aqui...
+        satellite_list = system_geometry.get_satellites()
+
+        reconstructor = DopplerReconstructor(system_geometry,
+                                             self._metadata,
+                                             state)
+
+        # build LSQ Engine matrices for all satellites
+        lsq_engine = LSQ_Engine_Vel(satellite_list, self._metadata, epoch, obs_data, reconstructor)
 
         # solve LS problem
         return lsq_engine.solve_ls(state)
@@ -351,79 +375,56 @@ class GnssSolver:
         if sats_to_remove:
             self.log.debug(f"Removing satellites {sats_to_remove} due to elevation filter. ")
 
-    def _estimate_velocity(self, state, epoch, obs_for_epoch):
+    def _estimate_velocity(self, state, epoch):
+
         # begin iterative process for this epoch
         iteration = 0
         rms = rms_prev = 1
         prefit_residuals = postfit_residuals = None
 
-        # get system geometry for this epoch
+        state.cov_velocity = np.zeros((3, 3))  # this is temp!
+
+        # get observations and system geometry for this epoch
+        obs_for_epoch = self.raw_obs_data.get_epoch_data(epoch)
         system_geometry = state.get_additional_info("geometry")
-        state.cov_velocity = np.zeros((3,3))
-        return
-        print(system_geometry)
-        exit()
 
         # check data availability for this epoch
-        if not self._check_model_availability(system_geometry, epoch):
-            return False  # not enough data to process this epoch
+        # TODO: check if we have enough data to process this (check if we have doppler measurements)...
 
-        self.log.info(f"Processing epoch {str(epoch)}")
+        self.log.info(f"Applying velocity estimation {str(epoch)}")
         self.log.debug(f"Available Satellites: {system_geometry.get_satellites()}")
 
         # Iterated Least-Squares algorithm
         while iteration < self._metadata["MAX_ITER"]:
-            # compute geometry-related data for each satellite link
-            system_geometry.compute(epoch, state, self._metadata)
-
             # solve the Least Squares
             try:
-                postfit_residuals, prefit_residuals, dop_matrix, rms = \
-                    self._compute(system_geometry, obs_data, state, epoch)
+                self._compute_vel(system_geometry, obs_for_epoch, state, epoch)
             except PVTComputationFail as e:
                 self.log.warning(f"Least Squares failed for {str(epoch)} on iteration {iteration}."
                                  f"Reason: {e}")
                 return False
 
             # check stop condition
-            if self._stop(rms_prev, rms, self._metadata["STOP_CRITERIA"]):
-                self.log.debug(f"Least Squares was successful. Reached convergence at iteration {iteration}")
-                break
+            # if self._stop(rms_prev, rms, self._metadata["STOP_CRITERIA"]):
+            #    self.log.debug(f"Least Squares was successful. Reached convergence at iteration {iteration}")
+            #    break
 
             # increase iteration counter
-            rms_prev = rms
-            iteration += 1
-
-        # perform additional iteration after elevation filter
-        if apply_elevation_filter:
-            self.log.info(f"Applying elevation filter with threshold {self._metadata['ELEVATION_FILTER']} [deg] "
-                          f"and performing additional iteration")
-            self._elevation_filter(system_geometry, self._metadata["ELEVATION_FILTER"])
-
-            # check data availability for this epoch
-            if not self._check_model_availability(system_geometry, epoch):
-                return False  # not enough data to process this epoch
-
-            # solve the Least Squares
-            try:
-                postfit_residuals, prefit_residuals, dop_matrix, rms = \
-                    self._compute(system_geometry, obs_data, state, epoch)
-            except PVTComputationFail as e:
-                self.log.warning(f"Least Squares failed for {str(epoch)} on additional iteration (elevation filter). "
-                                 f"Reason: {e}")
-                return False
+            # rms_prev = rms
+            # iteration += 1
 
         # end of iterative procedure
-        if iteration == self._metadata["MAX_ITER"]:
-            self.log.warning(f"PVT failed to converge for epoch {str(epoch)}, with RMS={rms}. "
-                             f"No solution will be computed for this epoch.")
-            return False
+        # if iteration == self._metadata["MAX_ITER"]:
+        #    self.log.warning(f"PVT failed to converge for epoch {str(epoch)}, with RMS={rms}. "
+        #                     f"No solution will be computed for this epoch.")
+        #    # TODO: update this message
+        #    return False
 
         # save other iteration data to state variable
-        state.add_additional_info("geometry", system_geometry)
-        state.add_additional_info("prefit_residuals", prefit_residuals)
-        state.add_additional_info("postfit_residuals", postfit_residuals)
-        state.add_additional_info("rms", rms)
-        state.add_additional_info("dop_matrix", dop_matrix)
+        # state.add_additional_info("geometry", system_geometry)
+        # state.add_additional_info("prefit_residuals", prefit_residuals)
+        # state.add_additional_info("postfit_residuals", postfit_residuals)
+        # state.add_additional_info("rms", rms)
+        # state.add_additional_info("dop_matrix", dop_matrix)
 
         return True

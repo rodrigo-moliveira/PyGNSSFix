@@ -11,6 +11,7 @@ tasks for preliminary version:
     [ ] add leapseconds from rinex file to EOP database, when there is no file
     [ ] o GGTO/ISB não estõa muito bem integrados no código da class Epoch.
     [ ] add shapiro correction (Eq. 19.14 of handbook)
+    [ ] improve computation of weight matrix W, taking inspiration from https://gnss-sdr.org/docs/sp-blocks/pvt/#precise-point-positioning
 
     code cleanup:
     [ ] escrever um traceback dos filtros do preprocessor
@@ -20,6 +21,7 @@ tasks for preliminary version:
 
 
     melhorar o modulo de post processing:
+    [ ] see the residual analysis in https://gnss-sdr.org/docs/sp-blocks/pvt/#solution-validation
     [ ]  mover a config do PPT (post processing tool) para um json proprio
     [ ] fazer plot do observation data
     [ ] plot Iono states
