@@ -2,6 +2,7 @@ import numpy as np
 
 from src import constants
 from src.algorithms.gnss.estimators.weighted_ls import WeightedLeastSquares
+from src.constants import SPEED_OF_LIGHT
 from src.errors import PVTComputationFail
 from src.io.config.enums import EnumModel
 
@@ -113,7 +114,7 @@ class LSQ_Engine:
 
                     # Weight matrix -> as 1/(obs_std^2)
                     self.weight_mat[obs_offset + iSat, obs_offset + iSat] = \
-                        1 / (reconstructor.get_obs_std(sat, datatype)**2)
+                        1 / (reconstructor.get_obs_std(sat, datatype) ** 2)
 
                 obs_offset += n_sats
             if self._metadata["MODEL"][const] == EnumModel.DUAL_FREQ:
@@ -163,7 +164,8 @@ class LSQ_Engine:
             if self._metadata["MODEL"][const] == EnumModel.DUAL_FREQ:
                 for iSat, sat in enumerate(self.sat_list[const]):
                     state.iono[sat] += float(dX[iono_offset + iSat + 4 + tropo_offset])
-                    state.cov_iono[sat] = cov[iono_offset + iSat + 4 + tropo_offset, iono_offset + iSat + 4 + tropo_offset]
+                    state.cov_iono[sat] = cov[
+                        iono_offset + iSat + 4 + tropo_offset, iono_offset + iSat + 4 + tropo_offset]
                 iono_offset += len(self.sat_list[const])
 
         # ISB
@@ -195,6 +197,7 @@ class LSQ_Engine:
                     res_dict[const][sat][datatype] = residual_vec[iFreq * n_sats + iSat]
         return res_dict
 
+
 # TODO: criar uma class LSQ_Engine mãe com as funções high level , e depois fazer duas filhas para pos e vel
 
 class LSQ_Engine_Vel:
@@ -205,7 +208,8 @@ class LSQ_Engine_Vel:
 
         self._metadata = metadata
         self.doppler_measurements = self._metadata["DOPPLER"]
-        self.constellations = metadata["CONSTELLATIONS"]  # master constellation is the first in the list  TODO: is there master constellation in doppler?
+        self.constellations = metadata[
+            "CONSTELLATIONS"]  # master constellation is the first in the list  TODO: is there master constellation in doppler?
         self.sat_list = dict()
         for sat in satellite_list:
             if sat.sat_system not in self.sat_list:
@@ -241,25 +245,28 @@ class LSQ_Engine_Vel:
         for const in self.constellations:
             n_sats = len(self.sat_list[const])
             n_observables += n_sats
+            n_states += 1  # receiver clock rate for each constellation
 
         self.y_vec = np.zeros(n_observables)
         self.design_mat = np.zeros((n_observables, n_states))
         self.weight_mat = np.eye(n_observables)
 
     @staticmethod
-    def compute_residual_los(sat, epoch, doppler_datatype, obs_data, reconstructor):
+    def compute_residual(sat, epoch, doppler_datatype, obs_data, reconstructor):
 
         # get observable and compute predicted observable
         obs = obs_data.get_observable(sat, doppler_datatype)
-        print(sat, epoch, doppler_datatype, obs)
+
+        # transform Doppler to pseudorange rate
+        wavelength = SPEED_OF_LIGHT / doppler_datatype.freq_value  # in meters
+        obs_range_rate = -wavelength * float(obs)  # in m/s
+
+        print(sat, epoch, doppler_datatype, obs, obs_range_rate, wavelength)
         exit()
         predicted_obs = reconstructor.compute(sat, epoch, doppler_datatype)
 
         # prefit residuals (measured gnss_obs - predicted gnss_obs)
         prefit_residuals = obs - predicted_obs
-
-        # get LOS vector w.r.t. ECEF frame (column in geometry matrix)
-        line_sight = reconstructor.get_unit_line_of_sight(sat)
 
         return prefit_residuals.value, line_sight
 
@@ -273,14 +280,16 @@ class LSQ_Engine_Vel:
             doppler_datatype = self.doppler_measurements[const][0]
 
             for iSat, sat in enumerate(self.sat_list[const]):
-                residual, los = self.compute_residual_los(sat, epoch, doppler_datatype, obs_data, reconstructor)
+                los = reconstructor.get_unit_line_of_sight(sat)
+                residual = self.compute_residual(sat, epoch, doppler_datatype, obs_data, reconstructor)
 
                 # filling the LS matrices
-                self.y_vec[offset+iSat] = residual
-                self.design_mat[offset+iSat][0:3] = los  # velocity
+                self.y_vec[offset + iSat] = residual
+                self.design_mat[offset + iSat][0:3] = los  # velocity
 
                 # Weight matrix -> as 1/(obs_std^2)
-                self.weight_mat[offset + iSat, offset + iSat] = 1.0 # / (reconstructor.get_obs_std(sat, datatype)**2)
+                self.weight_mat[offset + iSat, offset + iSat] = 1.0  # / (reconstructor.get_obs_std(sat, datatype)**2)
+            offset += n_sats
 
     def solve_ls(self, state):
         """solves the LS problem for this iteration"""
@@ -325,7 +334,8 @@ class LSQ_Engine_Vel:
             if self._metadata["MODEL"][const] == EnumModel.DUAL_FREQ:
                 for iSat, sat in enumerate(self.sat_list[const]):
                     state.iono[sat] += float(dX[iono_offset + iSat + 4 + tropo_offset])
-                    state.cov_iono[sat] = cov[iono_offset + iSat + 4 + tropo_offset, iono_offset + iSat + 4 + tropo_offset]
+                    state.cov_iono[sat] = cov[
+                        iono_offset + iSat + 4 + tropo_offset, iono_offset + iSat + 4 + tropo_offset]
                 iono_offset += len(self.sat_list[const])
 
         # ISB

@@ -99,3 +99,6 @@ class DopplerReconstructor:
 
     def compute(self, nav_message, sat, epoch, datatype):
         return 0.0
+
+    def get_unit_line_of_sight(self, sat):
+        return self._system_geometry.get_unit_line_of_sight(sat)

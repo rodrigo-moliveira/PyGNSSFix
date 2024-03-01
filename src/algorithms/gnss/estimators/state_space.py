@@ -7,8 +7,9 @@ from src.io.config.config import config_dict
 
 
 class GnssStateSpace(Container):
-    __states__ = ["position", "velocity", "clock_bias", "iono", "tropo_wet", "isb"]
-    __covs__ = ["cov_position", "cov_velocity", "cov_clock_bias", "cov_iono", "cov_tropo_wet", "cov_isb"]
+    __states__ = ["position", "velocity", "clock_bias", "iono", "tropo_wet", "isb", "clock_bias_rate"]
+    __covs__ = ["cov_position", "cov_velocity", "cov_clock_bias", "cov_iono", "cov_tropo_wet", "cov_isb",
+                "cov_clock_bias_rate"]
     __slots__ = __states__ + __covs__ + ["epoch", "_info"]
 
     def __init__(self, metadata=None, position=None, velocity=None, clock_bias=None, epoch=None, sat_list=None):
@@ -27,6 +28,9 @@ class GnssStateSpace(Container):
         _states = self.get_additional_info("states")
         state = GnssStateSpace(position=self.position, velocity=self.velocity, clock_bias=self.clock_bias,
                                epoch=self.epoch)
+
+        if "clock_bias_rate" in _states:
+            state.clock_bias_rate = self.clock_bias_rate
 
         if "iono" in _states:
             for sat, iono in self.iono.items():
@@ -54,10 +58,17 @@ class GnssStateSpace(Container):
         # velocity is an additional state, that is estimated when set by the user
         self.velocity = None
         self.cov_velocity = None
+        self.clock_bias_rate = None
+        self.cov_clock_bias_rate = None
         if metadata is not None and metadata["VELOCITY_EST"] or velocity is not None:
-            _states += ["velocity"]
+            _states += ["velocity", "clock_bias_rate"]
             self.velocity = np.array(velocity if velocity is not None else [0, 0, 0])
             self.cov_velocity = np.zeros((3, 3))
+            self.clock_bias_rate = dict()
+            self.cov_clock_bias_rate = dict()
+            for constellation in metadata["CONSTELLATIONS"]:
+                self.clock_bias_rate[constellation] = 0.0
+                self.cov_clock_bias_rate[constellation] = 0.0
 
         # clock with default to 0
         self.clock_bias = clock_bias if clock_bias is not None else 0.0
@@ -113,6 +124,8 @@ class GnssStateSpace(Container):
             _str += f", iono = {self.iono}"
         if "tropo_wet" in _states:
             _str += f", tropo_wet = {self.tropo_wet}"
+        if "clock_bias_rate" in _states:
+            _str += f", clock_bias_rate = {self.clock_bias_rate}"
 
         return f'{type(self).__name__}[{str(self.epoch)}]({_str})'
 
