@@ -37,7 +37,7 @@ class EphemeridePropagator:
 
     @staticmethod
     def compute_sat_nav_position_dt_rel(nav_message, time_emission, transit) -> \
-            tuple[np.array, float]:
+            tuple[np.array, np.array, float]:
         """
         Computes:
             * the satellite ephemeride
@@ -58,18 +58,21 @@ class EphemeridePropagator:
 
         """
         # satellite coordinates in ECEF frame defined at TX time, relativistic correction for satellite clock
-        r_sat, v_sat, dt_relative = EphemeridePropagator.compute_nav_sat_pos(nav_message, time_emission)
+        r_sat, v_sat, dt_relative = EphemeridePropagator.compute_nav_sat_eph(nav_message, time_emission)
 
         # rotation matrix from ECEF TX to ECEF RX (taking into consideration the signal transmission time)
         _R = dcm_e_i(-transit)
 
+        # TODO: apply similar fix to satellite velocity Eqs. (21.28) and (21.29)
+        vv_sat = _R @ v_sat + np.cross([0,0, constants.EARTH_ROTATION], _R @ r_sat)
+
         # get satellite position vector at ECEF frame defined at RX time (to be compared with receiver position)
         p_sat = _R @ r_sat
 
-        return p_sat, dt_relative
+        return p_sat, vv_sat, dt_relative
 
     @staticmethod
-    def compute_nav_sat_pos(nav_message, epoch):
+    def compute_nav_sat_eph(nav_message, epoch):
         """
         Implements the updating of GPS ephemerides (position) and the transformation to ECEF frame
 

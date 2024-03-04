@@ -12,7 +12,7 @@ from ...errors import TimeSeriesError
 class SatelliteGeometry(Container):
     __slots__ = ["transit_time",
                  "time_emission", "time_reception",
-                 "true_range", "az", "el", "satellite_position",
+                 "true_range", "az", "el", "satellite_position", "satellite_velocity",
                  "dt_rel_correction", "los", "tropo_map_wet"]
 
     def __init__(self):
@@ -25,6 +25,7 @@ class SatelliteGeometry(Container):
         self.el = 0
         self.tropo_map_wet = 0
         self.satellite_position = None
+        self.satellite_velocity = None
         self.dt_rel_correction = 0
         self.los = None
 
@@ -67,7 +68,7 @@ class SatelliteGeometry(Container):
                                                  pseudorange_obs=PR_obs)
 
         # get and satellite position at RX ECEF frame
-        pos_sat, dt_relative = EphemeridePropagator.compute_sat_nav_position_dt_rel(
+        pos_sat, vel_sat, dt_relative = EphemeridePropagator.compute_sat_nav_position_dt_rel(
             nav_message, time_emission.gnss_time, transit)
 
         # compute true range
@@ -81,7 +82,7 @@ class SatelliteGeometry(Container):
         az, el = enu2azel(*enu_coord)
 
         # line of sight
-        los = [(rec_pos[i] - pos_sat[i]) / true_range for i in (0, 1, 2)]
+        los = np.array([(rec_pos[i] - pos_sat[i]) / true_range for i in (0, 1, 2)])
 
         # save results in container
         self.transit_time = transit
@@ -91,6 +92,7 @@ class SatelliteGeometry(Container):
         self.az = az
         self.el = el
         self.satellite_position = pos_sat
+        self.satellite_velocity = vel_sat
         self.dt_rel_correction = dt_relative
         self.los = los
 

@@ -157,6 +157,20 @@ def dcm_e_i(time):
     return rot3(-theta)
 
 
+def dcm_e_i_dot(time):
+    """
+    rotation matrix (DCM) from ECEF frame (e) to ECI frame (i) given time argument
+    Args:
+            time (float): time argument [seconds]
+        Return:
+            numpy.ndarray : 3x3 rotation matrix of angle theta around the Z-axis (ECEF to ECI)
+    """
+    _sin = np.sin(time)
+    _cos = np.cos(time)
+    dcm = constants.EARTH_ROTATION * np.array([[-_sin, _cos, 0], [-_cos, -_sin, 0], [0, 0, 0]])
+    return dcm
+
+
 def M2E(e, M):
     """
     Conversion from Mean Anomaly to Eccentric anomaly, or Hyperbolic anomaly.

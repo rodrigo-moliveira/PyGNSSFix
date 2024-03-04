@@ -2,7 +2,7 @@ import numpy as np
 
 from src.algorithms.gnss.estimators.state_space import GnssStateSpace
 from src.algorithms.gnss.solver.lsq_engine import LSQ_Engine, LSQ_Engine_Vel
-from src.algorithms.gnss.solver.obs_reconstructor import PseudorangeReconstructor, DopplerReconstructor
+from src.algorithms.gnss.solver.obs_reconstructor import PseudorangeReconstructor, RangeRateReconstructor
 from src.common_log import get_logger
 from src.errors import PVTComputationFail, ConfigError
 from src.io.config import config_dict
@@ -325,9 +325,9 @@ class GnssSolver:
         # TODO: continuar aqui...
         satellite_list = system_geometry.get_satellites()
 
-        reconstructor = DopplerReconstructor(system_geometry,
-                                             self._metadata,
-                                             state)
+        reconstructor = RangeRateReconstructor(system_geometry,
+                                               self._metadata,
+                                               state)
 
         # build LSQ Engine matrices for all satellites
         lsq_engine = LSQ_Engine_Vel(satellite_list, self._metadata, epoch, obs_data, reconstructor)

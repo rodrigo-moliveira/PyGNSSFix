@@ -1,5 +1,6 @@
 import numpy as np
 
+from src.constants import SPEED_OF_LIGHT
 from src.data_types.gnss.data_type import DataType
 from src.io.config import config_dict
 from src.io.config.enums import EnumOnOff, EnumIono, EnumModel
@@ -91,14 +92,22 @@ class PseudorangeReconstructor:
         return el_std * obs_std
 
 
-class DopplerReconstructor:
+class RangeRateReconstructor:
     def __init__(self, system_geometry, metadata, state):
         self._metadata = metadata
         self._state = state
         self._system_geometry = system_geometry
 
-    def compute(self, nav_message, sat, epoch, datatype):
-        return 0.0
+    def compute(self, sat, epoch, datatype):
+        # reconstruct the pseudorange rate observation
+        # pseudorange rate = (v^sat - v_rec).e_los + c(clock_rate_rec - clock_rate_sat - rel_clock_rate_sat)
+
+        v_sat = self._system_geometry.get("satellite_velocity", sat)
+        los = -self.get_unit_line_of_sight(sat)
+        v_rec_ = self._state.velocity + np.cross([0,0, constants.EARTH_ROTATION], self._state.position)
+        clock_rate_rec = self._state.clock_bias_rate
+
+        return np.dot(v_sat - v_rec_, los) + SPEED_OF_LIGHT * clock_rate_rec[sat.sat_system]
 
     def get_unit_line_of_sight(self, sat):
         return self._system_geometry.get_unit_line_of_sight(sat)

@@ -261,14 +261,13 @@ class LSQ_Engine_Vel:
         wavelength = SPEED_OF_LIGHT / doppler_datatype.freq_value  # in meters
         obs_range_rate = -wavelength * float(obs)  # in m/s
 
-        print(sat, epoch, doppler_datatype, obs, obs_range_rate, wavelength)
-        exit()
         predicted_obs = reconstructor.compute(sat, epoch, doppler_datatype)
+        print(sat, epoch, obs, obs_range_rate, predicted_obs)
 
         # prefit residuals (measured gnss_obs - predicted gnss_obs)
-        prefit_residuals = obs - predicted_obs
+        prefit_residuals = obs_range_rate - predicted_obs
 
-        return prefit_residuals.value, line_sight
+        return prefit_residuals
 
     def _build_lsq(self, epoch, obs_data, reconstructor):
         """build the LS matrices y_vec, design_mat, weight_mat"""
@@ -282,7 +281,7 @@ class LSQ_Engine_Vel:
             for iSat, sat in enumerate(self.sat_list[const]):
                 los = reconstructor.get_unit_line_of_sight(sat)
                 residual = self.compute_residual(sat, epoch, doppler_datatype, obs_data, reconstructor)
-
+                continue
                 # filling the LS matrices
                 self.y_vec[offset + iSat] = residual
                 self.design_mat[offset + iSat][0:3] = los  # velocity
@@ -293,6 +292,7 @@ class LSQ_Engine_Vel:
 
     def solve_ls(self, state):
         """solves the LS problem for this iteration"""
+        print(state);exit()
         try:
             solver = WeightedLeastSquares(self.y_vec, self.design_mat, W=self.weight_mat)
             solver.solve()
