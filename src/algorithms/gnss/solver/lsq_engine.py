@@ -208,8 +208,7 @@ class LSQ_Engine_Vel:
 
         self._metadata = metadata
         self.doppler_measurements = self._metadata["DOPPLER"]
-        self.constellations = metadata[
-            "CONSTELLATIONS"]  # master constellation is the first in the list  TODO: is there master constellation in doppler?
+        self.constellations = metadata["CONSTELLATIONS"]
         self.sat_list = dict()
         for sat in satellite_list:
             if sat.sat_system not in self.sat_list:
@@ -262,7 +261,6 @@ class LSQ_Engine_Vel:
         obs_range_rate = -wavelength * float(obs)  # in m/s
 
         predicted_obs = reconstructor.compute(sat, epoch, doppler_datatype)
-        print(sat, epoch, obs, obs_range_rate, predicted_obs)
 
         # prefit residuals (measured gnss_obs - predicted gnss_obs)
         prefit_residuals = obs_range_rate - predicted_obs
@@ -272,27 +270,29 @@ class LSQ_Engine_Vel:
     def _build_lsq(self, epoch, obs_data, reconstructor):
         """build the LS matrices y_vec, design_mat, weight_mat"""
 
-        offset = 0
+        obs_offset = 0
+        const_offset = 0
         for iConst, const in enumerate(self.constellations):
 
             n_sats = len(self.sat_list[const])
             doppler_datatype = self.doppler_measurements[const][0]
 
             for iSat, sat in enumerate(self.sat_list[const]):
-                los = reconstructor.get_unit_line_of_sight(sat)
+                los = -reconstructor.get_unit_line_of_sight(sat)
                 residual = self.compute_residual(sat, epoch, doppler_datatype, obs_data, reconstructor)
-                continue
+
                 # filling the LS matrices
-                self.y_vec[offset + iSat] = residual
-                self.design_mat[offset + iSat][0:3] = los  # velocity
+                self.y_vec[obs_offset + iSat] = residual
+                self.design_mat[obs_offset + iSat][0:3] = -los  # velocity
+                self.design_mat[obs_offset + iSat][3 + const_offset] = 1
 
                 # Weight matrix -> as 1/(obs_std^2)
-                self.weight_mat[offset + iSat, offset + iSat] = 1.0  # / (reconstructor.get_obs_std(sat, datatype)**2)
-            offset += n_sats
+                self.weight_mat[obs_offset + iSat, obs_offset + iSat] = 1.0  # / (reconstructor.get_obs_std(sat, datatype)**2)
+            obs_offset += n_sats
+            const_offset += 1
 
     def solve_ls(self, state):
         """solves the LS problem for this iteration"""
-        print(state);exit()
         try:
             solver = WeightedLeastSquares(self.y_vec, self.design_mat, W=self.weight_mat)
             solver.solve()
@@ -320,49 +320,24 @@ class LSQ_Engine_Vel:
 
     def apply_corrections(self, state, dX, cov):
         """applies corrections to the state vector"""
-        # TODO: this needs to be updated....
 
-        estimate_tropo = self._metadata["TROPO"].estimate_tropo()
-        tropo_offset = 1 if estimate_tropo else 0
+        state.velocity += dX[0:3]  # in m/s
+        state.cov_velocity = cov[0:3, 0:3]  # in (m/s)^2
 
-        state.position += dX[0:3]
-        state.clock_bias += dX[3] / constants.SPEED_OF_LIGHT  # receiver clock in seconds
-
-        # if iono is estimated
-        iono_offset = 0
-        for const in self.constellations:
-            if self._metadata["MODEL"][const] == EnumModel.DUAL_FREQ:
-                for iSat, sat in enumerate(self.sat_list[const]):
-                    state.iono[sat] += float(dX[iono_offset + iSat + 4 + tropo_offset])
-                    state.cov_iono[sat] = cov[
-                        iono_offset + iSat + 4 + tropo_offset, iono_offset + iSat + 4 + tropo_offset]
-                iono_offset += len(self.sat_list[const])
-
-        # ISB
-        if len(self.constellations) > 1:
-            state.isb += dX[-1] / constants.SPEED_OF_LIGHT  # ISB between master and slave constellations
-            state.cov_isb = float(cov[-1, -1]) / (constants.SPEED_OF_LIGHT ** 2)  # in seconds^2
-
-        # tropo
-        if estimate_tropo:
-            state.tropo_wet += dX[4]
-            state.cov_tropo_wet = cov[4, 4]
-            print("tropo", state.tropo_wet)
-
-        # unpack covariance matrices
-        state.cov_position = np.array(cov[0:3, 0:3])
-        state.cov_clock_bias = float(cov[3, 3]) / (constants.SPEED_OF_LIGHT ** 2)  # in seconds^2
+        for iConst, const in enumerate(self.constellations):
+            # receiver clock drift [dimensionless]
+            state.clock_bias_rate[const] += dX[iConst + 3] / constants.SPEED_OF_LIGHT
+            state.cov_clock_bias_rate[const] = float(cov[iConst + 3, iConst + 3]) / (constants.SPEED_OF_LIGHT ** 2)
 
     def get_residuals(self, residual_vec):
 
         res_dict = dict()
+        iSat = 0
         for const in self.constellations:
-            n_sats = len(self.sat_list[const])
             res_dict[const] = dict()
 
-            for iSat, sat in enumerate(self.sat_list[const]):
-                res_dict[const][sat] = dict()
+            for sat in self.sat_list[const]:
+                res_dict[const][sat] = residual_vec[iSat]
+                iSat += 1
 
-                for iFreq, datatype in enumerate(self._metadata["CODES"][const]):
-                    res_dict[const][sat][datatype] = residual_vec[iFreq * n_sats + iSat]
         return res_dict

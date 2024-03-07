@@ -12,14 +12,15 @@ class GnssStateSpace(Container):
                 "cov_clock_bias_rate"]
     __slots__ = __states__ + __covs__ + ["epoch", "_info"]
 
-    def __init__(self, metadata=None, position=None, velocity=None, clock_bias=None, epoch=None, sat_list=None):
+    def __init__(self, metadata=None, position=None, velocity=None, clock_bias=None, epoch=None,
+                 clock_bias_rate=None, sat_list=None):
         super().__init__()
 
         # dict to store state information
         self._info = dict()
 
         # initialize system solve-for states
-        self._init_states(metadata, position, velocity, clock_bias, sat_list)
+        self._init_states(metadata, position, velocity, clock_bias, clock_bias_rate, sat_list)
 
         # epoch
         self.epoch = epoch
@@ -27,7 +28,7 @@ class GnssStateSpace(Container):
     def clone(self):
         _states = self.get_additional_info("states")
         state = GnssStateSpace(position=self.position, velocity=self.velocity, clock_bias=self.clock_bias,
-                               epoch=self.epoch)
+                               epoch=self.epoch, clock_bias_rate=self.clock_bias_rate)
 
         if "clock_bias_rate" in _states:
             state.clock_bias_rate = self.clock_bias_rate
@@ -48,7 +49,7 @@ class GnssStateSpace(Container):
 
         return state
 
-    def _init_states(self, metadata, position, velocity, clock_bias, sat_list):
+    def _init_states(self, metadata, position, velocity, clock_bias, clock_bias_rate, sat_list):
         _states = ["position", "clock_bias"]  # mandatory states
 
         # position (with default to [0, 0, 0])
@@ -66,9 +67,17 @@ class GnssStateSpace(Container):
             self.cov_velocity = np.zeros((3, 3))
             self.clock_bias_rate = dict()
             self.cov_clock_bias_rate = dict()
-            for constellation in metadata["CONSTELLATIONS"]:
-                self.clock_bias_rate[constellation] = 0.0
-                self.cov_clock_bias_rate[constellation] = 0.0
+
+            if metadata is not None:
+                _constellations = metadata["CONSTELLATIONS"]
+            elif clock_bias_rate is not None:
+                _constellations = list(clock_bias_rate.keys())
+            else:
+                _constellations = None
+            if _constellations:
+                for constellation in _constellations:
+                    self.clock_bias_rate[constellation] = clock_bias_rate[constellation] if clock_bias_rate else 0.0
+                    self.cov_clock_bias_rate[constellation] = 0.0
 
         # clock with default to 0
         self.clock_bias = clock_bias if clock_bias is not None else 0.0

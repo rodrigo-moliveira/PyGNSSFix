@@ -6,9 +6,13 @@ tasks for preliminary version:
     [X] re-adicionar o filtro de elevation no gnss_solver
     [X] re-adicionar o smoothing, tendo em conta que afinal é necessário converter carrier de ciclos para metros! (no cycle slip detection yet)
     [X] add velocity in computation of satellite ephemerides (ver prototype e livro da ESA)
-    [ ] process doppler measurements to estimate velocity
+    [X] process doppler measurements to estimate velocity
+    [ ] criar um RX Time
+    [ ] no output, permitir escolher qual a timetag de output (RX Time, GPST, GST, UTC...)
     [ ] add GGTO to the EOP database
-    [ ] add leapseconds from rinex file to EOP database, when there is no file
+        em relação ao GGTO, usar a config estimate_ggto para escolher entre usar o do rinex e o estimado
+        no caso de vir em rinex, fazer load para a db...
+    [ ] add leapseconds from rinex file to EOP database, when there is no file. Não concordo... Vem sempre do file
     [ ] o GGTO/ISB não estõa muito bem integrados no código da class Epoch.
     [ ] add shapiro correction (Eq. 19.14 of handbook)
     [ ] improve computation of weight matrix W, taking inspiration from https://gnss-sdr.org/docs/sp-blocks/pvt/#precise-point-positioning

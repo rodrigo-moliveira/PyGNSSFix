@@ -1,3 +1,5 @@
+import numpy as np
+
 # PI
 PI = 3.1415926535898
 
@@ -33,6 +35,7 @@ MU_WGS84 = 3.986005E14  # [m^3/sec^2] (WGS84 value, for GPS)
 MU_GTRF = 3.986004418e14  # (GTRF value, for GAL)
 EARTH_ROTATION = 7.292115E-5  # [rad/sec]
 SPEED_OF_LIGHT = 299792458  # [m/s]
+EARTH_ANGULAR_RATE = np.array([0.0, 0.0, EARTH_ROTATION])
 
 
 EARTH_FLATNESS = 1 / 298.257223563

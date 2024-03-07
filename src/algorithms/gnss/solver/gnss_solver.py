@@ -322,7 +322,6 @@ class GnssSolver:
         return lsq_engine.solve_ls(state)
 
     def _compute_vel(self, system_geometry, obs_data, state, epoch):
-        # TODO: continuar aqui...
         satellite_list = system_geometry.get_satellites()
 
         reconstructor = RangeRateReconstructor(system_geometry,
@@ -382,8 +381,6 @@ class GnssSolver:
         rms = rms_prev = 1
         prefit_residuals = postfit_residuals = None
 
-        state.cov_velocity = np.zeros((3, 3))  # this is temp!
-
         # get observations and system geometry for this epoch
         obs_for_epoch = self.raw_obs_data.get_epoch_data(epoch)
         system_geometry = state.get_additional_info("geometry")
@@ -398,33 +395,31 @@ class GnssSolver:
         while iteration < self._metadata["MAX_ITER"]:
             # solve the Least Squares
             try:
-                self._compute_vel(system_geometry, obs_for_epoch, state, epoch)
+                postfit_residuals, prefit_residuals, rms = \
+                    self._compute_vel(system_geometry, obs_for_epoch, state, epoch)
             except PVTComputationFail as e:
                 self.log.warning(f"Least Squares failed for {str(epoch)} on iteration {iteration}."
                                  f"Reason: {e}")
                 return False
 
             # check stop condition
-            # if self._stop(rms_prev, rms, self._metadata["STOP_CRITERIA"]):
-            #    self.log.debug(f"Least Squares was successful. Reached convergence at iteration {iteration}")
-            #    break
+            if self._stop(rms_prev, rms, self._metadata["STOP_CRITERIA"]):
+                self.log.debug(f"Velocity Least Squares was successful. Reached convergence at iteration {iteration}")
+                break
 
             # increase iteration counter
-            # rms_prev = rms
-            # iteration += 1
+            rms_prev = rms
+            iteration += 1
 
         # end of iterative procedure
-        # if iteration == self._metadata["MAX_ITER"]:
-        #    self.log.warning(f"PVT failed to converge for epoch {str(epoch)}, with RMS={rms}. "
-        #                     f"No solution will be computed for this epoch.")
-        #    # TODO: update this message
-        #    return False
+        if iteration == self._metadata["MAX_ITER"]:
+            self.log.warning(f"Velocity Estimation failed to converge for epoch {str(epoch)}, with RMS={rms}. "
+                             f"No solution will be computed for this epoch.")
+            return False
 
         # save other iteration data to state variable
-        # state.add_additional_info("geometry", system_geometry)
-        # state.add_additional_info("prefit_residuals", prefit_residuals)
-        # state.add_additional_info("postfit_residuals", postfit_residuals)
-        # state.add_additional_info("rms", rms)
-        # state.add_additional_info("dop_matrix", dop_matrix)
+        state.add_additional_info("vel_prefit_residuals", prefit_residuals)
+        state.add_additional_info("vel_postfit_residuals", postfit_residuals)
+        state.add_additional_info("vel_rms", rms)
 
         return True

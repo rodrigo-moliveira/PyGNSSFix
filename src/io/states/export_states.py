@@ -13,6 +13,8 @@ def get_file_header(exportable, state):
     elif exportable == "clock_bias":
         master = state.get_additional_info("clock_master")
         return f"Week_Number({epoch_system}),Time_of_Week[s],clock_bias(master={master})[s],cov[s^2]"
+    elif exportable == "clock_bias_rate":
+        return f"Week_Number({epoch_system}),Time_of_Week[s],constellation,clock_bias_rate[],cov[]"
     elif exportable == "iono":
         return f"Week_Number({epoch_system}),Time_of_Week[s],sat,iono[m],cov[m^2]"
     elif exportable == "tropo_wet":
@@ -62,6 +64,15 @@ def export_to_file(gnss_state: GnssStateSpace, exportable):
 
     if exportable == "clock_bias":
         return f"{gnss_state.clock_bias},{gnss_state.cov_clock_bias}"
+
+    if exportable == "clock_bias_rate":
+        data = []
+        for constellation, clock_rate in gnss_state.clock_bias_rate.items():
+            try:
+                data.append(f"{constellation},{clock_rate},{gnss_state.cov_clock_bias_rate[constellation]}")
+            except KeyError:
+                pass
+        return data
 
     if exportable == "tropo_wet":
         return f"{gnss_state.tropo_wet},{gnss_state.cov_tropo_wet}"

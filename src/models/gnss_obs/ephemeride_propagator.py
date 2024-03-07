@@ -63,13 +63,18 @@ class EphemeridePropagator:
         # rotation matrix from ECEF TX to ECEF RX (taking into consideration the signal transmission time)
         _R = dcm_e_i(-transit)
 
-        # TODO: apply similar fix to satellite velocity Eqs. (21.28) and (21.29)
-        vv_sat = _R @ v_sat + np.cross([0,0, constants.EARTH_ROTATION], _R @ r_sat)
-
         # get satellite position vector at ECEF frame defined at RX time (to be compared with receiver position)
         p_sat = _R @ r_sat
 
-        return p_sat, vv_sat, dt_relative
+        # get the inertial velocity vector at ECEF frame defined at RX time
+        # NOTE: v_sat is the ECEF velocity defined at TX time, expressed in ECEF TX frame.
+        # _R @ v_sat rotates this velocity to the ECEF RX frame
+        # np.cross(constants.EARTH_ANGULAR_RATE, _R @ r_sat) is the Earth velocity at TX time,
+        # defined in the ECEF RX frame, that allows to convert the satellite velocity as required
+        # See Eq. (21.29) of Handbook
+        v_sat = _R @ v_sat + np.cross(constants.EARTH_ANGULAR_RATE, p_sat)
+
+        return p_sat, v_sat, dt_relative
 
     @staticmethod
     def compute_nav_sat_eph(nav_message, epoch):
