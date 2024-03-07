@@ -103,11 +103,19 @@ class RangeRateReconstructor:
         # pseudorange rate = (v^sat - v_rec).e_los + c(clock_rate_rec - clock_rate_sat - rel_clock_rate_sat)
 
         v_sat = self._system_geometry.get("satellite_velocity", sat)
-        los = -self.get_unit_line_of_sight(sat)
+        los = -1 * self.get_unit_line_of_sight(sat)
         v_rec_ = self._state.velocity + np.cross(constants.EARTH_ANGULAR_RATE, self._state.position)
         clock_rate_rec = self._state.clock_bias_rate
+
+        # TODO: it could be possible to apply here the satellite clock drift correction
 
         return np.dot(v_sat - v_rec_, los) + SPEED_OF_LIGHT * clock_rate_rec[sat.sat_system]
 
     def get_unit_line_of_sight(self, sat):
-        return self._system_geometry.get_unit_line_of_sight(sat)
+        los = self._system_geometry.get_unit_line_of_sight(sat)
+
+        # correct line of sight, according to Eq. (21.28) of Handbook
+        v_sat = self._system_geometry.get("satellite_velocity", sat)
+        los = los / (1 + np.dot(v_sat, los) / SPEED_OF_LIGHT)
+
+        return los

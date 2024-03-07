@@ -264,7 +264,6 @@ class LSQ_Engine_Vel:
 
         # prefit residuals (measured gnss_obs - predicted gnss_obs)
         prefit_residuals = obs_range_rate - predicted_obs
-
         return prefit_residuals
 
     def _build_lsq(self, epoch, obs_data, reconstructor):
