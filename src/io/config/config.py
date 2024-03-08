@@ -11,42 +11,42 @@ from src.io.config.enums import EnumPositioningMode
 
 
 class Config(dict):
-    """Configuration
-
-    Example:
-        .. code-block:: python
-
-            from space.config import config
-
-            print(config['env']['eop_missing_policy'])
-            print(config.get('env', 'non-existent-field', fallback=25))
-
+    """Configuration class that inherits from dict
     """
 
     _instance = None
 
-    def init(self, initial_dict):
+    def init(self, initial_dict, alg="gnss"):
+
+        if alg.lower() not in ("gnss", "performance"):
+            raise ValueError(f"illegal value for {alg} argument. Available values are 'gnss', 'performance'")
+
         super().__init__()  # Call the parent class (dict) constructor
 
         # validate config file
-        self._validate(initial_dict)
+        self._validate(initial_dict, alg)
 
         self.update(initial_dict)  # Update the dictionary with the values from initial_dict
         # model initializations
         self["model"]["mode"] = EnumPositioningMode.init_model(self["model"]["mode"])
         self.get_obs_std()
 
-    def _validate(self, initial_dict):
+    def _validate(self, initial_dict, alg):
         # Read the schema from the file
-        with open(PROJECT_PATH / "src/io/config/resources/gnss_schema.json") as schema_file:
+        if alg.lower() == "gnss":
+            schema_path = PROJECT_PATH / "src/io/config/resources/gnss_schema.json"
+        elif alg.lower() == "performance":
+            schema_path = PROJECT_PATH / "src/io/config/resources/performance_schema.json"
+        else:
+            raise ValueError(f"invalid value for argument alg: {alg}")
+
+        with open(schema_path) as schema_file:
             schema = json.load(schema_file)
 
         try:
             validate(initial_dict, schema)
         except ValidationError as e:
             raise ConfigError(f"Error validating config file: {e}")
-
-        # TODO: enforce consistency between solution (SPS, SPS_IF), observations and pr_obs_stds
 
     def get(self, *keys, fallback=ConfigError):
         """Retrieve a value in the config, if the value is not available
@@ -80,19 +80,10 @@ class Config(dict):
     def set(self, *args):
         """Set a value in the config dictionary
 
-        The last argument is the value to set
+        The last argument is the value to set.
 
         Example:
-
-        .. code-block:: python
-
             config.set('aaa', 'bbb', True)
-            print(config)
-            # {
-            #     'aaa': {
-            #         'bbb': True
-            #     }
-            # }
         """
 
         # split arguments in keys and value
@@ -105,7 +96,10 @@ class Config(dict):
 
         subdict[last_key] = value
 
-    def get_services(self):
+    def get_services(self) -> dict:
+        """ Utility function to return a map with the services (observation attributes) configured for each
+        constellation, as defined in the configuration field 'observations'
+        """
         if "services" not in self:
             services = {}
             # iterate over all active constellations
@@ -117,10 +111,8 @@ class Config(dict):
             self.set("services", services)
         return self["services"]
 
-    def get_model(self):
-        return self["model"]["mode"]
-
-    def get_obs_std(self):
+    def get_obs_std(self) -> dict:
+        """Utility function to build the observation noise (standard deviation) for each observation"""
         if "obs_std" not in self:
             obs_dict = {}
             service_dict = self.get_services()
@@ -132,13 +124,16 @@ class Config(dict):
                 obs_dict[constellation] = {}
                 for index, service in enumerate(services):
                     datatype = data_type_from_rinex(f"C{service}", constellation)
+                    # NOTE: when carrier measurements are added, update here
                     obs_dict[constellation][datatype] = obs_std_list[index]
             self.set("obs_std", obs_dict)
 
         return self["obs_std"]
 
-    def set_obs_std(self, constellation, datatype, std):
-        # first build the obs_std dict
+    def update_obs_std(self, constellation, datatype, std):
+        """Utility configuration function to update the field variable obs_std for the provided datatype.
+        Useful when the std value is updated due to the elevation map, for example."""
+        # first build the obs_std dict (if not build before)
         self.get_obs_std()
 
         if constellation not in self["obs_std"]:

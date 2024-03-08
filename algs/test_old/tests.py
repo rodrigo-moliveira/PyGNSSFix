@@ -1,6 +1,4 @@
-import numpy as np
-from src.models.attitude.attitude import euler2exp_att, exp_att2euler, euler2quat
-from src.models.attitude.attitude import *
+from src.models.frames.attitude import *
 
 def read_file(file, token_map):
     fh = open(file)

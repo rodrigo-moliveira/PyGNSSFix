@@ -1,5 +1,5 @@
 from src import constants
-from src.errors import DataTypeError
+from src.errors import SignalError
 
 __all__ = ["get_data_type", "data_type_from_rinex"]
 
@@ -179,7 +179,7 @@ class DataType:
             index2 = datatype2.freq_number
             return get_data_type(f"CP{min(index1, index2)}{max(index1, index2)}", constellation)
 
-        raise DataTypeError(f"Unable to obtain iono free pseudorange from the provided arguments. "
+        raise SignalError(f"Unable to obtain iono free pseudorange from the provided arguments. "
                             f"Datatype1 and datatype2 must be both code."
                             f"datatype1 = {datatype1.data_type}, datatype2 = {datatype2.data_type}")
 
@@ -198,7 +198,7 @@ class DataType:
             index = datatype.freq_number
             return get_data_type(f"SPR{index}", datatype.constellation)
 
-        raise DataTypeError(f"Unable to create smooth pseudorange from "
+        raise SignalError(f"Unable to create smooth pseudorange from "
                             f"data type {str(datatype)}")
 
 

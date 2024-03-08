@@ -1,5 +1,5 @@
 from .service_utils import AvailableConstellations, ConstellationToCodeMap
-from ...errors import UnknownConstellationError
+from ...errors import ConfigError
 
 __all__ = ["Constellation", "get_constellation"]
 
@@ -82,6 +82,6 @@ def get_constellation(system: str):
     elif system.upper() == "BDS" or system.upper() == "B":
         return _BDS
     else:
-        raise UnknownConstellationError(
+        raise ConfigError(
             "No Satellite System matched the descriptor {}.".format(system)
         )

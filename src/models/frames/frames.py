@@ -303,7 +303,7 @@ def ecef2enu(x_ecef, y_ecef, z_ecef, lat, long, h):
 
 def enu2azel(x_enu, y_enu, z_enu):
     """
-    Transform ENU coordinates in Azimuth (Az) and Elevation (El) gnss_obs angles
+    Transform ENU coordinates in Azimuth (Az) and Elevation (El) gnss_models angles
     Algorithm B.3:  Elevation and Azimuth Computation from **REF[1]**
 
     Args:

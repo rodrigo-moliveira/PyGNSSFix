@@ -5,7 +5,7 @@ import os
 from src import RUNS_PATH
 from src.data_mng.csv_data_mng import GnssRunStorageManager
 from src.io.config import config_dict
-from src.performance.performance_manager import PerformanceEvaluation
+from src.modules.performance.performance_manager import PerformanceEvaluation
 
 
 def main():
@@ -49,7 +49,7 @@ def main():
 
 
 print("#--------------------------------------------------#")
-print("#           Welcome to PyGNSSFix Program           #")
+print("#           Welcome to GNSSNavPy Program           #")
 print("#--------------------------------------------------#\n")
 
 if __name__ == "__main__":

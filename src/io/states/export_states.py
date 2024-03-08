@@ -1,5 +1,5 @@
 from src import constants
-from src.algorithms.gnss.estimators.state_space import GnssStateSpace
+from src.modules.estimators import GnssStateSpace
 
 
 def get_file_header(exportable, state):

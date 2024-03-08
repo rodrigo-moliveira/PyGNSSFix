@@ -10,7 +10,6 @@ from ...utils.node import Node
 
 __all__ = ["Epoch", "timedelta"]
 
-raise EpochError("test erorr")
 
 """TAI = UTC + LEAPS
 TAI = GPS + 19

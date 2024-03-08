@@ -12,6 +12,8 @@ from ``logging`` docs:
         attributes that the output should contain.
 """
 
+__all__ = ["get_logger"]  # the user only needs this function
+
 __logs__ = {}  # global dict for all logs
 __file_level__ = logging.INFO
 _file_path = ""
