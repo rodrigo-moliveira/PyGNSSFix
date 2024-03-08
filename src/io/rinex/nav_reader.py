@@ -1,7 +1,7 @@
 from . import utils
 from src.data_types.date.date import Epoch
 from src.data_types.gnss.satellite import get_satellite
-from src.errors import FileError, NavigationError
+from src.errors import FileError, EphemerideError
 from src.io.config import config_dict
 
 
@@ -331,6 +331,6 @@ class RinexNavReader:
                     nav_type = navMessage.find_message_type()
                     if nav_type == config_dict.get("model", "GAL", "nav_type", fallback="FNAV"):
                         self.nav.set_data(toc, satellite, navMessage)
-                except NavigationError as e:
+                except EphemerideError as e:
                     # TODO raise warning
                     pass

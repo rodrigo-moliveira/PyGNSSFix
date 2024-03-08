@@ -102,6 +102,8 @@
    },
 
    "solver": {
+      "trace_files": true,
+
       "_comment1": "Select Algorithm. Available is 'WSL' - Weighted Least Squares",
       "algorithm": "WSL",
 
@@ -129,12 +131,5 @@
    "output": {
       "_comment": "select output folder (absolute path) to store the run. Set 'default' to store in default path runs/",
       "output_path": "default"
-   },
-
-   "performance_evaluation": {
-      "static": true,
-
-      "_comment": "True receiver coordinates with respect to ECEF frame [meters]",
-      "true_static_position": [4027881.6280, 306998.5370, 4919498.9840]
    }
 }

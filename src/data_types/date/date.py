@@ -4,11 +4,13 @@
 from numpy import sin, radians
 from datetime import datetime, timedelta, date
 
-from ...errors import DateError, UnknownScaleError
+from ...errors import EpochError, TimeScaleError
 from .eop import EopDb
 from ...utils.node import Node
 
 __all__ = ["Epoch", "timedelta"]
+
+raise EpochError("test erorr")
 
 """TAI = UTC + LEAPS
 TAI = GPS + 19
@@ -82,7 +84,7 @@ class Timescale(Node):
             elif hasattr(self, roper):
                 delta -= getattr(self, roper)(mjd, eop)
             else:  # pragma: no cover
-                raise DateError(f"Unknown conversion {one} => {two}")
+                raise EpochError(f"Unknown conversion {one} => {two}")
 
         return delta
 
@@ -107,7 +109,7 @@ def get_scale(name):
     if name in _cache.keys():
         return _cache[name]
     else:
-        raise UnknownScaleError(name)
+        raise TimeScaleError(name)
 
 
 class Epoch:

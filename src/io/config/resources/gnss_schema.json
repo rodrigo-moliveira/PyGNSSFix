@@ -131,15 +131,7 @@
         "output_path": {"type": "string"}
       },
       "required": ["output_path"]
-    },
-    "performance_evaluation": {
-      "type": "object",
-      "properties": {
-        "static": {"type": "boolean"},
-        "true_static_position": {"type": "array", "items": {"type": "number"}}
-      },
-      "required": ["static", "true_static_position"]
     }
   },
-  "required": ["log", "inputs", "model", "preprocessor", "solver", "output", "performance_evaluation"]
+  "required": ["log", "inputs", "model", "preprocessor", "solver", "output"]
 }

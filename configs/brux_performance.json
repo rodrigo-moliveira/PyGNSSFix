@@ -1,0 +1,11 @@
+{
+  "performance_evaluation": {
+    "static": true,
+    "_comment": "True receiver coordinates with respect to ECEF frame [meters]",
+    "true_static_position": [
+      4027881.6280,
+      306998.5370,
+      4919498.9840
+    ]
+  }
+}

@@ -1,7 +1,5 @@
 """Configuration handler
-
-The configuration is a simple dictionary. See :ref:`configuration` for
-details.
+The configuration is read from the json file and validated by the jsonschema tool
 """
 import json
 from jsonschema import validate, ValidationError
@@ -40,7 +38,7 @@ class Config(dict):
 
     def _validate(self, initial_dict):
         # Read the schema from the file
-        with open(PROJECT_PATH / "src/io/config/resources/schema.json") as schema_file:
+        with open(PROJECT_PATH / "src/io/config/resources/gnss_schema.json") as schema_file:
             schema = json.load(schema_file)
 
         try:

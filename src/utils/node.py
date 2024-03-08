@@ -24,33 +24,6 @@ class Route:
 
 class Node:
     """Class representing a node in a graph, relations may be circular.
-
-    .. code-block:: python
-
-        A = Node('A')
-        B = Node('B')
-        C = Node('C')
-        D = Node('D')
-        E = Node('E')
-        F = Node('F')
-
-        A + B + C + D + E + F + A
-        F + C
-
-        #   A
-        #  / \\
-        # B   F
-        # | / |
-        # C   E
-        # \\ /
-        #   D
-
-        A.path('E')
-        # [A, F, E]
-        A.steps('E')
-        # [(A, F), (F, E)]
-        E.path('B')
-        # [E, F, A, B] or [E, D, C, B]
     """
 
     def __init__(self, name):

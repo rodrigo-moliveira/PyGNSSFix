@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "properties": {
+    "performance_evaluation": {
+      "type": "object",
+      "properties": {
+        "static": {"type": "boolean"},
+        "true_static_position": {"type": "array", "items": {"type": "number"}}
+      },
+      "required": ["static", "true_static_position"]
+    }
+  },
+  "required": ["performance_evaluation"]
+}

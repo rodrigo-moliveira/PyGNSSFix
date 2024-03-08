@@ -1,3 +1,6 @@
+"""Definition of some useful constants
+"""
+
 import numpy as np
 
 # PI

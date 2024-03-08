@@ -1,5 +1,6 @@
-from enum import Enum
+"""Definition of some useful python Enumeration objects"""
 
+from enum import Enum
 from src.errors import EnumError
 
 

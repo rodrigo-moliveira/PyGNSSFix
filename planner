@@ -25,6 +25,7 @@ tasks for preliminary version:
 
 
     melhorar o modulo de post processing:
+    [ ] aplicar os pontos em ficheiros kml? Um plot de google maps ou assim.
     [ ] see the residual analysis in https://gnss-sdr.org/docs/sp-blocks/pvt/#solution-validation
     [ ]  mover a config do PPT (post processing tool) para um json proprio
     [ ] fazer plot do observation data
