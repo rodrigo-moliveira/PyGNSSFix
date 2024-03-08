@@ -1,19 +1,15 @@
 """Common errors declarations
 """
-MODULE = "PyGNSSFix"
+MODULE = "GNSSNavPy"
 
+# TODO: simplificar um pouco os erros. Criar erros mais genéricos...
 
-class PyGNSSFixError(Exception):
+class GNSSNavPyError(Exception):
     """Generic error"""
     __module__ = MODULE
 
-    # def __init__(self, message):
-    #    # Call the base class constructor with the parameters it needs
-    #    message = "Generic Error -> " + message
-    #    super().__init__(message)
 
-
-class UnknownScaleError(PyGNSSFixError):
+class UnknownScaleError(GNSSNavPyError):
     """Unknown timescale selected by user"""
     __module__ = MODULE
 
@@ -23,7 +19,7 @@ class UnknownScaleError(PyGNSSFixError):
         super().__init__(message)
 
 
-class DateError(PyGNSSFixError):
+class DateError(GNSSNavPyError):
     """Error when converting between timescales (no connection defined)"""
     __module__ = MODULE
 
@@ -33,7 +29,7 @@ class DateError(PyGNSSFixError):
         super().__init__(message)
 
 
-class ConfigError(PyGNSSFixError):
+class ConfigError(GNSSNavPyError):
     """Error when parsing the json configuration file"""
     __module__ = MODULE
 
@@ -43,7 +39,7 @@ class ConfigError(PyGNSSFixError):
         super().__init__(message)
 
 
-class ConfigTypeError(PyGNSSFixError):
+class ConfigTypeError(GNSSNavPyError):
     """Error when parsing the json configuration file"""
     __module__ = MODULE
 
@@ -53,7 +49,7 @@ class ConfigTypeError(PyGNSSFixError):
         super().__init__(message)
 
 
-class UnknownConstellationError(PyGNSSFixError):
+class UnknownConstellationError(GNSSNavPyError):
     """Unknown constellation defined by user"""
     __module__ = MODULE
 
@@ -63,7 +59,7 @@ class UnknownConstellationError(PyGNSSFixError):
         super().__init__(message)
 
 
-class EopError(PyGNSSFixError):
+class EopError(GNSSNavPyError):
     """Earth Orientation Parameters error (lack of data)"""
     __module__ = MODULE
 
@@ -73,7 +69,7 @@ class EopError(PyGNSSFixError):
         super().__init__(message)
 
 
-class DataTypeError(PyGNSSFixError):
+class DataTypeError(GNSSNavPyError):
     """Unknown GNSS data type """
     __module__ = MODULE
 
@@ -83,7 +79,7 @@ class DataTypeError(PyGNSSFixError):
         super().__init__(message)
 
 
-class TimeSeriesError(PyGNSSFixError):
+class TimeSeriesError(GNSSNavPyError):
     """Error in time series class"""
     __module__ = MODULE
 
@@ -93,7 +89,7 @@ class TimeSeriesError(PyGNSSFixError):
         super().__init__(message)
 
 
-class FileError(PyGNSSFixError):
+class FileError(GNSSNavPyError):
     """Error reading input file"""
     __module__ = MODULE
 
@@ -103,7 +99,7 @@ class FileError(PyGNSSFixError):
         super().__init__(message)
 
 
-class UnknownConversionError(PyGNSSFixError):
+class UnknownConversionError(GNSSNavPyError):
     """Error in time series class"""
     __module__ = MODULE
 
@@ -113,7 +109,7 @@ class UnknownConversionError(PyGNSSFixError):
         super().__init__(message)
 
 
-class NonExistentObservable(PyGNSSFixError):
+class NonExistentObservable(GNSSNavPyError):
     """Observable not found"""
     __module__ = MODULE
 
@@ -123,7 +119,7 @@ class NonExistentObservable(PyGNSSFixError):
         super().__init__(message)
 
 
-class DuplicateObservable(PyGNSSFixError):
+class DuplicateObservable(GNSSNavPyError):
     """Observable not found"""
     __module__ = MODULE
 
@@ -133,7 +129,7 @@ class DuplicateObservable(PyGNSSFixError):
         super().__init__(message)
 
 
-class EmptyObservationData(PyGNSSFixError):
+class EmptyObservationData(GNSSNavPyError):
     """Observation Data is empty"""
     __module__ = MODULE
 
@@ -143,7 +139,7 @@ class EmptyObservationData(PyGNSSFixError):
         super().__init__(message)
 
 
-class ArraySizeError(PyGNSSFixError):
+class ArraySizeError(GNSSNavPyError):
     """Array has wrong size/shape"""
     __module__ = MODULE
 
@@ -153,7 +149,7 @@ class ArraySizeError(PyGNSSFixError):
         super().__init__(message)
 
 
-class PreprocessorError(PyGNSSFixError):
+class PreprocessorError(GNSSNavPyError):
     __module__ = MODULE
 
     def __init__(self, message):
@@ -162,7 +158,7 @@ class PreprocessorError(PyGNSSFixError):
         super().__init__(message)
 
 
-class NavigationError(PyGNSSFixError):
+class NavigationError(GNSSNavPyError):
     __module__ = MODULE
 
     def __init__(self, message):
@@ -171,7 +167,7 @@ class NavigationError(PyGNSSFixError):
         super().__init__(message)
 
 
-class PVTComputationFail(PyGNSSFixError):
+class PVTComputationFail(GNSSNavPyError):
     """Error in PVT Computation"""
     __module__ = MODULE
 
@@ -181,7 +177,7 @@ class PVTComputationFail(PyGNSSFixError):
         super().__init__(message)
 
 
-class EnumError(PyGNSSFixError):
+class EnumError(GNSSNavPyError):
     __module__ = MODULE
 
     def __init__(self, message):
@@ -190,7 +186,7 @@ class EnumError(PyGNSSFixError):
         super().__init__(message)
 
 
-class UnknownModel(PyGNSSFixError):
+class UnknownModel(GNSSNavPyError):
     __module__ = MODULE
 
     def __init__(self, message):
