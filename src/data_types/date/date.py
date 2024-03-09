@@ -4,9 +4,9 @@
 from numpy import sin, radians
 from datetime import datetime, timedelta, date
 
-from ...errors import EpochError, TimeScaleError
+from src.errors import EpochError, TimeScaleError
 from .eop import EopDb
-from ...utils.node import Node
+from src.utils.node import Node
 
 __all__ = ["Epoch", "timedelta"]
 

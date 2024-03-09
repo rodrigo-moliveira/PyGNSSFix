@@ -1,12 +1,12 @@
 from datetime import timedelta
-
 from numpy.linalg import norm
 
-from src.data_types.gnss.data_type import *
-from src.io.config.enums import EnumTransmissionTime
-from src.models.frames.frames import dcm_e_i
-from src.models.gnss_models.ephemeride_propagator import EphemeridePropagator, fix_gnss_week_crossovers
 from src import constants
+from src.data_types.gnss import get_data_type
+from src.io.config import EnumTransmissionTime
+from src.models.frames import dcm_e_i
+from .ephemeride_propagator import EphemeridePropagator, fix_gnss_week_crossovers
+
 
 # TODO: consider creating a DCB, ISB and clock manager..
 

@@ -1,11 +1,8 @@
 from math import floor
 
-from src.data_types.date.date import Epoch
-from src.data_types.gnss.satellite import get_satellite
-from src.data_types.gnss.data_type import data_type_from_rinex, DataType
-from src.data_types.gnss.constellation import get_constellation
+from src.data_types.date import Epoch
+from src.data_types.gnss import get_satellite, data_type_from_rinex, DataType, get_constellation, service_utils
 from src.data_mng.gnss.observation_data import ObservationData
-from src.data_types.gnss.service_utils import CodeToConstellationMap
 from src.errors import ConfigError, FileError
 from src.constants import SPEED_OF_LIGHT
 from src import WORKSPACE_PATH
@@ -222,7 +219,7 @@ class RinexObsReader:
                 # the last two are optional -> may be blank. Here they will be discarded.
 
                 try:
-                    constellation = get_constellation(CodeToConstellationMap[line[0]])
+                    constellation = get_constellation(service_utils.CodeToConstellationMap[line[0]])
                 except (ConfigError, KeyError):
                     continue
 

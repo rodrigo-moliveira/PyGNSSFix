@@ -1,18 +1,18 @@
 import os
 import time
 import traceback
+import numpy as np
 
-# TODO: fazer uma revisão a estes imports todos.... Fazer varios de uma vez..
 from src import RUNS_PATH
-from src.data_mng.gnss.gnss_data_mng import GnssDataManager
-from src.io.rinex_parser.nav_reader import RinexNavReader
-from src.io.rinex_parser.obs_reader import RinexObsReader
+from src.data_mng.gnss import GnssDataManager
+from src.io.rinex_parser import RinexNavReader, RinexObsReader
 from src.io.config import config_dict
-
-from src.modules.gnss.solver.gnss_solver import GnssSolver
-from src.modules.gnss.preprocessor.preprocessor_manager import PreprocessorManager
 from src.common_log import get_logger
 from src.models.frames import cartesian2geodetic, latlon2dcm_e_enu
+
+from .solver.gnss_solver import GnssSolver
+from .preprocessor import PreprocessorManager
+
 
 class GnssAlgorithmManager:
 
@@ -24,9 +24,6 @@ class GnssAlgorithmManager:
         # create output folder
         data_dir = config_dict.get("output", "output_path")
         self.data_dir = self._check_data_dir(data_dir)
-
-
-
 
 
 

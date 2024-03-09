@@ -1,13 +1,13 @@
 from collections import OrderedDict
 from datetime import timedelta
 
-from src.data_types.gnss.data_type import DataType
-from src.data_types.date.date import Epoch
-from src.data_types.gnss.satellite import Satellite
-from src.data_mng.timeseries import TimeSeries
-from src.data_mng.container import Container
+from src.data_types.gnss import DataType, Satellite, Observation
+from src.data_types.date import Epoch
+from src.data_mng import TimeSeries, Container
 from src.errors import TimeSeriesError
-from src.data_types.gnss.observation import Observation
+
+
+__all__ = ["ObservationData", "ObservationHeader"]
 
 
 class ObservationHeader(Container):

@@ -1,12 +1,10 @@
 from . import utils
-from src.data_types.date.date import Epoch
-from src.data_types.gnss.satellite import get_satellite
+from src.data_types.date import Epoch
+from src.data_types.gnss import get_satellite
 from src.errors import FileError, EphemerideError
 from src.io.config import config_dict
-
-
-from src.data_mng.gnss.navigation_data import NavigationPointGPS, NavigationPointGAL
-from ... import WORKSPACE_PATH
+from src.data_mng.gnss import NavigationPointGPS, NavigationPointGAL
+from src import WORKSPACE_PATH
 
 """
 Important Note: The time tags of the navigation messages (e.g., time of ephemeris, time of clock) are given in the 

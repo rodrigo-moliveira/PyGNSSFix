@@ -1,10 +1,10 @@
 import numpy as np
 
 from src import constants
-from src.modules.estimators import WeightedLeastSquares
 from src.constants import SPEED_OF_LIGHT
 from src.errors import SolverError
 from src.io.config.enums import EnumModel
+from src.modules.estimators.weighted_ls import WeightedLeastSquares
 
 
 class LSQ_Engine:

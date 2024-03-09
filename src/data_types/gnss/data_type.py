@@ -1,7 +1,7 @@
 from src import constants
 from src.errors import SignalError
 
-__all__ = ["get_data_type", "data_type_from_rinex"]
+__all__ = ["get_data_type", "data_type_from_rinex", "DataType"]
 
 
 class DataType:

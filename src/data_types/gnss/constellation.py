@@ -1,5 +1,5 @@
 from .service_utils import AvailableConstellations, ConstellationToCodeMap
-from ...errors import ConfigError
+from src.errors import ConfigError
 
 __all__ = ["Constellation", "get_constellation"]
 

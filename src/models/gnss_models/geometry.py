@@ -1,12 +1,12 @@
 from datetime import timedelta
-
 import numpy as np
+
+from src.models.frames import enu2azel, ecef2enu, cartesian2geodetic
+from src.data_mng import Container
+from src.errors import TimeSeriesError
 
 from .clock_obs import compute_tx_time
 from .ephemeride_propagator import EphemeridePropagator
-from ..frames.frames import enu2azel, ecef2enu, cartesian2geodetic
-from ...data_mng.container import Container
-from ...errors import TimeSeriesError
 
 
 class SatelliteGeometry(Container):

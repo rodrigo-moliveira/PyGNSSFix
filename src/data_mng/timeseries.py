@@ -1,5 +1,8 @@
 from collections import OrderedDict
+
 from src.errors import TimeSeriesError
+
+__all__ = ["TimeSeries"]
 
 
 class TimeSeries(OrderedDict):

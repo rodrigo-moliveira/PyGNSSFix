@@ -4,7 +4,7 @@
 from pathlib import Path
 from inspect import isclass
 
-from ...errors import EopError, ConfigError, FileError
+from src.errors import EopError, ConfigError, FileError
 
 __all__ = ["register", "EopDb", "TaiUtc", "Finals", "Finals2000A", "GGTO"]
 

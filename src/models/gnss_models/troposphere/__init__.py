@@ -4,4 +4,3 @@
 # This troposphere model has been adapted from the reference above
 # Disclaimer: All credits for the original code go to the Department of Geodesy and Geoinformation,
 #              Vienna University of Technology. This code has been adapted for use in this project
-

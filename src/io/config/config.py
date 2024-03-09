@@ -5,10 +5,11 @@ import json
 from jsonschema import validate, ValidationError
 
 from src import PROJECT_PATH
-from src.data_types.gnss.data_type import data_type_from_rinex
+from src.data_types.gnss import data_type_from_rinex
 from src.errors import ConfigError
-from src.io.config.enums import EnumPositioningMode
+from .enums import EnumPositioningMode
 
+__all__ = ["config_dict"]
 
 class Config(dict):
     """Configuration class that inherits from dict

@@ -4,7 +4,7 @@ from src.constants import SPEED_OF_LIGHT
 from src.data_types.gnss.data_type import DataType
 from src.io.config import config_dict
 from src.io.config.enums import EnumOnOff, EnumIono, EnumModel
-from src.models.frames import cartesian2geodetic
+from src.models.frames.frames import cartesian2geodetic
 from src.models.gnss_models.ionosphere.iono_klobuchar import iono_klobuchar
 from src.models.gnss_models.ionosphere.iono_ntcmg import NTCMG
 from src.models.gnss_models.clock_obs import broadcast_clock, nav_sat_clock_correction

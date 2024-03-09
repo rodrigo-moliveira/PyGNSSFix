@@ -1,10 +1,7 @@
 import numpy as np
-from numpy import arccos, sin, cos
 
-from src.models.frames import cartesian2geodetic
-from src.models.frames.frames import latlon2dcm_e_n
-from ..require import require_len_array, require_len_matrix
-from src.utils.math_utils import vector2skew_symmetric
+from .frames import cartesian2geodetic, latlon2dcm_e_ned
+from src.utils.math_utils import vector2skew_symmetric, require_len_array, require_len_matrix
 
 
 def euler2dcm(euler):
@@ -25,8 +22,8 @@ def euler2dcm(euler):
     # where (x,y,z) are (roll,pitch,yaw), s is short for sin and c is short for cos
 
     dcm = np.zeros((3, 3))
-    c_angle = cos(euler)
-    s_angle = sin(euler)
+    c_angle = np.cos(euler)
+    s_angle = np.sin(euler)
 
     # dcm = rot1(angles[0]) @ rot2(angles[1]) @ rot3(angles[2])
     dcm[0, 0] = c_angle[1] * c_angle[2]
@@ -74,8 +71,8 @@ def exp_att2euler(pos, exp_att):
     skew = vector2skew_symmetric(omega)
 
     # from exp att to dcm
-    dcm_b_e = np.eye(3) + sin(theta) * skew + (1.0 - cos(theta)) * (skew @ skew)
-    dcm_n_e = latlon2dcm_e_n(llh[0], llh[1]).T  # from n to e
+    dcm_b_e = np.eye(3) + np.sin(theta) * skew + (1.0 - np.cos(theta)) * (skew @ skew)
+    dcm_n_e = latlon2dcm_e_ned(llh[0], llh[1]).T  # from n to e
     dcm_n_b = dcm_b_e.T @ dcm_n_e  # from n to b
 
     # from dcm to euler
@@ -96,12 +93,12 @@ def euler2exp_att(pos, euler):
 
     # from euler to dcm
     dcm_n_b = euler2dcm(euler)  # from n to b
-    dcm_n_e = latlon2dcm_e_n(llh[0], llh[1]).T  # from n to e
+    dcm_n_e = latlon2dcm_e_ned(llh[0], llh[1]).T  # from n to e
     dcm_b_e = dcm_n_e @ dcm_n_b.T  # from b to e
 
     # from dcm to exp att
-    theta = arccos((np.trace(dcm_b_e) - 1.0) / 2.0)
-    logRR = (dcm_b_e - dcm_b_e.T) * theta / (2.0 * sin(theta))
+    theta = np.arccos((np.trace(dcm_b_e) - 1.0) / 2.0)
+    logRR = (dcm_b_e - dcm_b_e.T) * theta / (2.0 * np.sin(theta))
     # print(f"theta={theta} -> sin(theta)={sin(theta)} -> trace={np.trace(dcm_b_e)}")
 
     exp1 = logRR[2, 1]
@@ -116,7 +113,7 @@ def euler2quat(pos, euler):
     require_len_array(pos)
 
     llh = cartesian2geodetic(*pos)
-    dcm_e_n = latlon2dcm_e_n(llh[0], llh[1])  # from e to n
+    dcm_e_n = latlon2dcm_e_ned(llh[0], llh[1])  # from e to n
     dcm_n_b = euler2dcm(euler)  # from n to b
     dcm_e_b = dcm_n_b @ dcm_e_n
 

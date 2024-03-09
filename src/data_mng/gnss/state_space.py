@@ -1,9 +1,8 @@
 import numpy as np
 
-from src.data_mng.container import Container
-from src.io.config.enums import EnumModel
-from src.models.gnss_models.clock_obs import compute_ggto
-from src.io.config.config import config_dict
+from src.data_mng import Container
+from src.io.config import EnumModel, config_dict
+from src.models.gnss_models import compute_ggto
 
 
 class GnssStateSpace(Container):

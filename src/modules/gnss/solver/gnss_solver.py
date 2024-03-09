@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.modules.estimators import GnssStateSpace
+from src.data_mng.gnss.state_space import GnssStateSpace
 from src.modules.gnss.solver.lsq_engine import LSQ_Engine, LSQ_Engine_Vel
 from src.modules.gnss.solver.obs_reconstructor import PseudorangeReconstructor, RangeRateReconstructor
 from src.common_log import get_logger

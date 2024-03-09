@@ -1,5 +1,6 @@
 from src import constants
-from src.modules.estimators import GnssStateSpace
+
+__all__ = ["get_file_header", "export_to_file"]
 
 
 def get_file_header(exportable, state):
@@ -39,7 +40,7 @@ def get_file_header(exportable, state):
         raise ValueError(f"Undefined header due to unknown exportable '{exportable}'")
 
 
-def export_to_file(gnss_state: GnssStateSpace, exportable):
+def export_to_file(gnss_state, exportable):
     if exportable == "position":
         cov = gnss_state.cov_position
         cov_xx = cov[0, 0]

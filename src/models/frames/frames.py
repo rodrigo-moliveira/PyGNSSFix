@@ -1,6 +1,4 @@
 import numpy as np
-from math import cos, sin, sqrt, atan2, sinh, cosh, asin
-from numpy import sign
 from src import constants
 from src.utils.math_utils import rot2, rot3, rot1
 
@@ -27,11 +25,11 @@ def geodetic2cartesian(lat, long, height):
     e2 = constants.EARTH_ECCENTRICITY_SQ
 
     # compute prime vertical radius of curvature at a given latitude for a given ellipsoid
-    N = a / sqrt(1 - e2 * sin(lat) * sin(lat))
+    N = a / np.sqrt(1 - e2 * np.sin(lat) * np.sin(lat))
 
-    x = (N + height) * cos(lat) * cos(long)
-    y = (N + height) * cos(lat) * sin(long)
-    z = ((1 - e2) * N + height) * sin(lat)
+    x = (N + height) * np.cos(lat) * np.cos(long)
+    y = (N + height) * np.cos(lat) * np.sin(long)
+    z = ((1 - e2) * N + height) * np.sin(lat)
 
     return [x, y, z]
 
@@ -84,11 +82,11 @@ def cartesian2geodetic(x, y, z):
     a = constants.EARTH_SEMI_MAJOR_AXIS
 
     # computation of longitude
-    long = atan2(y, x)
+    long = np.atan2(y, x)
 
     # initial value of latitude
-    p = sqrt(x * x + y * y)
-    lat = 0 if p == 0 else atan2(z / p, 1 - e2)
+    p = np.sqrt(x * x + y * y)
+    lat = 0 if p == 0 else np.atan2(z / p, 1 - e2)
 
     # iterative process to refine latitude
     MAX_ITERS = 10
@@ -98,9 +96,9 @@ def cartesian2geodetic(x, y, z):
     while i < MAX_ITERS:
         lat_prev = lat
 
-        N = a / sqrt(1 - e2 * sin(lat) * sin(lat))
-        height = p / cos(lat) - N
-        lat = 0 if p == 0 else atan2(z / p, 1 - N / (N + height) * e2)
+        N = a / np.sqrt(1 - e2 * np.sin(lat) * np.sin(lat))
+        height = p / np.cos(lat) - N
+        lat = 0 if p == 0 else np.atan2(z / p, 1 - N / (N + height) * e2)
 
         i += 1
         if abs(lat - lat_prev) < ABS_TOL:
@@ -191,7 +189,7 @@ def M2E(e, M):
             E = M + e
 
         def next_E(_E, _e, _M):
-            return _E + (_M - _E + _e * sin(_E)) / (1 - _e * cos(_E))
+            return _E + (_M - _E + _e * np.sin(_E)) / (1 - _e * np.cos(_E))
 
         E1 = next_E(E, e, M)
         while abs(E1 - E) >= tol:
@@ -208,12 +206,12 @@ def M2E(e, M):
                 H = M + e
         else:
             if e < 3.6 and abs(M) > constants.PI:
-                H = M - sign(M) * e
+                H = M - np.sign(M) * e
             else:
                 H = M / (e - 1)
 
         def next_H(_H, _e, _M):
-            return _H + (_M - _e * sinh(_H) + _H) / (_e * cosh(_H) - 1)
+            return _H + (_M - _e * np.sinh(_H) + _H) / (_e * np.cosh(_H) - 1)
 
         H1 = next_H(H, e, M)
         while abs(H1 - H) >= tol:
@@ -232,9 +230,9 @@ def E2v(e, E):
     Return:
         float: true anomaly [radian]
     """
-    cos_v = (cos(E) - e) / (1 - e * cos(E))
-    sin_v = (sin(E) * sqrt(1 - e ** 2)) / (1 - e * cos(E))
-    v = atan2(sin_v, cos_v) % (constants.PI * 2)
+    cos_v = (np.cos(E) - e) / (1 - e * np.cos(E))
+    sin_v = (np.sin(E) * np.sqrt(1 - e ** 2)) / (1 - e * np.cos(E))
+    v = np.atan2(sin_v, cos_v) % (constants.PI * 2)
 
     return v
 
@@ -313,10 +311,10 @@ def enu2azel(x_enu, y_enu, z_enu):
     Return:
         list : [Az, El] [rad]
     """
-    dist = sqrt(x_enu * x_enu + y_enu * y_enu + z_enu * z_enu)
+    dist = np.sqrt(x_enu * x_enu + y_enu * y_enu + z_enu * z_enu)
 
-    El = asin(z_enu / dist)
+    El = np.asin(z_enu / dist)
 
-    Az = atan2(x_enu, y_enu) % (2 * constants.PI)
+    Az = np.atan2(x_enu, y_enu) % (2 * constants.PI)
 
     return [Az, El]

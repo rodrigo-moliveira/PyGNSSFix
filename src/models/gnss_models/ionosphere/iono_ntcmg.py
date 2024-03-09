@@ -3,7 +3,6 @@ from dataclasses import dataclass
 
 from math import sqrt, asin, cos, sin, degrees, radians, exp
 from src.constants import PI
-from src.models.frames import cartesian2geodetic
 
 # Constants for this model (note that the Earth radius has this specific value for this model) 
 Re_km = 6371

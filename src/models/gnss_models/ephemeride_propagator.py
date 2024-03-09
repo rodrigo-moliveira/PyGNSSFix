@@ -1,9 +1,8 @@
-from math import sqrt, cos, sin
-
 import numpy as np
+from numpy import sqrt, cos, sin
 
 from src import constants
-from src.models.frames.frames import dcm_e_i, M2E, E2v
+from src.models.frames import dcm_e_i, M2E, E2v
 
 
 def fix_gnss_week_crossovers(time_diff: float) -> float:

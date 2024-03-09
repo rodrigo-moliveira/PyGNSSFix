@@ -35,11 +35,11 @@ def get_code_from_service(service, constellation):
 
     if constellation == "GPS":
         if service in GPSServices:
-            datatype = get_data_type("C" + service[0])
+            datatype = get_data_type("C" + service[0], constellation)
 
     elif constellation == "GAL":
         if service in GALServices:
-            datatype = get_data_type("C" + service[0])
+            datatype = get_data_type("C" + service[0], constellation)
 
     return datatype
 
@@ -49,10 +49,10 @@ def get_carrier_from_service(service, constellation):
 
     if constellation == "GPS":
         if service in GPSServices:
-            datatype = get_data_type("L" + service[0])
+            datatype = get_data_type("L" + service[0], constellation)
 
     elif constellation == "GAL":
         if service in GALServices:
-            datatype = get_data_type("L" + service[0])
+            datatype = get_data_type("L" + service[0], constellation)
 
     return datatype
