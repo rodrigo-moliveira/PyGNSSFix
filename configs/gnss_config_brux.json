@@ -15,11 +15,14 @@
       "clk_files": [""],
       "sp3_files": ["datasets/gnss/BRUX/ESA0MGNFIN_20190140000_01D_05M_ORB.SP3"],
 
+      "_comment2": "Select 'true' to use CLK and SP3 products or 'false' to use navigation ephemerides",
+      "use_precise_products": true,
+
       "leap_file": "geo_time_data/tai-utc.dat",
       "finals_file": "geo_time_data/finals1980.all",
       "tropo_file": "geo_time_data/gpt3_5.grd",
 
-      "_comment2": "snr threshold to discard RINEX observables (compare with snr control digit). [1-4]: bad, [5:8]: good, 9: excellent",
+      "_comment3": "snr threshold to discard RINEX observables (compare with snr control digit). [1-4]: bad, [5:8]: good, 9: excellent",
       "snr_control": 1,
 
       "arc": {
@@ -29,7 +32,7 @@
          "last_epoch": "2019-01-14 06:15:10"
       },
 
-      "_comment3": "Select the input data rate (in seconds). The rate must be consistent with the RINEX OBS rate. Select false to disable.",
+      "_comment4": "Select the input data rate (in seconds). The rate must be consistent with the RINEX OBS rate. Select false to disable.",
       "rate": 1
    },
 

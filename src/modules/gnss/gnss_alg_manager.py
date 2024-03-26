@@ -5,10 +5,10 @@ import numpy as np
 
 from src import RUNS_PATH
 from src.data_mng.gnss import GnssDataManager
-from src.io.rinex_parser import RinexNavReader, RinexObsReader
-from src.io.config import config_dict
-from src.common_log import get_logger
+from src.io.config import config_dict, EnumPositioningMode
 from src.models.frames import cartesian2geodetic, latlon2dcm_e_enu
+from src.errors import ConfigError
+from src.common_log import MAIN_LOG, get_logger
 
 from .solver.gnss_solver import GnssSolver
 from .preprocessor import PreprocessorManager
@@ -17,78 +17,52 @@ from .preprocessor import PreprocessorManager
 class GnssAlgorithmManager:
 
     def __init__(self):
-        # create data members
-        self.name = "GNSS Single Point Solution Algorithm"
-        self.data_manager = GnssDataManager()
-
         # create output folder
         data_dir = config_dict.get("output", "output_path")
         self.data_dir = self._check_data_dir(data_dir)
 
-
-
-    def _read_inputs(self):
-
-        #TODO: add log messages
-        #TODO: add possibility of multiple files
-
-        # read navigation data
-        nav_file = config_dict.get("inputs", "nav_files")[0]
-        obs_file = config_dict.get("inputs", "obs_files")[0]
-        services = config_dict.get_services()
-        first_epoch = config_dict.get("inputs", "arc", "first_epoch")
-        last_epoch = config_dict.get("inputs", "arc", "last_epoch")
-        snr_check = config_dict.get("inputs", "snr_control")
-
-        RinexNavReader(nav_file, self.data_manager.get_data("nav_data"))
-        RinexObsReader(self.data_manager.get_data("obs_data"), obs_file, services, first_epoch, last_epoch,
-                       snr_check)
-
-        # trace data files
-        trace_dir = f"{self.data_dir}\\trace"
-        with open(f"{trace_dir}\\RawObservationData.txt", "w") as file:
-            file.write(str(self.data_manager.get_data("obs_data")))
-        with open(f"{trace_dir}\\RawNavigationData.txt", "w") as file:
-            file.write(str(self.data_manager.get_data("nav_data")))
+        # create data members
+        self.data_manager = GnssDataManager()
 
     def run(self):
-        main_log = get_logger("MAIN_LOG")
-        main_log = get_logger("MAIN_LOG")
-        main_log.info("Starting GNSS Algorithm Manager")
+        MAIN_LOGGER = get_logger(MAIN_LOG)
+        MAIN_LOGGER.info("Starting GNSS Algorithm Manager")
+        model = config_dict.get('model', 'mode')
 
-        main_log.info(f"Running algorithm {str(self.algorithm)}")
+        if model not in (EnumPositioningMode.SPS, EnumPositioningMode.SPS_IF):
+            raise ConfigError(f"Selected Model {model} not valid. Available options are "
+                              f"SPS, SPS_IF")
+        MAIN_LOGGER.info(f"Running GNSS algorithm {model}")
 
         # Input Reader Module
         try:
-            main_log.info(f"Starting Input Reader Module...")
-            self._read_inputs()
+            MAIN_LOGGER.info(f"Starting Input Reader Module...")
+            self.data_manager.read_inputs(f"{self.data_dir}\\trace")
         except Exception as e:
-            main_log.error(f"Stopping execution of program due to error in execution of Input Reader Module: {e}")
+            MAIN_LOGGER.error(f"Stopping execution of program due to error in execution of Input Reader Module: {e}")
             print(traceback.format_exc())
             exit(-1)
 
         # Main Algorithm Module
         try:
-            main_log.info(f"Starting Main Algorithm Module...")
-            self.algorithm.compute(self.data_manager, f"{self.data_dir}\\trace")
+            MAIN_LOGGER.info(f"Starting Main Algorithm Module...")
+            self.compute(self.data_manager, f"{self.data_dir}\\trace")
         except Exception as e:
-            main_log.error(f"Stopping execution of program due to error in execution of Main Algorithm Module: {e}")
+            MAIN_LOGGER.error(f"Stopping execution of program due to error in execution of Main Algorithm Module: {e}")
             print(traceback.format_exc())
             exit(-1)
 
         # Output Writer Module
         try:
-            main_log.info(f"Starting Output Writer Module...")
-            self._save_run()
+            MAIN_LOGGER.info(f"Starting Output Writer Module...")
+            self.data_manager.save_data(f"{self.data_dir}\\output")
         except Exception as e:
-            main_log.error(f"Stopping execution of program due to error in execution of Output Writer Module: {str(e)}")
+            MAIN_LOGGER.error(f"Stopping execution of program due to error in execution of Output Writer Module: "
+                              f"{str(e)}")
             print(traceback.format_exc())
             exit(-1)
 
-        main_log.info(f"Successfully executed algorithm {str(self.algorithm)}")
-
-    def _save_run(self):
-        self.data_manager.save_data(f"{self.data_dir}\\output")
+        MAIN_LOGGER.info(f"Successfully executed GNSS algorithm {model}")
 
     def _check_data_dir(self, data_dir):
         """

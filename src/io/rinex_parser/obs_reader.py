@@ -20,14 +20,13 @@ class RinexObsReader:
 
     """
 
-    def __init__(self, obs: ObservationData, file: str, services, log=None,
+    def __init__(self, obs: ObservationData, file: str, services,
                  first_arc_epoch=None, last_arc_epoch=None, snr_control_check=0):
 
         # instance variables
         self._services = services
         self._map = {}
         self._obs = obs
-        self._log = log
         self._snr_control_check = snr_control_check
 
         f_handler = open(f"{WORKSPACE_PATH}/{file}", "r")

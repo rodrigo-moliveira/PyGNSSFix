@@ -1,6 +1,8 @@
 from src.io.states import OUTPUT_FILENAME_MAP, get_file_header, export_to_file
 from src.io.config import config_dict, EnumPositioningMode
+from src.io.rinex_parser import RinexNavReader, RinexObsReader
 from src.data_mng import Container
+from src.common_log import IO_LOG, get_logger
 from .navigation_data import NavigationData
 from .observation_data import ObservationData
 
@@ -9,7 +11,7 @@ __all__ = ["GnssDataManager"]
 
 
 class GnssDataManager(Container):
-    __slots__ = ["nav_data", "obs_data", "isb_data", "nav_solution", "_to_save",
+    __slots__ = ["nav_data", "obs_data", "isb_data", "nav_solution",
                  "smooth_obs_data", "iono_free_obs_data"]
 
     def __init__(self):
@@ -20,9 +22,7 @@ class GnssDataManager(Container):
         self.smooth_obs_data = ObservationData()  # Smooth Observation Data
         self.iono_free_obs_data = ObservationData()  # Iono Free Observation Data
         self.isb_data = None  # ISB (Inter-system bias) data
-
-        # available data for the current simulation
-        self._to_save = ["nav_solution"]
+        self.nav_solution = None  # Navigation solution
 
     def __str__(self):
         return f'{type(self).__name__}( DataManager for GNSS algorithms )'
@@ -73,11 +73,43 @@ class GnssDataManager(Container):
     def get_raw_obs_data(self):
         return self.obs_data
 
-    def save_data(self, directory, log):
+    def read_inputs(self, trace_dir):
+
+        # TODO: add possibility of multiple files
+
+        # TODO: check if precise products (clk and sp3) or navigation products (nav)
+
+        log = get_logger(IO_LOG)
+
+        # read navigation data
+        nav_file = config_dict.get("inputs", "nav_files")[0]
+        obs_file = config_dict.get("inputs", "obs_files")[0]
+        services = config_dict.get_services()
+        first_epoch = config_dict.get("inputs", "arc", "first_epoch")
+        last_epoch = config_dict.get("inputs", "arc", "last_epoch")
+        snr_check = config_dict.get("inputs", "snr_control")
+
+        log.info("Launching RinexNavReader")
+        RinexNavReader(nav_file, self.get_data("nav_data"))
+
+        log.info("Launching RinexObsReader")
+        RinexObsReader(self.get_data("obs_data"), obs_file, services, first_epoch, last_epoch, snr_check)
+
+        self._trace_files(trace_dir)
+
+    def _trace_files(self, trace_dir):
+        # trace data files
+        with open(f"{trace_dir}\\RawObservationData.txt", "w") as file:
+            file.write(str(self.get_data("obs_data")))
+        with open(f"{trace_dir}\\RawNavigationData.txt", "w") as file:
+            file.write(str(self.get_data("nav_data")))
+
+    def save_data(self, directory):
+        log = get_logger(IO_LOG)
         log.info(f"storing data to {directory}...")
         file_list = {}
 
-        for sim_data in self._to_save:
+        for sim_data in ["nav_solution"]:
             # fetch sim_data
             sim = getattr(self, sim_data, None)
             if sim is not None:

@@ -27,17 +27,16 @@ def main():
 
     # create algorithm and algorithm manager
     try:
-        pass
         alg_mng = GnssAlgorithmManager()
 
         # initialize logger objects
         set_logs(config_dict.get("log", "minimum_level"), f"{alg_mng.data_dir}\\log.txt")
 
         # run algorithm
-        #alg_mng.run()
+        alg_mng.run()
 
         # copy config json file to output dir
-        #shutil.copyfile(config_filename, f"{alg_mng.data_dir}\\config.json")
+        shutil.copyfile(config_filename, f"{alg_mng.data_dir}\\config.json")
     except Exception as e:
         print(f"Unexpected error running while running program: {e}")
         exit()

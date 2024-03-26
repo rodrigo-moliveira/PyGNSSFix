@@ -3,7 +3,7 @@ from src.data_types.date import Epoch
 from src.data_types.gnss import get_satellite
 from src.errors import FileError, EphemerideError
 from src.io.config import config_dict
-from src.data_mng.gnss import NavigationPointGPS, NavigationPointGAL
+from src.data_mng.gnss.navigation_data import NavigationPointGPS, NavigationPointGAL
 from src import WORKSPACE_PATH
 
 """

@@ -16,6 +16,7 @@
         "nav_files": {"type": "array", "items": {"type": "string"}},
         "clk_files": {"type": "array", "items": {"type": "string"}},
         "sp3_files": {"type": "array", "items": {"type": "string"}},
+        "use_precise_products": {"type": "boolean"},
         "leap_file": {"type": "string"},
         "finals_file": {"type": "string"},
         "snr_control": {"type": "integer", "minimum": 1, "maximum": 9},

@@ -11,6 +11,7 @@ from .enums import EnumPositioningMode
 
 __all__ = ["config_dict"]
 
+
 class Config(dict):
     """Configuration class that inherits from dict
     """
