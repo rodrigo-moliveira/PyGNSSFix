@@ -40,7 +40,7 @@
       "trace_files": true,
 
       "_comment4": "Signal strength (SNR) filter. Select value of SNR (dBHz) threshold. Select false to turn off",
-      "snr_filter": 20,
+      "snr_filter": 40,
 
       "satellite_status": {
          "_comment": "whether or not to check the SV Accuracy and SV health fields of the navigation message",

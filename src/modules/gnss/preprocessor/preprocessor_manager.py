@@ -1,17 +1,27 @@
-from src.common_log import get_logger
+import os
+
+from src.common_log import get_logger, PREPROCESSOR_LOG
 from src.data_types.gnss import data_type_from_rinex
 from src.io.config import config_dict, EnumPositioningMode
 from src.errors import PreprocessorError
-from . import *
+from .filter import *
+from .functor import *
 
 
 class PreprocessorManager:
 
     def __init__(self, trace_path, data_manager):
-        self.log = get_logger("PREPROCESSOR")
-        self.trace_path = trace_path
+        self.log = get_logger(PREPROCESSOR_LOG)
         self.data_manager = data_manager
         self.services = config_dict.get_services()
+
+        # set up trace path
+        self.write_trace = config_dict.get("preprocessor", "trace_files")
+        self.trace_path = f"{trace_path}\\preprocessor"
+        try:
+            os.makedirs(self.trace_path)
+        except:
+            raise IOError(f"Cannot create dir: {self.trace_path}")
 
     def compute(self):
         """
@@ -29,14 +39,13 @@ class PreprocessorManager:
         self.log.info("Starting Preprocessor...")
 
         # SNR Check Filter
-        # TODO: write a filter report (x% of data was removed, etc.)
-        # TODO: add log messages to all filters... (removed obs for epoch...)
         obs_data = self.data_manager.get_data("obs_data")
         try:
             self.snr_filter(obs_data)
         except Exception as e:
             raise PreprocessorError(f"PreprocessorManager -> Error performing SNR filter: {e}")
 
+        # Satellite Health Check (SiS reports)
         try:
             self.sv_ura_health_filter(obs_data)
         except Exception as e:
@@ -73,11 +82,12 @@ class PreprocessorManager:
                     except Exception as e:
                         raise PreprocessorError(
                             f"PreprocessorManager -> Error computing Iono Free Observation Data: {e}")
-            self.log.debug(
-                "Writing IonoFree Observation Data to trace file {}".format("IonoFreeObservationData.txt"))
-            f = open(self.trace_path + "/IonoFreeObservationData.txt", "w")
-            f.write(str(iono_free_data))
-            f.close()
+            if self.write_trace:
+                self.log.debug(
+                    "Writing IonoFree Observation Data to trace file {}".format("IonoFreeObservationData.txt"))
+                f = open(self.trace_path + "/IonoFreeObservationData.txt", "w")
+                f.write(str(iono_free_data))
+                f.close()
         else:
             self.log.info(f"Iono free data not computed due to user choice")
             # select raw observables for this constellation
@@ -95,11 +105,13 @@ class PreprocessorManager:
                 raise PreprocessorError(f"Error computing Smooth Observation Data: {e}")
 
         # Saving Output Observation Data to File
-        self.log.debug(
-            "Writing Preprocessor output Observation Data to trace file {}".format("PreprocessedObservationData.txt"))
-        f = open(self.trace_path + "/PreprocessedObservationData.txt", "w")
-        f.write(str(obs_data))
-        f.close()
+        if self.write_trace:
+            self.log.debug(
+                "Writing Preprocessor output Observation Data to trace file {}".format(
+                    "PreprocessedObservationData.txt"))
+            f = open(self.trace_path + "/PreprocessedObservationData.txt", "w")
+            f.write(str(obs_data))
+            f.close()
 
         self.log.info("End of module Preprocessor")
 
@@ -128,12 +140,16 @@ class PreprocessorManager:
         mapper = FilterMapper(type_filter)
         mapper.apply(observation_data)
 
+        # Write report to log
+        self.log.info(f"Type Consistency Filter Report: {mapper.report}")
+
         # Saving Consistent data to file
-        self.log.debug(
-            "Writing Type Consistent Observation Data to trace file {}".format("TypeConsistentObservationData.txt"))
-        f = open(self.trace_path + "/TypeConsistentObservationData.txt", "w")
-        f.write(str(observation_data))
-        f.close()
+        if self.write_trace:
+            self.log.debug(
+                "Writing Type Consistent Observation Data to trace file {}".format("TypeConsistentObservationData.txt"))
+            f = open(self.trace_path + "/TypeConsistentObservationData.txt", "w")
+            f.write(str(observation_data))
+            f.close()
 
     def snr_filter(self, observation_data):
         snr_threshold = config_dict.get("preprocessor", "snr_filter")
@@ -143,12 +159,16 @@ class PreprocessorManager:
         mapper = FilterMapper(snr_filter)
         mapper.apply(observation_data)
 
+        # Write report to log
+        self.log.info(f"SNR Filter Report: {mapper.report}")
+
         # Saving debug data to file
-        self.log.debug(
-            "Writing SNR Checked Observation Data to trace file {}".format("SNRCheckObservationData.txt"))
-        f = open(self.trace_path + "/SNRCheckObservationData.txt", "w")
-        f.write(str(observation_data))
-        f.close()
+        if self.write_trace:
+            self.log.debug(
+                "Writing SNR Checked Observation Data to trace file {}".format("SNRCheckObservationData.txt"))
+            f = open(self.trace_path + "/SNRCheckObservationData.txt", "w")
+            f.write(str(observation_data))
+            f.close()
 
     def sv_ura_health_filter(self, observation_data):
         gps_ura_check = config_dict.get("preprocessor", "satellite_status", "GPS", "URA")
@@ -171,13 +191,17 @@ class PreprocessorManager:
         mapper = FilterMapper(ura_filter)
         mapper.apply(observation_data)
 
+        # Write report to log
+        self.log.info(f"GPS URA, GAL SISA and Health Status Filter Report: {mapper.report}")
+
         # Saving debug data to file
-        self.log.debug(
-            "Writing SV URA and Health Check Observation Data to trace file {}".
-            format("SvURAHealthObservationData.txt"))
-        f = open(self.trace_path + "/SvURAHealthObservationData.txt", "w")
-        f.write(str(observation_data))
-        f.close()
+        if self.write_trace:
+            self.log.debug(
+                "Writing SV URA and Health Check Observation Data to trace file {}".
+                format("SvURAHealthObservationData.txt"))
+            f = open(self.trace_path + "/SvURAHealthObservationData.txt", "w")
+            f.write(str(observation_data))
+            f.close()
 
     def iono_free(self, raw_data, data_out, constellation):
         functor = IonoFreeFunctor(constellation, self.services[constellation])
@@ -194,10 +218,11 @@ class PreprocessorManager:
         smooth_data = self.data_manager.get_data("smooth_obs_data")
         mapper.apply(data, smooth_data)
 
-        self.log.debug("Writing Smooth Observation Data to trace file {}".format("SmoothObservationData.txt"))
-        f = open(self.trace_path + "/SmoothObservationData.txt", "w")
-        f.write(str(smooth_data))
-        f.close()
+        if self.write_trace:
+            self.log.debug("Writing Smooth Observation Data to trace file {}".format("SmoothObservationData.txt"))
+            f = open(self.trace_path + "/SmoothObservationData.txt", "w")
+            f.write(str(smooth_data))
+            f.close()
 
     def downgrade(self, data):
         # Downgrade gnss_models data rate
@@ -217,5 +242,8 @@ class PreprocessorManager:
                 downgrade_filter = RateDowngradeFilter(rate_out, epoch_list[0])
                 mapper = FilterMapper(downgrade_filter)
                 mapper.apply(data)
+
+                # Write report to log
+                self.log.info(f"Rate Downgrade Filter Report: {mapper.report}")
 
         return data

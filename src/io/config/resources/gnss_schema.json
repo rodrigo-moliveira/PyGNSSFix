@@ -113,6 +113,7 @@
     "solver": {
       "type": "object",
       "properties": {
+        "trace_files": {"type": "boolean"},
         "algorithm": {"type": "string", "enum": ["WSL"]},
         "n_iteration": {"type": "integer", "minimum": 1},
         "stop_criteria": {"type": "number"},
@@ -123,7 +124,7 @@
         "initial_vel_std": {"type": "array", "items": {"type": "number"}},
         "initial_clock_std": {"type": "array", "items": {"type": "number"}}
       },
-      "required": ["algorithm", "n_iterations", "stop_criteria", "transmission_time_alg", "relativistic_corrections",
+      "required": ["trace_files","algorithm", "n_iterations", "stop_criteria", "transmission_time_alg", "relativistic_corrections",
       "elevation_filter", "initial_pos_std", "initial_vel_std", "initial_clock_std"]
     },
     "output": {

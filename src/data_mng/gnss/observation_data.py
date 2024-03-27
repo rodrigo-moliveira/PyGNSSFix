@@ -6,22 +6,7 @@ from src.data_types.date import Epoch
 from src.data_mng import TimeSeries, Container
 from src.errors import TimeSeriesError
 
-
-__all__ = ["ObservationData", "ObservationHeader"]
-
-
-class ObservationHeader(Container):
-    """
-    ObservationHeader class, derived from Container
-    stores relevant data from the header section of a rinex_parser gnss_models file
-    """
-    __slots__ = ["rinex_version", "satellite_system", "time_system",
-                 "receiver_position", "first_epoch", "last_epoch"]
-
-    def __init__(self):
-        super().__init__()
-        for attr in self.__slots__:
-            setattr(self, attr, None)
+__all__ = ["ObservationData"]
 
 
 class EpochData:
@@ -193,10 +178,9 @@ class ObservationData:
         self._data = TimeSeries()
         self._types = {"GPS": [], "GAL": []}
         self._satellites = []
-        self.header = ObservationHeader()
 
     def __str__(self):
-        data_str = f"{repr(self.header)}\n{str(self._data)}"
+        data_str = f"{str(self._data)}"
 
         return data_str
 
@@ -328,7 +312,7 @@ class ObservationData:
             return [obs for obs in out_list if obs in datatypes]
         except KeyError:
             raise TimeSeriesError(f"Non Existent gnss_models for satellite {str(sat)} "
-                                        f"and epoch {str(epoch)}")
+                                  f"and epoch {str(epoch)}")
 
     def get_observable_at_epoch(self, sat: Satellite, epoch: Epoch, obs: DataType):
         """
@@ -347,7 +331,7 @@ class ObservationData:
             return self._data[epoch].get_observable(sat, obs)
         except KeyError:
             raise TimeSeriesError(f"Non Existent gnss_models for type {str(obs)}, satellite {str(sat)} "
-                                        f"and epoch {str(epoch)}")
+                                  f"and epoch {str(epoch)}")
 
     def get_epochs(self):
         return self._data.get_all_epochs()
@@ -389,7 +373,6 @@ class ObservationData:
         # shallow/reference copies and deep copy of data
         obj._types = self._types
         obj._satellites = self._satellites
-        obj.header = self.header
         obj._data = self._data.copy()
 
         return obj
@@ -405,4 +388,3 @@ class ObservationData:
                     observables = epoch_data.get_observables(sat)
                     for obs in observables:
                         self.set_observation(epoch, sat, obs)
-

@@ -7,7 +7,7 @@
    },
 
    "inputs": {
-      "trace_files": true,
+      "trace_files": false,
 
       "_comment1": "Input data files",
       "obs_files": ["datasets/gnss/ZIM/ZIM300CHE_S_20182901600_15M_01S_MO.rnx"],

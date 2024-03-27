@@ -92,6 +92,7 @@ class GnssSolver:
         self.obs_data = processed_obs_data
         self.raw_obs_data = raw_obs_data
         self.nav_data = nav_data
+        self.write_trace = config_dict.get("solver", "trace_files")
 
         self.log = get_logger("GNSS_SOLVER")
         self.log.info("Starting module GNSS Positioning Solver...")

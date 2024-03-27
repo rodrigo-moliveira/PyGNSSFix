@@ -74,34 +74,41 @@ class GnssDataManager(Container):
         return self.obs_data
 
     def read_inputs(self, trace_dir):
-
-        # TODO: add possibility of multiple files
-
         # TODO: check if precise products (clk and sp3) or navigation products (nav)
 
         log = get_logger(IO_LOG)
 
         # read navigation data
-        nav_file = config_dict.get("inputs", "nav_files")[0]
-        obs_file = config_dict.get("inputs", "obs_files")[0]
+        nav_files = config_dict.get("inputs", "nav_files")
+        obs_files = config_dict.get("inputs", "obs_files")
         services = config_dict.get_services()
         first_epoch = config_dict.get("inputs", "arc", "first_epoch")
         last_epoch = config_dict.get("inputs", "arc", "last_epoch")
         snr_check = config_dict.get("inputs", "snr_control")
 
-        log.info("Launching RinexNavReader")
-        RinexNavReader(nav_file, self.get_data("nav_data"))
+        log.info(f'Galileo messages selected by user are {config_dict.get("model", "GAL", "nav_type")}')
+        log.info('Launching RinexNavReader.')
+        for file in nav_files:
+            RinexNavReader(file, self.get_data("nav_data"))
 
         log.info("Launching RinexObsReader")
-        RinexObsReader(self.get_data("obs_data"), obs_file, services, first_epoch, last_epoch, snr_check)
+        for file in obs_files:
+            RinexObsReader(self.get_data("obs_data"), file, services, first_epoch, last_epoch, snr_check)
 
-        self._trace_files(trace_dir)
+        if config_dict.get("inputs", "trace_files"):
+            self._trace_files(trace_dir)
 
     def _trace_files(self, trace_dir):
+        import os
+        inputs_dir = f"{trace_dir}\\inputs"
+        try:
+            os.makedirs(inputs_dir)
+        except:
+            raise IOError(f"Cannot create dir: {inputs_dir}")
         # trace data files
-        with open(f"{trace_dir}\\RawObservationData.txt", "w") as file:
+        with open(f"{inputs_dir}\\RawObservationData.txt", "w") as file:
             file.write(str(self.get_data("obs_data")))
-        with open(f"{trace_dir}\\RawNavigationData.txt", "w") as file:
+        with open(f"{inputs_dir}\\RawNavigationData.txt", "w") as file:
             file.write(str(self.get_data("nav_data")))
 
     def save_data(self, directory):

@@ -1,12 +1,4 @@
 tasks for preliminary version:
-    [X] estimar a troposfera -> considera-se T = m_d * T_D + m_w * T_w em que T_D (dry) vem do modelo a-priori e T_w
-            é colocado no vetor de estados. m_w é o mapa, que é colocado na matriz da geometria. Ver Eqs. (21.71) e (21.72)
-            [X] no obs_reconstructor/tropo_manager -> construir T (wet + dry) usando o wet apropriado (modelo ou state.tropo consoante o caso)
-            [X] no lsq_engine/GNSS_State colocar a nova variável de estado
-    [X] re-adicionar o filtro de elevation no gnss_solver
-    [X] re-adicionar o smoothing, tendo em conta que afinal é necessário converter carrier de ciclos para metros! (no cycle slip detection yet)
-    [X] add velocity in computation of satellite ephemerides (ver prototype e livro da ESA)
-    [X] process doppler measurements to estimate velocity
     [ ] criar um RX Time
     [ ] no output, permitir escolher qual a timetag de output (RX Time, GPST, GST, UTC...)
     [ ] add GGTO to the EOP database

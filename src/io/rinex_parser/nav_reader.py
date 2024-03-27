@@ -5,6 +5,7 @@ from src.errors import FileError, EphemerideError
 from src.io.config import config_dict
 from src.data_mng.gnss.navigation_data import NavigationPointGPS, NavigationPointGAL
 from src import WORKSPACE_PATH
+from src.common_log import IO_LOG, get_logger
 
 """
 Important Note: The time tags of the navigation messages (e.g., time of ephemeris, time of clock) are given in the 
@@ -27,6 +28,8 @@ class RinexNavReader:
         self.nav = nav
 
         f_handler = open(f"{WORKSPACE_PATH}/{file}", "r")
+        self.log = get_logger(IO_LOG)
+        self.log.info(f"Reading navigation file {WORKSPACE_PATH}/{file}...")
 
         # read header
         self._read_header(f_handler)
@@ -53,10 +56,10 @@ class RinexNavReader:
             line = file.readline()
 
             if "RINEX VERSION / TYPE" in line:
-                self.nav.header.rinex_version = utils.to_float(line[5:10])
-                if self.nav.header.rinex_version < 3:
-                    raise FileError("The provided rinex_parser file {} is of version {}. Only version 3.00 or "
-                                    "higher is supported. Error!".format(file, self.nav.header.rinex_version))
+                rinex_version = utils.to_float(line[5:10])
+                if rinex_version < 3 or rinex_version >= 4:
+                    raise FileError("The provided rinex_parser file {} is of version {}. Only versions 3.XX "
+                                    "are supported. Error!".format(file, self.nav.header.rinex_version))
 
                 rinex_type = line[20]
                 if rinex_type != 'N':
@@ -64,8 +67,6 @@ class RinexNavReader:
                                     "a {} was provided (code {})".format(file,
                                                                          utils.RINEX_FILE_TYPES.get
                                                                          (rinex_type, "Unknown Data File"), rinex_type))
-
-                self.nav.header.satellite_system = utils.RINEX_SATELLITE_SYSTEM.get(line[40], "UNKNOWN")
 
             elif "LEAP SECONDS" in line:
                 data = line[:utils.RINEX_OBS_END_OF_DATA_HEADER].split()
@@ -329,6 +330,6 @@ class RinexNavReader:
                     nav_type = navMessage.find_message_type()
                     if nav_type == config_dict.get("model", "GAL", "nav_type", fallback="FNAV"):
                         self.nav.set_data(toc, satellite, navMessage)
+                    # else: nav message is skipped
                 except EphemerideError as e:
-                    # TODO raise warning
-                    pass
+                    self.log.warn(f"Error reading satellite {satellite} ephemeride for epoch {toc}: {e}")

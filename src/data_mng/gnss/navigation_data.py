@@ -13,8 +13,7 @@ class NavigationHeader(Container):
     NavigationHeader class, inherits from Container
     stores relevant data from the header section of a navigation file
     """
-    __slots__ = ["rinex_version", "satellite_system",
-                 "iono_corrections", "leap_seconds", "time_correction"]
+    __slots__ = ["iono_corrections", "leap_seconds", "time_correction"]
 
     def __init__(self):
         super().__init__()

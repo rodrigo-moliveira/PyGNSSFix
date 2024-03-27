@@ -3,6 +3,12 @@ from .logger import get_logger
 __all__ = ["get_logger", "set_logs", "IO_LOG", "PREPROCESSOR_LOG", "MAIN_LOG", "GNSS_ALG_LOG", "INS_ALG_LOG",
            "PERFORMANCE_LOG"]
 
+""" All log objects (string names) required by this package are defined here. To get the logs the user first 
+has to call function `set_logs` below. Then at each user file, simply do, for example:
+
+io_log = get_logger(IO_LOG)
+"""
+
 IO_LOG = str("IO_LOG")
 PREPROCESSOR_LOG = str("PREPROCESSOR_LOG")
 MAIN_LOG = str("MAIN_LOG")

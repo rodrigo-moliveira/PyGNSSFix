@@ -23,46 +23,48 @@ class GnssAlgorithmManager:
 
         # create data members
         self.data_manager = GnssDataManager()
+        self.main_log = None
 
     def run(self):
-        MAIN_LOGGER = get_logger(MAIN_LOG)
-        MAIN_LOGGER.info("Starting GNSS Algorithm Manager")
+        self.main_log = get_logger(MAIN_LOG)
+        self.main_log.info("Starting GNSS Algorithm Manager")
         model = config_dict.get('model', 'mode')
 
         if model not in (EnumPositioningMode.SPS, EnumPositioningMode.SPS_IF):
             raise ConfigError(f"Selected Model {model} not valid. Available options are "
                               f"SPS, SPS_IF")
-        MAIN_LOGGER.info(f"Running GNSS algorithm {model}")
+        self.main_log.info(f"Running GNSS algorithm {model}")
 
         # Input Reader Module
         try:
-            MAIN_LOGGER.info(f"Starting Input Reader Module...")
+            self.main_log.info(f"Starting Input Reader Module...")
             self.data_manager.read_inputs(f"{self.data_dir}\\trace")
         except Exception as e:
-            MAIN_LOGGER.error(f"Stopping execution of program due to error in execution of Input Reader Module: {e}")
+            self.main_log.error(f"Stopping execution of program due to error in execution of Input Reader Module: {e}")
             print(traceback.format_exc())
             exit(-1)
 
         # Main Algorithm Module
         try:
-            MAIN_LOGGER.info(f"Starting Main Algorithm Module...")
+            self.main_log.info(f"Starting Main Algorithm Module...")
             self.compute(self.data_manager, f"{self.data_dir}\\trace")
         except Exception as e:
-            MAIN_LOGGER.error(f"Stopping execution of program due to error in execution of Main Algorithm Module: {e}")
+            self.main_log.error(f"Stopping execution of program due to error in execution of Main Algorithm "
+                                f"Module: {e}")
             print(traceback.format_exc())
             exit(-1)
 
         # Output Writer Module
         try:
-            MAIN_LOGGER.info(f"Starting Output Writer Module...")
+            self.main_log.info(f"Starting Output Writer Module...")
             self.data_manager.save_data(f"{self.data_dir}\\output")
         except Exception as e:
-            MAIN_LOGGER.error(f"Stopping execution of program due to error in execution of Output Writer Module: "
-                              f"{str(e)}")
+            self.main_log.error(f"Stopping execution of program due to error in execution of Output Writer Module: "
+                                f"{str(e)}")
             print(traceback.format_exc())
             exit(-1)
 
-        MAIN_LOGGER.info(f"Successfully executed GNSS algorithm {model}")
+        self.main_log.info(f"Successfully executed GNSS algorithm {model}")
 
     def _check_data_dir(self, data_dir):
         """
@@ -93,10 +95,9 @@ class GnssAlgorithmManager:
                 raise IOError(f"Cannot create dir: {data_dir}")
         return data_dir
 
-    @classmethod
-    def compute_dop(cls, log, data_manager):
-        log.info("Computing Dilution of Precision (DOP) metrics in ECEF and local (ENU) frames")
-        sol = data_manager.get_data("nav_solution")
+    def compute_dop(self):
+        self.main_log.info("Computing Dilution of Precision (DOP) metrics in ECEF and local (ENU) frames")
+        sol = self.data_manager.get_data("nav_solution")
 
         for state in sol:
             dop_matrix = state.get_additional_info("dop_matrix")  # DOP matrix
@@ -131,26 +132,24 @@ class GnssAlgorithmManager:
                        "horizontal": dop_horizontal}
             state.add_additional_info("dop_local", dop_enu)
 
-            log.info(f"DOPs for epoch {str(state.epoch)}: geometry = {geometry_dop}, horizontal = {dop_horizontal}, "
-                     f"vertical = {dop_up}")
+            self.main_log.info(f"DOPs for epoch {str(state.epoch)}: geometry = {geometry_dop}, "
+                               f"horizontal = {dop_horizontal}, vertical = {dop_up}")
 
     def compute(self, data_manager, trace_path):
-        log = get_logger("MAIN_LOG")
-
         # get the input raw obs data
         nav_data = data_manager.get_data("nav_data")
 
         # perform pre-processing here
-        log.info(f"Starting Preprocessor Module")
+        self.main_log.info(f"Starting Preprocessor Module")
         preprocessor = PreprocessorManager(trace_path, data_manager)
-        preprocessor.compute()  # this is the gnss_models data to actually process
+        preprocessor.compute()
 
         # run estimation algorithm
-        log.info(f"Running estimation algorithm...")
+        self.main_log.info(f"Running estimation algorithm...");exit()
         solver = GnssSolver(data_manager.get_clean_obs_data(), data_manager.get_raw_obs_data(), nav_data)
         solver.solve()
 
         data_manager.add_data("nav_solution", solver.solution)
 
         # compute DOPs in ECEF and local (ENU) frame
-        self.compute_dop(log, data_manager)
+        self.compute_dop()
