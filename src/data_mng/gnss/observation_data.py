@@ -3,7 +3,7 @@ from datetime import timedelta
 
 from src.data_types.gnss import DataType, Satellite, Observation
 from src.data_types.date import Epoch
-from src.data_mng import TimeSeries, Container
+from src.data_mng import TimeSeries
 from src.errors import TimeSeriesError
 
 __all__ = ["ObservationData"]
@@ -11,14 +11,9 @@ __all__ = ["ObservationData"]
 
 class EpochData:
     """
-    Class EpochData
     Stores all observations for a single epoch. Consists of an OrderedDict:
         * keys -> satellites
-        * items -> List of Observation objects with the observations for the given epoch and satellite
-    Attributes
-        ----------
-        _data : OrderedDict
-            The DataType (gnss_models type) of this gnss_models
+        * Values -> List of Observation objects with the observations for the given epoch and satellite
     """
 
     def __init__(self):
@@ -26,14 +21,14 @@ class EpochData:
 
     def set_observable(self, satellite: Satellite, observation: Observation):
         """
-        method to set a new gnss_models
+        set a new observation for the provided satellite
 
         Args:
             satellite (Satellite)
             observation (Observation)
-        Return:
-            bool : true if gnss_models is successfully set. False when this datatype has already been set for
-                the given satellite and epoch (overwriting is not legal!)
+
+        Raises:
+            TimeSeriesError: raises an exception if the observation has already been set (overwriting is not legal!)
         """
         if satellite in self._data:
             if observation not in self._data[satellite]:
@@ -44,23 +39,23 @@ class EpochData:
                     f"which has already been set. Overwriting not permitted. Ignoring the second appearance")
         else:
             self._data[satellite] = [observation]
-        return True
 
     def get_observables(self, sat: Satellite):
         """
+        Return a list with all observations for the provided satellite
         Args:
-                sat (Satellite)
+            sat (Satellite)
         Return:
-                list : list of all observables for the provided satellite (only one epoch)
+            list: list with required observations
         """
         return self._data[sat]
 
     def get_code_observables(self, sat: Satellite):
         """
         Args:
-                sat (Satellite)
+            sat (Satellite)
         Return:
-                list : list of all code (pseudorange) observables for the provided satellite (only one epoch)
+            list : list of all code (pseudorange) observables for the provided satellite (only one epoch)
         """
         observables = []
         for obs in self._data[sat]:
@@ -74,17 +69,20 @@ class EpochData:
             sat (Satellite)
             obs (DataType)
         Return:
-            Observation : gets the gnss_models for the provided datatype
-        Raises:
-            NonExistentObservable
+            Observation : returns the required observation, or raises a TimeSeriesError
         """
         obs_list = self._data[sat]
         for _obs in obs_list:
             if obs == _obs.datatype:
                 return _obs
-        raise TimeSeriesError(f"gnss_models {str(obs)} not found for satellite {str(sat)}")
+        raise TimeSeriesError(f"Observation {str(obs)} not found for satellite {str(sat)}")
 
-    def has_observable(self, sat, obs):
+    def has_observable(self, sat: Satellite, obs: Observation):
+        """Returns True if the provided Observation is available
+
+        Return:
+            bool: True if the observation is available
+        """
         obs_list = self._data[sat]
         for _obs in obs_list:
             if obs == _obs.datatype:
@@ -92,12 +90,24 @@ class EpochData:
         return False
 
     def get_satellites(self):
+        """
+        Return:
+            list: returns a list with all the available satellites
+        """
         return list(self._data.keys())
 
     def get_satellites_for_constellation(self, constellation):
+        """
+        Return:
+            list: returns a list with all the available satellites for the provided constellation
+        """
         return [sat for sat in list(self._data.keys()) if constellation == sat.sat_system]
 
     def get_sats_for_datatypes(self, datatype_list):
+        """
+        Return:
+            list: returns a list with all the available satellites for the provided Observations
+        """
         sat_list = []
 
         for sat in self.get_satellites():
@@ -125,6 +135,7 @@ class EpochData:
         return data_str
 
     def remove_observable(self, sat: Satellite, datatype: DataType):
+        """Removes all the observations associated with the provided Satellite and DataType"""
         obs_list = self._data[sat]
         new_obs_list = []
 
@@ -137,6 +148,7 @@ class EpochData:
             self._data.pop(sat)
 
     def remove_for_frequency(self, sat: Satellite, datatype: DataType):
+        """Removes all the observations associated with the provided Satellite and frequency"""
         obs_list = self._data[sat]
         new_obs_list = []
 
@@ -149,6 +161,7 @@ class EpochData:
             self._data.pop(sat)
 
     def remove_satellite(self, sat):
+        """Removes all the observations associated with the provided Satellite"""
         if sat in self._data:
             self._data.pop(sat)
 
@@ -156,7 +169,6 @@ class EpochData:
         # self._data = OrderedDict()
         obj = EpochData()
         for sat, obs_list in self._data.items():
-            # construct new gnss_models and set it
             for obs in obs_list:
                 obj.set_observable(sat, obs.copy())
         return obj
@@ -164,35 +176,33 @@ class EpochData:
 
 class ObservationData:
     """
-    Class ObservationData
-    Container that stores all batch observations to be processed in the GNSS positioning algorithm.
+    Observation Data Frame
+
     Consists of an Ordered Dict:
         * keys -> epochs (Epoch objects)
-        * items -> EpochData objects
-    Attributes
-        ----------
-        _data : TimeSeries
-        """
+        * values -> EpochData objects
+    """
 
     def __init__(self):
         self._data = TimeSeries()
-        self._types = {"GPS": [], "GAL": []}
-        self._satellites = []
+        self._types = {"GPS": [], "GAL": []}  # for each key, store all available DataTypes
+        self._satellites = []  # list with all available satellites
 
     def __str__(self):
         data_str = f"{str(self._data)}"
 
         return data_str
 
+    # Setter Methods
     def set_observable(self, epoch: Epoch, satellite: Satellite, obs_type: DataType, value: float):
         """
-        method to set a new gnss_models (read directly from the rinex_parser gnss_models file)
+        method to set a new Observation
 
         Args:
             epoch (Epoch) : time at reception of signal (time tag from rinex_parser)
             satellite (Satellite)
-            obs_type (DataType) : the datatype of the gnss_models
-            value (float) : numeric value of the gnss_models
+            obs_type (DataType) : the datatype of the observation
+            value (float) : numeric value of the observation
         """
         if not isinstance(epoch, Epoch):
             raise TypeError(f'First argument should be a valid Epoch object. Type {type(epoch)} was provided instead')
@@ -209,12 +219,20 @@ class ObservationData:
         if isinstance(value, int):
             value = float(value)
 
-        # construct gnss_models
+        # construct Observation object
         obs = Observation(obs_type, value)
 
         self.set_observation(epoch, satellite, obs)
 
     def set_observation(self, epoch: Epoch, satellite: Satellite, obs: Observation):
+        """
+        method to set a new Observation
+
+        Args:
+            epoch (Epoch) : time at reception of signal (time tag from rinex_parser)
+            satellite (Satellite)
+            obs (Observation) : the Observation object to be set
+        """
         if not self._data.has_epoch(epoch):
             # create EpochData object and fill it
             epoch_data = EpochData()
@@ -231,49 +249,27 @@ class ObservationData:
         if satellite not in self._satellites:
             self._satellites.append(satellite)
 
-    def has_type(self, datatype):
-        return datatype in self._types[datatype.constellation]
-
-    def has_satellite(self, satellite):
-        return satellite in self._satellites
-
-    def remove_observable(self, sat: Satellite, epoch: Epoch, datatype: DataType):
+    def set_observations_for_constellation(self, constellation, other):
         """
-        Remove this observable, for the selected epoch and satellite
+        method to copy all observations from another :py:class:`ObservationData` object
+        for the provided constellation
 
-         Example: EpochData = [C1, L1, S1, C2, L2, S2]
-                remove_observable(datatype = C1)
-
-                -> EpochData = [L1, S1, C2, L2, S2]
+        Args:
+            constellation (str) : time at reception of signal (time tag from rinex_parser)
+            other (ObservationData): the input ObservationData object
         """
-        try:
-            epoch_data = self._data[epoch]
-            epoch_data.remove_observable(sat, datatype)
+        # set observations given an ObservationData object
+        epochs = other.get_epochs()
+        for epoch in epochs:
+            epoch_data = other.get_epoch_data(epoch)
+            sats = epoch_data.get_satellites()
+            for sat in sats:
+                if sat.sat_system == constellation:
+                    observables = epoch_data.get_observables(sat)
+                    for obs in observables:
+                        self.set_observation(epoch, sat, obs)
 
-            # check if there are no satellites (-> remove this epoch_data object)
-            if len(epoch_data.get_satellites()) == 0:
-                self._data.remove_data(epoch)
-
-        except TimeSeriesError:
-            pass
-
-    def remove_for_frequency(self, sat: Satellite, epoch: Epoch, datatype: DataType):
-        """
-        Remove observations for the selected epoch and satellite which are associated to the frequency
-         of the provided datatype.
-
-         Example: EpochData = [C1, L1, S1, C2, L2, S2]
-                remove_for_frequency(datatype = C1)
-
-                -> EpochData = [C2, L2, S2]
-        """
-        try:
-            epoch_data = self._data[epoch]
-            epoch_data.remove_for_frequency(sat, datatype)
-        except TimeSeriesError:
-            pass
-
-    # getters
+    # Getter Methods
     def get_epoch_data(self, epoch: Epoch):
         """
         Fetch the EpochData object for this epoch
@@ -282,8 +278,8 @@ class ObservationData:
             epoch (Epoch)
         Return:
             EpochData  : epoch data object for this epoch
-        Raise:
-            NonExistentObservable : if the observations are not found
+        Raises:
+            TimeSeriesError : if the observations are not found
         """
         try:
             return self._data[epoch]
@@ -301,8 +297,8 @@ class ObservationData:
         Return:
             list : list of observables for the provided sat and epoch. If the datatype list is provided, then the return
             list is filtered accordingly
-        Raise:
-            NonExistentObservable : if the observations are not found
+        Raises:
+            TimeSeriesError : if the observations are not found
         """
 
         try:
@@ -311,26 +307,26 @@ class ObservationData:
                 return out_list
             return [obs for obs in out_list if obs in datatypes]
         except KeyError:
-            raise TimeSeriesError(f"Non Existent gnss_models for satellite {str(sat)} "
+            raise TimeSeriesError(f"Non Existent Observation for satellite {str(sat)} "
                                   f"and epoch {str(epoch)}")
 
     def get_observable_at_epoch(self, sat: Satellite, epoch: Epoch, obs: DataType):
         """
-        Fetch the requested gnss_models from the database
+        Fetch the requested Observation from the database
 
         Args:
             sat (Satellite)
             epoch (Epoch)
             obs (DataType)
         Return:
-            Observation : the requested gnss_models
+            Observation : the requested Observation
         Raises:
-            NonExistentObservable : if the gnss_models is not found
+            TimeSeriesError : if the Observation is not found
         """
         try:
             return self._data[epoch].get_observable(sat, obs)
         except KeyError:
-            raise TimeSeriesError(f"Non Existent gnss_models for type {str(obs)}, satellite {str(sat)} "
+            raise TimeSeriesError(f"Non Existent Observation for type {str(obs)}, satellite {str(sat)} "
                                   f"and epoch {str(epoch)}")
 
     def get_epochs(self):
@@ -366,6 +362,45 @@ class ObservationData:
             except TimeSeriesError:
                 return epoch + timedelta(seconds=rate)
 
+    # Remove Methods
+    def remove_observable(self, sat: Satellite, epoch: Epoch, datatype: DataType):
+        """
+        Remove the observable, for the selected epoch, satellite and datatype
+
+        Example:
+            IN: EpochData = [C1, L1, S1, C2, L2, S2]
+            remove_observable(datatype = C1)
+            OUT: EpochData = [L1, S1, C2, L2, S2]
+        """
+        try:
+            epoch_data = self._data[epoch]
+            epoch_data.remove_observable(sat, datatype)
+
+            # check if there are no satellites (-> remove this epoch_data object)
+            if len(epoch_data.get_satellites()) == 0:
+                self._data.remove_data(epoch)
+
+        except TimeSeriesError:
+            pass
+
+    def remove_for_frequency(self, sat: Satellite, epoch: Epoch, datatype: DataType):
+        """
+        Remove observations for the selected epoch and satellite which are associated to the frequency
+        of the provided datatype.
+        """
+        try:
+            epoch_data = self._data[epoch]
+            epoch_data.remove_for_frequency(sat, datatype)
+        except TimeSeriesError:
+            pass
+
+    # Utilities
+    def has_type(self, datatype):
+        return datatype in self._types[datatype.constellation]
+
+    def has_satellite(self, satellite):
+        return satellite in self._satellites
+
     def copy(self):
         """ return a copy of this object"""
         obj = ObservationData()
@@ -376,15 +411,3 @@ class ObservationData:
         obj._data = self._data.copy()
 
         return obj
-
-    def set_observations_for_constellation(self, constellation, obs_data_in):
-        # set observations given an ObservationData object
-        epochs = obs_data_in.get_epochs()
-        for epoch in epochs:
-            epoch_data = obs_data_in.get_epoch_data(epoch)
-            sats = epoch_data.get_satellites()
-            for sat in sats:
-                if sat.sat_system == constellation:
-                    observables = epoch_data.get_observables(sat)
-                    for obs in observables:
-                        self.set_observation(epoch, sat, obs)

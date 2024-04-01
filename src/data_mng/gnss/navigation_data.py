@@ -11,7 +11,12 @@ __all__ = ["NavigationData"]
 class NavigationHeader(Container):
     """
     NavigationHeader class, inherits from Container
-    stores relevant data from the header section of a navigation file
+    Stores relevant data from the header section of a navigation file
+
+    Attributes:
+        iono_corrections(dict)
+        leap_seconds(int)
+        time_correction(dict)
     """
     __slots__ = ["iono_corrections", "leap_seconds", "time_correction"]
 
@@ -21,6 +26,7 @@ class NavigationHeader(Container):
             setattr(self, attr, None)
         self.iono_corrections = {}
         self.time_correction = {}
+        self.leap_seconds = 0
 
 
 class NavigationPoint(Container):
@@ -46,7 +52,7 @@ class NavigationPoint(Container):
 
 class NavigationPointGPS(NavigationPoint):
     """
-    NavigationPointGPS class, inherits from Container
+    NavigationPointGPS class, inherits from `NavigationPoint`
     stores the data contained in a single navigation message for GPS satellites
     """
     __slots__ = ["satellite", "toc", "af0", "af1", "af2",       # sv / Toc / sv clk
@@ -65,7 +71,7 @@ class NavigationPointGPS(NavigationPoint):
 
 class NavigationPointGAL(NavigationPoint):
     """
-    NavigationPointGPS class, inherits from Container
+    NavigationPointGPS class, inherits from `NavigationPoint`
     stores the data contained in a single navigation message for GAL satellites
     """
     __slots__ = ["satellite", "toc", "af0", "af1", "af2",       # sv / Toc / sv clk
@@ -83,6 +89,10 @@ class NavigationPointGAL(NavigationPoint):
         self.nav_type = None
 
     def find_message_type(self):
+        """Checks if this ephemeride point is I/NAV or F/NAV and fills the attribute `nav_type` accordingly
+        See RINEX NAV documentation (https://igs.org/wg/rinex/#documents-formats) for more information about the
+        `Data Source` field.
+        """
         data_source = int(self.dataSrc)
 
         bit0 = data_source & 0b1  # flag for INAV
@@ -115,8 +125,10 @@ class NavigationPointGAL(NavigationPoint):
 
 class NavigationData:
     """
-    NavigationDataMap
-    this class stores data from rinex_parser navigation files
+    Navigation Data Frame
+    this class stores ephemeride data, read from RINEX NAV files
+
+    NavigationData objects contain _data and _header attributes.
     """
 
     def __init__(self):
@@ -124,7 +136,7 @@ class NavigationData:
         self._header = NavigationHeader()
 
     def __str__(self):
-
+        """Print the navigation data to a string, for debug purposes"""
         myStr = f"{repr(self._header)}\n"
         for sat, data in self._data.items():
             myStr += str(sat) + f"\n{str(data)}\n"
@@ -151,10 +163,7 @@ class NavigationData:
                                  f'was provided instead')
 
         if satellite in self._data:
-            try:
-                self._data[satellite].set_data(epoch, nav_message)
-            except TimeSeriesError as e:
-                pass  # TODO: add warning to logger
+            self._data[satellite].set_data(epoch, nav_message)
         else:
             timeseries = TimeSeries()
             timeseries.set_data(epoch, nav_message)
@@ -163,7 +172,6 @@ class NavigationData:
     def set_header(self, header: NavigationHeader):
         """
         method to set the navigation header.
-        Note: the header is valid from the first epoch to the last. Multiple files can be used to increase the cover
         Args:
             header (NavigationHeader)
         """
@@ -191,9 +199,7 @@ class NavigationData:
             sat (Satellite)
             epoch (Epoch)
         Return:
-            NavigationPointGPS: navigation data for the given satellite closest to the provided epoch
-        Raises:
-            TimeSeriesError
+            NavigationPoint: navigation data for the given satellite closest to the provided epoch
         """
         try:
             _epoch = self._data[sat].get_closest_epoch(epoch)

@@ -4,11 +4,12 @@ __all__ = ["Container"]
 class Container:
     """
     Class Container
-    Base class for container classes, which are useful for storing data, for example, epoch-wise data
+    Base class for container classes, which are useful for storing data with fixed slots,
+    for example, epoch-wise data
 
     Data is stored in the member variable __dict__
-    The subclasses of this Container must update the __slots__ member with the list of the data keys to store
-
+    The subclasses of this Container must update the __slots__ member with the list of the
+    data keys to store
     """
 
     def __init__(self):

@@ -1,7 +1,7 @@
 from . import utils
 from src.data_types.date import Epoch, EopDb
 from src.data_types.gnss import get_satellite
-from src.errors import FileError, EphemerideError
+from src.errors import FileError
 from src.io.config import config_dict
 from src.data_mng.gnss.navigation_data import NavigationPointGPS, NavigationPointGAL
 from src import WORKSPACE_PATH
@@ -334,5 +334,5 @@ class RinexNavReader:
                     if nav_type == config_dict.get("model", "GAL", "nav_type", fallback="FNAV"):
                         self.nav.set_data(toc, satellite, navMessage)
                     # else: nav message is skipped
-                except EphemerideError as e:
+                except Exception as e:
                     self.log.warn(f"Error reading satellite {satellite} ephemeride for epoch {toc}: {e}")

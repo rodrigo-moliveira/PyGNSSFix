@@ -6,6 +6,32 @@ from src.models.gnss_models import compute_ggto
 
 
 class GnssStateSpace(Container):
+    """
+    This class contains the state space vector with all variables to be estimated in a GNSS run,
+    and the corresponding covariance values
+
+    States:
+        * epoch (Epoch): Epoch object for this time instant
+        * position (numpy.ndarray): cartesian components of ECEF position vector (XYZ)
+        * velocity (numpy.ndarray): cartesian components of ECEF velocity vector (XYZ)
+        * clock_bias (float): estimated clock bias
+        * iono (dict): dictionary with satellites as keys and estimated ionosphere delay as values
+        * tropo_wet (float): estimated wet component of troposphere delay
+        * isb (float): estimated inter system bias
+        * clock_bias_rate (dict): dictionary with constellations as keys and clock bias rates as values
+
+    Some auxiliary information is saved in the `_info` attribute dict, namely:
+        * _info["states"] provides a list with all valid states to be estimated, depending on the setup
+        * _info["clock_master"] provides the master constellation, when the ISB state is active
+        * _info["clock_slave"] provides the slave constellation, when the ISB state is active
+
+    Additionally, the GNSS solver will also save the following information in the _info dict:
+        * geometry
+        * dop_ecef
+        * dop_local
+        * prefit_residuals
+        * postfit_residuals
+    """
     __states__ = ["position", "velocity", "clock_bias", "iono", "tropo_wet", "isb", "clock_bias_rate"]
     __covs__ = ["cov_position", "cov_velocity", "cov_clock_bias", "cov_iono", "cov_tropo_wet", "cov_isb",
                 "cov_clock_bias_rate"]
@@ -25,6 +51,7 @@ class GnssStateSpace(Container):
         self.epoch = epoch
 
     def clone(self):
+        """Returns a copy of this GnssStateSpace object. All state variables are deep-copied."""
         _states = self.get_additional_info("states")
         state = GnssStateSpace(position=self.position, velocity=self.velocity, clock_bias=self.clock_bias,
                                epoch=self.epoch, clock_bias_rate=self.clock_bias_rate)
@@ -112,7 +139,6 @@ class GnssStateSpace(Container):
         # tropo wet delay (optional -> in case the user defined it)
         self.tropo_wet = None
         self.cov_tropo_wet = None
-
         if metadata is not None and metadata["TROPO"].estimate_tropo():
             self.tropo_wet = 0.0
             self.cov_tropo_wet = 0.0
@@ -141,6 +167,14 @@ class GnssStateSpace(Container):
         return str(self)
 
     def get_clock_bias(self, constellation, time_correction):
+        """
+        Computes the clock bias for the required constellation, applying the ISB correction
+        in case the slave constellation is selected
+
+        Args:
+             constellation(str)
+             time_correction(dict): dict with the GGTO data from the NavigationData header
+        """
         if "isb" in self.get_additional_info("states"):
             if constellation == self.get_additional_info("clock_master"):
                 clock = self.clock_bias
@@ -156,8 +190,9 @@ class GnssStateSpace(Container):
 
         ggto = 0.0
         if estimate_ggto is False:
-            ggto = compute_ggto(time_correction, self.epoch)  # compute GGTO from broadcast message
-            # TODO: add GGTO to trace file
+            week, sow = self.epoch.gnss_time
+            # compute GGTO from broadcast message
+            ggto = compute_ggto(time_correction, week, sow)
             if constellation == self.get_additional_info("clock_slave"):
                 if constellation == "GPS":
                     # in case the slave constellation is GPS, we need to fix the GGTO
@@ -180,14 +215,14 @@ class GnssStateSpace(Container):
             exportable_lst.append("time")
 
         # additional info
-        if "geometry" in self._info.keys():
+        if "geometry" in self._info:
             exportable_lst.append("satellite_azel")
-        if "dop_ecef" in self._info.keys():
+        if "dop_ecef" in self._info:
             exportable_lst.append("dop_ecef")
-        if "dop_local" in self._info.keys():
+        if "dop_local" in self._info:
             exportable_lst.append("dop_local")
-        if "prefit_residuals" in self._info.keys():
+        if "prefit_residuals" in self._info:
             exportable_lst.append("prefit_residuals")
-        if "postfit_residuals" in self._info.keys():
+        if "postfit_residuals" in self._info:
             exportable_lst.append("postfit_residuals")
         return exportable_lst

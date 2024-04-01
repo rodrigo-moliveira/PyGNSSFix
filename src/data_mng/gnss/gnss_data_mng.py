@@ -1,3 +1,6 @@
+"""Data Manager for GNSS Algorithms
+"""
+
 from src.io.states import OUTPUT_FILENAME_MAP, get_file_header, export_to_file
 from src.io.config import config_dict, EnumPositioningMode
 from src.io.rinex_parser import RinexNavReader, RinexObsReader
@@ -11,7 +14,20 @@ __all__ = ["GnssDataManager"]
 
 
 class GnssDataManager(Container):
-    __slots__ = ["nav_data", "obs_data", "isb_data", "nav_solution",
+    """
+    Data Manager class that stores all necessary data for a GNSS run. Derives from the :py:class:`Container`
+    class.
+
+    Attributes:
+        nav_data(NavigationData): navigation data object containing RINEX NAV ephemerides
+        obs_data(ObservationData): raw observation data from RINEX OBS
+        smooth_obs_data(NavigationData): processed smooth observation data
+        iono_free_obs_data(NavigationData): processed iono-free observation data
+        nav_solution(list): navigation solution, list of :py:class:`~src.data_mng.gnss.state_space.GnssStateSpace`
+            objects
+
+    """
+    __slots__ = ["nav_data", "obs_data", "nav_solution",
                  "smooth_obs_data", "iono_free_obs_data"]
 
     def __init__(self):
@@ -21,7 +37,6 @@ class GnssDataManager(Container):
         self.obs_data = ObservationData()  # Input Observation Data
         self.smooth_obs_data = ObservationData()  # Smooth Observation Data
         self.iono_free_obs_data = ObservationData()  # Iono Free Observation Data
-        self.isb_data = None  # ISB (Inter-system bias) data
         self.nav_solution = None  # Navigation solution
 
     def __str__(self):
@@ -34,10 +49,8 @@ class GnssDataManager(Container):
         """
         Add data to available.
         Args:
-            data_name: data name, str
-            data: a scalar, a numpy array or a dict of the above two. If data is a dict, each
-                value in it should be of same type (scalar or numpy array), same size and same
-                units.
+            data_name(str): data name matching one of the class attributes
+            data: object
         """
         if data_name in self.__slots__:
             setattr(self, data_name, data)
@@ -46,12 +59,8 @@ class GnssDataManager(Container):
 
     def get_data(self, data_name):
         """
-        Get data section of data_names.
         Args:
-            data_name: a list of data names
-        Returns:
-            data: a list of data corresponding to data_names.
-            If there is any unavailable data in data_names, return None
+            data_name(str): the data to be fetched
         """
         # single data
         if isinstance(data_name, str):
@@ -61,7 +70,10 @@ class GnssDataManager(Container):
                 raise ValueError(f'{data_name} is not available.')
 
     def get_clean_obs_data(self):
-        # return the observation data for the PVT processing, depending on user configuration
+        """
+        Return:
+            returns the observation data for the PVT processing, depending on user configuration
+        """
         model = config_dict.get("model", "mode")
         if config_dict.get("preprocessor", "compute_smooth"):
             return self.smooth_obs_data
@@ -74,8 +86,6 @@ class GnssDataManager(Container):
         return self.obs_data
 
     def read_inputs(self, trace_dir):
-        # TODO: check if precise products (clk and sp3) or navigation products (nav)
-
         log = get_logger(IO_LOG)
 
         # read navigation data
@@ -112,6 +122,7 @@ class GnssDataManager(Container):
             file.write(str(self.get_data("nav_data")))
 
     def save_data(self, directory):
+        """Saves the output data (contained in nav_solution) to the provided directory"""
         log = get_logger(IO_LOG)
         log.info(f"storing data to {directory}...")
         file_list = {}

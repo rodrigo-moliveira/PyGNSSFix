@@ -1,16 +1,12 @@
 tasks for preliminary version:
     [ ] no output, permitir escolher qual a timetag de output (RX Time, GPST, GST, UTC...)
-    [ ] add GGTO to the EOP database from the rinex nav...
-        em relação ao GGTO, usar a config estimate_ggto para escolher entre usar o do rinex e o estimado
-        no caso de vir em rinex, fazer load para a db...
-    [ ] o GGTO não está muito bem integrados no código da class Epoch.
     [ ] add shapiro correction (Eq. 19.14 of handbook)
     [ ] improve computation of weight matrix W, taking inspiration from https://gnss-sdr.org/docs/sp-blocks/pvt/#precise-point-positioning
 
     code cleanup:
     [ ] limpar o código / solve all TODOs
     [ ] update documentation
-    [ ] add trace file with tropo, iono, clock delays, etc... that form the observable
+    [ ] add trace file with tropo, iono, clock delays, ggto, etc... that form the observable
 
 
     melhorar o modulo de post processing:
@@ -30,9 +26,6 @@ tasks for preliminary version:
 
     ---> THIS FINISHES FIRST RELEASE 1.0<---
 
-
-nice to have:
-    [ ] add gradients to the GPT3 model (local east, north, west, south gradients)
 
 --- ### ---
 

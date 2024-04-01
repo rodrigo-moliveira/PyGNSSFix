@@ -31,7 +31,9 @@ class TimeSeries(OrderedDict):
 
     # methods to set data
     def set_data(self, epoch, epoch_data):
-
+        """
+        Sets the provided data in the TimeSeries frame
+        """
         # if not self.overwriting and epoch not in self._epochs:
         if not self.overwriting and epoch in self._epochs:
             # epoch is already defined, and we are in non-overwriting mode -> skip insertion
@@ -68,7 +70,7 @@ class TimeSeries(OrderedDict):
         return self[epoch]
 
     def get_closest_epoch(self, epoch):
-
+        """Returns the closest epoch in the TimeSeries with respect to the provided epoch (argument)"""
         self._sort()
 
         if len(self.epochs) == 0:
@@ -93,13 +95,9 @@ class TimeSeries(OrderedDict):
         Method to align the two time series to a common time interval
         returns a list with the common epochs for both series
 
-        Parameters:
-            ----------
-            series1 (TimeSeries):
-                time series 1
-
-            series2 (TimeSeries):
-                time series 2
+        Args:
+        series1 (TimeSeries): time series 1
+        series2 (TimeSeries): time series 2
 
         Return:
             list : A list with the common epochs
@@ -118,7 +116,6 @@ class TimeSeries(OrderedDict):
         return epochs
 
     # utility methods
-
     def _sort(self):
         # this sort is not very efficient...
         if self.sorted is False:
@@ -140,6 +137,7 @@ class TimeSeries(OrderedDict):
         return my_str
 
     def copy(self):
+        """Returns a deep copy of this TimeSeries object"""
         self._sort()
         # clone this TimeSeries
         _copy = TimeSeries()
@@ -147,7 +145,7 @@ class TimeSeries(OrderedDict):
         # clone data to new object
         for epoch, value in self.items():
 
-            # try to create a clone of the value object (if possible)
+            # try to create a clone (deep copy) of the value object (if possible)
             if hasattr(value, "copy"):
                 _copy.set_data(epoch, value.copy())
             else:
