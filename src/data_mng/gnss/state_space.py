@@ -154,6 +154,7 @@ class GnssStateSpace(Container):
     def get_isb(self, constellation, time_correction):
         estimate_ggto = config_dict.get("model", "estimate_ggto")
 
+        ggto = 0.0
         if estimate_ggto is False:
             ggto = compute_ggto(time_correction, self.epoch)  # compute GGTO from broadcast message
             # TODO: add GGTO to trace file
@@ -161,9 +162,7 @@ class GnssStateSpace(Container):
                 if constellation == "GPS":
                     # in case the slave constellation is GPS, we need to fix the GGTO
                     ggto = -ggto
-        else:
-            ggto = 0.0
-
+        # else: GGTO is estimated together with the ISB
         return self.isb - ggto
 
     def add_additional_info(self, arg, val):

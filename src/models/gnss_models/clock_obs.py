@@ -207,9 +207,14 @@ def get_bgd_correction(datatype, nav_message):
     return 0.0
 
 
-def compute_ggto(time_correction, epoch):
+def compute_ggto(time_correction, week, sow):
+    epoch = (week, sow)
+
+    if "GGTO" not in time_correction:
+        print("GGTO data not found")  # TODO: set as warning in log
+        _ggto_cache[epoch] = 0.0
+
     if epoch not in _ggto_cache:
-        week, sow = epoch.gnss_time
         # fetch data
         a0 = time_correction["GGTO"][0]
         a1 = time_correction["GGTO"][1]

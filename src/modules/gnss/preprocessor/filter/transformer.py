@@ -12,6 +12,8 @@ class FilterMapper:
         removed = 0
         total = 0
         sats_filter = set()
+        removed_epochs = set()
+        total_epochs = len(vEpochs)
 
         # epoch loop
         for epoch in vEpochs:
@@ -36,10 +38,12 @@ class FilterMapper:
                 removed += len(v_removable)
                 if len(v_removable) > 0:
                     sats_filter.add(sat)
+                    removed_epochs.add(epoch)
                 for obs in v_removable:
                     obs_data.remove_observable(sat, epoch, obs.datatype)
-        self.write_report(removed, total, sats_filter)
+        self.write_report(removed, total, sats_filter, total_epochs, len(removed_epochs))
 
-    def write_report(self, removed, total, sats_filter):
+    def write_report(self, removed, total, sats_filter, total_epochs, removed_epochs):
         self.report = f"The filter removed {removed/total*100:.2f}% of the data, for a total of {total} " \
-                      f"observations. Satellites affected were: {sats_filter}"
+                      f"observations. Satellites affected were: {sats_filter}. Percentage of epochs affected is " \
+                      f"{removed_epochs/total_epochs*100:.2f}%."

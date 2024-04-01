@@ -1,22 +1,18 @@
 """Date module
+This module is imported from
+https://github.com/galactics/beyond/tree/master/beyond/dates
+(all credits to galactics)
 """
 
 from numpy import sin, radians
 from datetime import datetime, timedelta, date
 
 from src.errors import EpochError, TimeScaleError
-from .eop import EopDb
+from .eop import EopDb, Eop
 from src.utils.node import Node
+from src.models.gnss_models.clock_obs import compute_ggto
 
 __all__ = ["Epoch", "timedelta"]
-
-
-"""TAI = UTC + LEAPS
-TAI = GPS + 19
-UTC + LEAPS = GPS + 19
-UTC + 37 = GPS + 19
-UTC + 18 = GPS
-UTC = GPS -18"""
 
 
 class Timescale(Node):
@@ -46,9 +42,11 @@ class Timescale(Node):
         return 19.0
 
     def _scale_gst_minus_gpst(self, mjd, eop):
-        """Definition of GST relatively to GPST (GPST = GST + EOP.GGTO)"""
+        """Definition of GST relatively to GPST (GST = GPST + EOP.GGTO)"""
         # From theory GGTO = GST - GPST is GPS-to-Galileo Time Offset
-        return eop.ggto
+        # or GPST + GGTO = GST (GGTO is the bias from GPS to GAL time)
+        week, sow = Epoch._gnss_time(mjd)
+        return compute_ggto(eop.ggto, week, sow)
 
     def _scale_tdb_minus_tt(self, mjd, eop):
         """Definition of the Barycentric Dynamic Time scale relatively to Terrestrial Time"""
@@ -63,7 +61,7 @@ class Timescale(Node):
         """Compute the offset necessary in order to convert from one timescale to another
 
         Args:
-            mjd (float):
+            mjd (float): epoch (in mjd format) to compute the offset
             new_scale (str): Name of the desired scale
             eop (Eop): class with Eop data
         Return:
@@ -112,41 +110,15 @@ def get_scale(name):
 
 
 class Epoch:
-    """Date object
+    """Epoch object (immutable)
 
-    All computations and in-memory saving are made in
-    `MJD <https://en.wikipedia.org/wiki/Julian_day>`__ and
-    `UTC.
-    In the current implementation, the Date object does not handle the
-    leap second.
+    All computations and in-memory saving are made in `MJD <https://en.wikipedia.org/wiki/Julian_day>`__ and `GPST`.
 
-    The constructor can take:
-
-        * the same arguments as the standard library's datetime object (year, month, day, hour,
-          minute, second, microsecond)
-        * MJD as :py:class:`float`
-        * MJD as :py:class:`int` for days and :py:class:`float` for seconds
-        * a :py:class:`Date` or :py:class:`datetime` object
-
-    Keyword Arguments:
-        scale (str) : One of the following scales : "UT1", "UTC", "GPS", "TDB", "TAI", "TT"
-
-    Examples:
-
-        .. code-block:: python
-
-            Date(2016, 11, 17, 19, 16, 40)
-            Date(2016, 11, 17, 19, 16, 40, scale="TAI")
-            Date(57709.804455)  # MJD
-            Date(57709, 69540.752649)
-            Date(datetime(2016, 11, 17, 19, 16, 40))  # built-in datetime object
-            Date.now()
-
-    Date objects interact with :py:class:`timedelta` as datetime do.
+    Epoch objects interact with :py:class:`timedelta` as datetime do.
 
     Attributes:
         eop (Eop): Value of the Earth Orientation Parameters for this particular date (see
-            :ref:`eop`)
+            :py:class:`Eop`)
         scale: Scale in which this date is represented
     """
 
@@ -156,6 +128,7 @@ class Epoch:
     """Origin of MJD"""
 
     GPS_ORIGIN = datetime(1980, 1, 6, 0, 0, 0)
+    GPS_ORIGIN_MJD = 44244
     """Origin of GPST (6th January 1980 00:00:00 midnight)"""
 
     JD_MJD = 2400000.5
@@ -173,8 +146,22 @@ class Epoch:
     DEFAULT_FORMAT = "%Y-%m-%d %H:%M:%S"
 
     def __init__(self, *args, scale=DEFAULT_SCALE, **kwargs):
+        """
+        Constructor of Epoch objects
 
-        # TODO: constructor with seconds of week and week number???
+        The constructor can take:
+            * the same arguments as the standard library's datetime object (year, month, day, hour,
+              minute, second, microsecond)
+            * MJD as :py:class:`float`
+            * MJD as :py:class:`int` for days and :py:class:`float` for seconds
+            * a :py:class:`Epoch` or :py:class:`datetime` object
+
+        Args:
+            args(list) : The argument list with the necessary data to build this object (as described above)
+            scale (str) : One of the following scales : "UT1", "UTC", "GPST", "GST", "TDB", "TAI", "TT"
+        """
+
+        # NOTE: it may be eventually helpful to add a constructor with seconds of week and week number
 
         if type(scale) is str:
             scale = get_scale(scale.upper())
@@ -184,7 +171,7 @@ class Epoch:
                 # Python datetime.datetime object
                 d, s = self._convert_dt(arg)
             elif isinstance(arg, Epoch):
-                # Date object
+                # Epoch object
                 d = arg.d
                 s = arg.s
                 scale = arg.scale
@@ -224,7 +211,7 @@ class Epoch:
         d += int((s + offset) // 86400)
         s = (s + offset) % 86400.0
 
-        # As Date acts like an immutable object, we can't set its attributes normally
+        # As Epoch acts like an immutable object, we can't set its attributes normally
         # like when we do ``self._d = _d``. Furthermore, those attribute represent the date with
         # respect to REF_SCALE
         super().__setattr__("_d", d)
@@ -297,12 +284,6 @@ class Epoch:
     def __repr__(self):  # pragma: no cover
         return f"<{self.__class__.__name__} '{self}'>"
 
-    def debug_print(self, scale="ref_scale"):
-        if scale == "ref_scale":
-            return f"({self._d},{self._s}) {self.REF_SCALE}"
-        else:
-            return f"{self._convert_to_scale()} {self.scale}"
-
     def __str__(self):  # pragma: no cover
         if "str" not in self._cache.keys():
             self._cache["str"] = f"{self.datetime.isoformat()} {self.scale}"
@@ -316,8 +297,6 @@ class Epoch:
 
     def __hash__(self):
         return hash((self._d, self._s))
-
-    # TODO: add just a function to convert between GPST and GST
 
     @classmethod
     def _convert_dt(cls, dt):
@@ -348,10 +327,10 @@ class Epoch:
 
     @property
     def datetime(self):
-        """Conversion of the Date object into a ``datetime.datetime``
+        """Conversion of the Epoch object into a :py:class:`datetime`
 
         The resulting object is a timezone-naive instance with the same scale
-        as the originating Date object.
+        as the originating Epoch object.
         """
         if "dt_scale" not in self._cache.keys():
             self._cache["dt_scale"] = self._datetime - timedelta(seconds=self._offset)
@@ -359,7 +338,7 @@ class Epoch:
 
     @property
     def _datetime(self):
-        """Conversion of the Date object into a :py:class:`datetime.datetime`.
+        """Conversion of the Epoch object into a :py:class:`datetime`.
 
         The resulting object is a timezone-naive instance in the REF_SCALE timescale
         """
@@ -369,7 +348,7 @@ class Epoch:
 
     @classmethod
     def strptime(cls, data, format=DEFAULT_FORMAT, scale=DEFAULT_SCALE):  # pragma: no cover
-        """Convert a string representation of a date to a Date object"""
+        """Convert a string representation of a date to an Epoch object"""
         return cls(datetime.strptime(data, format), scale=scale)
 
     @classmethod
@@ -378,7 +357,7 @@ class Epoch:
         Args:
             scale (str)
         Return:
-            Date: Current time in the chosen scale
+            Epoch: Current time in the chosen scale
         """
         return cls(datetime.utcnow()).change_scale(scale)
 
@@ -389,9 +368,9 @@ class Epoch:
     def change_scale(self, new_scale):
         """
         Args:
-            new_scale (str)
+            new_scale (str) : the new scale for the returned Epoch object
         Return:
-            Date: new Date object representing the same instant, with a different timescale
+            Epoch: new Epoch object representing the same instant, with a different timescale
         """
         offset = self.scale.offset(self._mjd, new_scale, self.eop)
         result = self.datetime + timedelta(seconds=offset)
@@ -404,11 +383,11 @@ class Epoch:
 
     @property
     def julian_century(self):
-        """Compute the julian_century of the Date object relatively to its
+        """Compute the julian_century of the Epoch object relatively to its
         scale
 
         Return:
-            float
+            float: the computed julian century
         """
         return self._julian_century(self.jd)
 
@@ -418,7 +397,7 @@ class Epoch:
         January 1, 4712 B.C., 12:00.
 
         Return:
-            float
+            float: the computed julian day
         """
         return self.mjd + self.JD_MJD
 
@@ -426,7 +405,7 @@ class Epoch:
     def _mjd(self):
         """
         Return:
-            float: Date in terms of MJD in the REF_SCALE timescale (internal timescale)
+            float: Epoch in terms of MJD in the REF_SCALE timescale (internal timescale)
         """
         return self._d + self._s / 86400.0
 
@@ -442,23 +421,41 @@ class Epoch:
     @property
     def gnss_time(self):
         """
-        Computes GPS Time GPST (Week number and Seconds of Week) for this Epoch
-        The origin of GPST (week = 0, seconds of week = 0) is 6 January 1980 at 00:00 midnight
+        Computes the GNSS time (week number and seconds of week) for this Epoch. No change in
+        scale is performed.
+        The origin of GNSS time (week = 0, seconds of week = 0) is 6 January 1980 at 00:00 midnight
+        (that is, the origin of GPS Time - GPST)
 
-        In RINEX files the GPS week number is provided as a continuous number, without roll-over
+        NOTE 1: In RINEX files the GPS week number is provided as a continuous number, without roll-over
 
-        NOTE: This is also valid for GST (Galileo System Time). According to RINEX documentation,
-        The GAL week number is a continuous number, aligned to (and hence identical to) the
-        continuous GPS week number used in the RINEX navigation message files
+        NOTE 2: In RINEX files, the GAL week number time is a continuous number, aligned to (and hence
+        identical to) the continuous GPS week number used in the RINEX navigation message files.
+        The broadcast 12-bit Galileo System Time (GST) week has a roll-over after 4095. It started at
+        zero at the first GPS roll-over (continuous GPS week 1024).
+            -> Hence, GAL week = GST week + 1024 + n*4096 (n:number of GST roll-overs).
+
+        If the proper GST is required instead (with the proper GST week counter), a new method is required.
+
+        Return:
+            tuple: A tuple is returned with GNSS time, as (week number, seconds of week)
         """
         if "gnss_time" not in self._cache.keys():
-            # convert this epoch to GPS Time
-            gps_epoch = self.change_scale(GPST)
-            dt = (gps_epoch - Epoch.GPS_ORIGIN).total_seconds()
+            # gps_epoch = self.change_scale(GPST)  # convert this epoch to GPS Time
+            dt = (self - Epoch.GPS_ORIGIN).total_seconds()
             week = (dt/3600/24) // 7
             sow = dt - week*3600*24*7
             self._cache["gnss_time"] = (int(week), sow)
         return self._cache["gnss_time"]
+
+    @classmethod
+    def _gnss_time(cls, mjd):
+        """
+        Un-cached computation of gnss_time (and without using any member variables from the Epoch class)
+        """
+        dt = (mjd - Epoch.GPS_ORIGIN_MJD) * 86400
+        week = (dt / 3600 / 24) // 7
+        sow = dt - week * 3600 * 24 * 7
+        return sow, week
 
     @property
     def doy(self):
@@ -468,10 +465,10 @@ class Epoch:
         return self._cache["doy"]
 
 
-# This part is here to allow matplotlib to display Date objects directly
+# This part is here to allow matplotlib to display Epoch objects directly
 # in the plot, without any other conversion by the developer
 # If matplotlib is importable, then a converter class is registered
-# for converting all Date objects on the fly
+# for converting all Epoch objects on the fly
 try:
     import matplotlib.dates as mdates
     import matplotlib.units as munits

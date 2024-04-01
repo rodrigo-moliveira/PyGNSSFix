@@ -1,5 +1,5 @@
 from . import utils
-from src.data_types.date import Epoch
+from src.data_types.date import Epoch, EopDb
 from src.data_types.gnss import get_satellite
 from src.errors import FileError, EphemerideError
 from src.io.config import config_dict
@@ -33,6 +33,9 @@ class RinexNavReader:
 
         # read header
         self._read_header(f_handler)
+
+        # set time corrections in EopDb
+        EopDb.set_time_correction(self.nav.header.time_correction)
 
         # read inputs
         self._read_data(f_handler)
