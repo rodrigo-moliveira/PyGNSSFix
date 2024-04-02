@@ -3,17 +3,22 @@ from .data_type import DataType
 
 class Observation:
     """
-    Class Observation
-    Stores a single gnss_models
-    Attributes
-        ----------
-        datatype : DataType
-            The DataType (gnss_models type) of this gnss_models
-        value : float or int
-            The numeric value for this gnss_models
+    Class Observation to store GNSS observables
+    The Observation objects contain a :py:class:`DataType` and the corresponding value
+
+    Attributes:
+        datatype (DataType): The DataType (gnss_models type) of this GNSS observation
+        value (float): The numeric value for this gnss_models
     """
 
     def __init__(self, datatype: DataType, value: float):
+        """
+        Constructor of `Observation` objects
+
+        Args:
+            datatype (DataType): The DataType (gnss_models type) of this GNSS observation
+            value (float): The numeric value for this gnss_models
+        """
         if isinstance(datatype, DataType):
             self.datatype = datatype
         else:
@@ -112,4 +117,8 @@ class Observation:
         return self.value
 
     def copy(self):
+        """
+        Return:
+            Observation: returns a deep copy of this object
+        """
         return Observation(self.datatype, float(self.value))

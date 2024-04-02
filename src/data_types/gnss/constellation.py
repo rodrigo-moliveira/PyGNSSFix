@@ -7,12 +7,11 @@ __all__ = ["Constellation", "get_constellation"]
 class Constellation(str):
     """
     Class Constellation, inherits from string
-    Represents a constellation system (GPS or GAL)
+    Represents a constellation system (GPS, GAL, GLO, BDS)
     This class is a subclass of str with special utility methods
     """
 
     def __new__(cls, content):
-
         if content.upper() in AvailableConstellations:
             return super(Constellation, cls).__new__(cls, content.upper())
         else:
@@ -23,8 +22,8 @@ class Constellation(str):
         return f'{type(self).__name__}({super().__repr__()})'
 
     def __getattribute__(self, name):
-        if name in dir(str):  # only handle str methods here
 
+        if name in dir(str):  # only handle str methods here
             def method(self, *args, **kwargs):
                 value = getattr(super(), name)(*args, **kwargs)
                 # not every string method returns a str:
@@ -53,7 +52,7 @@ class Constellation(str):
     def get_system_short(self):
         """
         Return:
-            str : "G" for sensors, "E" for galileo "U" for unkown
+            str : "G" for sensors, "E" for galileo "U" for unknown
         """
         return ConstellationToCodeMap.get(self, "UNKNOWN")
 

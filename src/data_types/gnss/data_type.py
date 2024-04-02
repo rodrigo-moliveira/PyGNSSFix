@@ -7,18 +7,18 @@ __all__ = ["get_data_type", "data_type_from_rinex", "DataType"]
 class DataType:
     """
     Class DataType
-    Represents a GNSS observable datatype (Carrier Phase, Pseudo Range, Signal or Doppler)
+    Represents a GNSS observable datatype (Carrier Phase, Pseudo Range, Signal, Doppler, Frequency)
 
-    Attributes
-        ----------
-        freq_number : int
-            The frequency index (1, 2, 5, ...)
-        freq_value : float
-            The frequency value in Hz
-        data_type : str
-            Short name for this type
-        description : str
-            Long description of this data type
+    Objects of this class are immutable
+
+    Properties:
+        * data_type (str): Short name for this type
+        * constellation (str): the constellation associated with this datatype
+        * freq (DataType): the frequency datatype, when applicable
+        * freq_value (float): The frequency value in Hz
+        * freq_number (int): The frequency index (1, 2, 5, ...)
+        * constellation (str): the constellation associated with this datatype
+
     """
 
     # Force DataType objects to immutable
@@ -26,6 +26,17 @@ class DataType:
 
     def __init__(self, freq_number: int = None, freq_value: float = None,
                  data_type: str = None, description: str = None, freq=None, constellation=None):
+        """
+        Constructor of a DataType object
+
+        Args:
+            freq_number (int)
+            freq_value (float)
+            data_type (str)
+            freq (DataType)
+            description (str)
+            constellation (str)
+        """
 
         if freq_number is not None:
             super(DataType, self).__setattr__('_freq_number', freq_number)
@@ -116,37 +127,86 @@ class DataType:
         else:
             raise AttributeError(f"The provided datatype {str(self)} has no attribute 'description'")
 
+    # Utility methods
     @staticmethod
     def is_code(data_type):
+        """
+        Args:
+            data_type(DataType)
+        Return:
+            bool: True if `data_type` is a pseudorange-based observable (raw, smooth or iono-free)
+        """
         return data_type in cAvailableCodes or data_type in cAvailableIonoFreeCodes or \
             data_type in cAvailableSmoothCodes or data_type in cAvailableIonoFreeSmoothCodes
 
     @staticmethod
     def is_iono_free_code(data_type):
+        """
+        Args:
+            data_type(DataType)
+        Return:
+            bool: True if `data_type` is a iono-free pseudorange observable
+        """
         return data_type in cAvailableIonoFreeCodes
 
     @staticmethod
     def is_iono_free_carrier(data_type):
+        """
+        Args:
+            data_type(DataType)
+        Return:
+            bool: True if `data_type` is a iono-free carrier phase observable
+        """
         return data_type in cAvailableIonoFreeCarrier
 
     @staticmethod
     def is_iono_free_smooth_code(data_type):
+        """
+        Args:
+            data_type(DataType)
+        Return:
+            bool: True if `data_type` is a smooth pseudorange observable
+        """
         return data_type in cAvailableIonoFreeSmoothCodes
 
     @staticmethod
     def is_carrier(data_type):
+        """
+        Args:
+            data_type(DataType)
+        Return:
+            bool: True if `data_type` is a carrier phase observable
+        """
         return data_type in cAvailableCarriers or data_type in cAvailableIonoFreeCarrier
 
     @staticmethod
     def is_signal(data_type):
+        """
+        Args:
+            data_type(DataType)
+        Return:
+            bool: True if `data_type` is a signal (SNR) observable
+        """
         return data_type in cAvailableSignals
 
     @staticmethod
     def is_doppler(data_type):
+        """
+        Args:
+            data_type(DataType)
+        Return:
+            bool: True if `data_type` is a Doppler observable
+        """
         return data_type in cAvailableDoppler
 
     @staticmethod
     def get_code_datatypes(datatype_list):
+        """
+        Args:
+            datatype_list(list): list of :py:class:DataType objects
+        Return:
+            list: Returns a sublist of `datatype_list` corresponding only to the pseudorange observables
+        """
         list_out = []
         for obs in datatype_list:
             if obs in cAvailableCodes + cAvailableSmoothCodes + cAvailableIonoFreeSmoothCodes + cAvailableIonoFreeCodes:
@@ -156,6 +216,12 @@ class DataType:
 
     @staticmethod
     def get_signal_datatypes(datatype_list):
+        """
+        Args:
+            datatype_list(list): list of :py:class:DataType objects
+        Return:
+            list: Returns a sublist of `datatype_list` corresponding only to the signal (SNR) observables
+        """
         list_out = []
         for obs in datatype_list:
             if obs in cAvailableSignals:
@@ -166,8 +232,15 @@ class DataType:
     @staticmethod
     def get_iono_free_datatype(datatype1, datatype2, constellation):
         """
-        mix data types to get the associated iono free datatype
-        get_iono_free_datatype(PR1, PR1) => PR12
+        Mix `DataType` objects to get the associated iono free datatype
+
+        Args:
+            datatype1(DataType)
+            datatype2(DataType)
+            constellation(str)
+
+        Example:
+            get_iono_free_datatype(PR1, PR1, constellation) returns PR12
         """
         if DataType.is_code(datatype1) and DataType.is_code(datatype2):
             index1 = datatype1.freq_number
@@ -180,14 +253,19 @@ class DataType:
             return get_data_type(f"CP{min(index1, index2)}{max(index1, index2)}", constellation)
 
         raise SignalError(f"Unable to obtain iono free pseudorange from the provided arguments. "
-                            f"Datatype1 and datatype2 must be both code."
-                            f"datatype1 = {datatype1.data_type}, datatype2 = {datatype2.data_type}")
+                          f"Datatype1 and datatype2 must be both code."
+                          f"datatype1 = {datatype1.data_type}, datatype2 = {datatype2.data_type}")
 
     @staticmethod
     def get_smooth_datatype(datatype):
         """
-        mix data types to get the associated smooth pseudo-range (SPR) or smooth iono free (IFSPR) datatype
-        get_smooth_datatype(PR1) => SPR1
+        Mix `DataType` objects to get the associated smooth pseudo-range (SPR) or smooth iono free (IFSPR) datatype
+
+        Args:
+            datatype(DataType)
+
+        Example:
+            get_smooth_datatype(PR1) returns SPR1
         """
         if DataType.is_code(datatype):
             # datatype = PR1 -> return SPR1
@@ -199,7 +277,7 @@ class DataType:
             return get_data_type(f"SPR{index}", datatype.constellation)
 
         raise SignalError(f"Unable to create smooth pseudorange from "
-                            f"data type {str(datatype)}")
+                          f"data type {str(datatype)}")
 
 
 # Default Data Types
@@ -326,7 +404,6 @@ PR18_GAL = DataType(data_type="PR18", description="E1-E5AltBOC Iono-Free PseudoR
 PR16_GAL = DataType(data_type="PR16", description="E1-E6 Iono-Free PseudoRange (GAL)", freq_number=16,
                     constellation="GAL")
 
-
 #######################################
 # Iono Free Carrier Phase Observables #
 #######################################
@@ -417,7 +494,7 @@ cGALObsSignals = {"C": {"1": PR1_GAL, "5": PR5_GAL, "6": PR6_GAL, "7": PR7_GAL, 
 def get_data_type(datatype: str, constellation: str):
     """
     Factory for inputs types. Receives a string representing the type of the datatype and returns the associated
-    DataType instance
+    DataType instance. The datatype string corresponds to the property `data_type` of the class
 
     Args:
         datatype (str): string with the short descriptor of the datatype to fetch (ex: C1, L5,...)
@@ -435,6 +512,16 @@ def get_data_type(datatype: str, constellation: str):
 
 
 def data_type_from_rinex(data_type: str, constellation: str):
+    """
+    Factory for inputs types. Receives a string representing the type of the datatype in RINEX format
+    and returns the associated DataType instance
+
+    Args:
+        data_type (str): string with the datatype in RINEX Format
+        constellation (str): constellation associated with the datatype
+    Return:
+         DataType : returns the corresponding DataType instance
+    """
     # return a datatype object given the data type string in RINEX format (ex: C1C, C2W, ...)
     if constellation == "GPS":
         return cGPSObsSignals[data_type[0]][data_type[1]]

@@ -24,49 +24,35 @@ class Satellite:
     Class Satellite
     Representation of a satellite with the important variables associated with it
 
-    Attributes
-        ----------
-        nID : int
-            The integer identifier of the satellite
-        sat_system : Constellation
-            The instance of the corresponding SatelliteSystem (constellation)
-
+    Attributes:
+        nID (int): The integer identifier of the satellite
+        sat_system (Constellation): The instance of the corresponding SatelliteSystem (constellation)
     """
 
-    def __init__(self, identifier, sat_system: Constellation = None):
+    def __init__(self, identifier, sat_system = None):
         """
         Constructor of Satellite instances
 
         Args:
-            identifier (str, int):
-                the satellite identifier, either an int (ex: 03) - just
-                the ID, or a string composed of constellation + ID (ex: "G03")
-            sat_system (Constellation):
-                instance of Constellation. Must be provided if ´´identifier´´ is of type int,
+            identifier (str or int): the satellite identifier, either an int nID (ex: 03), or a string composed of
+            constellation + nID (ex: "G03")
+            sat_system (Constellation): instance of Constellation. Must be provided if `identifier` is of type int,
                 and may be skipped if it is of type str (since constellation is inferred from the string)
         """
 
         if isinstance(identifier, int) and isinstance(sat_system, Constellation):
-            self._nID = identifier
-            self._sat_system = sat_system
+            self.nID = identifier
+            self.sat_system = sat_system
 
         elif isinstance(identifier, str) and (len(identifier) == 3):
-            self._nID = int(identifier[1:])
-            self._sat_system = get_constellation(identifier[0])
+            self.nID = int(identifier[1:])
+            self.sat_system = get_constellation(identifier[0])
 
         else:
             raise TypeError("Unable to initialize satellite with arguments {} and {}. See documentation."
                             "".format(identifier, sat_system))
 
         new_sat(self)
-
-    @property
-    def nID(self):
-        return self._nID
-
-    @property
-    def sat_system(self):
-        return self._sat_system
 
     def __repr__(self):
         """A repr is useful for debugging"""

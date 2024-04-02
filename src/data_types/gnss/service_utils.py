@@ -1,9 +1,8 @@
+"""Utility maps and dicts to deal with the constellations and observations.
+"""
+
 from .data_type import get_data_type
 
-"""
-Utility maps and dicts to deal with the constellations and observations.
--> Available constellations: Galileo and GPS
-"""
 
 AvailableConstellations = {"GPS", "GAL", "GLO", "BDS"}
 
