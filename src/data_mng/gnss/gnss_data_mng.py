@@ -150,7 +150,7 @@ class GnssDataManager(Container):
                             log.info(f"creating output file {filename}")
 
                         # save this epoch data
-                        data = export_to_file(state, ext)
+                        data = export_to_file(ext, state)
                         if isinstance(data, str):
                             file_list[ext].write(f"{time_str},{data}\n")
                         elif isinstance(data, list):

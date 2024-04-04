@@ -209,6 +209,11 @@ class GnssStateSpace(Container):
         return None
 
     def get_exportable_lst(self):
+        """
+        Returns:
+            list: list with the name of all state variables and additional data to be written in the output files
+            See module :py:mod:`src.io.states.export_states`
+        """
         exportable_lst = list(self.get_additional_info("states"))
 
         if self.epoch is not None:

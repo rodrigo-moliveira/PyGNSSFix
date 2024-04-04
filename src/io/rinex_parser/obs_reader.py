@@ -1,3 +1,7 @@
+"""Parser of RINEX OBS files (version 3.XX)
+The official documentation of these files may be found in https://igs.org/wg/rinex/#documents-formats
+"""
+
 from math import floor
 
 from src.data_types.date import Epoch
@@ -13,12 +17,7 @@ from .utils import *
 
 class RinexObsReader:
     """
-    Class RinexObsReader
-
-    Attributes
-        ----------
-        _obs: ObservationData
-
+    Parser of Rinex OBS files
     """
 
     def __init__(self, obs: ObservationData, file: str, services,

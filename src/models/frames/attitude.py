@@ -1,3 +1,6 @@
+"""Useful attitude functions and conversions
+"""
+
 import numpy as np
 
 from .frames import cartesian2geodetic, latlon2dcm_e_ned
@@ -5,21 +8,21 @@ from src.utils.math_utils import vector2skew_symmetric, require_len_array, requi
 
 
 def euler2dcm(euler):
-    require_len_array(euler)
-
     """
     Convert Euler angles to direction cosine matrix (DCM). The conventional rotation sequence z-y-x is adopted.
-    
+
+    The DCM matrix is the following:
+        [          cy*cz,          cy*sz,            -sy]
+        [ sy*sx*cz-sz*cx, sy*sx*sz+cz*cx,          cy*sx]
+        [ sy*cx*cz+sz*sx, sy*cx*sz-cz*sx,          cy*cx]
+    where (x,y,z) are (roll,pitch,yaw), s is short for sin and c is short for cos
+
     Args:
-        angles: 3x1 Euler angles (roll, pitch, yaw), rad.
+        euler (np.ndarray or list): 3x1 Euler angles (roll, pitch, yaw), rad.
     Returns:
-        dcm: 3x3 coordinate transformation matrix from n to b
+        np.ndarray: 3x3 DCM coordinate transformation matrix from n to b
     """
-    # the DCM matrix is the following
-    #     [          cy*cz,          cy*sz,            -sy]
-    #     [ sy*sx*cz-sz*cx, sy*sx*sz+cz*cx,          cy*sx]
-    #     [ sy*cx*cz+sz*sx, sy*cx*sz-cz*sx,          cy*cx]
-    # where (x,y,z) are (roll,pitch,yaw), s is short for sin and c is short for cos
+    require_len_array(euler)
 
     dcm = np.zeros((3, 3))
     c_angle = np.cos(euler)
@@ -44,16 +47,10 @@ def dcm2euler(dcm):
     Convert direction cosine matrix (DCM) to Euler angles
     The euler rotation sequence 3-2-1 is assumed
     Args:
-        dcm: 3x3 coordinate transformation matrix from n to b
+        dcm (np.ndarray or list): 3x3 coordinate transformation matrix from n to b
     Returns:
-        angles: 3x1 Euler angles, rad.
+        np.ndarray: 3x1 Euler angles, rad.
     """
-    # the DCM matrix is the following
-    #     [          cy*cz,          cy*sz,            -sy]
-    #     [ sy*sx*cz-sz*cx, sy*sx*sz+cz*cx,          cy*sx]
-    #     [ sy*cx*cz+sz*sx, sy*cx*sz-cz*sx,          cy*cx]
-    # where (x,y,z) are (roll,pitch,yaw), s is short for sin and c is short for cos
-
     yaw = np.arctan2(dcm[0, 1], dcm[0, 0])  # arctan2(cy*sz, cy*cz) <=> arctan2(sz,cz)
     pitch = np.arcsin(-dcm[0, 2])
     roll = np.arctan2(dcm[1, 2], dcm[2, 2])
@@ -62,6 +59,24 @@ def dcm2euler(dcm):
 
 
 def exp_att2euler(pos, exp_att):
+    """
+    Convert exponential attitude to Euler Angles.
+
+    More information about the exponential attitude conversions in:
+    https://www.mecharithm.com/explicit-representation-orientation-exponential-coordinates/
+
+    NOTE: The current implementation of this function is not the most correct because:
+        input exp_att is the attitude from b to e
+        output euler vector is the attitude from n to b
+    There is an underlying change in the frame of the input and output attitude state.
+    This function should just convert attitude from representation to the other, and not the frame.
+
+    Args:
+         pos(np.ndarray): 3x1 position vector associated with the current attitude state
+         exp_att(np.ndarray): 3x1 attitude in exponential angle notation
+    Returns:
+        np.ndarray: 3x1 Euler angles, rad.
+    """
     require_len_array(exp_att)
     require_len_array(pos)
 
@@ -81,10 +96,18 @@ def exp_att2euler(pos, exp_att):
 
 def euler2exp_att(pos, euler):
     """
-    exponential attitude: https://www.mecharithm.com/explicit-representation-orientation-exponential-coordinates/
+    Convert Euler angles to exponential attitude
+
+    More information about the exponential attitude conversions in:
+    https://www.mecharithm.com/explicit-representation-orientation-exponential-coordinates/
+
+    NOTE: The same applies to this function
+
     Args:
-         pos : ecef position
-         euler : euler angles from nav to body frame
+         pos(np.ndarray): 3x1 position vector associated with the current attitude state
+         euler(np.ndarray): 3x1 Euler angles vector
+    Returns:
+        np.ndarray: 3x1 exponential attitude vector
     """
     require_len_array(euler)
     require_len_array(pos)
@@ -124,9 +147,9 @@ def quat_normalize(q):
     """
     Normalize a quaternion, scalar part is always non-negative
     Args:
-        q: quaternion
+        q(np.ndarray): input quaternion to be normalized
     Returns:
-        qn: normalized quaternion, scalar part is always non-negative
+        (np.ndarray): normalized quaternion, scalar part is always non-negative
     """
     if q[0] < 0:
         q = -q
@@ -136,15 +159,15 @@ def quat_normalize(q):
 
 
 def dcm2quat(c):
-    require_len_matrix(c, 3, 3)
-
     """
     Convert direction cosine matrix to quaternion
     Args:
-        c: direction cosine matrix
+        c(np.ndarray): direction cosine matrix
     Returns:
-        q: quaternion, scalar first
+        np.ndarray: quaternion q, scalar first
     """
+    require_len_matrix(c, 3, 3)
+
     tr = c[0, 0] + c[1, 1] + c[2, 2]
     tmp = np.array([0.0, 0.0, 0.0, 0.0])
     q = np.array([0.0, 0.0, 0.0, 0.0])

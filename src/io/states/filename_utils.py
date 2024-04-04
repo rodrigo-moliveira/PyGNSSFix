@@ -1,3 +1,6 @@
+"""Definition of output filenames
+"""
+
 # Output file names
 AZEL = "satellite_azel.txt"
 DOP_ECEF = "DOP_ECEF.txt"

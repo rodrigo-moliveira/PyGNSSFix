@@ -1,3 +1,6 @@
+"""Useful reference frame functions and conversions
+"""
+
 import numpy as np
 from src import constants
 from src.utils.math_utils import rot2, rot3, rot1
@@ -6,17 +9,11 @@ from src.utils.math_utils import rot2, rot3, rot1
 def geodetic2cartesian(lat, long, height):
     """
     Convert from geodetic coordinates to cartesian coordinates. Both refer to ECEF frame
-    geodetic coordinates are:
-        * latitude [rad]
-        * longitude [rad]
-        * height [m]
-    cartesian coordinates are:
-        * x, y, z [m]
 
     Args:
-        lat: float [rad]
-        long: float [rad]
-        height: float [m]
+        lat(float): latitude in [rad]
+        long(float): longitude in [rad]
+        height(float): height in [m]
     Return:
         list : [x, y, z] [m]
     """
@@ -37,14 +34,15 @@ def geodetic2cartesian(lat, long, height):
 def latlon2dcm_e_ned(lat, lon):
     """
     transformation matrix from the ECEF frame to the NED frame defined by lat and lon.
-    Args:
-        lat: latitude, rad
-        lon: longitude, rad
-    """
-    # m = np.array([[-sin(lat)*cos(lon), -sin(lat)*sin(lon), cos(lat)],
-    #              [-sin(lon), cos(lon), 0],
-    #              [-cos(lat)*cos(lon), -cos(lat)*sin(lon), -sin(lat)]])
+    Matrix is:
+        [-sin(lat)*cos(lon)  -sin(lat)*sin(lon)  cos(lat)]
+        [-sin(lon)            cos(lon)           0       ]
+        [-cos(lat)*cos(lon)  -cos(lat)*sin(lon) -sin(lat)]
 
+    Args:
+        lat(float): latitude, rad
+        lon(float): longitude, rad
+    """
     return rot2(-np.pi / 2.0 - lat) @ rot3(lon)
 
 
@@ -52,8 +50,8 @@ def latlon2dcm_e_enu(lat, lon):
     """
     transformation matrix from the ECEF frame to the ENU frame defined by lat and lon.
     Args:
-        lat: latitude, rad
-        lon: longitude, rad
+        lat(float): latitude, rad
+        lon(float): longitude, rad
     """
     # get rotation matrix from ECEF to ENU
     return rot1((constants.PI / 2 - lat)) @ rot3((constants.PI / 2 + lon))
@@ -62,21 +60,13 @@ def latlon2dcm_e_enu(lat, lon):
 def cartesian2geodetic(x, y, z):
     """
     Convert from cartesian coordinates to geodetic coordinates. Both refer to ECEF frame
-    geodetic coordinates are:
-        * latitude [rad]
-        * longitude [rad]
-        * height [m]
-    cartesian coordinates are:
-        * x, y, z [m]
-    Algorithm B.1.2:  From Cartesian to Ellipsoidal Coordinates from **REF[1]**
-
 
     Args:
-        x: float [m]
-        y: float [m]
-        z: float [m]
+        x(float): x component [m]
+        y(float): y component [m]
+        z(float): z component [m]
     Return:
-        list : [lat, long, height] [rad,rad,m]
+        list : [lat, long, height] in [rad,rad,m]
     """
     e2 = constants.EARTH_ECCENTRICITY_SQ
     a = constants.EARTH_SEMI_MAJOR_AXIS
@@ -116,7 +106,7 @@ def ecef2ned(arr_rover_ecef, arr_obs_ecef, origin_llh):
     Args:
         arr_rover_ecef (numpy.ndarray) : position/velocity of rover in ecef
         arr_obs_ecef (numpy.ndarray) : reference or observer position/velocity
-        origin_llh (numpy.ndarray or list) : lat long height coordinates of the local topocentric frame origin
+        origin_llh (numpy.ndarray) : lat long height coordinates of the local topocentric frame origin
     Return:
         numpy.ndarray : [x_enu, y_enu, z_enu]  [m] or [m/s]
     """
@@ -132,7 +122,7 @@ def ecef2ned(arr_rover_ecef, arr_obs_ecef, origin_llh):
     return arr_enu
 
 
-def _sideral(time: float):
+def _sideral(time):
     """
     converts time argument to rotation angle theta (multiply with Earth rotation)
     Args:
@@ -147,9 +137,9 @@ def dcm_e_i(time):
     """
     rotation matrix (DCM) from ECEF frame (e) to ECI frame (i) given time argument
     Args:
-            time (float): time argument [seconds]
-        Return:
-            numpy.ndarray : 3x3 rotation matrix of angle theta around the Z-axis (ECEF to ECI)
+        time (float): time argument [seconds]
+    Return:
+        numpy.ndarray : 3x3 rotation matrix of angle theta around the Z-axis (ECEF to ECI)
     """
     theta = _sideral(time)
     return rot3(-theta)
@@ -157,11 +147,11 @@ def dcm_e_i(time):
 
 def dcm_e_i_dot(time):
     """
-    rotation matrix (DCM) from ECEF frame (e) to ECI frame (i) given time argument
+    Derivative of rotation matrix (DCM) from ECEF frame (e) to ECI frame (i) given time argument
     Args:
-            time (float): time argument [seconds]
-        Return:
-            numpy.ndarray : 3x3 rotation matrix of angle theta around the Z-axis (ECEF to ECI)
+        time (float): time argument [seconds]
+    Return:
+        numpy.ndarray : 3x3 rotation matrix derivative of angle theta around the Z-axis (ECEF to ECI)
     """
     _sin = np.sin(time)
     _cos = np.cos(time)
@@ -174,9 +164,9 @@ def M2E(e, M):
     Conversion from Mean Anomaly to Eccentric anomaly, or Hyperbolic anomaly.
     Args:
         e (float) : eccentricity
-        M (float) : mean anomaly [radians]
+        M (float) : mean anomaly [rad]
     Return:
-        float: eccentric anomaly [radian]
+        float: eccentric anomaly [rad]
     """
 
     tol = 1e-8
@@ -243,15 +233,13 @@ def enu2ecef(x_enu, y_enu, z_enu, lat, long, h):
     observer (for example, the GNSS receiver)
     ENU stands for East North Up -> local components from the origin O to the satellite
 
-    Algorithm B.2.1:  From ENU to ECEF Coordinates from **REF[1]**
-
     Args:
-        x_enu: float [m]
-        y_enu: float [m]
-        z_enu: float [m]
-        lat: float -> latitude of ground observer [rad]
-        long: float -> longitude of ground observer [rad]
-        h: float -> height of ground observer [m]
+        x_enu(float): X component in ENU frame [m]
+        y_enu(float): Y component in ENU frame [m]
+        z_enu(float): Z component in ENU frame [m]
+        lat(float): latitude of ground observer [rad]
+        long(float): longitude of ground observer [rad]
+        h(float): height of ground observer [m]
     Return:
         list : [x_ecef, y_ecef, z_ecef]  [m]
     """
@@ -272,8 +260,6 @@ def ecef2enu(x_ecef, y_ecef, z_ecef, lat, long, h):
     Convert from ECEF frame to ENU frame (cartesian coordinates). The ENU frame is centered (origin O) at the ground
     observer (for example, the GNSS receiver)
     ENU stands for East North Up -> local components from the origin O to the satellite
-
-    Algorithm B.2.2:  From ECEF to ENU Coordinates from **REF[1]**
 
     Args:
         x_ecef (float) : [m]
@@ -305,11 +291,11 @@ def enu2azel(x_enu, y_enu, z_enu):
     Algorithm B.3:  Elevation and Azimuth Computation from **REF[1]**
 
     Args:
-        x_enu : float [m]
-        y_enu : float [m]
-        z_enu : float [m]
+        x_enu(float) : X component in ENU frame [m]
+        y_enu(float) : Y component in ENU frame [m]
+        z_enu(float) : Z component in ENU frame [m]
     Return:
-        list : [Az, El] [rad]
+        list : [Az, El] angles in [rad]
     """
     dist = np.sqrt(x_enu * x_enu + y_enu * y_enu + z_enu * z_enu)
 

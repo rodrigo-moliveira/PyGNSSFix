@@ -21,14 +21,13 @@ RINEX_OBS_TYPES_TO_READ = {"C",  # pseudo range
                            "D"}  # doppler
 
 
-def to_float(nmb: str):
+def to_float(nmb: str) -> float:
     """
-    convert numbers from rinex_parser files to python floats
+    Convert numbers from RINEX files (in string format) to python floats
 
-    rinex_parser floats can either be:
-        4.391254341941D-09
-        4.391254341941E-09
-    that is, the scientific notation can use the ´E´ or ´D´ char
+    RINEX numbers are provided in scientific notation with the ´E´ or ´D´ char, for example:
+        * 4.391254341941D-09
+        * 4.391254341941E-09
     """
     try:
         flt = float(nmb)

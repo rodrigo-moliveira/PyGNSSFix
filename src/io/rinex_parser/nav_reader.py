@@ -1,11 +1,16 @@
+"""Parser of RINEX NAV files (version 3.XX)
+The official documentation of these files may be found in https://igs.org/wg/rinex/#documents-formats
+"""
+
 from . import utils
 from src.data_types.date import Epoch, EopDb
 from src.data_types.gnss import get_satellite
 from src.errors import FileError
 from src.io.config import config_dict
-from src.data_mng.gnss.navigation_data import NavigationPointGPS, NavigationPointGAL
+from src.data_mng.gnss.navigation_data import NavigationPointGPS, NavigationPointGAL, NavigationData
 from src import WORKSPACE_PATH
 from src.common_log import IO_LOG, get_logger
+
 
 """
 Important Note: The time tags of the navigation messages (e.g., time of ephemeris, time of clock) are given in the 
@@ -15,14 +20,15 @@ respective satellite time systems!
 
 class RinexNavReader:
     """
-    Class RinexNavReader
-
-    Attributes
-        ----------
-        nav : NavigationData
+    Parser of Rinex NAV files
     """
 
     def __init__(self, file, nav):
+        """
+        Args:
+            file(str): path to the input RINEX NAV file
+            nav(NavigationData): the `NavigationData` object to store the navigation information extracted from the file
+        """
 
         # instance variables
         self.nav = nav
@@ -46,7 +52,7 @@ class RinexNavReader:
         """
         Method to read header data
 
-        Tags to look for:
+        Header lines to look for (others are ignored):
             * RINEX VERSION / TYPE  -> rinex_version and satellite_system
             * IONOSPHERIC CORR      -> iono_corrections
             * LEAP SECONDS          -> leap_seconds
@@ -94,42 +100,7 @@ class RinexNavReader:
 
     def _read_data(self, file):
         """
-        Read GPS navigation data
-
-        Data to fetch:
-            * satellite, toc, af0, af1, af2                         [Line 1]
-            * IODE, crs, deltaN, M0                                 [Line 2]
-            * Cuc, e, Cus, sqrtA                                    [Line 3]
-            * Toe, Cic, RAAN0, Cis,                                 [Line 4]
-            * i0, crc, omega, RAANDot,                              [Line 5]
-            * iDot, codesL2, toe (sensors week), flagL2,            [Line 6]
-            * SV_URA, SV_health, TGD, IODC                          [Line 7]
-            * TransmissionTime (seconds of week)                    [Line 8]
-
-        Control variables:
-            * SV_URA - User Range Accuracy, in meters (the message data is already in meters!!! not the ura index)
-                    URA INDEX       URA (meters)
-                    0           0.00 < URA ≤ 2.40
-                    1           2.40 < URA ≤ 3.40
-                    2           3.40 < URA ≤ 4.85
-                    3           4.85 < URA ≤ 6.85
-                    4           6.85 < URA ≤ 9.65
-                    5           9.65 < URA ≤ 13.65
-                    6           13.65 < URA ≤ 24.00
-                    7           24.00 < URA ≤ 48.00
-                    8           48.00 < URA ≤ 96.00
-                    9           96.00 < URA ≤ 192.00
-                    10          192.00 < URA ≤ 384.00
-                    11          384.00 < URA ≤ 768.00
-                    12          768.00 < URA ≤ 1536.00
-                    13          1536.00 < URA ≤ 3072.00
-                    14          3072.00 < URA ≤ 6144.00
-                    15          6144.00 < URA (or no accuracy prediction is available - unauthorized users are
-                                advised to use the SV at their own risk.)
-
-            * SV_health : Satellite health status:
-                    0 = all NAV data are OK,
-                    != 0 some or all NAV data are bad (ignore this entry!!).
+        Read GPS and GAL navigation data
         """
         line = " "
 

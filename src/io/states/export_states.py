@@ -1,99 +1,120 @@
+"""Module with functions to write the State Space vectors to output files
+"""
+
 from src import constants
+from src.data_mng.gnss.state_space import GnssStateSpace
 
 __all__ = ["get_file_header", "export_to_file"]
 
 
-def get_file_header(exportable, state):
+def get_file_header(state_variable, state):
+    """
+    Get the header line of the provided `state_variable`
+    Args:
+        state_variable(str): name of the state variable
+        state(:py:class:`GnssStateSpace`): instance of the `GnssStateSpace` (to get fetch some metadata info about the
+        state)
+    Returns:
+        str: header line string (CSV format)
+    """
     epoch_system = state.epoch.scale
-    if exportable == "position":
+    if state_variable == "position":
         return f"Week_Number({epoch_system}),Time_of_Week[s],X_ECEF[m],Y_ECEF[m],Z_ECEF[m]," \
                f"cov_XX[m^2],cov_YY[m^2],cov_ZZ[m^2],cov_XY[m^2],cov_XZ[m^2],cov_YZ[m^2]"
-    if exportable == "velocity":
+    elif state_variable == "velocity":
         return f"Week_Number({epoch_system}),Time_of_Week[s],VX_ECEF[m/s],VY_ECEF[m/s],VZ_ECEF[m/s]," \
                f"cov_XX[m^2/s^2],cov_YY[m^2/s^2],cov_ZZ[m^2/s^2],cov_XY[m^2/s^2],cov_XZ[m^2/s^2],cov_YZ[m^2/s^2]"
-    elif exportable == "clock_bias":
+    elif state_variable == "clock_bias":
         master = state.get_additional_info("clock_master")
         return f"Week_Number({epoch_system}),Time_of_Week[s],clock_bias(master={master})[s],cov[s^2]"
-    elif exportable == "clock_bias_rate":
+    elif state_variable == "clock_bias_rate":
         return f"Week_Number({epoch_system}),Time_of_Week[s],constellation,clock_bias_rate[],cov[]"
-    elif exportable == "iono":
+    elif state_variable == "iono":
         return f"Week_Number({epoch_system}),Time_of_Week[s],sat,iono[m],cov[m^2]"
-    elif exportable == "tropo_wet":
+    elif state_variable == "tropo_wet":
         return f"Week_Number({epoch_system}),Time_of_Week[s],tropo_wet[m],cov[m^2]"
-    elif exportable == "time":
+    elif state_variable == "time":
         return f"Week_Number({epoch_system}),Time_of_Week[s],Epoch_timetag"
-    elif exportable == "prefit_residuals":
+    elif state_variable == "prefit_residuals":
         return f"Week_Number({epoch_system}),Time_of_Week[s],constellation,sat,data_type,residual[m]"
-    elif exportable == "postfit_residuals":
+    elif state_variable == "postfit_residuals":
         return f"Week_Number({epoch_system}),Time_of_Week[s],constellation,sat,data_type,residual[m]"
-    elif exportable == "satellite_azel":
+    elif state_variable == "satellite_azel":
         return f"Week_Number({epoch_system}),Time_of_Week[s],sat,azimuth[deg],elevation[deg]"
-    elif exportable == "dop_ecef":
+    elif state_variable == "dop_ecef":
         return f"Week_Number({epoch_system}),Time_of_Week[s],DOP_x,DOP_y,DOP_z,DOP_t,DOP_geometry,DOP_position"
-    elif exportable == "dop_local":
+    elif state_variable == "dop_local":
         return f"Week_Number({epoch_system}),Time_of_Week[s],DOP_East,DOP_North,DOP_Up,DOP_Horizontal"
-    elif exportable == "isb":
+    elif state_variable == "isb":
         master = state.get_additional_info("clock_master")
         slave = state.get_additional_info("clock_slave")
         return f"Week_Number({epoch_system}),Time_of_Week[s],ISB(master={master},slave={slave})[s],cov[s^2]"
     else:
-        raise ValueError(f"Undefined header due to unknown exportable '{exportable}'")
+        raise ValueError(f"Undefined header due to unknown state_variable '{state_variable}'")
 
 
-def export_to_file(gnss_state, exportable):
-    if exportable == "position":
-        cov = gnss_state.cov_position
+def export_to_file(state_variable, state):
+    """
+    Export the provided state to a string (to be written in the output file, in CSV format)
+    Args:
+        state_variable(str): name of the state variable
+        state(:py:class:`GnssStateSpace`): instance of the `GnssStateSpace`
+    Returns:
+        str: state variable converted to a string (along with covariance) in CSV format
+    """
+    if state_variable == "position":
+        cov = state.cov_position
         cov_xx = cov[0, 0]
         cov_yy = cov[1, 1]
         cov_zz = cov[2, 2]
         cov_xy = cov[0, 1]
         cov_xz = cov[0, 2]
         cov_yz = cov[1, 2]
-        return f"{gnss_state.position[0]},{gnss_state.position[1]},{gnss_state.position[2]},{cov_xx},{cov_yy}," \
+        return f"{state.position[0]},{state.position[1]},{state.position[2]},{cov_xx},{cov_yy}," \
                f"{cov_zz},{cov_xy},{cov_xz},{cov_yz}"
 
-    if exportable == "velocity":
-        cov = gnss_state.cov_velocity
+    if state_variable == "velocity":
+        cov = state.cov_velocity
         cov_xx = cov[0, 0]
         cov_yy = cov[1, 1]
         cov_zz = cov[2, 2]
         cov_xy = cov[0, 1]
         cov_xz = cov[0, 2]
         cov_yz = cov[1, 2]
-        return f"{gnss_state.velocity[0]},{gnss_state.velocity[1]},{gnss_state.velocity[2]},{cov_xx},{cov_yy}," \
+        return f"{state.velocity[0]},{state.velocity[1]},{state.velocity[2]},{cov_xx},{cov_yy}," \
                f"{cov_zz},{cov_xy},{cov_xz},{cov_yz}"
 
-    if exportable == "clock_bias":
-        return f"{gnss_state.clock_bias},{gnss_state.cov_clock_bias}"
+    if state_variable == "clock_bias":
+        return f"{state.clock_bias},{state.cov_clock_bias}"
 
-    if exportable == "clock_bias_rate":
+    if state_variable == "clock_bias_rate":
         data = []
-        for constellation, clock_rate in gnss_state.clock_bias_rate.items():
+        for constellation, clock_rate in state.clock_bias_rate.items():
             try:
-                data.append(f"{constellation},{clock_rate},{gnss_state.cov_clock_bias_rate[constellation]}")
+                data.append(f"{constellation},{clock_rate},{state.cov_clock_bias_rate[constellation]}")
             except KeyError:
                 pass
         return data
 
-    if exportable == "tropo_wet":
-        return f"{gnss_state.tropo_wet},{gnss_state.cov_tropo_wet}"
+    if state_variable == "tropo_wet":
+        return f"{state.tropo_wet},{state.cov_tropo_wet}"
 
-    if exportable == "isb":
-        return f"{gnss_state.isb},{gnss_state.cov_isb}"
+    if state_variable == "isb":
+        return f"{state.isb},{state.cov_isb}"
 
-    if exportable == "iono":
-        cov = gnss_state.cov_iono
+    if state_variable == "iono":
+        cov = state.cov_iono
 
         data = []
-        for sat, iono_data in gnss_state.iono.items():
+        for sat, iono_data in state.iono.items():
             try:
                 data.append(f"{sat},{iono_data},{cov[sat]}")
             except KeyError:
                 pass
         return data
 
-    elif exportable == "prefit_residuals" or exportable == "postfit_residuals":
-        residuals = gnss_state.get_additional_info(exportable)
+    elif state_variable == "prefit_residuals" or state_variable == "postfit_residuals":
+        residuals = state.get_additional_info(state_variable)
         data = []
 
         for constellation, dict1 in residuals.items():
@@ -102,8 +123,8 @@ def export_to_file(gnss_state, exportable):
                     data.append(f"{constellation},{sat},{observable.data_type},{residual}")
         return data
 
-    elif exportable == "satellite_azel":
-        geometry = gnss_state.get_additional_info("geometry")
+    elif state_variable == "satellite_azel":
+        geometry = state.get_additional_info("geometry")
         sat_list = geometry.get_satellites()
         data = []
         if len(sat_list) > 0:
@@ -113,16 +134,16 @@ def export_to_file(gnss_state, exportable):
                 data.append(f"{sat},{az},{el}")
         return data
 
-    elif exportable == "dop_ecef":
-        dop = gnss_state._info["dop_ecef"]
+    elif state_variable == "dop_ecef":
+        dop = state._info["dop_ecef"]
         return f"{dop['x_ecef']},{dop['y_ecef']},{dop['z_ecef']},{dop['time']},{dop['geometry']},{dop['position']}"
 
-    elif exportable == "dop_local":
-        dop = gnss_state._info["dop_local"]
+    elif state_variable == "dop_local":
+        dop = state._info["dop_local"]
         return f"{dop['east']},{dop['north']},{dop['up']},{dop['horizontal']}"
 
-    elif exportable == "time":
-        return f"{str(gnss_state.epoch)}"
+    elif state_variable == "time":
+        return f"{str(state.epoch)}"
 
     else:
-        raise ValueError(f"Undefined data due to unknown exportable '{exportable}'")
+        raise ValueError(f"Undefined data due to unknown state_variable '{state_variable}'")
