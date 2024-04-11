@@ -1,7 +1,7 @@
 from .logger import get_logger
 
 __all__ = ["get_logger", "set_logs", "IO_LOG", "PREPROCESSOR_LOG", "MAIN_LOG", "GNSS_ALG_LOG", "INS_ALG_LOG",
-           "PERFORMANCE_LOG", "LOG"]
+           "PERFORMANCE_LOG", "MODEL_LOG"]
 
 """ All log objects required by this package are set and initialized here. To get the logs, the user first 
 has to call function `set_logs` below (to set the log level and path). 
@@ -13,7 +13,7 @@ io_log.info("Info")
 io_log.error("Error")
 """
 
-LOG = str("LOG")
+MODEL_LOG = str("MODEL_LOG")
 IO_LOG = str("IO_LOG")
 PREPROCESSOR_LOG = str("PREPROCESSOR_LOG")
 MAIN_LOG = str("MAIN_LOG")

@@ -1,3 +1,6 @@
+"""NTCM-G ionospheric module for Galileo
+"""
+
 import numpy as np
 from dataclasses import dataclass
 
@@ -9,11 +12,6 @@ Re_km = 6371
 hI_km = 450
 lat_north_pole_deg = 79.74
 lon_north_pole_deg = -71.78
-
-
-# NTCM-gG class to calculate the ionospheric correction for galileo users
-# More information can be found in :
-# https://www.gsc-europa.eu/sites/default/files/NTCM-G_Ionospheric_Model_Description_-_v1.0.pdf
 
 
 # Values of NTCM-G coefficients
@@ -34,12 +32,20 @@ class NTCMG_coefs:
 
 
 class NTCMG:
+    """
+    NTCM-G ionospheric model for Galileo users
+
+    More information can be found in :
+        https://www.gsc-europa.eu/sites/default/files/NTCM-G_Ionospheric_Model_Description_-_v1.0.pdf
+    """
 
     @staticmethod
     def calculate_azpar(effec_iono: np.array):
-        """
-        effec_iono: Effective ionisation level coefficients a0 a1 a2
-        azpar
+        """Compute Azpar from the `effec_iono` broadcast parameters
+        Args:
+            effec_iono(list): Effective ionisation level coefficients a0 a1 a2, length 3
+        Return:
+            float: azpar
         """
         a0 = effec_iono[0]
         a1 = effec_iono[1]
@@ -50,13 +56,7 @@ class NTCMG:
     @staticmethod
     def calculate_pierce_point_lat_lon(sat_el_rad: float, sat_az_rad: float, user_lat_rad: float,
                                        user_lon_rad: float):
-        """
-        Description: Compute the geographic latitude and longitude of the ionospheric pierce point IPP
-        sat_el_rad: Satellite elevation in radians
-        sat_az_rad: Satellite azimuth in radians
-        user_lat_rad: user receiver latitude in radians
-        user_lon_rad: user receiver longitude in radians
-        return lat_pp_rad, lon_pp_rad
+        """Compute the geographic latitude and longitude of the ionospheric pierce point IPP
         """
         # Calculate the earths central angle delta_pp between the user position and the earth projection of the piercing
         # point
@@ -73,30 +73,19 @@ class NTCMG:
 
     @staticmethod
     def calculate_local_time(lon_pp_rad: float, universal_time_UT_hours: float):
-        """
-        Description: Computes the local time LT given the pierce point longitude and UT
-        @param lon_pp_rad: Pierce point longitude in radians
-        @param universal_time_UT_hours: Hours and decimals
-        @return local time LT in hours and decimals
+        """Computes the local time LT given the `pierce point` longitude and UT
         """
         return universal_time_UT_hours + degrees(lon_pp_rad) / 15
 
     @staticmethod
-    def calculate_sun_declination(doy):
-        """
-        Description: Computes the sun's declination for the applicable day
-        @param doy: Day of year
-        @return sun's declination in radians
+    def calculate_sun_declination(doy: float):
+        """Computes the sun's declination for the applicable day
         """
         return radians(23.44 * sin(radians(0.9856 * (doy - 80.7))))
 
     @staticmethod
     def calculate_solar_zenith_angle_dependence(lat_pp_rad: float, sun_declination_rad: float):
-        """
-        Description: Computes the dependency of TEC with the solar zenith angle X
-        @param lat_pp_rad: Pierce point latitude in radians
-        @param sun_declination_rad: Sun's declination in radians
-        @return two terms for the solar zenith angle dependence
+        """Computes the dependency of TEC with the solar zenith angle X
         """
         cos_solar_zenith_double_star = cos(lat_pp_rad - sun_declination_rad) + 0.4
         cos_solar_zenith_triple_star = cos(lat_pp_rad - sun_declination_rad) - (2 / PI) * lat_pp_rad * sin(
@@ -106,11 +95,7 @@ class NTCMG:
 
     @staticmethod
     def calculate_geomagnetic_lat_from_geographic(lat_pp_rad: float, lon_pp_rad: float):
-        """
-        Description: Computes the geomagnetic latitude of the pierce based on a magnetic dipole model
-        @param lat_pp_rad: Pierce point latitude in radians
-        @param lon_pp_rad: Pierce point longitude in radians
-        @return geomagnetic latitude in radians
+        """Computes the geomagnetic latitude of the `pierce point` based on a magnetic dipole model
         """
         lat_north_pole_rad = radians(lat_north_pole_deg)
         lon_north_pole_rad = radians(lon_north_pole_deg)
@@ -120,12 +105,7 @@ class NTCMG:
 
     @staticmethod
     def compute_local_time_dependency_F1(lat_pp_rad: float, lon_pp_rad: float, universal_time_hour: float):
-        """
-        Description: Computes the local time dependency
-        @param lat_pp_rad: Pierce point latitude in radians
-        @param lon_pp_rad: Pierce point longitude in radians
-        @param universal_time_hour: universal time, hours and decimals
-        @return F1
+        """Computes the local time dependency
         """
         cos_double_star, cos_triple_star = NTCMG.calculate_solar_zenith_angle_dependence(lat_pp_rad, lon_pp_rad)
         LT = NTCMG.calculate_local_time(lon_pp_rad, universal_time_hour)
@@ -141,10 +121,7 @@ class NTCMG:
 
     @staticmethod
     def compute_season_dependency_F2(doy: int):
-        """
-        Description: Computes the season dependency term
-        @param doy: day of year
-        @return F2
+        """Computes the season dependency term
         """
         VA = 2 * PI * (doy - 18) / 365.25
         VSA = 4 * PI * (doy - 6) / 365.25
@@ -154,11 +131,7 @@ class NTCMG:
 
     @staticmethod
     def compute_geomagnetic_field_dependency_F3(lat_pp_rad: float, lon_pp_rad: float):
-        """
-        Description: Computes the geomagnetic field dependency term
-        @param lat_pp_rad: Pierce point latitude in radians
-        @param lon_pp_rad: Pierce point longitude in radians
-        @return F3
+        """Computes the geomagnetic field dependency term
         """
         geo_lat_pp_rad = NTCMG.calculate_geomagnetic_lat_from_geographic(lat_pp_rad, lon_pp_rad)
         F3 = 1 + NTCMG_coefs.k8 * cos(geo_lat_pp_rad)
@@ -167,11 +140,7 @@ class NTCMG:
 
     @staticmethod
     def compute_equatorial_anomaly_dependency_F4(lat_pp_rad: float, lon_pp_rad: float):
-        """
-        Description: Computes the equatorial anomaly dependency term
-        @param lat_pp_rad: Pierce point latitude in radians
-        @param lon_pp_rad: Pierce point longitude in radians
-        @return F4
+        """Computes the equatorial anomaly dependency term
         """
         geo_lat_pp_deg = degrees(NTCMG.calculate_geomagnetic_lat_from_geographic(lat_pp_rad, lon_pp_rad))
         oc1_2 = 144
@@ -184,26 +153,16 @@ class NTCMG:
 
     @staticmethod
     def compute_solar_activity_dependency_F5(azpar: float):
-        """
-        Description: Computes the solar activity dependency term
-        @param azpar: proxy measure of the solar activity level
-        @return F5
+        """Computes the solar activity dependency term
         """
         F5 = NTCMG_coefs.k11 + NTCMG_coefs.k12 * azpar
 
         return F5
 
     @staticmethod
-    def compute_vtec(lat_pp_rad: float, lon_pp_rad: float, utc, azpar: float):
+    def compute_vtec(lat_pp_rad: float, lon_pp_rad: float, ut1, azpar: float):
+        """Computes the VTEC
         """
-        Description: Computes the VTEC
-        @param lat_pp_rad: Pierce point latitude in radians
-        @param lon_pp_rad: Pierce point longitude in radians
-        @param utc: measure timestamp
-        @param azpar: azpar
-        @return VTEC
-        """
-        ut1 = utc.change_scale("UT1").datetime
         doy = ut1.timetuple().tm_yday
 
         universal_time_hour = ut1.hour + ut1.minute / 60 + ut1.second / 3600  # Hour and decimal
@@ -216,39 +175,42 @@ class NTCMG:
 
     @staticmethod
     def vtec_to_stec_mapping(sat_el_rad: float):
-        """
-        Description: Computes the VTEC
-        @param sat_el_rad: Satellite elevation in radians
+        """Computes the VTEC
         """
         sinz = (Re_km / (Re_km + hI_km)) * sin(0.9782 * ((PI / 2) - sat_el_rad))
         return 1 / sqrt(1 - sinz ** 2)
 
     @staticmethod
-    def calculate_ionospheric_contribution(ut1, user_lat, user_lon, el_rad: float, az_rad: float, effec_iono: np.array,
-                                           freq):
+    def compute(ut1, gal_param, user_lat, user_long, sv_el, sv_az, freq):
         """
-        main function
-        Description: Computes the VTEC
-        @param ut1: Timestamp in UT1
-        @param effec_iono: Effective ionisation level coefficients a0 a1 a2
-        @param rec_pos: Receiver position
-        @param el_rad: Satellite elevation
-        @param az_rad: Satellite azimuth
-        @param freq: Measure frequency
-        @return Ionosphere delay
+        Main function of the NTCM-G model. It computes the ionosphere correction using the a priori
+        NTCM-G Model
+        refs:
+            * https://www.gsc-europa.eu/sites/default/files/NTCM-G_Ionospheric_Model_Description_-_v1.0.pdf
+
+        Args:
+            ut1(src.data_types.date.date.Epoch): required epoch in UT1 to compute the iono delay
+            gal_param (list) : Effective Ionisation Level coefficients broadcast in the Galileo navigation message
+            user_lat(float): user latitude in [rad]
+            user_long(float): user longitude in [rad]
+            sv_el(float): satellite elevation in [rad]
+            sv_az(float): satellite azimuth in [rad]
+            freq(src.data_types.gnss.data_type.DataType): Frequency band required for the iono delay
+        Returns:
+            float : ionosphere correction [m]
         """
-        # INPUT OR CALL calculate_azpar to get azpar
-        azpar = NTCMG.calculate_azpar(effec_iono)
+        # Compute Azpar
+        azpar = NTCMG.calculate_azpar(gal_param)
 
         # Calculate ionospheric pierce point location (lat_pp, lon_pp) for user-to-sat link at 450km height
-        lat_pp, lon_pp = NTCMG.calculate_pierce_point_lat_lon(el_rad, az_rad, user_lat, user_lon)
+        lat_pp, lon_pp = NTCMG.calculate_pierce_point_lat_lon(sv_el, sv_az, user_lat, user_long)
 
         # Call NTCM G to calculate VTEC at pierce point loc and local time LT
         vtec = NTCMG.compute_vtec(lat_pp, lon_pp, ut1, azpar)
 
         # Ionospheric mapping function MF
         # VTEC to STEC using the ionospheric mapping function
-        stec = vtec * NTCMG.vtec_to_stec_mapping(el_rad)
+        stec = vtec * NTCMG.vtec_to_stec_mapping(sv_el)
 
         # There is still a need to multiply 40.3/f**2 by the stec to retrieve the correction
         return ((40.3 * 1e16) / (freq.freq_value ** 2)) * stec

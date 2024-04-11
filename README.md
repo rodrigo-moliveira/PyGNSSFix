@@ -20,4 +20,9 @@ The following reference books/references have been used to implement this projec
 
 [2] ESA GNSS DATA PROCESSING, Volume I: Fundamentals and Algorithms, J. Sanz Subirana, J.M. Juan Zornoza and M. Hernández-Pajares
 
+[3] European GNSS (GALILEO) Open Service OS, Signal-In-Space Interface Control Document (ICD). Issue 2.0, January 2021
+
+[4] NAVSTAR GPS Space Segment/Navigation User Interfaces (IS-GPS-200). May 2021
+
+
 These references are used in the documentation of some classes/functions. 

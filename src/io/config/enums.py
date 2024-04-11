@@ -58,7 +58,7 @@ class EnumOnOff(Enum):
         return f"[0 - DISABLED, 1 - ENABLED]"
 
 
-class EnumIono(Enum):
+class EnumIonoModel(Enum):
     DISABLED = 0
     KLOBUCHAR = 1
     NTCMG = 2
@@ -70,11 +70,11 @@ class EnumIono(Enum):
     @classmethod
     def init_model(cls, model_str: str):
         if model_str.lower() == "none":
-            return EnumIono.DISABLED
+            return EnumIonoModel.DISABLED
         elif model_str.lower() == "klobuchar":
-            return EnumIono.KLOBUCHAR
+            return EnumIonoModel.KLOBUCHAR
         elif model_str.lower() == "ntcm-g" or model_str.lower() == "ntcmg":
-            return EnumIono.NTCMG
+            return EnumIonoModel.NTCMG
         else:
             raise EnumError(f"Unsupported Ionospheric Model {model_str}. Available options are {cls.show_options()}")
 

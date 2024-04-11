@@ -3,10 +3,8 @@ import numpy as np
 from src.constants import SPEED_OF_LIGHT
 from src.data_types.gnss.data_type import DataType
 from src.io.config import config_dict
-from src.io.config.enums import EnumOnOff, EnumIono, EnumModel
+from src.io.config.enums import EnumOnOff, EnumModel
 from src.models.frames.frames import cartesian2geodetic
-from src.models.gnss_models.ionosphere.iono_klobuchar import iono_klobuchar
-from src.models.gnss_models.ionosphere.iono_ntcmg import NTCMG
 from src.models.gnss_models.clock_obs import broadcast_clock, nav_sat_clock_correction
 from src.data_types.gnss.observation import Observation
 from src import constants
@@ -49,14 +47,11 @@ class PseudorangeReconstructor:
 
         # ionosphere (a-priori correction)
         if not DataType.is_iono_free_code(datatype) and not DataType.is_iono_free_smooth_code(datatype):
-            if self._metadata["IONO"][sat.sat_system] == EnumIono.KLOBUCHAR:
-                iono = iono_klobuchar(lat, long, el, az, self._nav_header.iono_corrections["GPSA"],
-                                      self._nav_header.iono_corrections["GPSB"], epoch.gnss_time[1],
-                                      datatype.freq)
-            elif self._metadata["IONO"][sat.sat_system] == EnumIono.NTCMG:
-                ut1 = epoch.change_scale("UT1")
-                iono = NTCMG.calculate_ionospheric_contribution(ut1, lat, long, el, az,
-                                                                self._nav_header.iono_corrections["GAL"], datatype.freq)
+            iono = self._metadata["IONO"][sat.sat_system].compute_iono_delay(
+                epoch, self._nav_header.iono_corrections, sat, lat, long, el, az, datatype.freq)
+            print(epoch, sat, iono)
+            exit()
+
         # iono estimated correction dI
         dI = 0.0
         if self._metadata["MODEL"][sat.sat_system] == EnumModel.DUAL_FREQ:

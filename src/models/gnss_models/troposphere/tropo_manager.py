@@ -3,10 +3,12 @@ from src.io.config.enums import EnumTropoModel, EnumTropoMask, EnumOnOff
 from src.models.gnss_models.troposphere.tropo_gpt import GPT3Tropo
 from src.models.gnss_models.troposphere.tropo_saastamoinen import SaastamoinenTropo
 from src.models.gnss_models.troposphere.mapping_function import *
+from src.io.config.config import config_dict as config
+from src.common_log import get_logger, MODEL_LOG
 
 
 class TropoManager:
-    def __init__(self, config):
+    def __init__(self):
         tropo_model_enum = EnumTropoModel.init_model(config.get("model", "troposphere", "model"))
         tropo_mask_enum = EnumTropoMask.init_model(config.get("model", "troposphere", "mask"))
         self._estimate_tropo_wet = EnumOnOff(config.get("model", "troposphere", "estimate_tropo_wet"))

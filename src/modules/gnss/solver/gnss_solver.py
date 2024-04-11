@@ -3,13 +3,13 @@ import numpy as np
 from src.data_mng.gnss.state_space import GnssStateSpace
 from src.modules.gnss.solver.lsq_engine import LSQ_Engine, LSQ_Engine_Vel
 from src.modules.gnss.solver.obs_reconstructor import PseudorangeReconstructor, RangeRateReconstructor
-from src.common_log import get_logger
+from src.common_log import get_logger, GNSS_ALG_LOG
 from src.errors import SolverError, ConfigError
 from src.io.config import config_dict
 from src.io.config.enums import *
 from src.models.gnss_models.geometry import SystemGeometry
 from src import constants
-from src.models.gnss_models.troposphere.tropo_manager import TropoManager
+from src.models.gnss_models import TropoManager, IonoManager
 
 np.set_printoptions(linewidth=np.inf)
 
@@ -94,7 +94,7 @@ class GnssSolver:
         self.nav_data = nav_data
         self.write_trace = config_dict.get("solver", "trace_files")
 
-        self.log = get_logger("GNSS_SOLVER")
+        self.log = get_logger(GNSS_ALG_LOG)
         self.log.info("Starting module GNSS Positioning Solver...")
 
         # user configurations
@@ -118,7 +118,7 @@ class GnssSolver:
         CONSTELLATIONS = config.get("model", "constellations")
         ELEVATION_FILTER = config.get("solver", "elevation_filter")
         VELOCITY_EST = config.get("model", "estimate_velocity")
-        TROPO = TropoManager(config)
+        TROPO = TropoManager()
         _model = config_dict.get("model", "mode")
 
         IONO = {}
@@ -127,7 +127,7 @@ class GnssSolver:
         DOPPLER = {}
 
         for const in CONSTELLATIONS:
-            IONO[const] = EnumIono.init_model(config.get("model", const, "ionosphere"))
+            IONO[const] = IonoManager(const)
 
             # check if the model is single frequency or dual frequency
             code_types = self.obs_data.get_code_types(const)
@@ -143,7 +143,7 @@ class GnssSolver:
                 MODEL[const] = EnumModel.SINGLE_FREQ  # we process as single frequency
                 CODES[const] = [code_types[0]]
                 # TODO: raise exception if code_types[0] is not IonoFree
-                IONO[const] = EnumIono.DISABLED
+                # IONO[const] = EnumIono.DISABLED
             elif len(code_types) == 1:
                 # Single Frequency Model
                 self.log.info(f"Selected model for {const} is Single Frequency with gnss_models {code_types[0]}")

@@ -72,11 +72,11 @@ def cartesian2geodetic(x, y, z):
     a = constants.EARTH_SEMI_MAJOR_AXIS
 
     # computation of longitude
-    long = np.atan2(y, x)
+    long = np.arctan2(y, x)
 
     # initial value of latitude
     p = np.sqrt(x * x + y * y)
-    lat = 0 if p == 0 else np.atan2(z / p, 1 - e2)
+    lat = 0 if p == 0 else np.arctan2(z / p, 1 - e2)
 
     # iterative process to refine latitude
     MAX_ITERS = 10
@@ -88,7 +88,7 @@ def cartesian2geodetic(x, y, z):
 
         N = a / np.sqrt(1 - e2 * np.sin(lat) * np.sin(lat))
         height = p / np.cos(lat) - N
-        lat = 0 if p == 0 else np.atan2(z / p, 1 - N / (N + height) * e2)
+        lat = 0 if p == 0 else np.arctan2(z / p, 1 - N / (N + height) * e2)
 
         i += 1
         if abs(lat - lat_prev) < ABS_TOL:
@@ -222,7 +222,7 @@ def E2v(e, E):
     """
     cos_v = (np.cos(E) - e) / (1 - e * np.cos(E))
     sin_v = (np.sin(E) * np.sqrt(1 - e ** 2)) / (1 - e * np.cos(E))
-    v = np.atan2(sin_v, cos_v) % (constants.PI * 2)
+    v = np.arctan2(sin_v, cos_v) % (constants.PI * 2)
 
     return v
 
@@ -299,8 +299,8 @@ def enu2azel(x_enu, y_enu, z_enu):
     """
     dist = np.sqrt(x_enu * x_enu + y_enu * y_enu + z_enu * z_enu)
 
-    El = np.asin(z_enu / dist)
+    El = np.arcsin(z_enu / dist)
 
-    Az = np.atan2(x_enu, y_enu) % (2 * constants.PI)
+    Az = np.arctan2(x_enu, y_enu) % (2 * constants.PI)
 
     return [Az, El]
