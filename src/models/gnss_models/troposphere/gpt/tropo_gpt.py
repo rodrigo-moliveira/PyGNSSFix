@@ -111,7 +111,6 @@ class GPT3Tropo:
 
         # compute ZWD
         zwd = self.asknewet(e[0][0], Tm[0][0], la[0][0])
-        # print(p[0][0], lat, e[0][0], T[0][0], h_ell);exit()
 
         return zhd, zwd, ah[0][0], aw[0][0]
 

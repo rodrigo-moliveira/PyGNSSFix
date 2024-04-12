@@ -84,21 +84,22 @@ class TropoManager:
             return 0.0, 0.0
 
         # fix height: in the estimation process, the initial state is usually [0, 0, 0] in xyz components
-        # which may lead to lat,long,height=[0,0,-6378137]
-        # and this produces an error in the GPT3 model, due to the bad height
-        height = -height if height < -1000000 else height
+        # which may lead to lat,long,height=[0,0,+/-6378137]
+        # when a big value in height is detected, it is set to 0 (point at Earth surface)
+        height_ = 0 if abs(height) > 100000 else height
 
         # get hydrostatic and wet delays from model
-        zhd, zwd, ah, aw = self._compute_model(lat, long, height, epoch)
+        zhd, zwd, ah, aw = self._compute_model(lat, long, height_, epoch)
 
         if self.estimate_tropo():
             # when tropo estimation is on, the model zwd is ignored, and the one from the state is used instead
             zwd = state_zwd
 
         # compute mapping function coefficients
-        map_hydro, map_wet = self._compute_map(ah, aw, epoch.mjd, lat, long, height, el)
+        map_hydro, map_wet = self._compute_map(ah, aw, epoch.mjd, lat, long, height_, el)
 
         # compute total delay
+        print(epoch, lat, long, height_, zhd * map_hydro + zwd * map_wet, map_wet)
         return zhd * map_hydro + zwd * map_wet, map_wet
 
     def _compute_map(self, ah, aw, mjd, lat, lon, h_ell, el):

@@ -73,7 +73,7 @@
 
       "troposphere": {
          "_comment1": "Select Tropospheric model. Available models are 'NONE', 'Saastamoinen', 'GPT3'",
-         "model": "Saastamoinen",
+         "model": "GPT3",
 
          "_comment2": "Select Tropospheric map function for model GPT3. Available maps are 'Saastamoinen', 'GMF', 'VMF1', 'VMF3'",
          "map": "Saastamoinen",

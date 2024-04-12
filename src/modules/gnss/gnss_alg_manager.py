@@ -148,7 +148,8 @@ class GnssAlgorithmManager:
         self.main_log.info(f"Running estimation algorithm...")
         solver = GnssSolver(data_manager.get_clean_obs_data(), data_manager.get_raw_obs_data(), nav_data)
         solver.solve()
-
+        print("compute GNSS SOLVER SUCCESS")
+        exit()
         data_manager.add_data("nav_solution", solver.solution)
 
         # compute DOPs in ECEF and local (ENU) frame
