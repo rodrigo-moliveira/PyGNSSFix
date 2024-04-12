@@ -20,16 +20,19 @@ class TypeConsistencyFilter(Filter):
     def is_applicable(self, sat, epoch, observation, **kwargs):
         # return False to keep this observable
 
-        # check if this gnss_models is part of the required observations
+        # check if this datatype is part of the required observations
         ret_val = observation.datatype not in self.types[sat.sat_system]
 
         if not ret_val:
 
             # check if all mandatory observations are available for this epoch
             for obs_required in self.mandatory[sat.sat_system]:
-                ret_val = True
+                found = False
                 for obs in kwargs["obs_list"]:
                     if obs.datatype == obs_required:
-                        ret_val = False
+                        found = True
                         break
+                if not found:
+                    ret_val = True  # delete this observable
+                    break
         return ret_val
