@@ -31,6 +31,8 @@ class IonoManager:
             self.iono_model = IonoKlobuchar()
         elif iono_model_enum == EnumIonoModel.NTCMG:
             self.iono_model = NTCMG()
+        elif iono_model_enum == EnumIonoModel.DISABLED:
+            self.iono_model = None
         else:
             raise ConfigError(f'Unknown iono model {iono_model_enum}')
 

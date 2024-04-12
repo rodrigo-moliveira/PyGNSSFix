@@ -100,7 +100,7 @@ class EnumTropoModel(Enum):
         return f"[ NONE, Saastamoinen, GPT3]"
 
 
-class EnumTropoMask(Enum):
+class EnumTropoMap(Enum):
     SAASTAMOINEM = 0
     GMF = 1
     VMF1 = 2
@@ -109,15 +109,15 @@ class EnumTropoMask(Enum):
     @classmethod
     def init_model(cls, model_str: str):
         if model_str.lower() == "saastamoinen":
-            return EnumTropoMask.SAASTAMOINEM
+            return EnumTropoMap.SAASTAMOINEM
         elif model_str.lower() == "gmf":
-            return EnumTropoMask.GMF
+            return EnumTropoMap.GMF
         elif model_str.lower() == "vmf1":
-            return EnumTropoMask.VMF1
+            return EnumTropoMap.VMF1
         elif model_str.lower() == "vmf3":
-            return EnumTropoMask.VMF3
+            return EnumTropoMap.VMF3
         else:
-            raise EnumError(f"Unsupported Tropospheric Mask Function {model_str}. "
+            raise EnumError(f"Unsupported Tropospheric Map Function {model_str}. "
                             f"Available options are {cls.show_options()}")
 
     @classmethod

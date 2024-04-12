@@ -8,7 +8,7 @@ from pathlib import Path
 from inspect import isclass
 
 from src.errors import EopError, ConfigError, FileError
-from src.common_log import get_logger, LOG
+from src.common_log import get_logger, MODEL_LOG
 
 __all__ = ["register", "EopDb", "Eop"]
 
@@ -265,7 +265,7 @@ class EopDb:
         except KeyError as e:
             msg = f"Missing EOP data for mjd = '{e}'"
             if cls.policy() == cls.WARN:
-                log = get_logger(LOG)
+                log = get_logger(MODEL_LOG)
                 log.warn(msg)
             elif cls.policy() == cls.ERROR:
                 raise e
@@ -297,7 +297,7 @@ class EopDb:
         """
         if name in cls._dbs:
             msg = f"'{name}' is already registered for an Eop database. Skipping"
-            log = get_logger(LOG)
+            log = get_logger(MODEL_LOG)
             log.warn(msg)
         else:
             cls._dbs[name] = klass

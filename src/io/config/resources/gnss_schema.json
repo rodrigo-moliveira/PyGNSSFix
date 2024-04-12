@@ -46,10 +46,10 @@
           "type": "object",
           "properties": {
             "model": {"type": "string", "enum": ["NONE", "Saastamoinen", "GPT3"]},
-            "mask": {"type": "string", "enum": ["Saastamoinen", "GMF", "VMF1", "VMF3"]},
+            "map": {"type": "string", "enum": ["Saastamoinen", "GMF", "VMF1", "VMF3"]},
             "estimate_tropo_wet": {"type": "boolean"}
           },
-          "required": ["model", "mask", "estimate_tropo_wet"]
+          "required": ["model", "map", "estimate_tropo_wet"]
         },
 
         "GPS": {

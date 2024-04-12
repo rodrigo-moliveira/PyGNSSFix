@@ -75,8 +75,8 @@
          "_comment1": "Select Tropospheric model. Available models are 'NONE', 'Saastamoinen', 'GPT3'",
          "model": "Saastamoinen",
 
-         "_comment2": "Select Tropospheric mask function for model GPT3. Available masks are 'Saastamoinen', 'GMF', 'VMF1', 'VMF3'",
-         "mask": "VMF3",
+         "_comment2": "Select Tropospheric map function for model GPT3. Available maps are 'Saastamoinen', 'GMF', 'VMF1', 'VMF3'",
+         "map": "Saastamoinen",
 
          "_comment3": "Select `true` to estimate tropospheric wet delay or `false` to disable tropo estimation",
          "estimate_tropo_wet": false

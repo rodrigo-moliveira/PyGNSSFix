@@ -1,4 +1,5 @@
-# Constants for the tropospheric Saastamoinen model
+"""Module with Tropospheric Saastamoinen Model class
+"""
 import numpy as np
 from math import cos
 
@@ -6,6 +7,27 @@ from src import constants
 
 
 class SaastamoinenTropo:
+    """
+    Tropospheric Saastamoinen Model
+
+    More information about it, as well as the description of the equations, can be found in
+
+        * [1] Saastamoinen, J., Atmospheric correction for the troposphere and
+            stratosphere in radio ranging of satellites. The use of artificial
+            satellites for geodesy, Geophys. Monogr. Ser. 15, Amer. Geophys. Union,
+            pp. 274-251, 1972.
+
+        * [2] Davis, J.L, T.A. Herring, I.I. Shapiro, A.E.E. Rogers, and G. Elgered,
+            Geodesy by Radio Interferometry: Effects of Atmospheric Modeling Errors
+            on Estimates of Baseline Length, Radio Science, Vol. 20, No. 6,
+            pp. 1593-1607, 1985.
+
+        * [3] J. Askne and H. Nordius
+            Estimation of tropospheric delay for microwaves from surface weather data
+            Department of Radio and Space Science, Chalmers University of Technology, Sweden
+            September 1986
+    """
+    # constants for Saastamoinen Tropo Model
     LimLat = (15, 30, 45, 60, 75)
 
     #                   P0(mbar),T0(K),e0(mbar),beta(K/m),lambda0
@@ -25,13 +47,7 @@ class SaastamoinenTropo:
     @staticmethod
     def compute(h, lat, doy):
         """
-        This function computes the tropospheric correction of pseudorange measurements for online users,
-        using the a priori Saastamoinen Model
-
-        This code has been adapted from:
-            Open source PANG-NAV software (https://geodesy.noaa.gov/gps-toolbox/PANG-NAV.htm), tropo_correction0.m script,
-            implementing the Saastamoinen Model
-
+        This function computes the tropospheric correction in meters using the a priori Saastamoinen Model
 
         Args:
             h (float) : user altitude (geodetic coordinate)     [m]
@@ -80,24 +96,17 @@ class SaastamoinenTropo:
         """
         This subroutine determines the zenith hydrostatic delay based on the
         equation by Saastamoinen (1972) as refined by Davis et al. (1985)
+        See ref [3] (listed above)
 
-        Reference:
-        Saastamoinen, J., Atmospheric correction for the troposphere and
-        stratosphere in radio ranging of satellites. The use of artificial
-        satellites for geodesy, Geophys. Monogr. Ser. 15, Amer. Geophys. Union,
-        pp. 274-251, 1972.
-        Davis, J.L, T.A. Herring, I.I. Shapiro, A.E.E. Rogers, and G. Elgered,
-        Geodesy by Radio Interferometry: Effects of Atmospheric Modeling Errors
-        on Estimates of Baseline Length, Radio Science, Vol. 20, No. 6,
-        pp. 1593-1607, 1985.
+        Args:
+            p (float): pressure in hPa
+            lat (float): ellipsoidal latitude in radians
+            e (float): water vapour pressure in hPa
+            T (float): temperature in degrees Kelvin
+            hell (float): ellipsoidal height in m
 
-        input parameters:
-        p:     pressure in hPa
-        lat:  ellipsoidal latitude in radians
-        hell:  ellipsoidal height in m
-
-        output parameters:
-        zhd:  zenith hydrostatic delay in meter
+        Return:
+            float: zenith hydrostatic delay (zhd) in meter
         """
         # calculate denominator f
         f = 1 - 0.00266 * cos(2 * lat) - 0.00000028 * hell

@@ -1,19 +1,23 @@
-# Tropospheric Model GPT3 5x5 grid
+"""This module contains the GPT Tropospheric Model"""
 # (c) Department of Geodesy and Geoinformation, Vienna University of Technology, 2017
 # Source: https://vmf.geo.tuwien.ac.at/codes/Python_Tools_Adavi/
 # This troposphere model has been adapted from the reference above
 # Disclaimer: All credits for the original code go to the Department of Geodesy and Geoinformation,
 #              Vienna University of Technology. This code has been adapted for use in this project
-#
-# I made the decision of keeping the code as is, minimizing the amount of fixes and code cleanup
-# As a consequence, this class does not follow the "architecture" of the rest of the project
+# I made the decision of keeping the code as is, minimizing the amount of fixes and code adaptation
+# As a consequence, this module does not follow the architecture (naming conventions, docstrings, etc.)
+# of the rest of the project
+
 
 import numpy as np
 import pandas as pd
 from math import floor
 
 from src.errors import FileError
-from src.models.gnss_models.troposphere.tropo_saastamoinen import SaastamoinenTropo
+from ..tropo_saastamoinen import SaastamoinenTropo
+
+
+__all__ = ["GPT3Tropo"]
 
 
 class GPT3Tropo:
@@ -103,10 +107,11 @@ class GPT3Tropo:
             mjd=mjd, lat=[lat], lon=[lon], h_ell=[h_ell], it=it)
 
         # compute ZHD
-        zhd, _ = SaastamoinenTropo.saasthyd(p[0][0], lat, e, T, h_ell)
+        zhd, _ = SaastamoinenTropo.saasthyd(p[0][0], lat, e[0][0], T[0][0], h_ell)
 
         # compute ZWD
         zwd = self.asknewet(e[0][0], Tm[0][0], la[0][0])
+        # print(p[0][0], lat, e[0][0], T[0][0], h_ell);exit()
 
         return zhd, zwd, ah[0][0], aw[0][0]
 

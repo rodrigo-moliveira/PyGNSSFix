@@ -49,8 +49,6 @@ class PseudorangeReconstructor:
         if not DataType.is_iono_free_code(datatype) and not DataType.is_iono_free_smooth_code(datatype):
             iono = self._metadata["IONO"][sat.sat_system].compute_iono_delay(
                 epoch, self._nav_header.iono_corrections, sat, lat, long, el, az, datatype.freq)
-            print(epoch, sat, iono)
-            exit()
 
         # iono estimated correction dI
         dI = 0.0
@@ -63,7 +61,8 @@ class PseudorangeReconstructor:
                 pass
 
         # troposphere
-        tropo, map_wet = self._metadata["TROPO"].compute_tropo_delay(lat, long, height, el, epoch, self._state)
+        tropo, map_wet = self._metadata["TROPO"].compute_tropo_delay(lat, long, height, el, epoch,
+                                                                     self._state.tropo_wet)
         self._system_geometry.set("tropo_map_wet", map_wet, sat)
 
         # finally, construct obs
