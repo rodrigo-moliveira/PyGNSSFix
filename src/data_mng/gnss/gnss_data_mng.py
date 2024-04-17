@@ -8,7 +8,7 @@ from src.data_mng import Container
 from src.common_log import IO_LOG, get_logger
 from .navigation_data import NavigationData
 from .observation_data import ObservationData
-
+from .sat_clock_data import SatelliteClocks
 
 __all__ = ["GnssDataManager"]
 
@@ -21,14 +21,21 @@ class GnssDataManager(Container):
     Attributes:
         nav_data(NavigationData): navigation data object containing RINEX NAV ephemerides
         obs_data(ObservationData): raw observation data from RINEX OBS
+        sat_clocks(SatelliteClocks): manager of satellite clocks (precise or navigation clocks)
         smooth_obs_data(NavigationData): processed smooth observation data
         iono_free_obs_data(NavigationData): processed iono-free observation data
         nav_solution(list): navigation solution, list of :py:class:`~src.data_mng.gnss.state_space.GnssStateSpace`
             objects
 
     """
-    __slots__ = ["nav_data", "obs_data", "nav_solution",
-                 "smooth_obs_data", "iono_free_obs_data"]
+    __slots__ = [
+        "nav_data",  # Input
+        "obs_data",  # Input
+        "sat_clocks",  # Input
+        "smooth_obs_data",  # Internal data
+        "iono_free_obs_data",  # Internal data
+        "nav_solution"  # Output
+    ]
 
     def __init__(self):
         super().__init__()
@@ -36,6 +43,7 @@ class GnssDataManager(Container):
         self.nav_data = NavigationData()  # Input Navigation Data
         self.obs_data = ObservationData()  # Input Observation Data
         self.smooth_obs_data = ObservationData()  # Smooth Observation Data
+        self.sat_clocks = SatelliteClocks()  # Satellite clocks manager (precise or navigation clocks)
         self.iono_free_obs_data = ObservationData()  # Iono Free Observation Data
         self.nav_solution = None  # Navigation solution
 
@@ -91,24 +99,33 @@ class GnssDataManager(Container):
         # read navigation data
         nav_files = config_dict.get("inputs", "nav_files")
         obs_files = config_dict.get("inputs", "obs_files")
+        clock_files = config_dict.get("inputs", "clk_files")
         services = config_dict.get_services()
         first_epoch = config_dict.get("inputs", "arc", "first_epoch")
         last_epoch = config_dict.get("inputs", "arc", "last_epoch")
         snr_check = config_dict.get("inputs", "snr_control")
-
-        log.info(f'Galileo messages selected by user are {config_dict.get("model", "GAL", "nav_type")}')
-        log.info('Launching RinexNavReader.')
-        for file in nav_files:
-            RinexNavReader(file, self.get_data("nav_data"))
+        use_precise_products = config_dict.get("inputs", "use_precise_products")
+        gal_nav_type = config_dict.get("model", "GAL", "nav_type")
 
         log.info("Launching RinexObsReader")
         for file in obs_files:
             RinexObsReader(self.get_data("obs_data"), file, services, first_epoch, last_epoch, snr_check)
 
-        if config_dict.get("inputs", "trace_files"):
-            self._trace_files(trace_dir)
+        log.info(f"Using precise orbit/clock products: {use_precise_products}")
 
-    def _trace_files(self, trace_dir):
+        if not use_precise_products:
+            log.info(f'Galileo messages selected by user are {gal_nav_type}')
+            log.info('Launching RinexNavReader.')
+            for file in nav_files:
+                RinexNavReader(file, self.get_data("nav_data"), gal_nav_type)
+
+        log.info("Launching SatelliteClocks constructor")
+        self.sat_clocks.init(self.get_data("nav_data"), clock_files, use_precise_products, first_epoch, last_epoch)
+
+        if config_dict.get("inputs", "trace_files"):
+            self._trace_files(trace_dir, use_precise_products)
+
+    def _trace_files(self, trace_dir, use_precise_products):
         import os
         inputs_dir = f"{trace_dir}\\inputs"
         try:
@@ -120,6 +137,9 @@ class GnssDataManager(Container):
             file.write(str(self.get_data("obs_data")))
         with open(f"{inputs_dir}\\RawNavigationData.txt", "w") as file:
             file.write(str(self.get_data("nav_data")))
+        if use_precise_products:
+            with open(f"{inputs_dir}\\PreciseClocks.txt", "w") as file:
+                file.write(str(self.get_data("sat_clocks")))
 
     def save_data(self, directory):
         """Saves the output data (contained in nav_solution) to the provided directory"""

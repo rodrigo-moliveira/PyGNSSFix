@@ -154,10 +154,7 @@ class TimeSeries(OrderedDict):
         return _copy
 
     def has_epoch(self, epoch):
-        if epoch in self.epochs:
-            return True
-        else:
-            return False
+        return epoch in self.epochs
 
     # def get_sub(self, n):
     #    tmOut = []
@@ -185,3 +182,43 @@ class TimeSeries(OrderedDict):
 
     def is_empty(self):
         return len(self.get_all_epochs()) == 0
+
+    def get_epoch_knots(self, epoch):
+        """
+        Get x-values knots (points before and after) surrounding the provided epoch.
+
+        Parameters:
+            epoch (:class:`src.data_types.date.date.Epoch` or float): The epoch for which to find the surrounding knots.
+
+        Returns:
+            tuple: A tuple containing the epochs of the knots (before and after `epoch`).
+                   If `epoch` is outside the range of data, a `TimeSeriesError` exception is raised.
+        """
+        self._sort()
+
+        keys = list(self.keys())
+
+        if len(keys) < 2:
+            raise TimeSeriesError(f"The Timeseries does not have sufficient data points. Provided epochs are: {keys}")
+
+        # Search for the nearest knot surrounding the provided epoch
+        idx = None
+        for i in range(len(keys)):
+            if keys[i] >= epoch:
+                idx = i
+                break
+
+        # If idx is None, the epoch is outside the range of provided data
+        if idx is None:
+            raise TimeSeriesError(f"The provided epoch {epoch} is smaller than the first epoch {keys[0]}")
+
+        # Determine the knots (points before and after x)
+        if idx == 0:
+            # the provided epoch is smaller than or equal to the smallest key in data
+            return keys[0], keys[1]
+        elif idx == len(keys):
+            # the provided epoch is larger than or equal to the largest key in data
+            return keys[-2], keys[-1]
+        else:
+            # the provided epoch is between keys[idx-1] and keys[idx]
+            return keys[idx - 1], keys[idx]

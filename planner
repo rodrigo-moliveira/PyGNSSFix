@@ -2,8 +2,8 @@ tasks for preliminary version:
     [ ] no output, permitir escolher qual a timetag de output (RX Time, GPST, GST, UTC...)
     [ ] add shapiro correction (Eq. 19.14 of handbook)
     [ ] improve computation of weight matrix W, taking inspiration from https://gnss-sdr.org/docs/sp-blocks/pvt/#precise-point-positioning
-    [ ] MAJOR: Ver qual o problema do modelo tropo GPT!!!
-        corrigir relação entre altitude e altura desde o chão
+    [ ] com precise products, passa a ser necessário utilizar DCBs para converter os relógios (tal como para o NEXA)
+        [ ] os dcbs podem até vir o rinex nav
 
     code cleanup:
     [ ] limpar o código / solve all TODOs

@@ -12,8 +12,8 @@
       "_comment1": "Input data files",
       "obs_files": ["datasets/gnss/BRUX/BRUX00BEL_S_20190140615_15M_01S_MO.rnx"],
       "nav_files": ["datasets/gnss/BRUX/BRDC00IGS_R_20190140000_01D_MN.rnx"],
-      "clk_files": [""],
-      "sp3_files": ["datasets/gnss/BRUX/ESA0MGNFIN_20190140000_01D_05M_ORB.SP3"],
+      "clk_files": ["datasets/gnss/BRUX/COD0R03FIN_20190140000_01D_30S_CLK_short.CLK"],
+      "sp3_files": ["datasets/gnss/BRUX/COD0R03FIN_20190140000_01D_05M_ORB.SP3"],
 
       "_comment2": "Select 'true' to use CLK and SP3 products or 'false' to use navigation ephemerides",
       "use_precise_products": true,

@@ -6,7 +6,6 @@ from . import utils
 from src.data_types.date import Epoch, EopDb
 from src.data_types.gnss import get_satellite
 from src.errors import FileError
-from src.io.config import config_dict
 from src.data_mng.gnss.navigation_data import NavigationPointGPS, NavigationPointGAL, NavigationData
 from src import WORKSPACE_PATH
 from src.common_log import IO_LOG, get_logger
@@ -23,15 +22,17 @@ class RinexNavReader:
     Parser of Rinex NAV files
     """
 
-    def __init__(self, file, nav):
+    def __init__(self, file, nav, gal_nav_type):
         """
         Args:
             file(str): path to the input RINEX NAV file
             nav(NavigationData): the `NavigationData` object to store the navigation information extracted from the file
+            gal_nav_type(str): the GAL navigation message (I/NAV of F/NAV), as configured by the user
         """
 
         # instance variables
         self.nav = nav
+        self.gal_nav_type = gal_nav_type
 
         f_handler = open(f"{WORKSPACE_PATH}/{file}", "r")
         self.log = get_logger(IO_LOG)
@@ -302,7 +303,7 @@ class RinexNavReader:
 
                 try:
                     nav_type = navMessage.find_message_type()
-                    if nav_type == config_dict.get("model", "GAL", "nav_type", fallback="FNAV"):
+                    if nav_type == self.gal_nav_type:
                         self.nav.set_data(toc, satellite, navMessage)
                     # else: nav message is skipped
                 except Exception as e:
