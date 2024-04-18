@@ -2,8 +2,6 @@
 The official documentation of these files may be found in https://files.igs.org/pub/data/format/rinex_clock304.txt
 for v3.04
 """
-
-from src.data_mng.gnss.sat_clock_data import SatelliteClocks
 from src import WORKSPACE_PATH
 from src.common_log import IO_LOG, get_logger
 from src.data_types.gnss import get_satellite, get_constellation
@@ -19,21 +17,22 @@ class RinexClockReader:
     Parser of Rinex Clock files
     """
 
-    def __init__(self, file, clocks: SatelliteClocks, first_obs_epoch, last_obs_epoch):
+    def __init__(self, file, clocks, first_epoch=None, last_epoch=None):
         """
         Args:
             file(str): path to the input RINEX Clock file
-            clocks(SatelliteClocks): the `SatelliteClocks` object to store the satellite clocks (precise)
-            first_obs_epoch(str): First observation epoch
-            last_obs_epoch(str): Last observation epoch
+            clocks(src.data_mng.gnss.sat_clock_data.SatelliteClocks): the `SatelliteClocks` object to store the
+                satellite clocks (precise)
+            first_epoch(str or None): First epoch to read
+            last_epoch(str or None): Last epoch to read
         """
 
         # instance variables
         self.clocks = clocks
         self._time_sys = None
         self._prn_list = []
-        self._last_epoch = (None, None)
-        self._active_constellations = config_dict.get("model", "constellations")
+        self._prev_epoch = (None, None)
+        self._active_constellations = config_dict.get("model", "constellations", fallback=["GPS", "GAL"])
 
         f_handler = open(f"{WORKSPACE_PATH}/{file}", "r")
         self.log = get_logger(IO_LOG)
@@ -42,18 +41,13 @@ class RinexClockReader:
         # read header
         self._read_header(f_handler)
 
-        # TODO: self._first_epoch = Epoch()
+        self._first_epoch = Epoch.strptime(first_epoch, scale=str(self._time_sys)) if first_epoch is not None else None
+        self._last_epoch = Epoch.strptime(last_epoch, scale=str(self._time_sys)) if last_epoch is not None else None
 
         # read inputs
         self._read_data(f_handler)
 
         f_handler.close()
-
-        test_epoch = Epoch(2019, 1, 14, 6, 0, 5, scale=str(self._time_sys))
-        test_sat = get_satellite("E01")
-        clock = self.clocks.get_clock(test_sat, test_epoch)
-        print(test_epoch, test_sat, clock)
-        exit()
 
     def _read_header(self, file):
         """
@@ -122,11 +116,19 @@ class RinexClockReader:
                     minute = int(tokens[6])
                     second = int(float(tokens[7]))  # note: milliseconds are ignored
 
-                    if self._last_epoch[0] == [year, month, day, hour, minute, second]:
-                        date = self._last_epoch[1]
+                    if self._prev_epoch[0] == [year, month, day, hour, minute, second]:
+                        date = self._prev_epoch[1]
                     else:
                         date = Epoch(year, month, day, hour, minute, second, scale=str(self._time_sys))
-                        self._last_epoch = ([year, month, day, hour, minute, second], date)
+                        self._prev_epoch = ([year, month, day, hour, minute, second], date)
+
+                    # check if this entry is inside the valid interval or not
+                    if self._first_epoch:
+                        if self._first_epoch > date:
+                            continue
+                    if self._last_epoch:
+                        if self._last_epoch < date:
+                            continue
 
                     clock_bias = utils.to_float(tokens[9])  # clock bias in seconds
 

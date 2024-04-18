@@ -6,7 +6,7 @@ from . import utils
 from src.data_types.date import Epoch, EopDb
 from src.data_types.gnss import get_satellite
 from src.errors import FileError
-from src.data_mng.gnss.navigation_data import NavigationPointGPS, NavigationPointGAL, NavigationData
+from ...data_mng.gnss.navigation_data import NavigationPointGPS, NavigationPointGAL, NavigationData
 from src import WORKSPACE_PATH
 from src.common_log import IO_LOG, get_logger
 

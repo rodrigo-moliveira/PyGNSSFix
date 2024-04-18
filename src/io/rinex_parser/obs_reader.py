@@ -160,8 +160,7 @@ class RinexObsReader:
         the loss-of lock indicator for each gnss_models type, it is common
         practice to only indicate it on the phase observations. Likewise,
         the single-digit signal-strength field is often omitted if the
-        signal strength (in dB-Hz) is explicitly provided as an gnss_models
-        type.
+        signal strength (in dB-Hz) is explicitly provided as a datatype.
 
         Epoch (example):
             > 2019 01 14 06 15  0.0000000  0 38

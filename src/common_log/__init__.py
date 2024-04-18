@@ -23,7 +23,7 @@ PERFORMANCE_LOG = str("PERFORMANCE_LOG")
 
 
 # initialize common application loggers
-def set_logs(file_level, log_path):
+def set_logs(file_level, log_path=""):
     for log in (IO_LOG, PREPROCESSOR_LOG, MAIN_LOG, GNSS_ALG_LOG, INS_ALG_LOG, PERFORMANCE_LOG, MODEL_LOG):
         get_logger(log, file_level, log_path)
 

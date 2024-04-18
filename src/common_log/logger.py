@@ -1,4 +1,5 @@
 import logging
+import sys
 
 """
 from ``logging`` docs:
@@ -45,7 +46,7 @@ def get_logger(log_str, file_level=logging.INFO, file_path=""):
         return setup(log_str, file_level, file_path)
 
 
-def setup(log_str, file_level, file_path):
+def setup(log_str, file_level, file_path=""):
     if log_str in __logs__:
         return __logs__[log_str]
 
@@ -58,19 +59,31 @@ def setup(log_str, file_level, file_path):
     set_log(log_str, new_log)
 
     # Create handlers
-    c_handler = logging.StreamHandler()
-    f_handler = logging.FileHandler(file_path, mode='a')
-    c_handler.setLevel(logging.WARN)  # console log level
-    f_handler.setLevel(file_level)  # file log level
+    f_handler = None
+    stdout_handler = logging.StreamHandler(stream=sys.stdout)
+    stdout_handler.addFilter(lambda rec: rec.levelno <= logging.INFO)
+    stderr_handler = logging.StreamHandler(stream=sys.stderr)
+    stderr_handler.addFilter(lambda rec: rec.levelno > logging.INFO)
+
+    if file_path != "":
+        f_handler = logging.FileHandler(file_path, mode='a')
+        f_handler.setLevel(file_level)  # file log level
+    else:
+        # only console log is available -> change its level
+        stderr_handler.setLevel(file_level)
+        stdout_handler.setLevel(file_level)
 
     # Create formatters and add it to handlers
     c_format = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
     f_format = logging.Formatter('[%(asctime)s] :: [%(name)s --- %(levelname)s] :: %(message)s')
 
-    c_handler.setFormatter(c_format)
-    f_handler.setFormatter(f_format)
+    stderr_handler.setFormatter(c_format)
+    stdout_handler.setFormatter(c_format)
+    if f_handler is not None:
+        f_handler.setFormatter(f_format)
+        new_log.addHandler(f_handler)
 
-    new_log.addHandler(c_handler)
-    new_log.addHandler(f_handler)
+    new_log.addHandler(stderr_handler)
+    new_log.addHandler(stdout_handler)
 
     return new_log

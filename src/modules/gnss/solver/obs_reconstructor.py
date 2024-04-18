@@ -32,6 +32,7 @@ class PseudorangeReconstructor:
             SPEED_OF_LIGHT
 
         # satellite clock
+        # TODO: use the sat_clocks from data manager
         dt_sat, _ = broadcast_clock(nav_message.af0,
                                     nav_message.af1,
                                     nav_message.af2,

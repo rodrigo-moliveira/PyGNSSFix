@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 
-from src.errors import NonExistentObservable
 from src.modules.performance.skyplot import plot_sky
 
 
@@ -16,7 +15,7 @@ def plot_observables(observation_data, satellite, datatype, **kwargs):
             times.append(epoch.to_datetime())
             observables.append(float(value))
 
-        except NonExistentObservable:
+        except:
             continue
 
     # plot

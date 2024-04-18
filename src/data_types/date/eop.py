@@ -365,8 +365,8 @@ class SimpleEopDatabase:
         from src import WORKSPACE_PATH
         from src.io.config import config_dict
 
-        leap_file = config_dict.get("inputs", "leap_file")
-        finals_file = config_dict.get("inputs", "finals_file")
+        leap_file = config_dict.get("inputs", "leap_file", fallback="geo_time_data/tai-utc.dat")
+        finals_file = config_dict.get("inputs", "finals_file", fallback="geo_time_data/finals1980.all")
 
         # Data reading
         f = Finals(WORKSPACE_PATH / f"{finals_file}")

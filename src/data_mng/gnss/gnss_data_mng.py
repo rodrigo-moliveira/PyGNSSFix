@@ -113,11 +113,11 @@ class GnssDataManager(Container):
 
         log.info(f"Using precise orbit/clock products: {use_precise_products}")
 
-        if not use_precise_products:
-            log.info(f'Galileo messages selected by user are {gal_nav_type}')
-            log.info('Launching RinexNavReader.')
-            for file in nav_files:
-                RinexNavReader(file, self.get_data("nav_data"), gal_nav_type)
+        # if not use_precise_products:
+        log.info(f'Galileo messages selected by user are {gal_nav_type}')
+        log.info('Launching RinexNavReader.')
+        for file in nav_files:
+            RinexNavReader(file, self.get_data("nav_data"), gal_nav_type)
 
         log.info("Launching SatelliteClocks constructor")
         self.sat_clocks.init(self.get_data("nav_data"), clock_files, use_precise_products, first_epoch, last_epoch)

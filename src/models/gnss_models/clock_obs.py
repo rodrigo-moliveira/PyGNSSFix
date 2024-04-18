@@ -1,3 +1,6 @@
+"""Module with several utility functions regarding Satellite Clock Biases
+"""
+
 from datetime import timedelta
 from numpy.linalg import norm
 
@@ -7,10 +10,6 @@ from src.io.config import EnumTransmissionTime
 from src.models.frames import dcm_e_i
 from .ephemeride_propagator import EphemeridePropagator, fix_gnss_week_crossovers
 
-
-# TODO: consider creating a DCB, ISB and clock manager..
-
-# utility functions related to navigation clocks
 
 _ggto_cache = {}
 L1 = get_data_type("L1", "GPS")
