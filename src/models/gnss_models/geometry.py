@@ -9,6 +9,8 @@ from .clock_obs import compute_tx_time
 from .ephemeride_propagator import EphemeridePropagator
 
 
+# TODO: move geometry class to data_mng.gnss
+
 class SatelliteGeometry(Container):
     __slots__ = ["transit_time",
                  "time_emission", "time_reception",
