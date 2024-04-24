@@ -4,6 +4,8 @@ tasks for preliminary version:
     [ ] improve computation of weight matrix W, taking inspiration from https://gnss-sdr.org/docs/sp-blocks/pvt/#precise-point-positioning
     [ ] com precise products, passa a ser necessário utilizar DCBs para converter os relógios (tal como para o NEXA)
         [ ] os dcbs podem até vir o rinex nav
+    [ ] para precise clocks e orbits, ter em atenção que é necessário ler 5 pontos antes do início, para ter a certeza (dumb check)
+
 
     code cleanup:
     [ ] limpar o código / solve all TODOs
@@ -12,6 +14,7 @@ tasks for preliminary version:
 
 
     melhorar o modulo de post processing:
+    [ ] criar plot com 3 subplots, um para cada componente. Melhorar depois o script sat_orbits.py
     [ ] aplicar os pontos em ficheiros kml? Um plot de google maps ou assim.
     [ ] see the residual analysis in https://gnss-sdr.org/docs/sp-blocks/pvt/#solution-validation
     [ ]  mover a config do PPT (post processing tool) para um json proprio

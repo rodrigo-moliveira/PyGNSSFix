@@ -5,7 +5,7 @@ from src.data_types.gnss.data_type import DataType
 from src.io.config import config_dict
 from src.io.config.enums import EnumOnOff, EnumModel
 from src.models.frames.frames import cartesian2geodetic
-from src.models.gnss_models.clock_obs import broadcast_clock, nav_sat_clock_correction
+from src.models.gnss_models.navigation import broadcast_clock, nav_sat_clock_correction
 from src.data_types.gnss.observation import Observation
 from src import constants
 

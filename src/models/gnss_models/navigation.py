@@ -1,15 +1,15 @@
-"""Module with several utility functions regarding Satellite Clock Biases
+"""Module with several utility functions for performing navigation
+(satellite clock and orbit ephemerides, and GNSS time)
 """
 
 from datetime import timedelta
-from numpy.linalg import norm
+from numpy import sqrt, cos, sin, linalg, array
 
 from src import constants
 from src.data_types.gnss import get_data_type
 from src.io.config import EnumTransmissionTime
 from src.common_log import get_logger, MODEL_LOG
-from src.models.frames import dcm_e_i
-from .ephemeride_propagator import EphemeridePropagator, fix_gnss_week_crossovers
+from src.models.frames import dcm_e_i, M2E, E2v
 
 
 _ggto_cache = {}  # local cache of GGTO computations
@@ -27,6 +27,34 @@ _warning_cache = {
     "_gal_bgd_fnav_warning": False,
     "_gal_bgd_inav_warning": False
 }
+
+
+def fix_gnss_week_crossovers(time_diff: float) -> float:
+    """
+    Repairs over and underflow of GNSS time, that is, the time difference must account for beginning or end of week
+    crossovers.
+
+    The time difference (time_diff) is the difference between a given GNSS epoch time t and toc:
+        time_diff = t - toc
+    time_diff is used, for example, in the computation of the clock bias, given the navigation clock model
+
+    Reference:
+        [1] NAVSTAR GPS Space Segment/Navigation User Interfaces (IS-GPS-200). May 2021. Section 20.3.3.3.3.1
+
+    Args:
+        time_diff (float) : time difference to be fixed
+    Return:
+        float : fixed time difference
+    """
+    half_week = 302400
+
+    if time_diff > half_week:
+        time_diff = time_diff - 2 * half_week
+
+    elif time_diff < -half_week:
+        time_diff = time_diff + 2 * half_week
+
+    return time_diff
 
 
 def compute_tx_time(model=None, **kwargs):
@@ -94,11 +122,11 @@ def tx_time_geometric(r_receiver=None, t_reception=None, dt_receiver=None, nav_m
     while residual > residual_th and N < max_iter:
         # 2. Get satellite coordinates
         t = t_reception + timedelta(seconds=-tau)
-        r_satellite, _, _ = EphemeridePropagator.compute_nav_sat_eph(nav_message, t.gnss_time)
+        r_satellite, _, _ = compute_nav_sat_eph(nav_message, t.gnss_time)
 
         # 3. Compute pseudorange (in ECEF frame associated to t_receiver epoch)
         _R = dcm_e_i(-tau)
-        rho = norm(_R @ r_satellite - r_receiver)
+        rho = linalg.norm(_R @ r_satellite - r_receiver)
         # LOS = (_R @ r_satellite - r_receiver) / rho
 
         # 4. Compute new tau [s]
@@ -336,3 +364,119 @@ def compute_ggto(time_correction, week, sow):
         # apply this eq. GGTO(t_sow) = a0 + a1 * (t_sow - T + 604800 * (week - Week_ref) )
         _ggto_cache[epoch] = a0 + a1 * (sow - sow_ref + constants.SECONDS_IN_GNSS_WEEK * (week - week_ref))
     return _ggto_cache[epoch]
+
+
+def compute_nav_sat_eph(nav_message, epoch):
+    """
+    Compute the SV position and velocity from the broadcast ephemerides (navigation message).
+    Also compute the associated relativistic time correction
+    Implements the updating of GPS ephemerides (position) and the transformation to ECEF frame
+
+    Reference:
+        [1] NAVSTAR GPS Space Segment/Navigation User Interfaces (IS-GPS-200). May 2021. Section 20.3.3.4.3
+
+    Args:
+        nav_message (src.data_mng.gnss.navigation_data.NavigationPoint): instance of `NavigationPoint` used
+            to compute the satellite positions
+        epoch (src.data_types.date.date.Epoch): epoch to compute the satellite ephemerides (must be the
+            transmission time epoch, that is, reception time minus transit time)
+    Return:
+        tuple[numpy.ndarray,numpy.ndarray,float]: Position vector in [m],
+            velocity vector in [m/s] and relativistic clock correction in [s]
+    """
+    GM = constants.MU_WGS84 if nav_message.constellation == "GPS" else constants.MU_GTRF
+
+    # unpack week and seconds of week
+    _, sow = epoch.gnss_time
+
+    # fetch navigation inputs
+    M0 = getattr(nav_message, "M0")
+    sqrtA = getattr(nav_message, "sqrtA")
+    deltaN = getattr(nav_message, "deltaN")
+    eccentricity = getattr(nav_message, "eccentricity")
+    omega = getattr(nav_message, "omega")
+    RAANDot = getattr(nav_message, "RAANDot")
+    RAAN0 = getattr(nav_message, "RAAN0")
+    cuc = getattr(nav_message, "cuc")
+    cus = getattr(nav_message, "cus")
+    crc = getattr(nav_message, "crc")
+    crs = getattr(nav_message, "crs")
+    i0 = getattr(nav_message, "i0")
+    iDot = getattr(nav_message, "iDot")
+    cic = getattr(nav_message, "cic")
+    cis = getattr(nav_message, "cis")
+    toe = getattr(nav_message, "toe")[1]  # to get seconds of week for TOE
+
+    # semi major axis
+    A = sqrtA * sqrtA
+    A_3 = A * A * A
+
+    # mean motion
+    n = sqrt(GM / A_3)
+
+    # time from ephemeris reference epoch (correct for beginning / end of week crossovers)
+    dt = sow - toe
+    dt = fix_gnss_week_crossovers(dt)
+
+    # corrected mean motion
+    n = n + deltaN
+
+    # mean anomaly at epoch
+    M = M0 + n * dt
+
+    # eccentric anomaly (Kepler equation)
+    E = M2E(eccentricity, M)
+    E_dot = n / (1.0 - eccentricity * cos(E))
+
+    # true anomaly
+    v = E2v(eccentricity, E)
+    v_dot = sin(E) * E_dot * (1.0 + eccentricity * cos(v)) / (sin(v) * (1.0 - eccentricity * cos(E)))
+
+    # argument of latitude
+    u = v + omega
+
+    # corrections
+    u_correction = cuc * cos(2 * u) + cus * sin(2 * u)
+    radius_correction = crc * cos(2 * u) + crs * sin(2 * u)
+    inclination_correction = cic * cos(2 * u) + cis * sin(2 * u)
+
+    # apply corrections
+    u = u + u_correction
+    radius = A * (1 - eccentricity * cos(E)) + radius_correction
+    i = i0 + inclination_correction + iDot * dt
+    u_k_dot = v_dot + 2.0 * (cus * cos(2.0 * u) - cuc * sin(2.0 * u)) * v_dot
+    r_k_dot = A * eccentricity * sin(E) * n / (1.0 - eccentricity * cos(E)) + 2.0 * (crs * cos(2.0 * u) - crc *
+                                                                                     sin(2.0 * u)) * v_dot
+    i_k_dot = iDot + (cis * cos(2.0 * u) - cic * sin(2.0 * u)) * 2.0 * v_dot
+
+    # SV position in orbital plane
+    x_orbital = radius * cos(u)
+    y_orbital = radius * sin(u)
+    x_kp_dot = r_k_dot * cos(u) - y_orbital * u_k_dot
+    y_kp_dot = r_k_dot * sin(u) + x_orbital * u_k_dot
+
+    # corrected longitude of ascending node
+    OMEGA_k_dot = (RAANDot - constants.EARTH_ROTATION)
+    OMEGA_k = RAAN0 + OMEGA_k_dot * dt - constants.EARTH_ROTATION * toe
+
+    # ECEF coordinates
+    x_ECEF = x_orbital * cos(OMEGA_k) - y_orbital * cos(i) * sin(OMEGA_k)
+    y_ECEF = x_orbital * sin(OMEGA_k) + y_orbital * cos(i) * cos(OMEGA_k)
+    z_ECEF = y_orbital * sin(i)
+
+    vx_ECEF = (x_kp_dot - y_orbital * cos(i) * OMEGA_k_dot) * cos(OMEGA_k) - \
+              (x_orbital * OMEGA_k_dot + y_kp_dot * cos(i) - y_orbital * sin(i) * i_k_dot) * sin(OMEGA_k)
+
+    vy_ECEF = (x_kp_dot - y_orbital * cos(i) * OMEGA_k_dot) * sin(OMEGA_k) + \
+              (x_orbital * OMEGA_k_dot + y_kp_dot * cos(i) - y_orbital * sin(i) * i_k_dot) * cos(OMEGA_k)
+
+    vz_ECEF = y_kp_dot * sin(i) + y_orbital * cos(i) * i_k_dot
+
+    # get StateVector object
+    position = array([x_ECEF, y_ECEF, z_ECEF])
+    velocity = array([vx_ECEF, vy_ECEF, vz_ECEF])
+
+    # compute relativistic correction
+    rel_correction = -2 * sqrt(GM) * sqrtA / constants.SPEED_OF_LIGHT ** 2 * eccentricity * sin(E)
+
+    return position, velocity, rel_correction

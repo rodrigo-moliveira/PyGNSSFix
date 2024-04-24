@@ -5,7 +5,7 @@ from src.models.frames import enu2azel, ecef2enu, cartesian2geodetic
 from src.data_mng import Container
 from src.errors import TimeSeriesError
 
-from .clock_obs import compute_tx_time
+from .navigation import compute_tx_time
 from .ephemeride_propagator import EphemeridePropagator
 
 

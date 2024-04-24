@@ -128,7 +128,7 @@ class RinexClockReader:
                             continue
                     if self._last_epoch:
                         if self._last_epoch < date:
-                            continue
+                            break  # here, we can exit
 
                     clock_bias = utils.to_float(tokens[9])  # clock bias in seconds
 

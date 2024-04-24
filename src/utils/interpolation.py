@@ -1,4 +1,4 @@
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, lagrange
 
 
 def linear_interpolation_scipy(x, x_vals, y_vals):
@@ -46,10 +46,10 @@ def linear_interpolation(x, x0, y0, x1, y1):
     return y
 
 
-# see also https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.lagrange.html
-
-"""def lagrange_interpolation(x_values, y_values, degree):
-    
+def lagrange_interpolation(x_values, y_values, degree):
+    """
+    TODO: need to check this function
+        see also https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.lagrange.html
     Perform Lagrange interpolation of specified degree.
 
     Parameters:
@@ -58,11 +58,11 @@ def linear_interpolation(x, x0, y0, x1, y1):
         degree (int): Degree of the Lagrange interpolation polynomial.
 
     Returns:
-        callable: A function representing the Lagrange interpolation polynomial.
-    
+        function: A function representing the Lagrange interpolation polynomial.
+    """
     # Ensure the number of data points matches the degree + 1
     if len(x_values) != degree + 1 or len(y_values) != degree + 1:
-        raise ValueError("Number of data points should be equal to degree + 1")
+        raise ValueError(f"Number of data points (len={len(x_values)}) should be equal to degree + 1 (degree={degree})")
 
     def lagrange_poly(x):
         result = 0.0
@@ -75,22 +75,3 @@ def linear_interpolation(x, x0, y0, x1, y1):
         return result
 
     return lagrange_poly
-
-
-# Example usage:
-x_values = [0.0, 1.0, 2.0]  # List of x-values (data points)
-y_values = [1.0, 3.0, 5.0]  # Corresponding y-values
-degree = len(x_values) - 1  # Degree of the Lagrange polynomial
-
-# Perform Lagrange interpolation of the specified degree
-lagrange_poly = lagrange_interpolation(x_values, y_values, degree)
-
-# Display the Lagrange interpolation polynomial
-print("Lagrange Interpolation Polynomial:")
-print(lagrange_poly)
-
-# Evaluate the Lagrange interpolation polynomial at a specific x-value
-x = 0.5
-interpolated_y = lagrange_poly(x)
-print(f"Interpolated y at x = {x}: {interpolated_y}")"""
-

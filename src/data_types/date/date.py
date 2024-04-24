@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, date
 from src.errors import EpochError, TimeScaleError
 from .eop import EopDb, Eop
 from src.utils.node import Node
-from src.models.gnss_models.clock_obs import compute_ggto
+from src.models.gnss_models.navigation import compute_ggto
 
 __all__ = ["Epoch", "timedelta"]
 

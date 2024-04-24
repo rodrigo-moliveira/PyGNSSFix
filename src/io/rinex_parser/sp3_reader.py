@@ -1,4 +1,4 @@
-"""Parser of RINEX SP3-d files
+"""Parser of RINEX SP3-c and SP3-d files
 The official documentation of these files may be found in http://epncb.eu/ftp/data/format/sp3d.pdf
 (compatible with SP3-d version)
 """
@@ -6,7 +6,7 @@ import numpy as np
 
 from src import WORKSPACE_PATH
 from src.common_log import IO_LOG, get_logger
-from src.data_types.gnss import get_satellite, get_constellation
+from src.data_types.gnss import get_satellite
 from src.data_types.date import Epoch
 from src.errors import FileError
 from src.io.config.config import config_dict
@@ -43,26 +43,22 @@ class SP3OrbitReader:
         # read header
         epoch = self._read_header(f_handler)
 
-        #self._first_epoch = Epoch.strptime(first_epoch, scale=str(self._time_sys)) if first_epoch is not None else None
-        #self._last_epoch = Epoch.strptime(last_epoch, scale=str(self._time_sys)) if last_epoch is not None else None
+        self._first_epoch = Epoch.strptime(first_epoch, scale=str(self._time_sys)) if first_epoch is not None else None
+        self._last_epoch = Epoch.strptime(last_epoch, scale=str(self._time_sys)) if last_epoch is not None else None
 
         # read inputs
-        #self._read_data(f_handler)
+        self._read_data(f_handler, epoch)
 
-        #f_handler.close()
-        exit()
+        f_handler.close()
 
     def _read_header(self, file):
         """
         Method to read header data
-
-        TODO: to update
-        Header lines to look for (others are ignored):
-            * RINEX VERSION / TYPE  -> rinex_version and satellite_system
-            * TIME SYSTEM ID        -> Time system used for time tags
-            * # / TYPES OF DATA     -> List of clock data types (required AS)
-            * PRN LIST              -> List of all satellites reported in this file
-            * END OF HEADER         -> end of header section
+        Values read:
+            * version (check if it is SP3c or SP3d)
+            * number of epochs in the file
+            * time interval between epochs
+            * time system for the reported epochs
         """
         # read first line
         line = file.readline()
@@ -91,6 +87,7 @@ class SP3OrbitReader:
         return self.get_epoch(line)
 
     def get_epoch(self, line_str):
+        """Build the epoch object for the provided SP3 line"""
         tokens = line_str.split()
 
         year = int(tokens[1])
@@ -101,44 +98,42 @@ class SP3OrbitReader:
         second = int(float(tokens[6]))
         return Epoch(year, month, day, hour, minute, second, scale=str(self._time_sys))
 
-    def _read_data(self, file):
+    def _read_data(self, file, first_epoch):
+        """
+        Method to read the orbit data (only position is read, velocities and clocks are ignored)
+        """
         line = " "
+        curr_epoch = first_epoch
 
         while line:
             line = file.readline()
 
+            # End of File detected
+            if "EOF" in line:
+                break
+
+            # New epoch detected
+            if line[0] == '*':
+                curr_epoch = self.get_epoch(line)
+
+            # check if this entry is inside the valid interval or not
+            if self._first_epoch:
+                if self._first_epoch > curr_epoch:
+                    continue
+            if self._last_epoch:
+                if self._last_epoch < curr_epoch:
+                    break  # after the last epoch has been reached, we can stop reading
+
             tokens = line.split()
-            if len(tokens) != 0 and tokens[0] == "AS":
+            if len(tokens) != 0 and tokens[0][0] == "P":
                 try:
-                    # process new satellite clock
-                    sat = get_satellite(tokens[1])
+                    # process new satellite orbit
+                    sat = get_satellite(tokens[0][1:])
 
                     if sat.sat_system not in self._active_constellations:
                         continue
 
-                    year = int(tokens[2])
-                    month = int(tokens[3])
-                    day = int(tokens[4])
-                    hour = int(tokens[5])
-                    minute = int(tokens[6])
-                    second = int(float(tokens[7]))  # note: milliseconds are ignored
-
-                    if self._prev_epoch[0] == [year, month, day, hour, minute, second]:
-                        date = self._prev_epoch[1]
-                    else:
-                        date = Epoch(year, month, day, hour, minute, second, scale=str(self._time_sys))
-                        self._prev_epoch = ([year, month, day, hour, minute, second], date)
-
-                    # check if this entry is inside the valid interval or not
-                    if self._first_epoch:
-                        if self._first_epoch > date:
-                            continue
-                    if self._last_epoch:
-                        if self._last_epoch < date:
-                            continue
-
-                    clock_bias = utils.to_float(tokens[9])  # clock bias in seconds
-
-                    self.clocks.set_data(date, sat, clock_bias)
+                    orbit = [utils.to_float(tokens[i])*1000.0 for i in [1, 2, 3]]  # get x,y,z components, in m (ECEF)
+                    self.orbits.set_data(curr_epoch, sat, np.array(orbit))
                 except Exception as e:
                     self.log.warn(f"Unable to process line: {line} due to error: {e}")

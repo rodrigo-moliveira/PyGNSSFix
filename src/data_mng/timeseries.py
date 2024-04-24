@@ -183,42 +183,43 @@ class TimeSeries(OrderedDict):
     def is_empty(self):
         return len(self.get_all_epochs()) == 0
 
-    def get_epoch_knots(self, epoch):
+    def get_n_items(self, epoch, order):
         """
-        Get x-values knots (points before and after) surrounding the provided epoch.
+        Applies binary search to return the `order` number of epochs before and after the provided `epoch`
+        This method is helpful to get the surrounding knots to perform interpolations
 
         Parameters:
             epoch (:class:`src.data_types.date.date.Epoch` or float): The epoch for which to find the surrounding knots.
+            order(int): order of the search, i.e., number of epochs before and after to be returned
 
         Returns:
-            tuple: A tuple containing the epochs of the knots (before and after `epoch`).
+            tuple: A tuple containing the knot epochs
                    If `epoch` is outside the range of data, a `TimeSeriesError` exception is raised.
         """
         self._sort()
 
         keys = list(self.keys())
 
-        if len(keys) < 2:
-            raise TimeSeriesError(f"The Timeseries does not have sufficient data points. Provided epochs are: {keys}")
+        # Binary search to find the index where `epoch` would be inserted to maintain sorted order
+        low, high = 0, len(keys) - 1
+        while low <= high:
+            mid = (low + high) // 2
+            if keys[mid] < epoch:
+                low = mid + 1
+            else:
+                high = mid - 1
 
-        # Search for the nearest knot surrounding the provided epoch
-        idx = None
-        for i in range(len(keys)):
-            if keys[i] >= epoch:
-                idx = i
-                break
+        # `low` is now the index where `epoch` would be inserted
+        insert_index = low
 
-        # If idx is None, the epoch is outside the range of provided data
-        if idx is None:
-            raise TimeSeriesError(f"The provided epoch {epoch} is smaller than the first epoch {keys[0]}")
+        # Find the start and end indexes for the sublist
+        start_index = max(0, insert_index - order)
+        end_index = min(len(keys), insert_index + order)
 
-        # Determine the knots (points before and after x)
-        if idx == 0:
-            # the provided epoch is smaller than or equal to the smallest key in data
-            return keys[0], keys[1]
-        elif idx == len(keys):
-            # the provided epoch is larger than or equal to the largest key in data
-            return keys[-2], keys[-1]
-        else:
-            # the provided epoch is between keys[idx-1] and keys[idx]
-            return keys[idx - 1], keys[idx]
+        # Check if there are enough items before and after `epoch` to return `order` items each way
+        if end_index - start_index < 2 * order:
+            raise TimeSeriesError(
+                f"Not enough elements in the dataset around the specified epoch {epoch} to return the desired number of"
+                f" epochs before and after (selected order is {order}).")
+
+        return keys[start_index:insert_index] + keys[insert_index:end_index]

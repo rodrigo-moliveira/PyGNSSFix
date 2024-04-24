@@ -4,10 +4,10 @@ import numpy
 from src.data_types.date import Epoch
 from src.data_types.gnss import Satellite
 from src.data_mng import TimeSeries
-from src.models.gnss_models import broadcast_clock
+from src.models.gnss_models import compute_nav_sat_eph
 from src.io.rinex_parser import SP3OrbitReader
 from src.common_log import IO_LOG, get_logger
-from src.utils.interpolation import linear_interpolation_scipy
+from src.utils.interpolation import lagrange_interpolation
 
 __all__ = ["SatelliteOrbits"]
 
@@ -25,8 +25,9 @@ class SatelliteOrbits:
         self._data = OrderedDict()  # contains the SP3 data
         self.nav_data = None  # contains the broadcast navigation data
         self.use_precise_products = False
+        self.interp_order = 0
 
-    def init(self, nav_data, sp3_files, use_precise_products, first_epoch=None, last_epoch=None):
+    def init(self, nav_data, sp3_files, use_precise_products, interp_order=9, first_epoch=None, last_epoch=None):
         """
         Initialize this SatelliteOrbits instance with navigation and precise data.
         The argument `use_precise_products` allows to select which satellite orbits to output.
@@ -38,11 +39,13 @@ class SatelliteOrbits:
                 (must be already initialized)
             sp3_files(list): list of SP3 files from the user configuration
             use_precise_products(bool): True to use precise orbits and False to use broadcast navigation orbits
+            interp_order(int): interpolation order for satellite clocks (default order is 9)
             first_epoch(str): the first epoch to save data from the SP3 files
             last_epoch(str): the last epoch to save data from the SP3 files
         """
         self.nav_data = nav_data
         self.use_precise_products = use_precise_products
+        self.interp_order = interp_order
 
         if use_precise_products:
             log = get_logger(IO_LOG)
@@ -104,9 +107,8 @@ class SatelliteOrbits:
             return val.get_all_epochs()
 
     def get_orbit(self, sat, epoch):
-        # TODO: to be updated for orbits...
         """
-        Compute the satellite clock.
+        Compute the satellite orbits (position in ECEF frame).
         If `use_precise_products` is True then the SP3 Orbit is returned. Otherwise,
         the clock bias is computed from the provided navigation data.
 
@@ -122,16 +124,15 @@ class SatelliteOrbits:
             return self.get_orbit_broadcast(sat, epoch)
 
     def get_orbit_precise(self, sat, epoch):
-        # TODO: to be updated for orbits...
         """
-        Compute the precise satellite clocks from the provided SP3 Orbit data.
-        Applies linear interpolation when needed (when the provided epoch is in-between data points).
+        Compute the precise satellite orbits from the provided SP3 Orbit data.
+        Applies lagrange interpolation when needed (when the provided epoch is in-between data points).
 
         Args:
             sat(src.data_types.gnss.satellite.Satellite)
             epoch(src.data_types.date.date.Epoch)
         Returns:
-            float: the clock bias for the provided satellite and epoch
+            numpy.ndarray: the position for the provided satellite and epoch
 
         Raises an exception if the provided satellite does not have valid data
         """
@@ -142,14 +143,17 @@ class SatelliteOrbits:
             return sat_data.get_data_for_epoch(epoch)
         else:
             # an interpolation is needed
-            knots = sat_data.get_epoch_knots(epoch)
-            return linear_interpolation_scipy(epoch.mjd, [x.mjd for x in knots],
-                                              [sat_data.get_data_for_epoch(x) for x in knots])
+            n_points = (self.interp_order + 1)//2
+            knots = sat_data.get_n_items(epoch, n_points)
+            poly = lagrange_interpolation([x.mjd for x in knots],
+                                          [sat_data.get_data_for_epoch(x) for x in knots],
+                                          self.interp_order)
+
+            return poly(epoch.mjd)
 
     def get_orbit_broadcast(self, sat, epoch):
-        # TODO: to be updated for orbits...
         """
-        Compute the broadcast satellite clocks from the provided RINEX Navigation data.
+        Compute the broadcast satellite orbits from the provided RINEX Navigation data.
 
         Args:
             sat(src.data_types.gnss.satellite.Satellite)
@@ -160,6 +164,5 @@ class SatelliteOrbits:
         Raises an exception if the provided satellite does not have valid data
         """
         nav_message = self.nav_data.get_closest_message(sat, epoch)
-        dt_sat, _ = broadcast_clock(nav_message.af0, nav_message.af1, nav_message.af2,
-                                    nav_message.toc.gnss_time[1], epoch.gnss_time[1])
-        return dt_sat
+        position, _, _ = compute_nav_sat_eph(nav_message, epoch)
+        return position

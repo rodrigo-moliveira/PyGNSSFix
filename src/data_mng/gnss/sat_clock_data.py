@@ -24,8 +24,9 @@ class SatelliteClocks:
         self._data = OrderedDict()  # contains the RINEX Clock data
         self.nav_data = None  # contains the broadcast navigation data
         self.use_precise_products = False
+        self.interp_order = 0
 
-    def init(self, nav_data, clock_files, use_precise_products, first_epoch=None, last_epoch=None):
+    def init(self, nav_data, clock_files, use_precise_products, interp_order=1, first_epoch=None, last_epoch=None):
         """
         Initialize this SatelliteClocks instance with navigation and precise data.
         The argument `use_precise_products` allows to select which satellite clocks to output.
@@ -37,11 +38,13 @@ class SatelliteClocks:
                 (must be already initialized)
             clock_files(list): list of RINEX clock files from the user configuration
             use_precise_products(bool): True to use precise clocks and False to use broadcast navigation clocks
+            interp_order(int): interpolation order for satellite clocks (default order is 1)
             first_epoch(str): the first epoch to store RINEX clocks
             last_epoch(str): the last epoch to store RINEX clocks
         """
         self.nav_data = nav_data
         self.use_precise_products = use_precise_products
+        self.interp_order = interp_order  # default interpolation order for clocks is 1
 
         if use_precise_products:
             log = get_logger(IO_LOG)
@@ -139,7 +142,8 @@ class SatelliteClocks:
             return sat_data.get_data_for_epoch(epoch)
         else:
             # an interpolation is needed
-            knots = sat_data.get_epoch_knots(epoch)
+            n_points = (self.interp_order + 1) // 2
+            knots = sat_data.get_n_items(epoch, n_points)
             return linear_interpolation_scipy(epoch.mjd, [x.mjd for x in knots],
                                               [sat_data.get_data_for_epoch(x) for x in knots])
 
