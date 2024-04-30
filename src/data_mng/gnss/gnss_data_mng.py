@@ -9,6 +9,7 @@ from src.common_log import IO_LOG, get_logger
 from .navigation_data import NavigationData
 from .observation_data import ObservationData
 from .sat_clock_data import SatelliteClocks
+from .sat_orbit_data import SatelliteOrbits
 
 __all__ = ["GnssDataManager"]
 
@@ -22,6 +23,7 @@ class GnssDataManager(Container):
         nav_data(NavigationData): navigation data object containing RINEX NAV ephemerides
         obs_data(ObservationData): raw observation data from RINEX OBS
         sat_clocks(SatelliteClocks): manager of satellite clocks (precise or navigation clocks)
+        sat_orbits(SatelliteOrbits): manager of satellite orbits (precise or navigation orbits)
         smooth_obs_data(NavigationData): processed smooth observation data
         iono_free_obs_data(NavigationData): processed iono-free observation data
         nav_solution(list): navigation solution, list of :py:class:`~src.data_mng.gnss.state_space.GnssStateSpace`
@@ -32,6 +34,7 @@ class GnssDataManager(Container):
         "nav_data",  # Input
         "obs_data",  # Input
         "sat_clocks",  # Input
+        "sat_orbits",  # Input
         "smooth_obs_data",  # Internal data
         "iono_free_obs_data",  # Internal data
         "nav_solution"  # Output
@@ -44,6 +47,7 @@ class GnssDataManager(Container):
         self.obs_data = ObservationData()  # Input Observation Data
         self.smooth_obs_data = ObservationData()  # Smooth Observation Data
         self.sat_clocks = SatelliteClocks()  # Satellite clocks manager (precise or navigation clocks)
+        self.sat_orbits = SatelliteOrbits()  # Satellite orbits manager (precise or navigation orbits)
         self.iono_free_obs_data = ObservationData()  # Iono Free Observation Data
         self.nav_solution = None  # Navigation solution
 
@@ -100,6 +104,7 @@ class GnssDataManager(Container):
         nav_files = config_dict.get("inputs", "nav_files")
         obs_files = config_dict.get("inputs", "obs_files")
         clock_files = config_dict.get("inputs", "clk_files")
+        sp3_files = config_dict.get("inputs", "sp3_files")
         services = config_dict.get_services()
         first_epoch = config_dict.get("inputs", "arc", "first_epoch")
         last_epoch = config_dict.get("inputs", "arc", "last_epoch")
@@ -113,14 +118,20 @@ class GnssDataManager(Container):
 
         log.info(f"Using precise orbit/clock products: {use_precise_products}")
 
-        # if not use_precise_products:
         log.info(f'Galileo messages selected by user are {gal_nav_type}')
         log.info('Launching RinexNavReader.')
         for file in nav_files:
             RinexNavReader(file, self.get_data("nav_data"), gal_nav_type)
 
+        # NOTE: for now, I am reading both nav and clk/sp3. Consider changing this in the future...
+
         log.info("Launching SatelliteClocks constructor")
-        self.sat_clocks.init(self.get_data("nav_data"), clock_files, use_precise_products, first_epoch, last_epoch)
+        self.sat_clocks.init(self.get_data("nav_data"), clock_files, use_precise_products, first_epoch=first_epoch,
+                             last_epoch=last_epoch)
+
+        log.info("Launching SatelliteOrbits constructor")
+        self.sat_orbits.init(self.get_data("nav_data"), sp3_files, use_precise_products, first_epoch=first_epoch,
+                             last_epoch=last_epoch)
 
         if config_dict.get("inputs", "trace_files"):
             self._trace_files(trace_dir, use_precise_products)

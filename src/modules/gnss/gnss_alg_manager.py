@@ -4,7 +4,6 @@ import traceback
 import numpy as np
 
 from src import RUNS_PATH
-from src.data_mng.gnss import GnssDataManager
 from src.io.config import config_dict, EnumPositioningMode
 from src.models.frames import cartesian2geodetic, latlon2dcm_e_enu
 from src.errors import ConfigError
@@ -12,6 +11,7 @@ from src.common_log import MAIN_LOG, get_logger
 
 from .solver.gnss_solver import GnssSolver
 from .preprocessor import PreprocessorManager
+from ...data_mng.gnss.gnss_data_mng import GnssDataManager
 
 
 class GnssAlgorithmManager:
@@ -146,7 +146,7 @@ class GnssAlgorithmManager:
 
         # run estimation algorithm
         self.main_log.info(f"Running estimation algorithm...")
-        solver = GnssSolver(data_manager.get_clean_obs_data(), data_manager.get_raw_obs_data(), nav_data)
+        solver = GnssSolver(data_manager.get_clean_obs_data(), data_manager.get_raw_obs_data(), nav_data, data_manager.sat_orbits, data_manager.sat_clocks)
         solver.solve()
         print("compute GNSS SOLVER SUCCESS")
         exit()

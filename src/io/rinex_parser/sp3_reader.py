@@ -3,6 +3,7 @@ The official documentation of these files may be found in http://epncb.eu/ftp/da
 (compatible with SP3-d version)
 """
 import numpy as np
+import datetime
 
 from src import WORKSPACE_PATH
 from src.common_log import IO_LOG, get_logger
@@ -25,8 +26,11 @@ class SP3OrbitReader:
             file(str): path to the input RINEX Clock file
             orbits(src.data_mng.gnss.sat_orbit_data.SatelliteOrbits): the `SatelliteOrbits` object to store the
                 satellite orbits (precise)
-            first_epoch(str or None): First epoch to read (ignore if None)
-            last_epoch(str or None): Last epoch to read (ignore if None)
+            first_epoch(str or None): first observation epoch
+            last_epoch(str or None): last observation epoch
+
+        Note that for interpolation purposes, this reader starts saving data from 5 epochs before the `first_epoch`
+        until 5 epochs after the `last_epoch` (if possible).
         """
 
         # instance variables
@@ -43,8 +47,10 @@ class SP3OrbitReader:
         # read header
         epoch = self._read_header(f_handler)
 
-        self._first_epoch = Epoch.strptime(first_epoch, scale=str(self._time_sys)) if first_epoch is not None else None
-        self._last_epoch = Epoch.strptime(last_epoch, scale=str(self._time_sys)) if last_epoch is not None else None
+        self._first_epoch = Epoch.strptime(first_epoch, scale=str(self._time_sys)) - datetime.timedelta(
+            seconds=5 * self._interval) if first_epoch is not None else None
+        self._last_epoch = Epoch.strptime(last_epoch, scale=str(self._time_sys)) + datetime.timedelta(
+            seconds=5 * self._interval) if first_epoch is not None else None
 
         # read inputs
         self._read_data(f_handler, epoch)
@@ -133,7 +139,7 @@ class SP3OrbitReader:
                     if sat.sat_system not in self._active_constellations:
                         continue
 
-                    orbit = [utils.to_float(tokens[i])*1000.0 for i in [1, 2, 3]]  # get x,y,z components, in m (ECEF)
+                    orbit = [utils.to_float(tokens[i]) * 1000.0 for i in [1, 2, 3]]  # get x,y,z components, in m (ECEF)
                     self.orbits.set_data(curr_epoch, sat, np.array(orbit))
                 except Exception as e:
                     self.log.warn(f"Unable to process line: {line} due to error: {e}")

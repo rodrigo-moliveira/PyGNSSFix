@@ -20,8 +20,16 @@ def plots(time_vec, data_vec):
     show_all()
 
 
+def plots_1d(time_vec, data_vec):
+    for sat, data in data_vec.items():
+        plot_1D(time_vec, [x for x in data], x_label="Time", y_label="dt error [s]",
+                title=f"Time differences for {str(sat)}")
+
+    show_all()
+
+
 def apply_test_interpolation(log, sat_orbits, sats_to_plot):
-    first_epoch = Epoch.strptime("2019-01-14 10:00:00", scale="GPST")
+    first_epoch = Epoch.strptime("2019-01-14 12:00:00", scale="GPST")
     sat_list = sat_orbits.get_satellites()
     epoch_list = [first_epoch + datetime.timedelta(seconds=60*i) for i in range(100)]
 
@@ -33,21 +41,26 @@ def apply_test_interpolation(log, sat_orbits, sats_to_plot):
     for epoch in epoch_list:
         time_vec.append(epoch)
         for sat in sat_list:
-            precise_orbit = sat_orbits.get_orbit_precise(sat, epoch)
-            nav_orbit = sat_orbits.get_orbit_broadcast(sat, epoch)
-
-            # compare
-            #log.info(f"{epoch}, {sat}, nav_orbit={nav_orbit}[m], precise_orbit={precise_orbit}[m] : "
-            #         f"diff={precise_orbit - nav_orbit}[m]")
+            precise_pos, precise_vel, precise_dt = sat_orbits.get_orbit_precise(sat, epoch)
+            nav_pos, nav_vel, nav_dt = sat_orbits.get_orbit_broadcast(sat, epoch)
 
             if sat in sats_to_plot:
-                data_vec[sat].append(precise_orbit - nav_orbit)
+                log.info(f"[POS] {epoch}, {sat}, nav position={nav_pos}[m], precise position={precise_pos}[m] : "
+                         f"diff={precise_pos - nav_pos}[m]")
+                #log.info(f"[VEL] {epoch}, {sat}, nav velocity={nav_vel}[m/s], precise velocity={precise_vel}[m/s] : "
+                #         f"diff={precise_vel - nav_vel}[m/s]")
+                #log.info(f"[DT] {epoch}, {sat}, nav dt={nav_dt}[s], precise dt={precise_dt}[s] : "
+                #         f"diff={precise_dt - nav_dt}[s]")
+
+                data_vec[sat].append(precise_pos - nav_pos)
 
     plots(time_vec, data_vec)
 
+
 def apply_test(log, sat_orbits, sats_to_plot):
     sat_list = sat_orbits.get_satellites()
-    epoch_list = sat_orbits.get_epochs()
+    epoch_list = list(sat_orbits.get_epochs())
+    epoch_list = epoch_list[5:-5]
 
     time_vec = []
     data_vec = {}
@@ -57,17 +70,20 @@ def apply_test(log, sat_orbits, sats_to_plot):
     for epoch in epoch_list:
         time_vec.append(epoch)
         for sat in sat_list:
-            precise_orbit = sat_orbits.get_orbit_precise(sat, epoch)
-            nav_orbit = sat_orbits.get_orbit_broadcast(sat, epoch)
-
-            # compare
-            #log.info(f"{epoch}, {sat}, nav_orbit={nav_orbit}[m], precise_orbit={precise_orbit}[m] : "
-            #         f"diff={precise_orbit - nav_orbit}[m]")
+            precise_pos, precise_vel, precise_dt = sat_orbits.get_orbit_precise(sat, epoch)
+            nav_pos, nav_vel, nav_dt = sat_orbits.get_orbit_broadcast(sat, epoch)
 
             if sat in sats_to_plot:
-                data_vec[sat].append(precise_orbit - nav_orbit)
+                log.info(f"[POS] {epoch}, {sat}, nav position={nav_pos}[m], precise position={precise_pos}[m] : "
+                         f"diff={precise_pos - nav_pos}[m]")
+                #log.info(f"[VEL] {epoch}, {sat}, nav velocity={nav_vel}[m/s], precise velocity={precise_vel}[m/s] : "
+                #         f"diff={precise_vel - nav_vel}[m/s]")
+                #log.info(f"[DT] {epoch}, {sat}, nav dt={nav_dt}[s], precise dt={precise_dt}[s] : "
+                #         f"diff={precise_dt - nav_dt}[s]")
 
-    plots(time_vec, data_vec)
+                data_vec[sat].append(precise_dt - nav_dt)
+
+    plots_1d(time_vec, data_vec)
 
 
 def main():
@@ -95,8 +111,8 @@ def main():
     RinexNavReader(rnx_nav_file, nav_data, gal_nav_type)
 
     log.info("Launching SatelliteOrbits constructor")
-    sat_orbits.init(nav_data, sp3_file, True, interp_order=9, first_epoch="2019-01-14 02:00:00",
-                    last_epoch="2019-01-14 22:00:00")
+    sat_orbits.init(nav_data, sp3_file, True, interp_order=9, first_epoch="2019-01-14 10:00:00",
+                    last_epoch="2019-01-14 15:00:00")
 
     apply_test_interpolation(log, sat_orbits, sats_to_plot)
 

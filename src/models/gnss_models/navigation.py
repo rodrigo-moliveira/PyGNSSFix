@@ -83,7 +83,7 @@ def compute_tx_time(model=None, **kwargs):
         return tx_time_pseudorange(**kwargs)
 
 
-def tx_time_geometric(r_receiver=None, t_reception=None, dt_receiver=None, nav_message=None, **_):
+def tx_time_geometric(r_receiver=None, t_reception=None, dt_receiver=None, sat=None, sat_orbits=None, **_):
     """
     Purely Geometric Algorithm to compute:
         * transit time (propagation time from signal transmission to reception)
@@ -105,8 +105,6 @@ def tx_time_geometric(r_receiver=None, t_reception=None, dt_receiver=None, nav_m
         t_reception (src.data_types.date.date.Epoch): time of signal reception, measured by receiver
             `t(reception)^{receiver}`, i.e., RINEX obs time tag
         dt_receiver (float): current estimate of the receiver clock bias (seconds)
-        nav_message (src.data_mng.gnss.navigation_data.NavigationPoint): instance of `NavigationPoint` used
-            to compute the satellite positions
     Return:
         tuple [src.data_types.basics.Epoch.Epoch, float] : computed TX epoch, computed transit time
     """
@@ -122,7 +120,7 @@ def tx_time_geometric(r_receiver=None, t_reception=None, dt_receiver=None, nav_m
     while residual > residual_th and N < max_iter:
         # 2. Get satellite coordinates
         t = t_reception + timedelta(seconds=-tau)
-        r_satellite, _, _ = compute_nav_sat_eph(nav_message, t.gnss_time)
+        r_satellite = sat_orbits.get_orbit(sat, t)
 
         # 3. Compute pseudorange (in ECEF frame associated to t_receiver epoch)
         _R = dcm_e_i(-tau)
@@ -142,7 +140,7 @@ def tx_time_geometric(r_receiver=None, t_reception=None, dt_receiver=None, nav_m
     return T_emission, tau
 
 
-def tx_time_pseudorange(pseudorange_obs=None, t_reception=None, nav_message=None, **_):
+def tx_time_pseudorange(pseudorange_obs=None, t_reception=None, nav_message=None, sat=None, sat_clocks=None, **_):
     """
     Pseudorange-Based Algorithm to compute:
         * transit time (propagation time from signal transmission to reception)
@@ -162,16 +160,13 @@ def tx_time_pseudorange(pseudorange_obs=None, t_reception=None, nav_message=None
     Return:
         tuple [src.data_types.basics.Epoch.Epoch, float] : computed TX epoch, computed transit time
     """
-
     tau = pseudorange_obs.value / constants.SPEED_OF_LIGHT
     t_emission = t_reception + timedelta(seconds=-tau)  # t(emission)^{satellite} = t(reception)^{receiver} - tau
-    dt_sat, _ = broadcast_clock(nav_message.af0, nav_message.af1, nav_message.af2,
-                                nav_message.toc.gnss_time[1],  # to get seconds of week
-                                t_emission.gnss_time[1]  # to get seconds of week
-                                )
+
+    dt_sat_ = sat_clocks.get_clock(sat, t_emission)
 
     # correct satellite clock for BGDs
-    dt_sat = nav_sat_clock_correction(dt_sat, pseudorange_obs.datatype, nav_message)
+    dt_sat = nav_sat_clock_correction(dt_sat_, pseudorange_obs.datatype, nav_message)
 
     # compute transmission time, using Eq. (5.6)
     T_emission = t_emission + timedelta(seconds=-dt_sat)  # t(emission)^{GPS} = t(emission)^{satellite} - dt_sat

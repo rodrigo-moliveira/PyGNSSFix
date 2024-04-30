@@ -6,7 +6,6 @@ from src.data_mng import Container
 from src.errors import TimeSeriesError
 
 from .navigation import compute_tx_time
-from .ephemeride_propagator import EphemeridePropagator
 
 
 # TODO: move geometry class to data_mng.gnss
@@ -40,7 +39,7 @@ class SatelliteGeometry(Container):
     def __repr__(self):
         return str(self)
 
-    def compute(self, epoch, state, constellation, nav_message, compute_tx, PR_obs, nav_header):
+    def compute(self, sat, epoch, state, constellation, nav_message, compute_tx, PR_obs, nav_header, sat_orbits, sat_clocks):
         """
         compute satellite-related quantities (tropo, iono, transmission time, etc.) to be used in the PVT gnss_models
         reconstruction equation, for a given satellite.
@@ -67,11 +66,20 @@ class SatelliteGeometry(Container):
                                                  t_reception=epoch,
                                                  dt_receiver=rec_bias,
                                                  nav_message=nav_message,
-                                                 pseudorange_obs=PR_obs)
+                                                 pseudorange_obs=PR_obs,
+                                                 sat_orbits=sat_orbits,
+                                                 sat_clocks=sat_clocks,
+                                                 sat=sat)
 
         # get and satellite position at RX ECEF frame
-        pos_sat, vel_sat, dt_relative = EphemeridePropagator.compute_sat_nav_position_dt_rel(
-            nav_message, time_emission.gnss_time, transit)
+        # TODO: this needs to change...
+        pos_sat, vel_sat, dt_relative = sat_orbits.compute_sat_nav_position_dt_rel_2(
+            nav_message, time_emission, transit)
+        p_sat, v_sat, dt_relative_ = sat_orbits.compute_sat_nav_position_dt_rel(sat, time_emission, transit)
+        print(pos_sat, p_sat, pos_sat-p_sat)
+        print(vel_sat, v_sat, vel_sat - v_sat)
+        print(dt_relative, dt_relative_, dt_relative_-dt_relative)
+        exit()
 
         # compute true range
         true_range = np.linalg.norm(pos_sat - rec_pos)
@@ -100,15 +108,17 @@ class SatelliteGeometry(Container):
 
 
 class SystemGeometry:
-    def __init__(self, nav_data, obs_data):
+    def __init__(self, nav_data, obs_data, sat_clocks, sat_orbits):
         """
         Args:
-            nav_data (src.data_types.containers.NavigationData.NavigationDataMap) : Navigation data map
-            obs_data (src.data_types.containers.ObservationData.EpochData) : gnss_models epoch data for
+            nav_data (...) : Navigation data map
+            obs_data (...) : gnss_models epoch data for
         """
         self._data = dict.fromkeys(obs_data.get_satellites())
         self.nav_data = nav_data
         self.obs_data = obs_data
+        self.sat_clocks = sat_clocks
+        self.sat_orbits = sat_orbits
 
     def _clean(self):
         # reinitialize self._data
@@ -143,8 +153,8 @@ class SystemGeometry:
         reconstruction equation, for all available satellites.
 
         Args:
-            epoch (src.data_types.basics.Epoch.Epoch) : epoch under evaluation
-            state (src.data_types.state_space.statevector.Position) : state vector
+            epoch (...) : epoch under evaluation
+            state (...) : state vector
             metadata (dict) : function to compute the transmission time
         """
         self._clean()
@@ -168,8 +178,9 @@ class SystemGeometry:
                 continue
 
             # compute geometry for this satellite
-            geometry.compute(epoch, state, sat.sat_system, nav_message,
-                             metadata["TX_TIME_ALG"], observable_lst[0], self.nav_data._header)
+            geometry.compute(sat, epoch, state, sat.sat_system, nav_message,
+                             metadata["TX_TIME_ALG"], observable_lst[0], self.nav_data._header,
+                             self.sat_orbits, self.sat_clocks)
 
             self._data[sat] = geometry
 

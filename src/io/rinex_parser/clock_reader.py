@@ -2,6 +2,8 @@
 The official documentation of these files may be found in https://files.igs.org/pub/data/format/rinex_clock304.txt
 for v3.04
 """
+import datetime
+
 from src import WORKSPACE_PATH
 from src.common_log import IO_LOG, get_logger
 from src.data_types.gnss import get_satellite, get_constellation
@@ -23,8 +25,11 @@ class RinexClockReader:
             file(str): path to the input RINEX Clock file
             clocks(src.data_mng.gnss.sat_clock_data.SatelliteClocks): the `SatelliteClocks` object to store the
                 satellite clocks (precise)
-            first_epoch(str or None): First epoch to read
-            last_epoch(str or None): Last epoch to read
+            first_epoch(str or None): first observation epoch
+            last_epoch(str or None): last observation epoch
+
+        Note that for interpolation purposes, this reader starts saving data from 2 minutes before the `first_epoch`
+        until 2 minutes after the `last_epoch` (if possible).
         """
 
         # instance variables
@@ -41,8 +46,10 @@ class RinexClockReader:
         # read header
         self._read_header(f_handler)
 
-        self._first_epoch = Epoch.strptime(first_epoch, scale=str(self._time_sys)) if first_epoch is not None else None
-        self._last_epoch = Epoch.strptime(last_epoch, scale=str(self._time_sys)) if last_epoch is not None else None
+        self._first_epoch = Epoch.strptime(first_epoch, scale=str(self._time_sys)) - datetime.timedelta(minutes=2)\
+            if first_epoch is not None else None
+        self._last_epoch = Epoch.strptime(last_epoch, scale=str(self._time_sys)) + datetime.timedelta(minutes=2)\
+            if last_epoch is not None else None
 
         # read inputs
         self._read_data(f_handler)

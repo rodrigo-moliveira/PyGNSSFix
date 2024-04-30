@@ -82,7 +82,7 @@ class GnssSolver:
 
     """
 
-    def __init__(self, processed_obs_data, raw_obs_data, nav_data):
+    def __init__(self, processed_obs_data, raw_obs_data, nav_data, sat_orbits, sat_clocks):
         """
         Args:
             processed_obs_data : gnss_models data processed (to be used in the positioning)
@@ -92,6 +92,8 @@ class GnssSolver:
         self.obs_data = processed_obs_data
         self.raw_obs_data = raw_obs_data
         self.nav_data = nav_data
+        self.sat_orbits = sat_orbits
+        self.sat_clocks = sat_clocks
         self.write_trace = config_dict.get("solver", "trace_files")
 
         self.log = get_logger(GNSS_ALG_LOG)
@@ -104,8 +106,6 @@ class GnssSolver:
         self.solution = []
 
     def _set_solver_metadata(self, config):
-
-        # TODO : add this to the config object rather than being here
         # Fetching user options
         MAX_ITER = config.get("solver", "n_iterations")  # maximum number of iterations
         STOP_CRITERIA = config.get("solver", "stop_criteria")  # RMS threshold for stop criteria
@@ -242,7 +242,7 @@ class GnssSolver:
         apply_elevation_filter = False if self._metadata["ELEVATION_FILTER"] is False else True
 
         # build system geometry for this epoch
-        system_geometry = SystemGeometry(self.nav_data, obs_data)
+        system_geometry = SystemGeometry(self.nav_data, obs_data, self.sat_clocks, self.sat_orbits)
 
         # check data availability for this epoch
         if not self._check_model_availability(system_geometry, epoch):

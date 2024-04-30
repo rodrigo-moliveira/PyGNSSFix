@@ -16,7 +16,7 @@
       "sp3_files": ["datasets/gnss/BRUX/COD0R03FIN_20190140000_01D_05M_ORB.SP3"],
 
       "_comment2": "Select 'true' to use CLK and SP3 products or 'false' to use navigation ephemerides",
-      "use_precise_products": true,
+      "use_precise_products": false,
 
       "leap_file": "geo_time_data/tai-utc.dat",
       "finals_file": "geo_time_data/finals1980.all",

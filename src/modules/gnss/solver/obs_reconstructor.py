@@ -19,7 +19,8 @@ class PseudorangeReconstructor:
 
     def compute(self, nav_message, sat, epoch, datatype):
         iono = 0.0
-
+        print("compute---")
+        exit()
         az = self._system_geometry.get("az", sat)  # satellite azimuth from receiver
         el = self._system_geometry.get("el", sat)  # satellite elevation from receiver
         [lat, long, height] = cartesian2geodetic(*self._state.position)  # user lat, long and height
