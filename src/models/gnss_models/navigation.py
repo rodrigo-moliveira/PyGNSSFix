@@ -104,6 +104,8 @@ def tx_time_geometric(r_receiver=None, t_reception=None, dt_receiver=None, sat=N
         r_receiver (numpy.ndarray): position of receiver at reception time `t(reception)^{receiver}`
         t_reception (src.data_types.date.date.Epoch): time of signal reception, measured by receiver
             `t(reception)^{receiver}`, i.e., RINEX obs time tag
+        sat(src.data_types.gnss.satellite.Satellite): the satellite to compute the transmission time
+        sat_orbits(src.data_mng.gnss.sat_orbit_data.SatelliteOrbits): `SatelliteOrbits` object with orbit data
         dt_receiver (float): current estimate of the receiver clock bias (seconds)
     Return:
         tuple [src.data_types.basics.Epoch.Epoch, float] : computed TX epoch, computed transit time
@@ -120,7 +122,7 @@ def tx_time_geometric(r_receiver=None, t_reception=None, dt_receiver=None, sat=N
     while residual > residual_th and N < max_iter:
         # 2. Get satellite coordinates
         t = t_reception + timedelta(seconds=-tau)
-        r_satellite = sat_orbits.get_orbit(sat, t)
+        r_satellite, _, _ = sat_orbits.get_orbit(sat, t)
 
         # 3. Compute pseudorange (in ECEF frame associated to t_receiver epoch)
         _R = dcm_e_i(-tau)
@@ -157,6 +159,8 @@ def tx_time_pseudorange(pseudorange_obs=None, t_reception=None, nav_message=None
             `t(reception)^{receiver}`, i.e., RINEX obs time tag
         nav_message (src.data_mng.gnss.navigation_data.NavigationPoint): instance of `NavigationPoint` used
             to compute the satellite positions
+        sat(src.data_types.gnss.satellite.Satellite): the satellite to compute the transmission time
+        sat_clocks(src.data_mng.gnss.sat_clock_data.SatelliteClocks): `SatelliteClocks` object with clock data
     Return:
         tuple [src.data_types.basics.Epoch.Epoch, float] : computed TX epoch, computed transit time
     """

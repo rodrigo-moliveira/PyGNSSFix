@@ -7,7 +7,7 @@ from src.common_log import get_logger, GNSS_ALG_LOG
 from src.errors import SolverError, ConfigError
 from src.io.config import config_dict
 from src.io.config.enums import *
-from src.models.gnss_models.geometry import SystemGeometry
+from src.data_mng.gnss.geometry import SystemGeometry
 from src import constants
 from src.models.gnss_models import TropoManager, IonoManager
 
@@ -199,7 +199,6 @@ class GnssSolver:
                               f"RMS = {state.get_additional_info('rms')} [m]")
 
                 if self._metadata["VELOCITY_EST"]:
-                    raw_obs_data = self.raw_obs_data.get_epoch_data(epoch)
                     self._estimate_velocity(state, epoch)
 
                 # store data for this epoch
@@ -216,12 +215,8 @@ class GnssSolver:
             position = np.array(self._metadata["INITIAL_POS"][0:3], dtype=np.float64)
             velocity = np.array(self._metadata["INITIAL_VEL"][0:3], dtype=np.float64)
             clock = self._metadata["INITIAL_CLOCK_BIAS"][0]
-            state = GnssStateSpace(self._metadata,
-                                   position=position,
-                                   velocity=velocity,
-                                   clock_bias=clock,
-                                   epoch=epoch,
-                                   sat_list=sat_list)
+            state = GnssStateSpace(self._metadata, position=position, velocity=velocity, clock_bias=clock,
+                                   epoch=epoch, sat_list=sat_list)
         else:
             # initialize from previous state
             prev_state = self.solution[-1]
@@ -242,7 +237,7 @@ class GnssSolver:
         apply_elevation_filter = False if self._metadata["ELEVATION_FILTER"] is False else True
 
         # build system geometry for this epoch
-        system_geometry = SystemGeometry(self.nav_data, obs_data, self.sat_clocks, self.sat_orbits)
+        system_geometry = SystemGeometry(obs_data, self.sat_clocks, self.sat_orbits)
 
         # check data availability for this epoch
         if not self._check_model_availability(system_geometry, epoch):
