@@ -100,7 +100,7 @@ class SatelliteOrbits:
         try:
             return self._data[sat]
         except KeyError:
-            raise KeyError(f"Satellite {str(sat)} has no available navigation data")
+            raise KeyError(f"The provided SP3 files do not have data for satellite {str(sat)}")
 
     def get_satellites(self):
         """Returns a list with all available satellites (from SP3 file)"""
@@ -113,16 +113,18 @@ class SatelliteOrbits:
 
     def get_orbit(self, sat, epoch):
         """
-        TODO: update docstrings
-        Compute the satellite orbits (position in ECEF frame).
-        If `use_precise_products` is True then the SP3 Orbit is returned. Otherwise,
-        the clock bias is computed from the provided navigation data.
+        Compute the satellite orbits (position, velocity and clock relativistic correction). These quantities are
+        computed in the ECEF frame.
+
+        If `use_precise_products` is True then these quantities are computed from the SP3 files. Otherwise,
+        they are computed from the provided navigation data.
 
         Args:
             sat(src.data_types.gnss.satellite.Satellite)
             epoch(src.data_types.date.date.Epoch)
         Returns:
-            float: the clock bias for the provided satellite and epoch
+            tuple[numpy.ndarray,numpy.ndarray,float]: tuple with satellite position, velocity and clock relativistic
+                correction for the provided satellite and epoch
         """
         if self.use_precise_products:
             return self.get_orbit_precise(sat, epoch)
@@ -131,7 +133,6 @@ class SatelliteOrbits:
 
     def get_orbit_precise(self, sat, epoch):
         """
-        TODO: update docstrings
         Compute the precise satellite orbits from the provided SP3 Orbit data.
         Applies lagrange interpolation when needed (when the provided epoch is in-between data points).
 
@@ -139,7 +140,8 @@ class SatelliteOrbits:
             sat(src.data_types.gnss.satellite.Satellite)
             epoch(src.data_types.date.date.Epoch)
         Returns:
-            numpy.ndarray: the position for the provided satellite and epoch
+            tuple[numpy.ndarray,numpy.ndarray,float]: tuple with satellite position, velocity and clock relativistic
+                correction for the provided satellite and epoch
 
         Raises an exception if the provided satellite does not have valid data
         """
@@ -171,14 +173,14 @@ class SatelliteOrbits:
 
     def get_orbit_broadcast(self, sat, epoch):
         """
-        TODO: update docstrings
         Compute the broadcast satellite orbits from the provided RINEX Navigation data.
 
         Args:
             sat(src.data_types.gnss.satellite.Satellite)
             epoch(src.data_types.date.date.Epoch)
         Returns:
-            float: the clock bias for the provided satellite and epoch
+            tuple[numpy.ndarray,numpy.ndarray,float]: tuple with satellite position, velocity and clock relativistic
+                correction for the provided satellite and epoch
 
         Raises an exception if the provided satellite does not have valid data
         """
@@ -187,28 +189,30 @@ class SatelliteOrbits:
         # rel_correction2 = -2 * np.dot(position, velocity) / (constants.SPEED_OF_LIGHT ** 2)
         return position, velocity, rel_correction
 
-    def compute_sat_nav_position_dt_rel(self, sat, time_emission, transit):
+    def compute_orbit_at_rx_time(self, sat, time_emission, transit):
         """
-        TODO: update docstrings
         This function computes:
             * the satellite position and velocity
             * the clock relativistic correction
-        at the requested epoch (transmission epoch). It is noted that the position and velocity vectors are rotated
-        to the valid ECEF frame of the RX time, according to the provided transit time duration.
+        at the requested epoch ('time_emission': time of signal emission). It is noted that the position and velocity
+        vectors are rotated to the correct ECEF frame of the reception time, according to the provided transit time.
+        That is, the satellite position dnd velocity are computed for the `time_emission` epoch (with respect to the
+        ECEF frame defined at this epoch), but then these vectors are rotated to the ECEF frame valid for the reception
+        epoch (according to reception_epoch = time_emission + transit).
 
-        The satellite position/velocity vectors are computed at the ECEF frame at emission time, but the ECEF frame
-        rotates a bit from transmission to reception of the signal. This rotation needs to be taken into account
+        This function is called for the reconstruction of the receiver-satellite true range and range rate, since both
+        the receiver and satellite vectors must refer to a common ECEF frame
 
         Args:
-            nav_message (src.data_types.containers.NavigationData.NavigationPointGPS) : navigation data point object
+            sat (src.data_types.gnss.satellite.Satellite)
             time_emission (src.data_types.basics.Epoch.Epoch) : Signal emission time (wrt GPS time system)
             transit (float) : Computed transit time in seconds. Used to rotate the computed satellite ephemeride to the
                             ECEF frame at reception time
 
         Returns:
-            tuple [Position, numpy.ndarray, float] : returns the computed satellite position at the request epoch, as
-                                                    well as the corresponding clock relativistic corrections
-
+            tuple [numpy.ndarray,numpy.ndarray,float] : returns the computed satellite position and velocity vectors
+                at the transmission epoch with respect to the ECEF frame of the reception epoch. The satellite
+                relativistic clock is also returned.
         """
         # satellite coordinates in ECEF frame defined at TX time, relativistic correction for satellite clock
         r_sat, v_sat, rel_correction = self.get_orbit(sat, time_emission)
@@ -224,7 +228,7 @@ class SatelliteOrbits:
         # _R @ v_sat rotates this velocity to the ECEF RX frame
         # np.cross(constants.EARTH_ANGULAR_RATE, _R @ r_sat) is the Earth velocity at TX time,
         # defined in the ECEF RX frame, that allows to convert the satellite velocity as required
-        # See Eq. (21.29) of Handbook
+        # Reference: Eq. (21.29) of Springer Handbook of Global Navigation Satellite Systems, Springer Cham, 2017
         v_sat = _R @ v_sat + np.cross(constants.EARTH_ANGULAR_RATE, p_sat)
 
         return p_sat, v_sat, rel_correction

@@ -11,17 +11,20 @@ class SatelliteGeometry(Container):
     """
     SatelliteGeometry class. This class is a container that stores geometry-related data for the
     reconstruction of GNSS observation equations. It stores the following data (for a single epoch and satellite):
-        * `transit_time`: transmission time (time that signal takes to travel from the satellite to the receiver)
-        * `time_emission`: epoch of signal transmission (time_emission = time_reception - transit_time)
-        * `time_reception`: epoch of signal reception
-        * `true_range`: geometric range
-        * `az`: satellite azimuth as seen from the receiver frame
-        * `el`: satellite elevation as seen from the receiver frame
-        * `satellite_position`: satellite position in ECEF frame
-        * `satellite_velocity`: satellite velocity in ECEF frame
-        * `dt_rel_correction`: relativistic correction of satellite clock
-        * `los`: line of sight vector from receiver to satellite
-        * `tropo_map_wet`: map of tropospheric wet component
+
+    Attributes:
+        transit_time(float): transmission time (time that signal takes to travel from the satellite to the receiver)
+        time_emission(src.data_types.date.Epoch): epoch of signal transmission
+            (time_emission = time_reception - transit_time)
+        time_reception(src.data_types.date.Epoch): epoch of signal reception
+        true_range(float): geometric range
+        az(float): satellite azimuth as seen from the receiver frame
+        el(float): satellite elevation as seen from the receiver frame
+        satellite_position(numpy.ndarray): satellite position in ECEF frame
+        satellite_velocity(numpy.ndarray): satellite velocity in ECEF frame
+        dt_rel_correction(float): relativistic correction of satellite clock
+        los(numpy.ndarray): line of sight vector from receiver to satellite
+        tropo_map_wet(float): map of tropospheric wet component
     """
     __slots__ = ["transit_time", "time_emission", "time_reception", "true_range", "az", "el",
                  "satellite_position", "satellite_velocity", "dt_rel_correction", "los", "tropo_map_wet"]
@@ -64,13 +67,9 @@ class SatelliteGeometry(Container):
             sat_orbits(src.data_mng.gnss.sat_orbit_data.SatelliteOrbits): `SatelliteOrbits` object with orbit data
             sat_clocks(src.data_mng.gnss.sat_clock_data.SatelliteClocks): `SatelliteClocks` object with clock data
         """
-        # TODO: parei aqui..
-        # TODO: nav_messages are no longer required.
-        #   nav_header I need to evaluate, but most likely not, it is included in the sat_clocks.nav
-        #   if it is None or empty, then set to 0 or something like that
-        #   if the sat is missing, in sat_clocks or orbits, an exception must be raised...
         rec_pos = state.position
-        rec_bias = state.get_clock_bias(constellation, nav_header.time_correction)
+        time_correction = sat_clocks.nav_data.header.time_correction if sat_clocks.nav_data is not None else None
+        rec_bias = state.get_clock_bias(constellation, time_correction)
 
         # get reception time in GNSS time system ( T_GNSS = T_receiver - t_(receiver_bias) )
         time_reception = epoch + timedelta(seconds=-rec_bias)
@@ -81,7 +80,7 @@ class SatelliteGeometry(Container):
                                                  sat_clocks=sat_clocks, sat=sat)
 
         # get and satellite position at RX ECEF frame
-        p_sat, v_sat, dt_relative = sat_orbits.compute_sat_nav_position_dt_rel(sat, time_emission, transit)
+        p_sat, v_sat, dt_relative = sat_orbits.compute_orbit_at_rx_time(sat, time_emission, transit)
 
         # compute true range
         true_range = np.linalg.norm(p_sat - rec_pos)
@@ -183,7 +182,7 @@ class SystemGeometry:
                 geometry.compute(sat, epoch, state, sat.sat_system, metadata["TX_TIME_ALG"], observable_lst[0],
                                  self.sat_orbits, self.sat_clocks)
                 self._data[sat] = geometry
-            except:  # TODO: specify which exception
+            except (KeyError, TimeSeriesError):
                 _to_remove.append(sat)
                 continue
 

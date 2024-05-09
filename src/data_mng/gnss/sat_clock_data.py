@@ -94,13 +94,13 @@ class SatelliteClocks:
         try:
             return self._data[sat]
         except KeyError:
-            raise KeyError(f"Satellite {str(sat)} has no available navigation data")
+            raise KeyError(f"The provided RINEX Clock files do not have data for satellite {str(sat)}")
 
     def get_clock(self, sat, epoch):
         """
         Compute the satellite clock.
-        If `use_precise_products` is True then the RINEX Clock is returned. Otherwise,
-        the clock bias is computed from the provided navigation data.
+        If `use_precise_products` is True then the clocks are computed from the RINEX Clock files. Otherwise,
+        they are computed from the provided navigation data.
 
         Args:
             sat(src.data_types.gnss.satellite.Satellite)
