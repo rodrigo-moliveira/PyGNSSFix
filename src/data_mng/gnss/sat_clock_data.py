@@ -103,8 +103,8 @@ class SatelliteClocks:
         they are computed from the provided navigation data.
 
         Args:
-            sat(src.data_types.gnss.satellite.Satellite)
-            epoch(src.data_types.date.date.Epoch)
+            sat(src.data_types.gnss.Satellite)
+            epoch(src.data_types.date.Epoch)
         Returns:
             float: the clock bias for the provided satellite and epoch
         """
@@ -128,8 +128,8 @@ class SatelliteClocks:
         Applies linear interpolation when needed (when the provided epoch is in-between data points).
 
         Args:
-            sat(src.data_types.gnss.satellite.Satellite)
-            epoch(src.data_types.date.date.Epoch)
+            sat(src.data_types.gnss.Satellite)
+            epoch(src.data_types.date.Epoch)
         Returns:
             float: the clock bias for the provided satellite and epoch
 
@@ -152,8 +152,8 @@ class SatelliteClocks:
         Compute the broadcast satellite clocks from the provided RINEX Navigation data.
 
         Args:
-            sat(src.data_types.gnss.satellite.Satellite)
-            epoch(src.data_types.date.date.Epoch)
+            sat(src.data_types.gnss.Satellite)
+            epoch(src.data_types.date.Epoch)
         Returns:
             float: the clock bias for the provided satellite and epoch
 
@@ -163,3 +163,17 @@ class SatelliteClocks:
         dt_sat, _ = broadcast_clock(nav_message.af0, nav_message.af1, nav_message.af2,
                                     nav_message.toc.gnss_time[1], epoch.gnss_time[1])
         return dt_sat
+
+    def get_nav_message(self, sat, epoch):
+        """
+        Fetches the closest navigation message valid for the satellite and epoch.
+
+        Args:
+            sat(src.data_types.gnss.Satellite)
+            epoch(src.data_types.date.Epoch)
+        Returns:
+            src.data_mng.gnss.navigation_data.NavigationPoint: navigation message
+
+        Raises an exception if the provided satellite does not have valid data
+        """
+        return self.nav_data.get_closest_message(sat, epoch)

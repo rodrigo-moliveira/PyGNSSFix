@@ -6,7 +6,7 @@ from src.data_mng.gnss.navigation_data import NavigationData
 from src.data_types.gnss.satellite import get_satellite
 from src.common_log import set_logs, MAIN_LOG, get_logger
 from src.modules.performance.plot_manager import plot_1D, show_all
-from src.data_types.date.date import Epoch
+from src.data_types.date import Epoch
 
 
 def plots(time_vec, data_vec):

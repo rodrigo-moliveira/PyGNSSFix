@@ -8,7 +8,8 @@ from src.modules.estimators.weighted_ls import WeightedLeastSquares
 
 
 class LSQ_Engine:
-    def __init__(self, satellite_list, metadata, epoch, obs_data, reconstructor, nav_data):
+    # TODO: update docstrings
+    def __init__(self, satellite_list, metadata, epoch, obs_data, reconstructor):
         self.y_vec = None  # observation vector
         self.design_mat = None  # design matrix
         self.weight_mat = None  # weight matrix
@@ -22,7 +23,7 @@ class LSQ_Engine:
             self.sat_list[sat.sat_system].append(sat)
 
         self._initialize_matrices()
-        self._build_lsq(epoch, obs_data, reconstructor, nav_data)
+        self._build_lsq(epoch, obs_data, reconstructor)
 
     def _initialize_matrices(self):
 
@@ -67,15 +68,13 @@ class LSQ_Engine:
         self.weight_mat = np.eye(n_observables)
 
     @staticmethod
-    def compute_residual_los(nav_data, sat, epoch, datatype, obs_data, reconstructor):
-        # fetch valid navigation message (closest to the current epoch)
-        nav_message = nav_data.get_closest_message(sat, epoch)
+    def compute_residual_los(sat, epoch, datatype, obs_data, reconstructor):
 
         # get observable and compute predicted observable
         obs = obs_data.get_observable(sat, datatype)
-        predicted_obs = reconstructor.compute(nav_message, sat, epoch, datatype)
+        predicted_obs = reconstructor.compute(sat, epoch, datatype)
 
-        # prefit residuals (measured gnss_models - predicted gnss_models)
+        # prefit residuals (measured - predicted)
         prefit_residuals = obs - predicted_obs
 
         # get LOS vector w.r.t. ECEF frame (column in geometry matrix)
@@ -83,7 +82,7 @@ class LSQ_Engine:
 
         return prefit_residuals.value, line_sight
 
-    def _build_lsq(self, epoch, obs_data, reconstructor, nav_data):
+    def _build_lsq(self, epoch, obs_data, reconstructor):
         """build the LS matrices y_vec, design_mat, weight_mat"""
 
         iono_offset = 0
@@ -97,7 +96,7 @@ class LSQ_Engine:
             for iFreq, datatype in enumerate(self._metadata["CODES"][const]):
 
                 for iSat, sat in enumerate(self.sat_list[const]):
-                    residual, los = self.compute_residual_los(nav_data, sat, epoch, datatype, obs_data, reconstructor)
+                    residual, los = self.compute_residual_los(sat, epoch, datatype, obs_data, reconstructor)
 
                     # filling the LS matrices
                     self.y_vec[obs_offset + iSat] = residual
@@ -128,8 +127,7 @@ class LSQ_Engine:
             dop_matrix = np.linalg.inv(self.design_mat.T @ self.design_mat)
 
         except (AttributeError, np.linalg.LinAlgError) as e:
-
-            # possible error in the numpy.linalg.inv() function -> solution not possible
+            # failed to solve the LS: solution not possible
             raise SolverError(e)
 
         # update state vector with incremental dX
@@ -177,7 +175,6 @@ class LSQ_Engine:
         if estimate_tropo:
             state.tropo_wet += dX[4]
             state.cov_tropo_wet = cov[4, 4]
-            print("tropo", state.tropo_wet)
 
         # unpack covariance matrices
         state.cov_position = np.array(cov[0:3, 0:3])

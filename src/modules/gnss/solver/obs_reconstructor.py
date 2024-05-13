@@ -11,16 +11,14 @@ from src import constants
 
 
 class PseudorangeReconstructor:
-    def __init__(self, system_geometry, metadata, state, nav_header):
+    # TODO: update docstrings
+    def __init__(self, system_geometry, metadata, state):
         self._metadata = metadata
         self._state = state
         self._system_geometry = system_geometry
-        self._nav_header = nav_header
 
-    def compute(self, nav_message, sat, epoch, datatype):
+    def compute(self, sat, epoch, datatype):
         iono = 0.0
-        print("compute---")
-        exit()
         az = self._system_geometry.get("az", sat)  # satellite azimuth from receiver
         el = self._system_geometry.get("el", sat)  # satellite elevation from receiver
         [lat, long, height] = cartesian2geodetic(*self._state.position)  # user lat, long and height
@@ -29,28 +27,27 @@ class PseudorangeReconstructor:
         true_range = self._system_geometry.get("true_range", sat)
 
         # user clock in meters (with proper ISB applied, if necessary)
-        dt_rec = self._state.get_clock_bias(sat.sat_system, self._nav_header.time_correction) * constants. \
-            SPEED_OF_LIGHT
+        sat_clocks = self._system_geometry.sat_clocks
+        time_correction = sat_clocks.nav_data.header.time_correction if sat_clocks.nav_data is not None else None
+        dt_rec = self._state.get_clock_bias(sat.sat_system, time_correction) * constants.SPEED_OF_LIGHT
 
         # satellite clock
-        # TODO: use the sat_clocks from data manager
-        dt_sat, _ = broadcast_clock(nav_message.af0,
-                                    nav_message.af1,
-                                    nav_message.af2,
-                                    nav_message.toc.gnss_time[1],
-                                    self._system_geometry.get("time_emission", sat).gnss_time[1])
+        dt_sat = sat_clocks.get_clock(sat, epoch)
 
         # correct satellite clock for relativistic corrections
         if self._metadata["REL_CORRECTION"] == EnumOnOff.ENABLED:
             dt_sat += self._system_geometry.get("dt_rel_correction", sat)
 
-        # correct satellite clock for BGDs
+        # correct satellite clock for BGDs. NOTE: this needs to change (add a DCB manager)
+        # DCB data can either come from a precise file or from the nav message
+        nav_message = sat_clocks.get_nav_message(sat, epoch)
         dt_sat = nav_sat_clock_correction(dt_sat, datatype, nav_message)
 
         # ionosphere (a-priori correction)
+        iono_corrections = sat_clocks.nav_data.header.iono_corrections if sat_clocks.nav_data is not None else None
         if not DataType.is_iono_free_code(datatype) and not DataType.is_iono_free_smooth_code(datatype):
             iono = self._metadata["IONO"][sat.sat_system].compute_iono_delay(
-                epoch, self._nav_header.iono_corrections, sat, lat, long, el, az, datatype.freq)
+                epoch, iono_corrections, sat, lat, long, el, az, datatype.freq)
 
         # iono estimated correction dI
         dI = 0.0

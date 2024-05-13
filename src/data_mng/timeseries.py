@@ -13,7 +13,7 @@ class TimeSeries(OrderedDict):
     a feature to sort it by keys is introduced. This is suitable for time series, where keys represent time instants
     (epochs).
 
-    The keys can either be :class:`src.data_types.date.date.Epoch` or floats
+    The keys can either be :class:`src.data_types.date.Epoch` or floats
     """
 
     def __init__(self, overwriting=False):
@@ -102,12 +102,6 @@ class TimeSeries(OrderedDict):
         Return:
             list : A list with the common epochs
         """
-        # series1.sort()
-        # series2.sort()
-
-        # print(series1.epochs[0], series1.epochs[-1])
-        # print(series2.epochs[0], series2.epochs[-1])
-
         epochs = []
         for key in series1.epochs:
             if key in series2.epochs:
@@ -189,7 +183,7 @@ class TimeSeries(OrderedDict):
         This method is helpful to get the surrounding knots to perform interpolations
 
         Parameters:
-            epoch (:class:`src.data_types.date.date.Epoch` or float): The epoch for which to find the surrounding knots.
+            epoch (:class:`src.data_types.date.Epoch` or float): The epoch for which to find the surrounding knots.
             order(int): order of the search, i.e., number of epochs before and after to be returned
 
         Returns:

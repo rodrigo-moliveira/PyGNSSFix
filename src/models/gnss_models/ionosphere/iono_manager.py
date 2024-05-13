@@ -40,8 +40,8 @@ class IonoManager:
         """
         Compute iono delay in meters for the corresponding a-priori model selected
         Args:
-            epoch(src.data_types.date.date.Epoch): required epoch to compute the iono delay
-            iono_corrections(dict): dictionary with iono corrections read from RINEX NAV header
+            epoch(src.data_types.date.Epoch): required epoch to compute the iono delay
+            iono_corrections(dict or None): dictionary with iono corrections read from RINEX NAV header
             sat(str): satellite
             user_lat(float): user latitude in [rad]
             user_long(float): user longitude in [rad]

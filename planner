@@ -5,6 +5,8 @@ tasks for preliminary version:
     [ ] com precise products, passa a ser necessário utilizar DCBs para converter os relógios (tal como para o NEXA)
         [ ] os dcbs podem até vir o rinex nav
     [ ] na geometria e obs_reconstructor, passar a usar apenas 1) nav_messages, 2) sat_clocks e sat_orbits -> precisa de alguma simplificação porque o objeto nav_message anda por lá a navegar
+    [ ] criar um check que verifique os ficheiros e configurações obrigatórias para cada modelo (SPS, SPS_IF, PPPP...)
+        por exemplo, por agora o ficheiro nav é sempre obrigatório, mas isso tem de mudar depois..
 
     code cleanup:
     [ ] limpar o código / solve all TODOs

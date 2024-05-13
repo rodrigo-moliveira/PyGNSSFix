@@ -173,7 +173,7 @@ class GnssStateSpace(Container):
 
         Args:
              constellation(str)
-             time_correction(dict): dict with the GGTO data from the NavigationData header
+             time_correction(dict or None): dict with the GGTO data from the NavigationData header
         """
         if "isb" in self.get_additional_info("states"):
             if constellation == self.get_additional_info("clock_master"):

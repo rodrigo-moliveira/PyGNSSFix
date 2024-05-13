@@ -75,7 +75,7 @@ def compute_tx_time(model=None, **kwargs):
             * Geometric algorithm: `r_receiver`, `t_reception`, `dt_receiver`, `nav_message`.
             * Pseudorange-based algorithm: `pseudorange_obs`, `t_reception`, `nav_message`.
     Returns:
-        tuple [src.data_types.date.date.Epoch, float] : computed TX epoch, computed transit time
+        tuple [src.data_types.date.Epoch, float] : computed TX epoch, computed transit time
     """
     if model == EnumTransmissionTime.GEOMETRIC:
         return tx_time_geometric(**kwargs)
@@ -102,13 +102,13 @@ def tx_time_geometric(r_receiver=None, t_reception=None, dt_receiver=None, sat=N
 
     Args:
         r_receiver (numpy.ndarray): position of receiver at reception time `t(reception)^{receiver}`
-        t_reception (src.data_types.date.date.Epoch): time of signal reception, measured by receiver
+        t_reception (src.data_types.date.Epoch): time of signal reception, measured by receiver
             `t(reception)^{receiver}`, i.e., RINEX obs time tag
-        sat(src.data_types.gnss.satellite.Satellite): the satellite to compute the transmission time
+        sat(src.data_types.gnss.Satellite): the satellite to compute the transmission time
         sat_orbits(src.data_mng.gnss.sat_orbit_data.SatelliteOrbits): `SatelliteOrbits` object with orbit data
         dt_receiver (float): current estimate of the receiver clock bias (seconds)
     Return:
-        tuple [src.data_types.basics.Epoch.Epoch, float] : computed TX epoch, computed transit time
+        tuple [src.data_types.date.Epoch, float] : computed TX epoch, computed transit time
     """
     max_iter = 5
     residual_th = 1E-8
@@ -155,14 +155,14 @@ def tx_time_pseudorange(pseudorange_obs=None, t_reception=None, nav_message=None
     Args:
         pseudorange_obs (src.data_types.gnss.observation.Observation): instance of `Observation` with the
             pseudorange measured observable
-        t_reception (src.data_types.date.date.Epoch): time of signal reception, measured by receiver
+        t_reception (src.data_types.date.Epoch): time of signal reception, measured by receiver
             `t(reception)^{receiver}`, i.e., RINEX obs time tag
         nav_message (src.data_mng.gnss.navigation_data.NavigationPoint): instance of `NavigationPoint` used
             to compute the satellite positions
-        sat(src.data_types.gnss.satellite.Satellite): the satellite to compute the transmission time
+        sat(src.data_types.gnss.Satellite): the satellite to compute the transmission time
         sat_clocks(src.data_mng.gnss.sat_clock_data.SatelliteClocks): `SatelliteClocks` object with clock data
     Return:
-        tuple [src.data_types.basics.Epoch.Epoch, float] : computed TX epoch, computed transit time
+        tuple [src.data_types.date.Epoch, float] : computed TX epoch, computed transit time
     """
     tau = pseudorange_obs.value / constants.SPEED_OF_LIGHT
     t_emission = t_reception + timedelta(seconds=-tau)  # t(emission)^{satellite} = t(reception)^{receiver} - tau
@@ -337,14 +337,14 @@ def compute_ggto(time_correction, week, sow):
     where (week, t_sow) is the current time in week number and seconds of week
 
     Args:
-        time_correction(dict): dictionary with the `GGTO` item.
+        time_correction(dict or None): dictionary with the `GGTO` item.
             See :py:class:`src.data_mng.gnss.navigation_data.NavigationData`
         week(int): the week number of the user epoch to compute the GGTO
         sow(float): the SoW (seconds of week) of the user epoch to compute the GGTO
     """
     epoch = (week, sow)
 
-    if "GGTO" not in time_correction:
+    if time_correction is None or "GGTO" not in time_correction:
         if not _warning_cache["_ggto_warning"]:
             log = get_logger(MODEL_LOG)
             log.warning(f"The provided `time_correction` argument does not contain the GGTO correction. Please check "
@@ -377,7 +377,7 @@ def compute_nav_sat_eph(nav_message, epoch):
     Args:
         nav_message (src.data_mng.gnss.navigation_data.NavigationPoint): instance of `NavigationPoint` used
             to compute the satellite positions
-        epoch (src.data_types.date.date.Epoch): epoch to compute the satellite ephemerides (must be the
+        epoch (src.data_types.date.Epoch): epoch to compute the satellite ephemerides (must be the
             transmission time epoch, that is, reception time minus transit time)
     Return:
         tuple[numpy.ndarray,numpy.ndarray,float]: Position vector in [m],

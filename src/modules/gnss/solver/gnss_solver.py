@@ -182,7 +182,7 @@ class GnssSolver:
 
         # iterate over all available epochs
         for epoch in epochs:
-            print(f"processing epoch {epoch}...")
+            self.log.info(f"processing epoch {epoch}...")
             # fetch gnss_models data for this epoch
             obs_for_epoch = self.obs_data.get_epoch_data(epoch)
             sats_for_epoch = obs_for_epoch.get_satellites()
@@ -306,13 +306,10 @@ class GnssSolver:
     def _compute(self, system_geometry, obs_data, state, epoch):
         satellite_list = system_geometry.get_satellites()
 
-        reconstructor = PseudorangeReconstructor(system_geometry,
-                                                 self._metadata,
-                                                 state,
-                                                 self.nav_data.header)
+        reconstructor = PseudorangeReconstructor(system_geometry, self._metadata, state)
 
         # build LSQ Engine matrices for all satellites
-        lsq_engine = LSQ_Engine(satellite_list, self._metadata, epoch, obs_data, reconstructor, self.nav_data)
+        lsq_engine = LSQ_Engine(satellite_list, self._metadata, epoch, obs_data, reconstructor)
 
         # solve LS problem
         return lsq_engine.solve_ls(state)

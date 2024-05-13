@@ -63,7 +63,7 @@
    "model": {
       "constellations": ["GPS", "GAL"],
       "mode": "SPS",
-      "_comment": "available modes are SPS, SPS",
+      "_comment": "available modes are SPS, SPS_IF",
 
       "estimate_velocity": true,
       "_comment1": "Use Doppler measurements to estimate velocity",

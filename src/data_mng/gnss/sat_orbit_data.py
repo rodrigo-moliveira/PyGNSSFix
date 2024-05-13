@@ -15,8 +15,6 @@ from src.utils.interpolation import lagrange_interpolation, lagrange_interpolati
 __all__ = ["SatelliteOrbits"]
 
 
-# TODO: add velocity and relativistic correction...
-
 class SatelliteOrbits:
     """
     Satellite Orbits DataFrame class
@@ -120,8 +118,8 @@ class SatelliteOrbits:
         they are computed from the provided navigation data.
 
         Args:
-            sat(src.data_types.gnss.satellite.Satellite)
-            epoch(src.data_types.date.date.Epoch)
+            sat(src.data_types.gnss.Satellite)
+            epoch(src.data_types.date.Epoch)
         Returns:
             tuple[numpy.ndarray,numpy.ndarray,float]: tuple with satellite position, velocity and clock relativistic
                 correction for the provided satellite and epoch
@@ -137,8 +135,8 @@ class SatelliteOrbits:
         Applies lagrange interpolation when needed (when the provided epoch is in-between data points).
 
         Args:
-            sat(src.data_types.gnss.satellite.Satellite)
-            epoch(src.data_types.date.date.Epoch)
+            sat(src.data_types.gnss.Satellite)
+            epoch(src.data_types.date.Epoch)
         Returns:
             tuple[numpy.ndarray,numpy.ndarray,float]: tuple with satellite position, velocity and clock relativistic
                 correction for the provided satellite and epoch
@@ -176,8 +174,8 @@ class SatelliteOrbits:
         Compute the broadcast satellite orbits from the provided RINEX Navigation data.
 
         Args:
-            sat(src.data_types.gnss.satellite.Satellite)
-            epoch(src.data_types.date.date.Epoch)
+            sat(src.data_types.gnss.Satellite)
+            epoch(src.data_types.date.Epoch)
         Returns:
             tuple[numpy.ndarray,numpy.ndarray,float]: tuple with satellite position, velocity and clock relativistic
                 correction for the provided satellite and epoch
@@ -204,8 +202,8 @@ class SatelliteOrbits:
         the receiver and satellite vectors must refer to a common ECEF frame
 
         Args:
-            sat (src.data_types.gnss.satellite.Satellite)
-            time_emission (src.data_types.basics.Epoch.Epoch) : Signal emission time (wrt GPS time system)
+            sat (src.data_types.gnss.Satellite)
+            time_emission (src.data_types.date.Epoch) : Signal emission time (wrt GPS time system)
             transit (float) : Computed transit time in seconds. Used to rotate the computed satellite ephemeride to the
                             ECEF frame at reception time
 

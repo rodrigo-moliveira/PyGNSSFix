@@ -74,7 +74,7 @@ class TropoManager:
             long(float): user longitude in [rad]
             height(float): user height in [m]
             el(float): satellite elevation from user position in [rad]
-            epoch(src.data_types.date.date.Epoch): epoch to compute the tropo delay
+            epoch(src.data_types.date.Epoch): epoch to compute the tropo delay
             state_zwd(float or None): state estimated zenith wet delay (wzd) or None
 
         Returns:
@@ -99,7 +99,6 @@ class TropoManager:
         map_hydro, map_wet = self._compute_map(ah, aw, epoch.mjd, lat, long, height_, el)
 
         # compute total delay
-        print(epoch, lat, long, height_, zhd * map_hydro + zwd * map_wet, map_wet)
         return zhd * map_hydro + zwd * map_wet, map_wet
 
     def _compute_map(self, ah, aw, mjd, lat, lon, h_ell, el):

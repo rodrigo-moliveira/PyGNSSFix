@@ -189,7 +189,7 @@ class NTCMG:
             * https://www.gsc-europa.eu/sites/default/files/NTCM-G_Ionospheric_Model_Description_-_v1.0.pdf
 
         Args:
-            ut1(src.data_types.date.date.Epoch): required epoch in UT1 to compute the iono delay
+            ut1(src.data_types.date.Epoch): required epoch in UT1 to compute the iono delay
             gal_param (list) : Effective Ionisation Level coefficients broadcast in the Galileo navigation message
             user_lat(float): user latitude in [rad]
             user_long(float): user longitude in [rad]

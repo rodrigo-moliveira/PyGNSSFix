@@ -5,6 +5,7 @@ from src.models.frames import enu2azel, ecef2enu, cartesian2geodetic
 from src.data_mng import Container
 from src.errors import TimeSeriesError
 from src.models.gnss_models.navigation import compute_tx_time
+from src.common_log import MODEL_LOG, get_logger
 
 
 class SatelliteGeometry(Container):
@@ -58,8 +59,8 @@ class SatelliteGeometry(Container):
         reconstruction equation, for a given satellite.
 
         Args:
-            sat(src.data_types.gnss.satellite.Satellite): the satellite to compute the geometry data
-            epoch (src.data_types.basics.Epoch.Epoch) : epoch under evaluation
+            sat(src.data_types.gnss.Satellite): the satellite to compute the geometry data
+            epoch (src.data_types.date.Epoch) : epoch under evaluation
             state (State) : state
             constellation (Constellation) : constellation
             compute_tx (function) : function to compute the transmission time
@@ -160,7 +161,7 @@ class SystemGeometry:
         Observation reconstruction models
 
         Args:
-            epoch (src.data_types.date.date.Epoch) : observation epoch for the computations
+            epoch (src.data_types.date.Epoch) : observation epoch for the computations
             state (src.data_mng.gnss.state_space.GnssStateSpace) : current GNSS state vector
             metadata (dict) : dictionary with metadata information for the models
         """
@@ -174,6 +175,9 @@ class SystemGeometry:
             # fetch pseudorange observables for this satellite at epoch
             observable_lst = self.obs_data.get_code_observables(sat)
             if len(observable_lst) == 0:
+                log = get_logger(MODEL_LOG)
+                log.warning(f"Failed to compute geometry for sat {sat} at epoch {epoch} due to:"
+                            f" no valid observations for this sat and epoch")
                 _to_remove.append(sat)
                 continue
 
@@ -182,7 +186,10 @@ class SystemGeometry:
                 geometry.compute(sat, epoch, state, sat.sat_system, metadata["TX_TIME_ALG"], observable_lst[0],
                                  self.sat_orbits, self.sat_clocks)
                 self._data[sat] = geometry
-            except (KeyError, TimeSeriesError):
+            except (KeyError, TimeSeriesError) as e:
+                log = get_logger(MODEL_LOG)
+                log.warning(f"Failed to compute geometry for sat {sat} at epoch {epoch} due to:"
+                            f" {e}")
                 _to_remove.append(sat)
                 continue
 
