@@ -305,6 +305,7 @@ class GnssSolver:
 
     def _compute(self, system_geometry, obs_data, state, epoch):
         satellite_list = system_geometry.get_satellites()
+        state.update_sat_list(satellite_list)
 
         reconstructor = PseudorangeReconstructor(system_geometry, self._metadata, state)
 

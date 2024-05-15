@@ -15,7 +15,7 @@ def geodetic2cartesian(lat, long, height):
         long(float): longitude in [rad]
         height(float): height in [m]
     Return:
-        list : [x, y, z] [m]
+        list[float, float, float] : [x, y, z] components in [m]
     """
 
     a = constants.EARTH_SEMI_MAJOR_AXIS
@@ -42,6 +42,8 @@ def latlon2dcm_e_ned(lat, lon):
     Args:
         lat(float): latitude, rad
         lon(float): longitude, rad
+    Returns:
+        numpy.ndarray : rotation matrix from ECEF to NED frame (3x3)
     """
     return rot2(-np.pi / 2.0 - lat) @ rot3(lon)
 
@@ -52,6 +54,8 @@ def latlon2dcm_e_enu(lat, lon):
     Args:
         lat(float): latitude, rad
         lon(float): longitude, rad
+    Returns:
+        numpy.ndarray : rotation matrix from ECEF to ENU frame (3x3)
     """
     # get rotation matrix from ECEF to ENU
     return rot1((constants.PI / 2 - lat)) @ rot3((constants.PI / 2 + lon))
@@ -65,8 +69,8 @@ def cartesian2geodetic(x, y, z):
         x(float): x component [m]
         y(float): y component [m]
         z(float): z component [m]
-    Return:
-        list : [lat, long, height] in [rad,rad,m]
+    Returns:
+        list[float, float, float] : [lat, long, height] in [rad,rad,m]
     """
     e2 = constants.EARTH_ECCENTRICITY_SQ
     a = constants.EARTH_SEMI_MAJOR_AXIS
@@ -107,7 +111,7 @@ def ecef2ned(arr_rover_ecef, arr_obs_ecef, origin_llh):
         arr_rover_ecef (numpy.ndarray) : position/velocity of rover in ecef
         arr_obs_ecef (numpy.ndarray) : reference or observer position/velocity
         origin_llh (numpy.ndarray) : lat long height coordinates of the local topocentric frame origin
-    Return:
+    Returns:
         numpy.ndarray : [x_enu, y_enu, z_enu]  [m] or [m/s]
     """
     lat = origin_llh[0]
@@ -241,7 +245,7 @@ def enu2ecef(x_enu, y_enu, z_enu, lat, long, h):
         long(float): longitude of ground observer [rad]
         h(float): height of ground observer [m]
     Return:
-        list : [x_ecef, y_ecef, z_ecef]  [m]
+        list[float, float, float] : [x_ecef, y_ecef, z_ecef] in [m]
     """
     # get rotation matrix from ENU to ECEF
     R = rot3(-(constants.PI / 2 + long)) @ rot1(-(constants.PI / 2 - lat))
@@ -269,7 +273,7 @@ def ecef2enu(x_ecef, y_ecef, z_ecef, lat, long, h):
         long (float) : longitude of ground observer [rad]
         h (float) : height of ground observer [m]
     Return:
-        list : [x_enu, y_enu, z_enu]  [m]
+        list[float, float, float] : [x_enu, y_enu, z_enu] in [m]
     """
     # get rotation matrix from ECEF to ENU
     R = rot1((constants.PI / 2 - lat)) @ rot3((constants.PI / 2 + long))
@@ -295,7 +299,7 @@ def enu2azel(x_enu, y_enu, z_enu):
         y_enu(float) : Y component in ENU frame [m]
         z_enu(float) : Z component in ENU frame [m]
     Return:
-        list : [Az, El] angles in [rad]
+        list[float, float] : [Az, El] angles in [rad]
     """
     dist = np.sqrt(x_enu * x_enu + y_enu * y_enu + z_enu * z_enu)
 

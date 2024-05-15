@@ -78,7 +78,8 @@ class TropoManager:
             state_zwd(float or None): state estimated zenith wet delay (wzd) or None
 
         Returns:
-            tuple: A tuple with tropo_delay in meters and wet map function is returned as (tropo_delay, map_wet)
+            tuple[float, float]: A tuple with tropo_delay in meters and wet map function is
+                returned as (tropo_delay, map_wet)
         """
         if self.tropo_model is None:
             return 0.0, 0.0

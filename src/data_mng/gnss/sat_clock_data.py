@@ -144,7 +144,9 @@ class SatelliteClocks:
             # an interpolation is needed
             n_points = (self.interp_order + 1) // 2
             knots = sat_data.get_n_items(epoch, n_points)
-            return linear_interpolation_scipy(epoch.mjd, [x.mjd for x in knots],
+
+            return linear_interpolation_scipy((epoch - knots[0]).total_seconds(),
+                                              [(x - knots[0]).total_seconds() for x in knots],
                                               [sat_data.get_data_for_epoch(x) for x in knots])
 
     def get_clock_broadcast(self, sat, epoch):

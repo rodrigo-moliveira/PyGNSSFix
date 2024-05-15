@@ -72,8 +72,8 @@ def compute_tx_time(model=None, **kwargs):
         model(EnumTransmissionTime): enumeration that evaluates to `EnumTransmissionTime.GEOMETRIC` or
             `EnumTransmissionTime.PSEUDORANGE`
         kwargs(dict): depending on the model, different items are provided in `kwargs`:
-            * Geometric algorithm: `r_receiver`, `t_reception`, `dt_receiver`, `nav_message`.
-            * Pseudorange-based algorithm: `pseudorange_obs`, `t_reception`, `nav_message`.
+            * Geometric algorithm: `r_receiver`, `t_reception`, `dt_receiver`, `sat`, `sat_orbits`.
+            * Pseudorange-based algorithm: `pseudorange_obs`, `t_reception`, `sat`, `sat_clocks`.
     Returns:
         tuple [src.data_types.date.Epoch, float] : computed TX epoch, computed transit time
     """
@@ -142,7 +142,7 @@ def tx_time_geometric(r_receiver=None, t_reception=None, dt_receiver=None, sat=N
     return T_emission, tau
 
 
-def tx_time_pseudorange(pseudorange_obs=None, t_reception=None, nav_message=None, sat=None, sat_clocks=None, **_):
+def tx_time_pseudorange(pseudorange_obs=None, t_reception=None, sat=None, sat_clocks=None, **_):
     """
     Pseudorange-Based Algorithm to compute:
         * transit time (propagation time from signal transmission to reception)
@@ -157,8 +157,6 @@ def tx_time_pseudorange(pseudorange_obs=None, t_reception=None, nav_message=None
             pseudorange measured observable
         t_reception (src.data_types.date.Epoch): time of signal reception, measured by receiver
             `t(reception)^{receiver}`, i.e., RINEX obs time tag
-        nav_message (src.data_mng.gnss.navigation_data.NavigationPoint): instance of `NavigationPoint` used
-            to compute the satellite positions
         sat(src.data_types.gnss.Satellite): the satellite to compute the transmission time
         sat_clocks(src.data_mng.gnss.sat_clock_data.SatelliteClocks): `SatelliteClocks` object with clock data
     Return:
@@ -170,6 +168,7 @@ def tx_time_pseudorange(pseudorange_obs=None, t_reception=None, nav_message=None
     dt_sat_ = sat_clocks.get_clock(sat, t_emission)
 
     # correct satellite clock for BGDs
+    nav_message = sat_clocks.nav_data.get_closest_message(sat, t_emission)
     dt_sat = nav_sat_clock_correction(dt_sat_, pseudorange_obs.datatype, nav_message)
 
     # compute transmission time, using Eq. (5.6)
@@ -235,7 +234,7 @@ def nav_sat_clock_correction(sat_clock, datatype, nav_message):
         into account, which accounts for the difference in hardware biases between the P1 and C/A.
         This correction is however not transmitted in the GPS legacy navigation message.
         It must be fetched from IGS DCB products
-        This is currently not considered in this algorithm!!!
+        This is **currently** not considered in this algorithm!
 
     Args:
         sat_clock(float): the iono-free satellite clock bias
@@ -341,6 +340,8 @@ def compute_ggto(time_correction, week, sow):
             See :py:class:`src.data_mng.gnss.navigation_data.NavigationData`
         week(int): the week number of the user epoch to compute the GGTO
         sow(float): the SoW (seconds of week) of the user epoch to compute the GGTO
+    Returns:
+        float: GGTO offset for the provided epoch, in [seconds]
     """
     epoch = (week, sow)
 

@@ -2,7 +2,7 @@ from scipy.interpolate import interp1d
 from src.utils.deprecated import deprecated
 
 
-@deprecated("use function :py:function:`src.utils.interpolation.linear_interpolation` instead")
+# @deprecated("use function :py:function:`src.utils.interpolation.linear_interpolation` instead")
 def linear_interpolation_scipy(x, x_vals, y_vals):
     """
     Perform linear interpolation using scipy's interp1d function.

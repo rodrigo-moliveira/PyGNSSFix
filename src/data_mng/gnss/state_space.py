@@ -21,7 +21,7 @@ class GnssStateSpace(Container):
         * clock_bias_rate (dict): dictionary with constellations as keys and clock bias rates as values
 
     Some auxiliary information is saved in the `_info` attribute dict, namely:
-        * _info["states"] provides a list with all valid states to be estimated, depending on the setup
+        * _info["states"] provides a list with all valid states to be estimated, depending on the configuration
         * _info["clock_master"] provides the master constellation, when the ISB state is active
         * _info["clock_slave"] provides the slave constellation, when the ISB state is active
 
@@ -145,6 +145,19 @@ class GnssStateSpace(Container):
             _states.append("tropo_wet")
 
         self.add_additional_info("states", _states)
+
+    def update_sat_list(self, sat_list):
+        """"""
+        for sat in sat_list:
+            if sat not in self.iono:
+                self.iono[sat] = 0.0  # add new satellite
+
+        _to_remove = []
+        for sat in self.iono:
+            if sat not in sat_list:
+                _to_remove.append(sat)  # satellite to be removed
+        for sat in _to_remove:
+            self.iono.pop(sat)
 
     def __str__(self):
         _states = self.get_additional_info("states")

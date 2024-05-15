@@ -24,8 +24,8 @@ class GnssDataManager(Container):
         obs_data(ObservationData): raw observation data from RINEX OBS
         sat_clocks(SatelliteClocks): manager of satellite clocks (precise or navigation clocks)
         sat_orbits(SatelliteOrbits): manager of satellite orbits (precise or navigation orbits)
-        smooth_obs_data(NavigationData): processed smooth observation data
-        iono_free_obs_data(NavigationData): processed iono-free observation data
+        smooth_obs_data(ObservationData): processed smooth observation data
+        iono_free_obs_data(ObservationData): processed iono-free observation data
         nav_solution(list): navigation solution, list of :py:class:`~src.data_mng.gnss.state_space.GnssStateSpace`
             objects
 
@@ -62,7 +62,7 @@ class GnssDataManager(Container):
         Add data to available.
         Args:
             data_name(str): data name matching one of the class attributes
-            data: object
+            data: data object
         """
         if data_name in self.__slots__:
             setattr(self, data_name, data)
@@ -98,6 +98,16 @@ class GnssDataManager(Container):
         return self.obs_data
 
     def read_inputs(self, trace_dir):
+        """
+        Function to read the input data. The data files are read from the user configurations
+        according to the chosen algorithm.
+        There are mandatory inputs for each model (SPS, PPP).
+
+        TODO: this is the place to implement the mode manager (SPS / PPP require different mandatory files)
+
+        Args:
+            trace_dir(str): path to write trace files
+        """
         log = get_logger(IO_LOG)
 
         # read navigation data
@@ -122,8 +132,6 @@ class GnssDataManager(Container):
         log.info('Launching RinexNavReader.')
         for file in nav_files:
             RinexNavReader(file, self.get_data("nav_data"), gal_nav_type)
-
-        # NOTE: for now, I am reading both nav and clk/sp3. Consider changing this in the future...
 
         log.info("Launching SatelliteClocks constructor")
         self.sat_clocks.init(self.get_data("nav_data"), clock_files, use_precise_products, first_epoch=first_epoch,

@@ -16,7 +16,7 @@
       "sp3_files": ["datasets/gnss/BRUX/COD0R03FIN_20190140000_01D_05M_ORB.SP3"],
 
       "_comment2": "Select 'true' to use CLK and SP3 products or 'false' to use navigation ephemerides",
-      "use_precise_products": false,
+      "use_precise_products": true,
 
       "leap_file": "geo_time_data/tai-utc.dat",
       "finals_file": "geo_time_data/finals1980.all",
@@ -29,7 +29,7 @@
          "_comment1": "Select first and last epochs in estimation arc in format YYYY-MM-DD hh:mm:ss",
          "_comment2": "Select false to deactivate fields",
          "first_epoch": "2019-01-14 06:15:00",
-         "last_epoch": "2019-01-14 06:15:10"
+         "last_epoch": "2019-01-14 06:20:00"
       },
 
       "_comment4": "Select the input data rate (in seconds). The rate must be consistent with the RINEX OBS rate. Select false to disable.",
@@ -40,7 +40,7 @@
       "trace_files": true,
 
       "_comment4": "Signal strength (SNR) filter. Select value of SNR (dBHz) threshold. Select false to turn off",
-      "snr_filter": 40,
+      "snr_filter": 30,
 
       "satellite_status": {
          "_comment": "whether or not to check the SV Accuracy and SV health fields of the navigation message",
@@ -68,12 +68,12 @@
       "estimate_velocity": true,
       "_comment1": "Use Doppler measurements to estimate velocity",
 
-      "estimate_ggto": false,
+      "estimate_ggto": true,
       "_comment2": "Select `true` to estimate GGTO or `false` to use the broadcast GGTO",
 
       "troposphere": {
          "_comment1": "Select Tropospheric model. Available models are 'NONE', 'Saastamoinen', 'GPT3'",
-         "model": "GPT3",
+         "model": "Saastamoinen",
 
          "_comment2": "Select Tropospheric map function for model GPT3. Available maps are 'Saastamoinen', 'GMF', 'VMF1', 'VMF3'",
          "map": "Saastamoinen",
@@ -83,8 +83,8 @@
       },
 
       "GPS": {
-         "observations": ["1C"],
-         "pr_obs_std": [1.1],
+         "observations": ["1C", "2W"],
+         "pr_obs_std": [1.1, 0.8],
          "elevation_mask": true,
 
          "_comment1": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G' ",

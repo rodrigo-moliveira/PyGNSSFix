@@ -24,15 +24,15 @@ class Constellation(str):
     def __getattribute__(self, name):
 
         if name in dir(str):  # only handle str methods here
-            def method(self, *args, **kwargs):
+            def method(self_, *args, **kwargs):
                 value = getattr(super(), name)(*args, **kwargs)
                 # not every string method returns a str:
                 if isinstance(value, str):
-                    return type(self)(value)
+                    return type(self_)(value)
                 elif isinstance(value, list):
-                    return [type(self)(i) for i in value]
+                    return [type(self_)(i) for i in value]
                 elif isinstance(value, tuple):
-                    return tuple(type(self)(i) for i in value)
+                    return tuple(type(self_)(i) for i in value)
                 else:  # dict, bool, or int
                     return value
 
