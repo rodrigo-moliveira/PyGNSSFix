@@ -9,36 +9,56 @@ from .functor import *
 
 
 class PreprocessorManager:
+    """
+    PreprocessorManager class: performs the preprocessing operations to the GNSS measurements
+    to prepare them for the GNSS Solver
+
+    The operations involved are:
+        * Filtering: clean and delete the observation dataset according to some checks:
+            - SNR Filter: remove measurements with low SNR (signal-to-noise ratio)
+            - Satellite Health Filter: remove measurements from unhealthy satellites (check GPS URA or GAL SISA)
+            - Type Consistency Filter: clean satellite epoch data for missing observables
+            - Downgrade Filter: downgrade the observation dataset for the provided user-defined rate
+
+        * Creating Processed ObservationData:
+                - Compute IonoFree observation dataset (only if defined in the user configurations)
+                - Compute Smooth and IonoFree Smooth observation dataset (only if defined in the user configurations)
+
+        * Write intermediate trace files for each operation
+    """
 
     def __init__(self, trace_path, data_manager):
+        """
+        Constructor of the PreprocessorManager instance
+
+        Parameters:
+            trace_path(str): path to store the Preprocessor trace files
+            data_manager(src.data_mng.gnss.gnss_data_mng.GnssDataManager): data manager instance
+        """
         self.log = get_logger(PREPROCESSOR_LOG)
         self.data_manager = data_manager
         self.services = config_dict.get_services()
 
         # set up trace path
         self.write_trace = config_dict.get("preprocessor", "trace_files")
-        self.trace_path = f"{trace_path}\\preprocessor"
-        try:
-            os.makedirs(self.trace_path)
-        except:
-            raise IOError(f"Cannot create dir: {self.trace_path}")
+        self.trace_path = None
+        if self.write_trace:
+            self.trace_path = f"{trace_path}\\preprocessor"
+            try:
+                os.makedirs(self.trace_path)
+            except:
+                raise IOError(f"Cannot create dir: {self.trace_path}")
 
     def compute(self):
         """
-        Algorithms to apply:
-            Acting on Raw ObservationData:
-                * Apply SNR Check Filter -> remove observables with low SNR
-                * Type Consistency Filter -> remove all unnecessary observations and empty satellites
+        Launch the Preprocessor algorithm
 
-            Creating Processed ObservationData:
-                * Compute IonoFree Observation Data -> Compute iono-free observables from the raw gnss_models data,
-                                                        creating a new dataset
-                * Compute (IonoFree) Smooth Observation Data -> Compute smooth code observables
-
+        Raises:
+            PreprocessorError: if an error is detected during the Preprocessor algorithm, an error is raised.
         """
         self.log.info("Starting Preprocessor...")
 
-        # SNR Check Filter
+        # SNR Filter
         obs_data = self.data_manager.get_data("obs_data")
         try:
             self.snr_filter(obs_data)
@@ -116,27 +136,26 @@ class PreprocessorManager:
         self.log.info("End of module Preprocessor")
 
     def consistency_filter(self, observation_data):
+        """ Perform Consistency Filter
+
+        NOTE: Doppler is not mandatory. If it is missing, velocity estimation is not triggered
+        """
         self.log.info("Applying consistency filter to remove unnecessary datatypes and data-less satellites")
         required_datatypes = {}
-
-        # NOTE: Doppler is not mandatory. If it is missing, velocity estimation is not triggered
 
         keep_doppler = config_dict.get("model", "estimate_velocity")
         for constellation, services in self.services.items():
             required_datatypes[constellation] = []
             for service in services:
                 pr = data_type_from_rinex(f"C{service}", constellation)
-                if pr is not None:
-                    required_datatypes[constellation].append(pr)
-                cp = data_type_from_rinex(f"L{service}", constellation)
-                if cp is not None:
-                    required_datatypes[constellation].append(cp)
+                required_datatypes[constellation].append(pr)
+                # cp = data_type_from_rinex(f"L{service}", constellation)
+                # required_datatypes[constellation].append(cp)
                 if keep_doppler:
                     doppler = data_type_from_rinex(f"D{service}", constellation)
-                    if doppler is not None:
-                        required_datatypes[constellation].append(doppler)
+                    required_datatypes[constellation].append(doppler)
 
-        type_filter = TypeConsistencyFilter(required_datatypes)
+        type_filter = TypeConsistencyFilter(required_datatypes, self.trace_path)
         mapper = FilterMapper(type_filter)
         mapper.apply(observation_data)
 
@@ -144,18 +163,19 @@ class PreprocessorManager:
         self.log.info(f"Type Consistency Filter Report: {mapper.report}")
 
         # Saving Consistent data to file
-        if self.write_trace:
-            self.log.debug(
-                "Writing Type Consistent Observation Data to trace file {}".format("TypeConsistentObservationData.txt"))
-            f = open(self.trace_path + "/TypeConsistentObservationData.txt", "w")
-            f.write(str(observation_data))
-            f.close()
+        # if self.write_trace:
+        #    self.log.debug(
+        #       "Writing Type Consistent Observation Data to trace file {}".format("TypeConsistentObservationData.txt"))
+        #    f = open(self.trace_path + "/TypeConsistentObservationData.txt", "w")
+        #    f.write(str(observation_data))
+        #    f.close()
 
     def snr_filter(self, observation_data):
+        """ Perform SNR Filter """
         snr_threshold = config_dict.get("preprocessor", "snr_filter")
         self.log.info(f"Applying SNR check filter. SNR Threshold is {snr_threshold}")
 
-        snr_filter = SignalCheckFilter(observation_data, snr_threshold)
+        snr_filter = SignalCheckFilter(observation_data, snr_threshold, self.trace_path)
         mapper = FilterMapper(snr_filter)
         mapper.apply(observation_data)
 
@@ -163,14 +183,15 @@ class PreprocessorManager:
         self.log.info(f"SNR Filter Report: {mapper.report}")
 
         # Saving debug data to file
-        if self.write_trace:
-            self.log.debug(
-                "Writing SNR Checked Observation Data to trace file {}".format("SNRCheckObservationData.txt"))
-            f = open(self.trace_path + "/SNRCheckObservationData.txt", "w")
-            f.write(str(observation_data))
-            f.close()
+        # if self.write_trace:
+        #    self.log.debug(
+        #        "Writing SNR Checked Observation Data to trace file {}".format("SNRCheckObservationData.txt"))
+        #    f = open(self.trace_path + "/SNRCheckObservationData.txt", "w")
+        #    f.write(str(observation_data))
+        #    f.close()
 
     def sv_ura_health_filter(self, observation_data):
+        """ Perform Satellite Health Check (GPS URA and GAL SISA test) """
         gps_ura_check = config_dict.get("preprocessor", "satellite_status", "GPS", "URA")
         gps_ura_val = config_dict.get("preprocessor", "satellite_status", "GPS", "max_URA")
         gps_health = config_dict.get("preprocessor", "satellite_status", "GPS", "health")
@@ -187,7 +208,7 @@ class PreprocessorManager:
 
         nav_data = self.data_manager.get_data("nav_data")
         ura_filter = SatFilterHealthURA(nav_data, gps_ura_check, gps_ura_val, gps_health,
-                                        gal_sisa_check, gal_sisa_val, gal_health, self.log)
+                                        gal_sisa_check, gal_sisa_val, gal_health, self.log, self.trace_path)
         mapper = FilterMapper(ura_filter)
         mapper.apply(observation_data)
 
@@ -195,20 +216,22 @@ class PreprocessorManager:
         self.log.info(f"GPS URA, GAL SISA and Health Status Filter Report: {mapper.report}")
 
         # Saving debug data to file
-        if self.write_trace:
-            self.log.debug(
-                "Writing SV URA and Health Check Observation Data to trace file {}".
-                format("SvURAHealthObservationData.txt"))
-            f = open(self.trace_path + "/SvURAHealthObservationData.txt", "w")
-            f.write(str(observation_data))
-            f.close()
+        # if self.write_trace:
+        #    self.log.debug(
+        #        "Writing SV URA and Health Check Observation Data to trace file {}".
+        #        format("SvURAHealthObservationData.txt"))
+        #    f = open(self.trace_path + "/SvURAHealthObservationData.txt", "w")
+        #    f.write(str(observation_data))
+        #    f.close()
 
     def iono_free(self, raw_data, data_out, constellation):
+        """ Compute IonoFree data """
         functor = IonoFreeFunctor(constellation, self.services[constellation])
         mapper = FunctorMapper(functor)
         mapper.apply(raw_data, data_out)
 
     def smooth(self, data):
+        """ Compute Smooth data """
         time_constant = config_dict.get("preprocessor", "smooth_time_constant_secs")
         rate = data.get_rate()
         self.log.info(f"Computing smooth data with time constant set to {time_constant}[s]. Data rate is {rate}")
@@ -225,6 +248,7 @@ class PreprocessorManager:
             f.close()
 
     def downgrade(self, data):
+        """ Perform Downgrading of the GNSS measurements input rate """
         # Downgrade gnss_models data rate
         rate_out = config_dict.get("inputs", "rate")
         rate_in = data.get_rate()
@@ -245,5 +269,3 @@ class PreprocessorManager:
 
                 # Write report to log
                 self.log.info(f"Rate Downgrade Filter Report: {mapper.report}")
-
-        return data

@@ -1,30 +1,35 @@
-from src.data_types.gnss.data_type import DataType
+""" Type Consistency Module """
 from . import Filter
 
 
 class TypeConsistencyFilter(Filter):
 
-    def __init__(self, types):
-        super().__init__()
-        self.types = types
+    def __init__(self, types, trace_path):
+        """
+        Constructor for the Type Consistency Filter
+        The `TypeConsistencyFilter` cleans the Observation dataset by removing all epoch data for a given satellite
+        that does not have all required observation types. The required observation types are provided as input to the
+        filter
 
-        # build required datatypes (pseudorange and carrier phase)
-        # NOTE: Doppler and SNR are not mandatory
-        self.mandatory = {}
-        for const, observations in self.types.items():
-            self.mandatory[const] = []
-            for obs in observations:
-                if DataType.is_code(obs) or DataType.is_carrier(obs):
-                    self.mandatory[const].append(obs)
+        Parameters:
+            types(dict): Dictionary with constellation string as keys and list of all mandatory observation types as
+                values
+            trace_path(str or None): path to the trace file
+        """
+        super().__init__()
+        self.mandatory = types
+        self.write_header(trace_path)
+
+    def write_header(self, trace_path):
+        if trace_path is not None:
+            self.fd = open(trace_path + "/TypeConsistentFilter.txt", "w")
+            self.fd.write("Epoch, Satellite, Observable, To Remove\n")
 
     def is_applicable(self, sat, epoch, observation, **kwargs):
-        # return False to keep this observable
-
         # check if this datatype is part of the required observations
-        ret_val = observation.datatype not in self.types[sat.sat_system]
+        to_remove = observation.datatype not in self.mandatory[sat.sat_system]
 
-        if not ret_val:
-
+        if not to_remove:
             # check if all mandatory observations are available for this epoch
             for obs_required in self.mandatory[sat.sat_system]:
                 found = False
@@ -33,6 +38,9 @@ class TypeConsistencyFilter(Filter):
                         found = True
                         break
                 if not found:
-                    ret_val = True  # delete this observable
+                    to_remove = True  # delete this observable
                     break
-        return ret_val
+
+        if self.fd is not None:
+            self.fd.write(f"{epoch}, {sat}, {observation.datatype}, {to_remove}\n")
+        return to_remove

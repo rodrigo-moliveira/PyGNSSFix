@@ -1,1 +1,1 @@
-from .weighted_ls import *
+from .weighted_ls import WeightedLeastSquares

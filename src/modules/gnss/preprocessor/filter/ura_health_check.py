@@ -1,10 +1,11 @@
+""" Satellite Health Filter Module """
 from . import Filter
 
 
 class SatFilterHealthURA(Filter):
 
     def __init__(self, navigation_data, gps_ura_check, gps_ura_val, gps_health,
-                 gal_sisa_check, gal_sisa_val, gal_health, log):
+                 gal_sisa_check, gal_sisa_val, gal_health, log, trace_path):
         super().__init__()
         self.navigation_data = navigation_data
         self.gps_ura_check = gps_ura_check
@@ -15,6 +16,12 @@ class SatFilterHealthURA(Filter):
         self.gal_health = gal_health
         self.log = log
         self.warned = []
+        self.write_header(trace_path)
+
+    def write_header(self, trace_path):
+        if trace_path is not None:
+            self.fd = open(trace_path + "/SvURAHealthFilter.txt", "w")
+            self.fd.write("Epoch, Satellite, Observable, To Remove\n")
 
     def apply(self, sat, epoch, observation, v_removable):
         # return False to keep this observable
@@ -54,3 +61,6 @@ class SatFilterHealthURA(Filter):
 
         if flagged:
             v_removable.append(observation)
+
+        if self.fd is not None:
+            self.fd.write(f"{epoch}, {sat}, {observation.datatype}, {flagged}\n")

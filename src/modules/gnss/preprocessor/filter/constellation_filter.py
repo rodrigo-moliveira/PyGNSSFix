@@ -1,6 +1,8 @@
+""" Constellation Filter Module """
 from src.modules.gnss.preprocessor.filter import Filter
 
 
+# This is currently unused
 class ConstellationFilter(Filter):
 
     def __init__(self, constellations):

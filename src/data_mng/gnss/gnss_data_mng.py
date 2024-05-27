@@ -159,6 +159,8 @@ class GnssDataManager(Container):
         if use_precise_products:
             with open(f"{inputs_dir}\\PreciseClocks.txt", "w") as file:
                 file.write(str(self.get_data("sat_clocks")))
+            with open(f"{inputs_dir}\\PreciseOrbits.txt", "w") as file:
+                file.write(str(self.get_data("sat_orbits")))
 
     def save_data(self, directory):
         """Saves the output data (contained in nav_solution) to the provided directory"""

@@ -1,13 +1,34 @@
+""" Filter Mapper (Transformer) Module """
 from src.data_mng.gnss.observation_data import ObservationData
+from .filter import Filter
 
 
 class FilterMapper:
+    """
+    Manages the execution of the filter algorithms and effectively removes the flagged data from the
+    ObservationData instance.
+    """
 
-    def __init__(self, _filter):
-        self.filter = _filter
+    def __init__(self, filter: Filter):
+        """
+        Constructor of the FilterMapper
+
+        Parameters:
+            filter(Filter): instance of the `Filter` class
+        """
+        self.filter = filter
         self.report = str()
 
     def apply(self, obs_data: ObservationData):
+        """
+        Applies the filter to the provided `ObservationData` instance.
+        Iterates over all epochs, satellites and observables and calls the `filter.is_applicable` and `filter.apply`
+        methods (must be implemented by the inherited Filter class)
+
+        Parameters:
+            obs_data(ObservationData): input observation dataset to be filtered (data is effectively removed from the
+                input dataset)
+        """
         vEpochs = list(obs_data.get_epochs())
         removed = 0
         total = 0
@@ -44,6 +65,7 @@ class FilterMapper:
         self.write_report(removed, total, sats_filter, total_epochs, len(removed_epochs))
 
     def write_report(self, removed, total, sats_filter, total_epochs, removed_epochs):
+        self.filter.close_file()
         self.report = f"The filter removed {removed/total*100:.2f}% of the data, for a total of {total} " \
                       f"observations. Satellites affected were: {sats_filter}. Percentage of epochs affected is " \
                       f"{removed_epochs/total_epochs*100:.2f}%."
