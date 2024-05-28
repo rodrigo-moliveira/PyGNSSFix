@@ -56,7 +56,7 @@
          }
       },
 
-      "compute_smooth": false,
+      "compute_smooth": true,
       "smooth_time_constant_secs": 300
    },
 

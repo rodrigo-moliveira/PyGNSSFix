@@ -30,6 +30,9 @@ class IonoFreeFunctor(Functor):
         self.pr1 = None
         self.pr2 = None
         self.pr_if = None
+        self.cp1 = None
+        self.cp2 = None
+        self.cp_if = None
         self.compute_iono_std(constellation)
 
     def compute_iono_std(self, constellation):
@@ -37,10 +40,12 @@ class IonoFreeFunctor(Functor):
         datatypes = list(std_dict.keys())
 
         for datatype in datatypes:
-            if datatype.freq == self.base_freq:
+            if datatype.freq == self.base_freq and DataType.is_code(datatype):
                 self.pr1 = datatype
-            if datatype.freq == self.second_freq:
+                self.cp1 = DataType.get_carrier_from_code(self.pr1)
+            if datatype.freq == self.second_freq and DataType.is_code(datatype):
                 self.pr2 = datatype
+                self.cp2 = DataType.get_carrier_from_code(self.pr2)
 
         if self.pr1 is not None and self.pr2 is not None:
             pr_std_1 = std_dict[self.pr1]
@@ -54,6 +59,7 @@ class IonoFreeFunctor(Functor):
 
             pr_std_if = self.gama1 * pr_std_1 - self.gama2 * pr_std_2
             self.pr_if = DataType.get_iono_free_datatype(self.pr1, self.pr2, constellation)
+            self.cp_if = DataType.get_iono_free_datatype(self.cp1, self.cp2, constellation)
             config_dict.update_obs_std(constellation, self.pr_if, pr_std_if)
 
             log = get_logger(MODEL_LOG)
@@ -73,10 +79,10 @@ class IonoFreeFunctor(Functor):
                 C1 = obs
             if obs.datatype == self.pr2:
                 C2 = obs
-            # if obs.datatype == self.cp1:
-            #   L1 = obs
-            # if obs.datatype == self.cp2:
-            #   L2 = obs
+            if obs.datatype == self.cp1:
+                L1 = obs
+            if obs.datatype == self.cp2:
+                L2 = obs
 
         return C1, C2, L1, L2
 
@@ -96,9 +102,9 @@ class IonoFreeFunctor(Functor):
             iono_free = self.compute_iono_free(C1, C2)
             v_obs_out.append(Observation(self.pr_if, iono_free))
 
-        # if L1 is not None and L2 is not None:
-        #    # get iono-free value
-        #    iono_free = self.compute_iono_free(L1, L2)
-        #    v_obs_out.append(Observation(L12, iono_free))
+        if L1 is not None and L2 is not None:
+            # get iono-free value
+            iono_free = self.compute_iono_free(L1, L2)
+            v_obs_out.append(Observation(self.cp_if, iono_free))
 
         return v_obs_out

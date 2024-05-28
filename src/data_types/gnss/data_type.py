@@ -200,6 +200,14 @@ class DataType:
         return data_type in cAvailableDoppler
 
     @staticmethod
+    def get_carrier_from_code(datatype):
+        if DataType.is_code(datatype):
+            data_str = datatype.data_type
+            # replace PR substring for CP
+            return get_data_type(data_str.replace("PR", "CP"), datatype.constellation)
+        return None
+
+    @staticmethod
     def get_code_datatypes(datatype_list):
         """
         Args:

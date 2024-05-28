@@ -34,7 +34,7 @@ class PreprocessorManager:
 
         Parameters:
             trace_path(str): path to store the Preprocessor trace files
-            data_manager(src.data_mng.gnss.gnss_data_mng.GnssDataManager): data manager instance
+            data_manager(src.data_mng.gnss.gnss_data_mng.GnssDataManager): GNSS data manager instance
         """
         self.log = get_logger(PREPROCESSOR_LOG)
         self.data_manager = data_manager
@@ -138,25 +138,26 @@ class PreprocessorManager:
 
     def consistency_filter(self, observation_data):
         """ Perform Consistency Filter
-
-        NOTE: Doppler is not mandatory. If it is missing, velocity estimation is not triggered
-        TODO: carrier phase is mandatory when smoothing is enabled...
         """
         self.log.info("Applying consistency filter to remove unnecessary datatypes and data-less satellites")
         required_datatypes = {}
 
-        keep_doppler = config_dict.get("model", "estimate_velocity")
+        keep_doppler = config_dict.get("model", "estimate_velocity")  # doppler only needed when velocity is estimated
+        keep_carrier = config_dict.get("preprocessor", "compute_smooth")  # carrier only needed for smoothing
+
         for constellation, services in self.services.items():
             required_datatypes[constellation] = []
             for service in services:
                 pr = data_type_from_rinex(f"C{service}", constellation)
                 required_datatypes[constellation].append(pr)
-                # cp = data_type_from_rinex(f"L{service}", constellation)
-                # required_datatypes[constellation].append(cp)
+                if keep_carrier:
+                    cp = data_type_from_rinex(f"L{service}", constellation)
+                    required_datatypes[constellation].append(cp)
                 if keep_doppler:
                     doppler = data_type_from_rinex(f"D{service}", constellation)
                     required_datatypes[constellation].append(doppler)
 
+        self.log.info(f"Type Consistency Filter: Required datatypes are {required_datatypes}")
         type_filter = TypeConsistencyFilter(required_datatypes, self.trace_path)
         mapper = FilterMapper(type_filter)
         mapper.apply(observation_data)
@@ -250,7 +251,7 @@ class PreprocessorManager:
         rate = data.get_rate()
         self.log.info(f"Computing smooth data with time constant set to {time_constant}[s]. Data rate is {rate}")
 
-        smooth_functor = SmoothFunctor(time_constant, data.get_rate())
+        smooth_functor = SmoothFunctor(time_constant, rate)
         mapper = FunctorMapper(smooth_functor)
         smooth_data = self.data_manager.get_data("smooth_obs_data")
         mapper.apply(data, smooth_data)
