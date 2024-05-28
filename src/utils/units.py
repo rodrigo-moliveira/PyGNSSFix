@@ -2,8 +2,6 @@
 # import src.constants as constant
 # from src.errors import UnknownConversionError
 #
-# # TODO: add this functionality to TimeSeries
-# # TODO: consider using a units library instead
 # def convert_unit(data, src_unit, out_unit):
 #     """
 #     Unit conversion. Notice not to change values in data

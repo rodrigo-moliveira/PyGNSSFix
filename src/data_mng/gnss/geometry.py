@@ -61,10 +61,10 @@ class SatelliteGeometry(Container):
         Args:
             sat(src.data_types.gnss.Satellite): the satellite to compute the geometry data
             epoch (src.data_types.date.Epoch) : epoch under evaluation
-            state (State) : state
-            constellation (Constellation) : constellation
+            state (src.data_mng.gnss.state_space.GnssStateSpace) : state
+            constellation (src.data_types.gnss.Constellation) : constellation
             compute_tx (function) : function to compute the transmission time
-            PR_obs (src.data_types.data_types.Observation.Observation) : Code gnss_models to use in some computations
+            PR_obs (src.data_types.gnss.observation.Observation) : pseudorange observation to use in some computations
             sat_orbits(src.data_mng.gnss.sat_orbit_data.SatelliteOrbits): `SatelliteOrbits` object with orbit data
             sat_clocks(src.data_mng.gnss.sat_clock_data.SatelliteClocks): `SatelliteClocks` object with clock data
         """
@@ -201,7 +201,7 @@ class SystemGeometry:
         Computes the line of sight vector between the receiver and the satellite, used in the PVT geometry matrix.
 
         Args:
-            sat (src.data_types.data_types.Satellite.Satellite) : satellite to compute the LOS vector
+            sat (src.data_types.gnss.Satellite) : satellite to compute the LOS vector
 
         Return:
             numpy.ndarray : Line of sight for [x, y, z] axis of ECEF frame

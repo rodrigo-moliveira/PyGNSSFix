@@ -11,8 +11,6 @@ from src.data_mng.gnss.geometry import SystemGeometry
 from src import constants
 from src.models.gnss_models import TropoManager, IonoManager
 
-np.set_printoptions(linewidth=np.inf)
-
 
 class GnssSolver:
     """
