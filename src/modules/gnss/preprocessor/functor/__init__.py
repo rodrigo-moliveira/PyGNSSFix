@@ -3,4 +3,4 @@ from .transformer import FunctorMapper
 from .iono_free import IonoFreeFunctor
 from .smooth import SmoothFunctor
 
-__all__ = ["Functor", "FunctorMapper", "IonoFreeFunctor", "SmoothFunctor"]
+__all__ = ["FunctorMapper", "IonoFreeFunctor", "SmoothFunctor"]

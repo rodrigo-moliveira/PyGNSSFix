@@ -2,6 +2,7 @@ import os
 
 from src.common_log import get_logger, PREPROCESSOR_LOG
 from src.data_types.gnss import data_type_from_rinex
+from src.data_types.gnss.service_utils import get_freq_from_service
 from src.io.config import config_dict, EnumPositioningMode
 from src.errors import PreprocessorError
 from .filter import *
@@ -139,6 +140,7 @@ class PreprocessorManager:
         """ Perform Consistency Filter
 
         NOTE: Doppler is not mandatory. If it is missing, velocity estimation is not triggered
+        TODO: carrier phase is mandatory when smoothing is enabled...
         """
         self.log.info("Applying consistency filter to remove unnecessary datatypes and data-less satellites")
         required_datatypes = {}
@@ -226,9 +228,21 @@ class PreprocessorManager:
 
     def iono_free(self, raw_data, data_out, constellation):
         """ Compute IonoFree data """
-        functor = IonoFreeFunctor(constellation, self.services[constellation])
-        mapper = FunctorMapper(functor)
-        mapper.apply(raw_data, data_out)
+        services = self.services[constellation]
+        if len(services) != 2:
+            raise AttributeError(f"Problem getting base and second frequencies in Iono Free Computation for "
+                                 f"constellation {constellation}, observations provided are {services}. "
+                                 f"There should be 2 observation types defined, and not {len(services)}")
+        base_freq = get_freq_from_service(services[0], constellation)
+        second_freq = get_freq_from_service(services[1], constellation)
+        if base_freq is not None and second_freq is not None:
+            functor = IonoFreeFunctor(constellation, base_freq, second_freq)
+            mapper = FunctorMapper(functor)
+            mapper.apply(raw_data, data_out)
+        else:
+            raise AttributeError(f"Unable to fetch base ({base_freq}) and second ({second_freq}) frequencies "
+                                 f"for constellation {constellation} and services {services}. Please review"
+                                 f" the input observation data and the configurations.")
 
     def smooth(self, data):
         """ Compute Smooth data """
@@ -263,7 +277,7 @@ class PreprocessorManager:
 
             else:
                 epoch_list = data.get_epochs()
-                downgrade_filter = RateDowngradeFilter(rate_out, epoch_list[0])
+                downgrade_filter = RateDowngradeFilter(rate_out, epoch_list[0], self.trace_path)
                 mapper = FilterMapper(downgrade_filter)
                 mapper.apply(data)
 

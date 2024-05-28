@@ -61,8 +61,8 @@
    },
 
    "model": {
-      "constellations": ["GPS", "GAL"],
-      "mode": "SPS",
+      "constellations": ["GPS"],
+      "mode": "SPS_IF",
       "_comment": "available modes are SPS, SPS_IF",
 
       "estimate_velocity": true,

@@ -1,103 +1,104 @@
+"""Ionospheric Free Computation Module"""
+
 from src.io.config import config_dict
+from src.common_log import MODEL_LOG, get_logger
 from . import Functor
 from src.data_types.gnss.data_type import DataType
 from src.data_types.gnss.observation import Observation
 
 
 class IonoFreeFunctor(Functor):
+    """
+    The `IonoFreeFunctor` computes 1st order ionospheric free observations
 
-    def __init__(self, constellation, observations):
+    The pseudorange and carrier phase iono free combinations are computed with the following equations:
+
+        PR12 = (f1^2 * PR1 - f2^2 * PR2) / (f1^2 - f2^2)
+        CP12 = (f1^2 * CP1 - f2^2 * CP2) / (f1^2 - f2^2)
+    where PRi and CPi are the pseudorange and carrier phase observables for frequency fi.
+
+    More information can be found in:
+    https://gssc.esa.int/navipedia/index.php/Ionosphere-free_Combination_for_Dual_Frequency_Receivers
+    """
+    def __init__(self, constellation, base_freq, second_freq):
         super().__init__()
-
         self.constellation = constellation
-        self.observations = list(observations)
-        try:
-            self.base_freq_index = int(self.observations[0][0])
-            self.second_freq_index = int(self.observations[1][0])
-        except Exception as e:
-            raise AttributeError(f"Problem getting base and second frequencies in Iono Free Computation for "
-                                 f"constellation {self.constellation}, observations provided are {self.observations}. "
-                                 f"Traceback Reason: {e}")
-
+        self.base_freq = base_freq
+        self.second_freq = second_freq
+        self.gama1 = 0
+        self.gama2 = 0
+        self.pr1 = None
+        self.pr2 = None
+        self.pr_if = None
         self.compute_iono_std(constellation)
 
     def compute_iono_std(self, constellation):
         std_dict = config_dict.get_obs_std()[constellation]
         datatypes = list(std_dict.keys())
-        if len(datatypes) != 2:
+
+        for datatype in datatypes:
+            if datatype.freq == self.base_freq:
+                self.pr1 = datatype
+            if datatype.freq == self.second_freq:
+                self.pr2 = datatype
+
+        if self.pr1 is not None and self.pr2 is not None:
+            pr_std_1 = std_dict[self.pr1]
+            f1 = self.pr1.freq.freq_value
+
+            pr_std_2 = std_dict[self.pr2]
+            f2 = self.pr2.freq.freq_value
+
+            self.gama1 = f1 * f1 / (f1 * f1 - f2 * f2)
+            self.gama2 = f2 * f2 / (f1 * f1 - f2 * f2)
+
+            pr_std_if = self.gama1 * pr_std_1 - self.gama2 * pr_std_2
+            self.pr_if = DataType.get_iono_free_datatype(self.pr1, self.pr2, constellation)
+            config_dict.update_obs_std(constellation, self.pr_if, pr_std_if)
+
+            log = get_logger(MODEL_LOG)
+            log.info(f"Computing iono-free observation std for constellation {constellation}. {self.pr1}: {pr_std_1} - "
+                     f"{self.pr2}: {pr_std_2} -> {self.pr_if}: {pr_std_if}")
+        else:
             raise AttributeError(f"Error computing observation stds for constellation {constellation}: "
-                                 f"There should be 2 datatypes defined in std list {config_dict.get_obs_std()}")
-        datatype_1 = datatypes[0]
-        pr_std_1 = std_dict[datatype_1]
-        f1 = datatype_1.freq.freq_value
+                                 f"Mismatch between observation std list {std_dict} and base and second frequencies "
+                                 f"{self.base_freq} and {self.second_freq}")
 
-        datatype_2 = datatypes[1]
-        pr_std_2 = std_dict[datatype_2]
-        f2 = datatype_2.freq.freq_value
-
-        gama1 = f1 * f1 / (f1 * f1 - f2 * f2)
-        gama2 = f2 * f2 / (f1 * f1 - f2 * f2)
-
-        pr_std_if = gama1 * pr_std_1 - gama2 * pr_std_2
-        datatype_if = DataType.get_iono_free_datatype(datatype_1, datatype_2, constellation)
-        config_dict.set_obs_std(constellation, datatype_if, pr_std_if)
-
-        # TODO: add log message "computing observation std for observations...."
-        print(f"Computing iono-free observation std for constellation {constellation}. {datatype_1}: {pr_std_1} - "
-              f"{datatype_2}: {pr_std_2} -> {datatype_if}: {pr_std_if}")
-
-    def get_iono_free_datatype(self, v_obs_in):
+    def get_iono_free_observations(self, v_obs_in):
         # get code and carrier for first frequency (C1, L1)
         C1 = C2 = L1 = L2 = None
 
         for obs in v_obs_in:
-            if obs.datatype.freq_number == self.base_freq_index:
-                if DataType.is_code(obs.datatype):
-                    C1 = obs
-                elif DataType.is_carrier(obs.datatype):
-                    L1 = obs
-
-        # get code and carrier for second frequency (C2, L2)
-        for obs in v_obs_in:
-            if obs.datatype.freq_number == self.second_freq_index:
-                if DataType.is_code(obs.datatype):
-                    C2 = obs
-                elif DataType.is_carrier(obs.datatype):
-                    L2 = obs
+            if obs.datatype == self.pr1:
+                C1 = obs
+            if obs.datatype == self.pr2:
+                C2 = obs
+            # if obs.datatype == self.cp1:
+            #   L1 = obs
+            # if obs.datatype == self.cp2:
+            #   L2 = obs
 
         return C1, C2, L1, L2
 
-    @staticmethod
-    def compute_iono_free(type1: Observation, type2: Observation):
-        # get frequency values
-        f1 = type1.datatype.freq.freq_value
-        f2 = type2.datatype.freq.freq_value
-
-        gama1 = f1 * f1 / (f1 * f1 - f2 * f2)
-        gama2 = f2 * f2 / (f1 * f1 - f2 * f2)
-
-        iono_free = gama1 * type1.value - gama2 * type2.value
+    def compute_iono_free(self, obs1: Observation, obs2: Observation):
+        iono_free = self.gama1 * obs1.value - self.gama2 * obs2.value
         return iono_free
 
     def __call__(self, obs_data_in, epoch, sat):
         v_obs_in = obs_data_in.get_observables_at_epoch(epoch, sat)
         v_obs_out = []
 
-        C1, C2, L1, L2 = self.get_iono_free_datatype(v_obs_in)
+        C1, C2, L1, L2 = self.get_iono_free_observations(v_obs_in)
 
         # get iono free code
         if C1 is not None and C2 is not None:
-            C12 = DataType.get_iono_free_datatype(C1.datatype, C2.datatype, C1.datatype.constellation)
-
             # get iono-free value
             iono_free = self.compute_iono_free(C1, C2)
-            v_obs_out.append(Observation(C12, iono_free))
+            v_obs_out.append(Observation(self.pr_if, iono_free))
 
-        if L1 is not None and L2 is not None:
-            L12 = DataType.get_iono_free_datatype(L1.datatype, L2.datatype, L1.datatype.constellation)
-
-            # get iono-free value
-            iono_free = self.compute_iono_free(L1, L2)
-            v_obs_out.append(Observation(L12, iono_free))
+        # if L1 is not None and L2 is not None:
+        #    # get iono-free value
+        #    iono_free = self.compute_iono_free(L1, L2)
+        #    v_obs_out.append(Observation(L12, iono_free))
 
         return v_obs_out

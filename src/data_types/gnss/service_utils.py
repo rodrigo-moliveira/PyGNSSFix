@@ -1,7 +1,7 @@
 """Utility maps and dicts to deal with the constellations and observations.
 """
 
-from .data_type import get_data_type
+from .data_type import get_data_type, UN
 
 
 AvailableConstellations = {"GPS", "GAL", "GLO", "BDS"}
@@ -34,11 +34,11 @@ def get_code_from_service(service, constellation):
 
     if constellation == "GPS":
         if service in GPSServices:
-            datatype = get_data_type("C" + service[0], constellation)
+            datatype = get_data_type("PR" + service[0], constellation)
 
     elif constellation == "GAL":
         if service in GALServices:
-            datatype = get_data_type("C" + service[0], constellation)
+            datatype = get_data_type("PR" + service[0], constellation)
 
     return datatype
 
@@ -48,10 +48,17 @@ def get_carrier_from_service(service, constellation):
 
     if constellation == "GPS":
         if service in GPSServices:
-            datatype = get_data_type("L" + service[0], constellation)
+            datatype = get_data_type("CP" + service[0], constellation)
 
     elif constellation == "GAL":
         if service in GALServices:
-            datatype = get_data_type("L" + service[0], constellation)
+            datatype = get_data_type("CP" + service[0], constellation)
 
     return datatype
+
+
+def get_freq_from_service(service, constellation):
+    datatype = get_code_from_service(service, constellation)
+    if datatype is not None and datatype != UN:
+        return datatype.freq
+    return None

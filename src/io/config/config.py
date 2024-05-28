@@ -133,9 +133,9 @@ class Config(dict):
         return self["obs_std"]
 
     def update_obs_std(self, constellation, datatype, std):
-        """Utility configuration function to update the field variable obs_std for the provided datatype.
-        Useful when the std value is updated due to the elevation map, for example."""
-        # first build the obs_std dict (if not build before)
+        """Utility configuration function to update the field variable `obs_std` for the provided datatype.
+        Useful when updating the std value for the iono free data types"""
+        # first build the obs_std dict (if not built before)
         self.get_obs_std()
 
         if constellation not in self["obs_std"]:
