@@ -368,11 +368,6 @@ class GnssSolver:
 
     def _estimate_velocity(self, state, epoch):
 
-        # begin iterative process for this epoch
-        iteration = 0
-        rms = rms_prev = 1
-        prefit_residuals = postfit_residuals = None
-
         # get observations and system geometry for this epoch
         obs_for_epoch = self.raw_obs_data.get_epoch_data(epoch)
         system_geometry = state.get_additional_info("geometry")
@@ -383,30 +378,13 @@ class GnssSolver:
         self.log.info(f"Applying velocity estimation {str(epoch)}")
         self.log.debug(f"Available Satellites: {system_geometry.get_satellites()}")
 
-        # Iterated Least-Squares algorithm
-        while iteration < self._metadata["MAX_ITER"]:
-            # solve the Least Squares
-            try:
-                postfit_residuals, prefit_residuals, rms = \
-                    self._compute_vel(system_geometry, obs_for_epoch, state, epoch)
-            except SolverError as e:
-                self.log.warning(f"Least Squares failed for {str(epoch)} on iteration {iteration}."
-                                 f"Reason: {e}")
-                return False
-
-            # check stop condition
-            if self._stop(rms_prev, rms, self._metadata["STOP_CRITERIA"]):
-                self.log.debug(f"Velocity Least Squares was successful. Reached convergence at iteration {iteration}")
-                break
-
-            # increase iteration counter
-            rms_prev = rms
-            iteration += 1
-
-        # end of iterative procedure
-        if iteration == self._metadata["MAX_ITER"]:
-            self.log.warning(f"Velocity Estimation failed to converge for epoch {str(epoch)}, with RMS={rms}. "
-                             f"No solution will be computed for this epoch.")
+        # Least-Squares algorithm
+        # This is not an iterative procedure, because no linearization is needed for velocity estimation
+        try:
+            postfit_residuals, prefit_residuals, rms = \
+                self._compute_vel(system_geometry, obs_for_epoch, state, epoch)
+        except SolverError as e:
+            self.log.warning(f"Least Squares failed for {str(epoch)}. Reason: {e}")
             return False
 
         # save other iteration data to state variable

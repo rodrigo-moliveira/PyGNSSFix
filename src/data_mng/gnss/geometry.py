@@ -67,6 +67,10 @@ class SatelliteGeometry(Container):
             PR_obs (src.data_types.gnss.observation.Observation) : pseudorange observation to use in some computations
             sat_orbits(src.data_mng.gnss.sat_orbit_data.SatelliteOrbits): `SatelliteOrbits` object with orbit data
             sat_clocks(src.data_mng.gnss.sat_clock_data.SatelliteClocks): `SatelliteClocks` object with clock data
+
+
+        Reference:
+            [1] Springer Handbook of Global Navigation Satellite Systems, Peter J.G. Teunissen, Oliver Montenbruck, Springer Cham, 2017
         """
         rec_pos = state.position
         time_correction = sat_clocks.nav_data.header.time_correction if sat_clocks.nav_data is not None else None
@@ -87,13 +91,14 @@ class SatelliteGeometry(Container):
         true_range = np.linalg.norm(p_sat - rec_pos)
 
         # TODO: apply shapiro correction here
+        # Shapiro correction (Eq. (XX.XX) of [1])
 
         # get satellite elevation and azimuth angles (from the receiver), ENU frame
         lat, long, h = cartesian2geodetic(rec_pos[0], rec_pos[1], rec_pos[2])
         enu_coord = ecef2enu(p_sat[0], p_sat[1], p_sat[2], lat, long, h)
         az, el = enu2azel(*enu_coord)
 
-        # line of sight
+        # line of sight (Eq. (21.21) of [1])
         los = np.array([(rec_pos[i] - p_sat[i]) / true_range for i in (0, 1, 2)])
 
         # save results in container

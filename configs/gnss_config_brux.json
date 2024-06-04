@@ -62,7 +62,7 @@
 
    "model": {
       "constellations": ["GPS"],
-      "mode": "SPS_IF",
+      "mode": "SPS",
       "_comment": "available modes are SPS, SPS_IF",
 
       "estimate_velocity": true,
@@ -83,11 +83,17 @@
       },
 
       "GPS": {
-         "observations": ["1C", "2W"],
+         "observations": ["1C"],
+
+         "_comment1": "in `pr_obs_std` define the observation noise for the selected pseudorange observations (in the same order in `observations`), in meters",
          "pr_obs_std": [1.1, 0.8],
+
+         "_comment2": "in `doppler_obs_std` define the observation noise for the selected doppler observations (in the same order in `observations`), in meters",
+         "doppler_obs_std": [1.1, 0.8],
+
          "elevation_mask": true,
 
-         "_comment1": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G' ",
+         "_comment2": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G' ",
          "ionosphere": "Klobuchar"
       },
 

@@ -71,16 +71,16 @@ class LSQ_Engine:
     def compute_residual_los(sat, epoch, datatype, obs_data, reconstructor):
 
         # get observable and compute predicted observable
-        obs = obs_data.get_observable(sat, datatype)
+        obs = float(obs_data.get_observable(sat, datatype))
         predicted_obs = reconstructor.compute(sat, epoch, datatype)
 
-        # prefit residuals (measured - predicted)
+        # prefit residuals (observed minus computed)
         prefit_residuals = obs - predicted_obs
 
         # get LOS vector w.r.t. ECEF frame (column in geometry matrix)
         line_sight = reconstructor.get_unit_line_of_sight(sat)
 
-        return prefit_residuals.value, line_sight
+        return prefit_residuals, line_sight
 
     def _build_lsq(self, epoch, obs_data, reconstructor):
         """build the LS matrices y_vec, design_mat, weight_mat"""
@@ -251,15 +251,15 @@ class LSQ_Engine_Vel:
     def compute_residual(sat, epoch, doppler_datatype, obs_data, reconstructor):
 
         # get observable and compute predicted observable
-        obs = obs_data.get_observable(sat, doppler_datatype)
+        obs = float(obs_data.get_observable(sat, doppler_datatype))  # in Hz
 
         # transform Doppler to pseudorange rate
         wavelength = SPEED_OF_LIGHT / doppler_datatype.freq_value  # in meters
-        obs_range_rate = -wavelength * float(obs)  # in m/s
+        obs_range_rate = -wavelength * obs  # in m/s
 
         predicted_obs = reconstructor.compute(sat, epoch, doppler_datatype)
 
-        # prefit residuals (measured gnss_models - predicted gnss_models)
+        # prefit residuals (observed minus computed)
         prefit_residuals = obs_range_rate - predicted_obs
         return prefit_residuals
 
@@ -317,12 +317,14 @@ class LSQ_Engine_Vel:
     def apply_corrections(self, state, dX, cov):
         """applies corrections to the state vector"""
 
-        state.velocity += dX[0:3]  # in m/s
+        # NOTA!!! é necessário retirar a Earth velocity ao dX!!! cf. a Eq (21.29)
+        vel = np.array(dX[0:3]) - np.cross(constants.EARTH_ANGULAR_RATE, state.position)
+        state.velocity = vel  # in m/s
         state.cov_velocity = cov[0:3, 0:3]  # in (m/s)^2
 
         for iConst, const in enumerate(self.constellations):
             # receiver clock drift [dimensionless]
-            state.clock_bias_rate[const] += dX[iConst + 3] / constants.SPEED_OF_LIGHT
+            state.clock_bias_rate[const] = dX[iConst + 3] / constants.SPEED_OF_LIGHT
             state.cov_clock_bias_rate[const] = float(cov[iConst + 3, iConst + 3]) / (constants.SPEED_OF_LIGHT ** 2)
 
     def get_residuals(self, residual_vec):

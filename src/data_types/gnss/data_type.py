@@ -170,6 +170,16 @@ class DataType:
         return data_type in cAvailableIonoFreeSmoothCodes
 
     @staticmethod
+    def is_smooth_code(data_type):
+        """
+        Args:
+            data_type(DataType)
+        Return:
+            bool: True if `data_type` is a smooth pseudorange
+        """
+        return data_type in cAvailableSmoothCodes or data_type in cAvailableIonoFreeSmoothCodes
+
+    @staticmethod
     def is_carrier(data_type):
         """
         Args:

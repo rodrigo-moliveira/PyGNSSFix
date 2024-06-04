@@ -63,6 +63,8 @@ loosely coupled:
     [ ] sensor emulator
     [ ] INS
     [ ] loosely coupled
+    [ ] quando chegar à parte do INS / atitude etc... ver o projeto HNF (hybrid navigation function) da navika
+        https://confluence.elecnor-deimos.com/display/GNCCC/%5BNaviKA%5D+Hybrid+Navigation+for+Launchers+and+Re-entry+Vehicles?src=contextnavpagetreemode
 
 ...
 # Release 1.3
