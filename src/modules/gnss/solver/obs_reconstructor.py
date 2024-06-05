@@ -54,6 +54,41 @@ class ObservationReconstructor:
         """
         return self._system_geometry.get_unit_line_of_sight(sat)
 
+    def get_obs_std(self, sat, datatype):
+        """
+        Returns standard deviation for the provided satellite and `datatype` according to the std defined in
+        the user configurations.
+
+        If the `elevation_mask` configuration is activated, then the returned std is computed as
+            std = exp(-elevation) * user_std
+
+        Otherwise, the returned std is simply the user-defined one
+            std = user_std
+
+        Arguments:
+            sat(src.data_types.gnss.Satellite) : satellite to compute the std
+            datatype(src.data_types.gnss.data_type.DataType): observation datatype to compute the std
+
+        Returns:
+            float: computed observation noise standard deviation for the provided datatype and satellite
+        """
+        elevation_mask = config_dict.get("model", sat.sat_system, "elevation_mask")
+        el_std = 1.0
+        if elevation_mask:
+            elevation = self._system_geometry.get("el", sat)
+            el_std = np.exp(-elevation)
+        try:
+            _dt = datatype
+            if DataType.is_smooth_code(datatype):
+                _dt = get_data_type(datatype.data_type[1:], datatype.constellation)
+            obs_std = config_dict.get_obs_std()[sat.sat_system][_dt]
+        except KeyError:
+            from src.common_log import get_logger, MODEL_LOG
+            get_logger(MODEL_LOG).warning(f"Unable to get user-defined std for satellite {sat} and datatype "
+                                          f"{datatype}. User configurations are: {config_dict.get_obs_std()}")
+            obs_std = 1.0
+        return el_std * obs_std
+
 
 class PseudorangeReconstructor(ObservationReconstructor):
     """
@@ -92,8 +127,9 @@ class PseudorangeReconstructor(ObservationReconstructor):
         time_correction = sat_clocks.nav_data.header.time_correction if sat_clocks.nav_data is not None else None
         dt_rec = self._state.get_clock_bias(sat.sat_system, time_correction) * constants.SPEED_OF_LIGHT
 
-        # satellite clock
-        dt_sat = sat_clocks.get_clock(sat, epoch)
+        # get satellite clock at time of transmission
+        time_emission = self._system_geometry.get("time_emission", sat)
+        dt_sat, _ = sat_clocks.get_clock(sat, time_emission)
 
         # correct satellite clock for relativistic corrections
         if self._metadata["REL_CORRECTION"] == EnumOnOff.ENABLED:
@@ -128,42 +164,6 @@ class PseudorangeReconstructor(ObservationReconstructor):
         # finally, construct obs
         obs = true_range + dt_rec - dt_sat * constants.SPEED_OF_LIGHT + iono + tropo + dI
         return obs
-
-    def get_obs_std(self, sat, datatype):
-        """
-        TODO: move this to the base class
-        Returns standard deviation for the provided satellite and `datatype` according to the std defined in
-        the user configurations.
-
-        If the `elevation_mask` configuration is activated, then the returned std is computed as
-            std = exp(-elevation) * user_std
-
-        Otherwise, the returned std is simply the user-defined one
-            std = user_std
-
-        Arguments:
-            sat(src.data_types.gnss.Satellite) : satellite to compute the std
-            datatype(src.data_types.gnss.data_type.DataType): pseudorange datatype to compute the std
-
-        Returns:
-            float: the computed standard deviation for the pseudorange datatype for the given satellite
-        """
-        elevation_mask = config_dict.get("model", sat.sat_system, "elevation_mask")
-        el_std = 1.0
-        if elevation_mask:
-            elevation = self._system_geometry.get("el", sat)
-            el_std = np.exp(-elevation)
-        try:
-            _dt = datatype
-            if DataType.is_smooth_code(datatype):
-                _dt = get_data_type(datatype.data_type[1:], datatype.constellation)
-            obs_std = config_dict.get_obs_std()[sat.sat_system][_dt]
-        except KeyError:
-            from src.common_log import get_logger, MODEL_LOG
-            get_logger(MODEL_LOG).warning(f"Unable to get user-defined std for satellite {sat} and datatype "
-                                          f"{datatype}. User configurations are: {config_dict.get_obs_std()}")
-            obs_std = 1.0
-        return el_std * obs_std
 
 
 class RangeRateReconstructor(ObservationReconstructor):
@@ -212,11 +212,17 @@ class RangeRateReconstructor(ObservationReconstructor):
         Note that since the pseudorange rate equation is linear with respect to `v_rec`, no linearization is required,
         hence the LS procedure estimates the complete `v_rec` and not a corrective (delta) quantity.
         """
+        sat_clocks = self._system_geometry.sat_clocks
+        time_emission = self._system_geometry.get("time_emission", sat)
+
         # fetch satellite velocity and clock drift
         v_sat = self._system_geometry.get("satellite_velocity", sat)
-        # TODO fetch these quantities
-        clock_rate_sat = 0.0
+        _, clock_rate_sat = sat_clocks.get_clock(sat, time_emission)
+
+        # correct satellite clock drift for relativistic corrections
         rel_clock_rate_sat = 0.0
+        if self._metadata["REL_CORRECTION"] == EnumOnOff.ENABLED:
+            rel_clock_rate_sat = self._system_geometry.get("drift_rel_correction", sat)
 
         # fetch user velocity and clock drift
         # v_rec = self._state.velocity + np.cross(constants.EARTH_ANGULAR_RATE, self._state.position)

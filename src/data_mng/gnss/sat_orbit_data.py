@@ -121,11 +121,12 @@ class SatelliteOrbits:
             sat(src.data_types.gnss.Satellite)
             epoch(src.data_types.date.Epoch)
         Returns:
-            tuple[numpy.ndarray,numpy.ndarray,float]: tuple with satellite position, velocity and clock relativistic
-                correction for the provided satellite and epoch
+            tuple[numpy.ndarray,numpy.ndarray,float,float]: tuple with satellite position, velocity, relativistic
+                clock correction in [s] and clock drift in [s/s] for the provided satellite and epoch
         """
         if self.use_precise_products:
-            return self.get_orbit_precise(sat, epoch)
+            # NOTE: no relativistic clock drift is computed with precise data yet
+            return *self.get_orbit_precise(sat, epoch), 0.0
         else:
             return self.get_orbit_broadcast(sat, epoch)
 
@@ -177,21 +178,20 @@ class SatelliteOrbits:
             sat(src.data_types.gnss.Satellite)
             epoch(src.data_types.date.Epoch)
         Returns:
-            tuple[numpy.ndarray,numpy.ndarray,float]: tuple with satellite position, velocity and clock relativistic
-                correction for the provided satellite and epoch
+            tuple[numpy.ndarray,numpy.ndarray,float,float]: tuple with satellite position, velocity, relativistic
+                clock correction in [s] and clock drift in [s/s] for the provided satellite and epoch
 
         Raises an exception if the provided satellite does not have valid data
         """
         nav_message = self.nav_data.get_closest_message(sat, epoch)
-        position, velocity, rel_correction = compute_nav_sat_eph(nav_message, epoch)
-        # rel_correction2 = -2 * np.dot(position, velocity) / (constants.SPEED_OF_LIGHT ** 2)
-        return position, velocity, rel_correction
+        position, velocity, rel_correction, rel_drift = compute_nav_sat_eph(nav_message, epoch)
+        return position, velocity, rel_correction, rel_drift
 
     def compute_orbit_at_rx_time(self, sat, time_emission, transit):
         """
         This function computes:
             * the satellite position and velocity
-            * the clock relativistic correction
+            * the relativistic clock and drift correction
         at the requested epoch ('time_emission': time of signal emission). It is noted that the position and velocity
         vectors are rotated to the correct ECEF frame of the reception time, according to the provided transit time.
         That is, the satellite position dnd velocity are computed for the `time_emission` epoch (with respect to the
@@ -208,12 +208,12 @@ class SatelliteOrbits:
                             ECEF frame at reception time
 
         Returns:
-            tuple [numpy.ndarray,numpy.ndarray,float] : returns the computed satellite position and velocity vectors
-                at the transmission epoch with respect to the ECEF frame of the reception epoch. The satellite
-                relativistic clock is also returned.
+            tuple [numpy.ndarray,numpy.ndarray,float,float] : returns the computed satellite position and velocity
+                vectors at the transmission epoch with respect to the ECEF frame of the reception epoch. The satellite
+                relativistic clock in [s] and clock drift in [s/s] is also returned.
         """
         # satellite coordinates in ECEF frame defined at TX time, relativistic correction for satellite clock
-        r_sat, v_sat, rel_correction = self.get_orbit(sat, time_emission)
+        r_sat, v_sat, rel_correction, rel_drift = self.get_orbit(sat, time_emission)
 
         # rotation matrix from ECEF TX to ECEF RX (taking into consideration the signal transmission time)
         _R = dcm_e_i(-transit)
@@ -229,4 +229,4 @@ class SatelliteOrbits:
         # Reference: Eq. (21.29) of Springer Handbook of Global Navigation Satellite Systems, Springer Cham, 2017
         v_sat = _R @ v_sat + np.cross(constants.EARTH_ANGULAR_RATE, p_sat)
 
-        return p_sat, v_sat, rel_correction
+        return p_sat, v_sat, rel_correction, rel_drift

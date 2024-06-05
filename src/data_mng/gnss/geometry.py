@@ -26,9 +26,11 @@ class SatelliteGeometry(Container):
         dt_rel_correction(float): relativistic correction of satellite clock
         los(numpy.ndarray): line of sight vector from receiver to satellite
         tropo_map_wet(float): map of tropospheric wet component
+        drift_rel_correction(float): relativistic clock drift correction of satellite clock
     """
     __slots__ = ["transit_time", "time_emission", "time_reception", "true_range", "az", "el",
-                 "satellite_position", "satellite_velocity", "dt_rel_correction", "los", "tropo_map_wet"]
+                 "satellite_position", "satellite_velocity", "dt_rel_correction", "los", "tropo_map_wet",
+                 "drift_rel_correction"]
 
     def __init__(self):
         super().__init__()
@@ -42,6 +44,7 @@ class SatelliteGeometry(Container):
         self.satellite_position = None
         self.satellite_velocity = None
         self.dt_rel_correction = 0
+        self.drift_rel_correction = 0
         self.los = None
 
     def __str__(self):
@@ -85,13 +88,13 @@ class SatelliteGeometry(Container):
                                                  sat_clocks=sat_clocks, sat=sat)
 
         # get and satellite position at RX ECEF frame
-        p_sat, v_sat, dt_relative = sat_orbits.compute_orbit_at_rx_time(sat, time_emission, transit)
+        p_sat, v_sat, dt_relative, drift_relative = sat_orbits.compute_orbit_at_rx_time(sat, time_emission, transit)
 
         # compute true range
         true_range = np.linalg.norm(p_sat - rec_pos)
 
         # TODO: apply shapiro correction here
-        # Shapiro correction (Eq. (XX.XX) of [1])
+        # Shapiro correction (Eq. (19.14) of [1])
 
         # get satellite elevation and azimuth angles (from the receiver), ENU frame
         lat, long, h = cartesian2geodetic(rec_pos[0], rec_pos[1], rec_pos[2])
@@ -112,6 +115,7 @@ class SatelliteGeometry(Container):
         self.satellite_velocity = v_sat
         self.dt_rel_correction = dt_relative
         self.los = los
+        self.drift_rel_correction = drift_relative
 
 
 class SystemGeometry:

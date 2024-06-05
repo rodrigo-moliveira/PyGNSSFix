@@ -122,7 +122,7 @@ def tx_time_geometric(r_receiver=None, t_reception=None, dt_receiver=None, sat=N
     while residual > residual_th and N < max_iter:
         # 2. Get satellite coordinates
         t = t_reception + timedelta(seconds=-tau)
-        r_satellite, _, _ = sat_orbits.get_orbit(sat, t)
+        r_satellite, _, _, _ = sat_orbits.get_orbit(sat, t)
 
         # 3. Compute pseudorange (in ECEF frame associated to t_receiver epoch)
         _R = dcm_e_i(-tau)
@@ -165,7 +165,7 @@ def tx_time_pseudorange(pseudorange_obs=None, t_reception=None, sat=None, sat_cl
     tau = pseudorange_obs.value / constants.SPEED_OF_LIGHT
     t_emission = t_reception + timedelta(seconds=-tau)  # t(emission)^{satellite} = t(reception)^{receiver} - tau
 
-    dt_sat_ = sat_clocks.get_clock(sat, t_emission)
+    dt_sat_, _ = sat_clocks.get_clock(sat, t_emission)
 
     # correct satellite clock for BGDs
     nav_message = sat_clocks.nav_data.get_closest_message(sat, t_emission)
@@ -369,11 +369,14 @@ def compute_ggto(time_correction, week, sow):
 def compute_nav_sat_eph(nav_message, epoch):
     """
     Compute the SV position and velocity from the broadcast ephemerides (navigation message).
-    Also compute the associated relativistic time correction
+    Also compute the associated relativistic time correction and drift
     Implements the updating of GPS ephemerides (position) and the transformation to ECEF frame
 
     Reference:
         [1] NAVSTAR GPS Space Segment/Navigation User Interfaces (IS-GPS-200). May 2021. Section 20.3.3.4.3
+
+        [2] Springer Handbook of Global Navigation Satellite Systems, Peter J.G. Teunissen, Oliver Montenbruck,
+            Springer Cham, 2017
 
     Args:
         nav_message (src.data_mng.gnss.navigation_data.NavigationPoint): instance of `NavigationPoint` used
@@ -381,8 +384,8 @@ def compute_nav_sat_eph(nav_message, epoch):
         epoch (src.data_types.date.Epoch): epoch to compute the satellite ephemerides (must be the
             transmission time epoch, that is, reception time minus transit time)
     Return:
-        tuple[numpy.ndarray,numpy.ndarray,float]: Position vector in [m],
-            velocity vector in [m/s] and relativistic clock correction in [s]
+        tuple[numpy.ndarray,numpy.ndarray,float,float]: Position vector in [m],
+            velocity vector in [m/s], relativistic clock correction in [s] and relativistic clock drift in [s/s]
     """
     GM = constants.MU_WGS84 if nav_message.constellation == "GPS" else constants.MU_GTRF
 
@@ -476,7 +479,11 @@ def compute_nav_sat_eph(nav_message, epoch):
     position = array([x_ECEF, y_ECEF, z_ECEF])
     velocity = array([vx_ECEF, vy_ECEF, vz_ECEF])
 
-    # compute relativistic correction
+    # compute relativistic correction. See Equation (19.15) of [2]
     rel_correction = -2 * sqrt(GM) * sqrtA / constants.SPEED_OF_LIGHT ** 2 * eccentricity * sin(E)
 
-    return position, velocity, rel_correction
+    # compute time derivative of relativistic correction (drift). See Equation (19.17) of [2]
+    r = linalg.norm(position)
+    rel_drift = 2 * GM / constants.SPEED_OF_LIGHT ** 2 * (1.0 / A - 1.0 / r)
+
+    return position, velocity, rel_correction, rel_drift

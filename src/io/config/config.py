@@ -8,6 +8,7 @@ from src import PROJECT_PATH
 from src.data_types.gnss import data_type_from_rinex
 from src.errors import ConfigError
 from .enums import EnumPositioningMode
+from src.common_log import get_logger, IO_LOG
 
 __all__ = ["config_dict"]
 
@@ -116,18 +117,25 @@ class Config(dict):
     def get_obs_std(self) -> dict:
         """Utility function to build the observation noise (standard deviation) for each observation"""
         if "obs_std" not in self:
+            log = get_logger(IO_LOG)
             obs_dict = {}
             service_dict = self.get_services()
+
             for constellation, services in service_dict.items():
-                obs_std_list = self.get("model", constellation, "pr_obs_std")
-                if len(obs_std_list) < len(services):
-                    raise ConfigError(f"Inconsistency between number of signals for {constellation}: {services} and"
-                                      f" the correspondent obs std list {obs_std_list}. Please fix the configuration.")
                 obs_dict[constellation] = {}
-                for index, service in enumerate(services):
-                    datatype = data_type_from_rinex(f"C{service}", constellation)
-                    # NOTE: when carrier measurements are added, update here
-                    obs_dict[constellation][datatype] = obs_std_list[index]
+
+                for obs_std_list, datatype_char in zip(("pr_obs_std", "doppler_obs_std"), ("C", "D")):
+                    std_list = self.get("model", constellation, obs_std_list)
+                    if len(std_list) < len(services):
+                        raise ConfigError(f"Inconsistency between number of signals for {constellation}: {services} and"
+                                          f" the correspondent observation noise in field {std_list}. "
+                                          f"Please fix the configuration.")
+
+                    for index, service in enumerate(services):
+                        datatype = data_type_from_rinex(f"{datatype_char}{service}", constellation)
+                        obs_dict[constellation][datatype] = std_list[index]
+                        log.info(f"Setting observation noise std for datatype {datatype} and constellation "
+                                 f"{constellation} equal to {obs_dict[constellation][datatype]}")
             self.set("obs_std", obs_dict)
 
         return self["obs_std"]

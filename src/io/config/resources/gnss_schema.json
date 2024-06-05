@@ -57,21 +57,23 @@
           "properties": {
             "observations": {"type": "array", "items": {"type": "string"}},
             "pr_obs_std": {"type": "array", "items": {"type": "number"}},
+            "doppler_obs_std": {"type": "array", "items": {"type": "number"}},
             "elevation_mask": {"type": "boolean"},
             "ionosphere": {"type": "string", "enum": ["NONE", "Klobuchar", "NTCM-G"]}
           },
-          "required": ["observations", "pr_obs_std", "elevation_mask", "ionosphere"]
+          "required": ["observations", "pr_obs_std", "doppler_obs_std", "elevation_mask", "ionosphere"]
         },
         "GAL": {
           "type": "object",
           "properties": {
             "observations": {"type": "array", "items": {"type": "string"}},
             "pr_obs_std": {"type": "array", "items": {"type": "number"}},
+            "doppler_obs_std": {"type": "array", "items": {"type": "number"}},
             "elevation_mask": {"type": "boolean"},
             "ionosphere": {"type": "string", "enum": ["NONE", "Klobuchar", "NTCM-G"]},
             "nav_type": {"type": "string", "enum": ["INAV", "FNAV"]}
           },
-          "required": ["observations", "pr_obs_std", "elevation_mask", "ionosphere", "nav_type"]
+          "required": ["observations", "pr_obs_std", "doppler_obs_std", "elevation_mask", "ionosphere", "nav_type"]
         }
       },
       "required": ["constellations", "mode", "estimate_velocity", "estimate_ggto","GPS", "GAL"]

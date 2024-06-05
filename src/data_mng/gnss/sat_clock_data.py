@@ -98,7 +98,7 @@ class SatelliteClocks:
 
     def get_clock(self, sat, epoch):
         """
-        Compute the satellite clock.
+        Compute the satellite clock and drift.
         If `use_precise_products` is True then the clocks are computed from the RINEX Clock files. Otherwise,
         they are computed from the provided navigation data.
 
@@ -106,10 +106,11 @@ class SatelliteClocks:
             sat(src.data_types.gnss.Satellite)
             epoch(src.data_types.date.Epoch)
         Returns:
-            float: the clock bias for the provided satellite and epoch
+            tuple[float, float]: the clock bias (sec) and drift (sec/sec) for the provided satellite and epoch
         """
         if self.use_precise_products:
-            return self.get_clock_precise(sat, epoch)
+            # NOTE: for now, no computation of drift for precise data is performed
+            return self.get_clock_precise(sat, epoch), 0.0
         else:
             return self.get_clock_broadcast(sat, epoch)
 
@@ -157,14 +158,14 @@ class SatelliteClocks:
             sat(src.data_types.gnss.Satellite)
             epoch(src.data_types.date.Epoch)
         Returns:
-            float: the clock bias for the provided satellite and epoch
+            tuple[float, float]: the clock bias and clock drift for the provided satellite and epoch
 
         Raises an exception if the provided satellite does not have valid data
         """
         nav_message = self.nav_data.get_closest_message(sat, epoch)
-        dt_sat, _ = broadcast_clock(nav_message.af0, nav_message.af1, nav_message.af2,
+        dt, drift = broadcast_clock(nav_message.af0, nav_message.af1, nav_message.af2,
                                     nav_message.toc.gnss_time[1], epoch.gnss_time[1])
-        return dt_sat
+        return dt, drift
 
     def get_nav_message(self, sat, epoch):
         """

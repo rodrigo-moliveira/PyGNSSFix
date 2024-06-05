@@ -283,7 +283,9 @@ class LSQ_Engine_Vel:
                 self.design_mat[obs_offset + iSat][3 + const_offset] = 1
 
                 # Weight matrix -> as 1/(obs_std^2)
-                self.weight_mat[obs_offset + iSat, obs_offset + iSat] = 1.0  # / (reconstructor.get_obs_std(sat, datatype)**2)
+                self.weight_mat[obs_offset + iSat, obs_offset + iSat] = \
+                    1 / (reconstructor.get_obs_std(sat, doppler_datatype) ** 2)
+
             obs_offset += n_sats
             const_offset += 1
 
