@@ -1,7 +1,7 @@
 import numpy as np
 
 from src.data_mng.gnss.state_space import GnssStateSpace
-from src.modules.gnss.solver.lsq_engine import LSQ_Engine, LSQ_Engine_Vel
+from src.modules.gnss.solver.lsq_engine import LSQ_Engine_Position, LSQ_Engine_Velocity
 from src.modules.gnss.solver.obs_reconstructor import PseudorangeReconstructor, RangeRateReconstructor
 from src.common_log import get_logger, GNSS_ALG_LOG
 from src.errors import SolverError, ConfigError
@@ -279,7 +279,7 @@ class GnssSolver:
 
             # solve the Least Squares
             try:
-                postfit_residuals, prefit_residuals, dop_matrix, rms = \
+                prefit_residuals, postfit_residuals, dop_matrix, rms = \
                     self._compute(system_geometry, obs_data, state, epoch)
             except SolverError as e:
                 self.log.warning(f"Least Squares failed for {str(epoch)} on additional iteration (elevation filter). "
@@ -308,7 +308,7 @@ class GnssSolver:
         reconstructor = PseudorangeReconstructor(system_geometry, self._metadata, state)
 
         # build LSQ Engine matrices for all satellites
-        lsq_engine = LSQ_Engine(satellite_list, self._metadata, epoch, obs_data, reconstructor)
+        lsq_engine = LSQ_Engine_Position(satellite_list, self._metadata, epoch, obs_data, reconstructor)
 
         # solve LS problem
         return lsq_engine.solve_ls(state)
@@ -321,7 +321,7 @@ class GnssSolver:
                                                state)
 
         # build LSQ Engine matrices for all satellites
-        lsq_engine = LSQ_Engine_Vel(satellite_list, self._metadata, epoch, obs_data, reconstructor)
+        lsq_engine = LSQ_Engine_Velocity(satellite_list, self._metadata, epoch, obs_data, reconstructor)
 
         # solve LS problem
         return lsq_engine.solve_ls(state)
@@ -381,7 +381,7 @@ class GnssSolver:
         # Least-Squares algorithm
         # This is not an iterative procedure, because no linearization is needed for velocity estimation
         try:
-            postfit_residuals, prefit_residuals, rms = \
+            prefit_residuals, postfit_residuals, _, rms = \
                 self._compute_vel(system_geometry, obs_for_epoch, state, epoch)
         except SolverError as e:
             self.log.warning(f"Least Squares failed for {str(epoch)}. Reason: {e}")
