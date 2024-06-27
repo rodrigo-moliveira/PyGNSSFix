@@ -386,7 +386,7 @@ class GnssSolver:
         except SolverError as e:
             self.log.warning(f"Least Squares failed for {str(epoch)}. Reason: {e}")
             return False
-
+        exit()
         # save other iteration data to state variable
         state.add_additional_info("vel_prefit_residuals", prefit_residuals)
         state.add_additional_info("vel_postfit_residuals", postfit_residuals)

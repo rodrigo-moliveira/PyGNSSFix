@@ -13,7 +13,7 @@ tasks for preliminary version:
     [ ] limpar o código / solve all TODOs
     [ ] update documentation
     [ ] add trace file with tropo, iono, clock delays, ggto, etc... that form the observable
-
+    [ ] fazer cleanup ao theory notes
 
     melhorar o modulo de post processing:
     [ ] criar plot com 3 subplots, um para cada componente. Melhorar depois o script sat_orbits.py
