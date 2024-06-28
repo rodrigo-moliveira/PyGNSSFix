@@ -56,13 +56,13 @@
          }
       },
 
-      "compute_smooth": true,
+      "compute_smooth": false,
       "smooth_time_constant_secs": 300
    },
 
    "model": {
       "constellations": ["GPS", "GAL"],
-      "mode": "SPS",
+      "mode": "SPS_IF",
       "_comment": "available modes are SPS, SPS_IF",
 
       "estimate_velocity": true,

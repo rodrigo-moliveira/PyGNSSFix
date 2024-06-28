@@ -146,7 +146,8 @@ class GnssAlgorithmManager:
 
         # run estimation algorithm
         self.main_log.info(f"Running estimation algorithm...")
-        solver = GnssSolver(data_manager.get_clean_obs_data(), data_manager.get_raw_obs_data(), nav_data, data_manager.sat_orbits, data_manager.sat_clocks)
+        solver = GnssSolver(data_manager.get_clean_obs_data(), data_manager.get_raw_obs_data(), nav_data,
+                            data_manager.sat_orbits, data_manager.sat_clocks)
         solver.solve()
 
         data_manager.add_data("nav_solution", solver.solution)

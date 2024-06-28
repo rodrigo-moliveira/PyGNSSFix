@@ -1,6 +1,7 @@
 import numpy as np
 
 from src.data_mng.gnss.state_space import GnssStateSpace
+from src.data_types.gnss import DataType
 from src.modules.gnss.solver.lsq_engine import LSQ_Engine_Position, LSQ_Engine_Velocity
 from src.modules.gnss.solver.obs_reconstructor import PseudorangeReconstructor, RangeRateReconstructor
 from src.common_log import get_logger, GNSS_ALG_LOG
@@ -14,81 +15,46 @@ from src.models.gnss_models import TropoManager, IonoManager
 
 class GnssSolver:
     """
-        GPSSolver. Implements GPS Position Velocity Time (PVT) modules, to compute receiver position and clock bias
-        (not yet velocity).
+    GnssSolver class
+    Implements GNSS-based estimation of the receiver Position, Velocity Time (PVT) states.
 
-        The following modules are included:
+    The module is able to process currently GPS and GAL constellations in both single-frequency and dual-frequency
+    configurations.
 
-            -> Single constellation Single Point Positioning (SPP). This is the most basic GNSS algorithm. It refers to
-                an epoch-wise iterated Least Squares (LS) parameter adjustment, where the gnss_models equations are
-                linearized and solved with respect to the receiver position and clock bias.
-                The linearized equation to be solved in a LS sense is:
-                    dy = G @ dx (see Eq. 6.9 of **REF[1]**), where dy is the gnss_models residual, G is the design
-                    (geometry) matrix, and dx is the solve-for state vector x = [dx, dy, dz, dt, dl]
-                    After x is computed for iteration i, the receiver position is updated as:
-                        X(i) = X(i-1) + dx
-                    The process is iterated in i until convergence. Then, the process restarts for the next epoch
-                    evaluation. The state vector can also comprehend other parameters (dl), for example ionosphere
-                    delays.
+    The estimation process is achieved in two parts:
+        1) First, the receiver position and clock bias are estimated, using pseudorange observations
+        2) Then, the receiver velocity and clock drift are estimated, using doppler (converted to pseudorange rate
+            observations)
 
-                There exist a couple of variations to this solution, depending on the user configurations.
-                The implemented variations are:
-                    - Single Frequency (SF):
-                        * raw pseudorange observables (e.g.: C1 pseudorange)
-                        * pseudorange smoothed with Hatch filter (e.g.: SPR1)
-                        * iono free combination, using two frequencies to obtain, for example, C12 pseudorange
-                        * smooth iono free observables (e.g.: SPR12)
-
-                    - Dual Frequency (DF)
-                        * in DF processing, the system of equations comprises observations from two frequencies
-                            (e.g.: C1 and C2)
-
-                The GPS gnss_models model comprises:
-                    * true range
-                    * receiver clock bias
-                    * satellite clock bias (corrected for relativistic corrections and TGDs)
-                    * ionosphere - a priori Klobuchar Ionospheric Model or estimated in DF mode
-                    * troposphere - a priori Saastamoinen model
-
-
-        Iterated Least-Squares PVT - High Level Algorithm
-        -------
-
-        for each gnss_models epoch (time tag in rinex_parser obs):
-            set initial pos = 0, dt = 0 (or with previous results...)
-
-            get closest navigation message
-
-            for each iteration:
-                set r = 0, dt = 0 for first iteration or with results of previous iteration
-
-                for each satellite that there exist measurements:
-                    compute transit time
-                    compute signal transmission epoch
-                    with these, compute final satellite position at TX, and rotate to ECEF frame at t = RX
-                    get true range
-                    estimate azimuth, elevation
-                    compute dt_sat and implement TGD
-                    compute iono / tropo delays
-
-                compute predicted observations using the quantities computed for this iteration:
-                compute prefit_residual = gnss_models - predicted_observation
-                set up system LS system and solve for the state variables dx, dy, dz, dt, ...
-
-                update (x,y,z) += (dx,dy,dz) and finish this iteration
-                finish iterative procedure if process converged
-
+    The state vector (estimated parameters) is dependent on the chosen user configuration and simulation setup. The
+    available parameters for estimation are:
+        * Receiver position [3x1]: this state is mandatory and always estimated
+        * Receiver clock bias [1]: this state is mandatory and always estimated
+        * Inter system bias (ISB) [1] : this state is enabled for dual-constellation scenarios
+        * Troposphere [1] (Zenith Wet Delay ZWD coefficient): this state is enabled/disabled in the user configurations
+        * Ionosphere [1xN_i]: this state is enabled for dual-frequency scenarios, where N_i is the number of satellites
+            for constellation i
+        * Receiver velocity [3x1]: the velocity estimation is enabled/disabled by the user in the configurations and
+            requires Doppler measurements
+        * Clock drift [1xN_C]: the clock drift state is a by-product of the velocity estimation process, where N_C is
+            the number of available constellations.
     """
 
-    def __init__(self, processed_obs_data, raw_obs_data, nav_data, sat_orbits, sat_clocks):
+    def __init__(self, obs_data_for_pos, obs_data_for_vel, nav_data, sat_orbits, sat_clocks):
         """
-        Args:
-            processed_obs_data : gnss_models data processed (to be used in the positioning)
-            raw_obs_data : gnss_models data to be used in the velocity estimation (contains the doppler measurements)
-            nav_data : navigation data
+        Constructor of the GnssSolver class
+
+        Parameters:
+            obs_data_for_pos(src.data_mng.gnss.ObservationData): observation data for the position estimation process
+                (may contain raw, smooth or iono-free pseudorange observations)
+            obs_data_for_vel(src.data_mng.gnss.ObservationData): observation data for the velocity estimation process
+                (contains Doppler measurements)
+            nav_data(src.data_mng.gnss.NavigationData): navigation data object containing RINEX NAV ephemerides
+            sat_orbits(src.data_mng.gnss.sat_orbit_data.SatelliteOrbits): `SatelliteOrbits` object with orbit data
+            sat_clocks(src.data_mng.gnss.sat_clock_data.SatelliteClocks): `SatelliteClocks` object with clock data
         """
-        self.obs_data = processed_obs_data
-        self.raw_obs_data = raw_obs_data
+        self.obs_data_for_pos = obs_data_for_pos
+        self.obs_data_for_vel = obs_data_for_vel
         self.nav_data = nav_data
         self.sat_orbits = sat_orbits
         self.sat_clocks = sat_clocks
@@ -100,15 +66,16 @@ class GnssSolver:
         # user configurations
         self._set_solver_metadata(config_dict)
 
-        # solution dict
-        self.solution = []
+        # solution list
+        self.solution = list()
 
     def _set_solver_metadata(self, config):
+        """ Set up the metadata dict with the scenario setup (user configurations) """
         # Fetching user options
         MAX_ITER = config.get("solver", "n_iterations")  # maximum number of iterations
         STOP_CRITERIA = config.get("solver", "stop_criteria")  # RMS threshold for stop criteria
-        SOLVER = EnumSolver.init_model(config.get("solver", "algorithm"))
-        TX_TIME_ALG = config.get("solver", "transmission_time_alg")
+        SOLVER_ALG = EnumSolver.init_model(config.get("solver", "algorithm"))
+        TX_TIME_ALG = EnumTransmissionTime(config.get("solver", "transmission_time_alg"))
         REL_CORRECTION = EnumOnOff(config.get("solver", "relativistic_corrections"))  # 0 disable, 1 enable
         INITIAL_POS = config.get("solver", "initial_pos_std")
         INITIAL_VEL = config.get("solver", "initial_vel_std")
@@ -124,55 +91,66 @@ class GnssSolver:
         CODES = {}
         DOPPLER = {}
 
+        # Set up the user models for each active constellation
         for const in CONSTELLATIONS:
             IONO[const] = IonoManager(const)
 
+            code_types = self.obs_data_for_pos.get_code_types(const)
+            doppler_types = self.obs_data_for_vel.get_doppler_types(const)
+
             # check if the model is single frequency or dual frequency
-            code_types = self.obs_data.get_code_types(const)
-            doppler_types = self.raw_obs_data.get_doppler_types(const)
             if len(code_types) == 2 and (_model != EnumPositioningMode.SPS_IF):
-                # Dual-Frequency Model
+                # Dual-Frequency Uncombined Model
                 self.log.info(f"Selected model for {const} is Dual-Frequency Uncombined with observations {code_types}")
                 MODEL[const] = EnumModel.DUAL_FREQ
                 CODES[const] = [code_types[0], code_types[1]]  # setting main and second code type
             elif len(code_types) == 1 and _model == EnumPositioningMode.SPS_IF:
                 # Iono-Free Model
-                self.log.info(f"Selected model for {const} is Iono-Free with gnss_models {code_types}")
+                self.log.info(f"Selected model for {const} is Iono-Free with code observations {code_types}")
+                iono_code = code_types[0]
+                if not DataType.is_iono_free_code(iono_code) and not DataType.is_iono_free_smooth_code(iono_code):
+                    raise ConfigError(f"Iono-Free Model is selected for constellation {const} but no iono-free code "
+                                      f"observations are available. Available code observations: {code_types}")
                 MODEL[const] = EnumModel.SINGLE_FREQ  # we process as single frequency
-                CODES[const] = [code_types[0]]
-                # TODO: raise exception if code_types[0] is not IonoFree
-                # IONO[const] = EnumIono.DISABLED
+                CODES[const] = [iono_code]
+                IONO[const].iono_model = EnumIonoModel.DISABLED  # disable Iono model in Iono-Free scenarios
             elif len(code_types) == 1:
                 # Single Frequency Model
-                self.log.info(f"Selected model for {const} is Single Frequency with gnss_models {code_types[0]}")
+                self.log.info(f"Selected model for {const} is Single Frequency with code types {code_types[0]}")
                 MODEL[const] = EnumModel.SINGLE_FREQ
                 CODES[const] = [code_types[0]]
             else:
                 raise ConfigError(f"Unable to initialize GNSS Solver Model for constellation {const}. Check configs.")
 
-            if len(doppler_types) == 0:
-                self.log.error(f"No Doppler observations for constellation {const} are available")
-            DOPPLER[const] = doppler_types
+            # Velocity estimation checks
+            if VELOCITY_EST:
+                self.log.info(f"Velocity estimation is enabled. Available Doppler observations for constellation "
+                              f"{const} are {doppler_types}")
+                if len(doppler_types) == 0:
+                    self.log.error(f"No Doppler observations for constellation {const} are available")
+                DOPPLER[const] = doppler_types
 
         # fill info dict
         self._metadata = {
             "CONSTELLATIONS": CONSTELLATIONS,
             "MAX_ITER": MAX_ITER,
             "STOP_CRITERIA": STOP_CRITERIA,
-            "SOLVER": SOLVER,
+            "SOLVER": SOLVER_ALG,
             "TROPO": TROPO,
             "IONO": IONO,
             "MODEL": MODEL,
             "CODES": CODES,
             "DOPPLER": DOPPLER,
             "REL_CORRECTION": REL_CORRECTION,
-            "TX_TIME_ALG": EnumTransmissionTime(TX_TIME_ALG),
+            "TX_TIME_ALG": TX_TIME_ALG,
             "INITIAL_POS": INITIAL_POS,
             "INITIAL_VEL": INITIAL_VEL,
             "INITIAL_CLOCK_BIAS": INITIAL_CLOCK_BIAS,
             "ELEVATION_FILTER": ELEVATION_FILTER,
             "VELOCITY_EST": VELOCITY_EST
         }
+
+    # PAREI AQUI
 
     def solve(self):
         # available epochs
