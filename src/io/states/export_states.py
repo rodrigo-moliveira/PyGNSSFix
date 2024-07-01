@@ -39,6 +39,10 @@ def get_file_header(state_variable, state):
         return f"Week_Number({epoch_system}),Time_of_Week[s],constellation,sat,data_type,residual[m]"
     elif state_variable == "postfit_residuals":
         return f"Week_Number({epoch_system}),Time_of_Week[s],constellation,sat,data_type,residual[m]"
+    elif state_variable == "vel_prefit_residuals":
+        return f"Week_Number({epoch_system}),Time_of_Week[s],constellation,sat,data_type,residual[m/s]"
+    elif state_variable == "vel_postfit_residuals":
+        return f"Week_Number({epoch_system}),Time_of_Week[s],constellation,sat,data_type,residual[m/s]"
     elif state_variable == "satellite_azel":
         return f"Week_Number({epoch_system}),Time_of_Week[s],sat,azimuth[deg],elevation[deg]"
     elif state_variable == "dop_ecef":
@@ -113,7 +117,7 @@ def export_to_file(state_variable, state):
                 pass
         return data
 
-    elif state_variable == "prefit_residuals" or state_variable == "postfit_residuals":
+    elif state_variable in ["prefit_residuals", "postfit_residuals", "vel_prefit_residuals", "vel_postfit_residuals"]:
         residuals = state.get_additional_info(state_variable)
         data = []
 

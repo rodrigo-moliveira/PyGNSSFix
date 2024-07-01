@@ -70,7 +70,11 @@ class GnssSolver:
         self.solution = list()
 
     def _set_solver_metadata(self, config):
-        """ Set up the metadata dict with the scenario setup (user configurations) """
+        """ Set up the metadata dict with the scenario setup (user configurations)
+
+        Parameters:
+            config(src.io.config.config.Config): user configurations
+        """
         # Fetching user options
         MAX_ITER = config.get("solver", "n_iterations")  # maximum number of iterations
         STOP_CRITERIA = config.get("solver", "stop_criteria")  # RMS threshold for stop criteria
@@ -150,24 +154,23 @@ class GnssSolver:
             "VELOCITY_EST": VELOCITY_EST
         }
 
-    # PAREI AQUI
-
-    def solve(self):
+    def solve(self) -> None:
+        """ Launch GNSSSolver solver algorithm (main function) """
         # available epochs
-        epochs = self.obs_data.get_epochs()
+        epochs = self.obs_data_for_pos.get_epochs()
 
         # iterate over all available epochs
         for epoch in epochs:
             self.log.info(f"processing epoch {epoch}...")
-            # fetch gnss_models data for this epoch
-            obs_for_epoch = self.obs_data.get_epoch_data(epoch)
+            # fetch observation data for this epoch
+            obs_for_epoch = self.obs_data_for_pos.get_epoch_data(epoch)
             sats_for_epoch = obs_for_epoch.get_satellites()
 
             # initialize solve-for variables (receiver position and bias) for the present epoch
             state = self._init_state(epoch, sats_for_epoch)
 
-            # call lower level of solve
-            success = self._solve_for_epoch(epoch, obs_for_epoch, state)
+            # call lower level of position estimation
+            success = self._estimate_position(epoch, obs_for_epoch, state)
 
             if success:
                 # add solution to Output timeseries
@@ -175,7 +178,13 @@ class GnssSolver:
                               f"RMS = {state.get_additional_info('rms')} [m]")
 
                 if self._metadata["VELOCITY_EST"]:
-                    self._estimate_velocity(state, epoch)
+                    success = self._estimate_velocity(state, epoch)
+
+                    if success:
+                        self.log.info(f"Successfully solved velocity estimation for epoch {str(epoch)} with "
+                                      f"RMS = {state.get_additional_info('vel_rms')} [m/s]")
+                    else:
+                        self.log.warning(f"No velocity solution computed for epoch {str(epoch)}.")
 
                 # store data for this epoch
                 self.solution.append(state)
@@ -186,7 +195,15 @@ class GnssSolver:
         self.log.info("Successfully ending module GNSS Positioning Solver...")
 
     def _init_state(self, epoch, sat_list):
-        # initialize GNSS state
+        """ Initialize state vector for this epoch
+
+        Parameters:
+            epoch(src.data_types.date.Epoch): epoch to initialize the state vector
+            sat_list(list[src.data_types.gnss.Satellite]) : list of available satellites
+        Returns:
+            GnssStateSpace : initialized state vector
+        """
+        # initialize GNSS state (first epoch)
         if len(self.solution) == 0:
             position = np.array(self._metadata["INITIAL_POS"][0:3], dtype=np.float64)
             velocity = np.array(self._metadata["INITIAL_VEL"][0:3], dtype=np.float64)
@@ -196,16 +213,24 @@ class GnssSolver:
         else:
             # initialize from previous state
             prev_state = self.solution[-1]
-            state = prev_state.clone()
+            state = prev_state.clone()  # deep copy
             state.epoch = epoch
         return state
 
-    @staticmethod
-    def _stop(rms_old, rms_new, stop_criteria):
-        return abs((rms_old - rms_new) / rms_old) <= stop_criteria
+    def _estimate_position(self, epoch, obs_data, state):
+        """
+        Sub function to launch the position estimation procedure
 
-    def _solve_for_epoch(self, epoch, obs_data, state):
-        # TODO: limpar o código duplicado devido ao elevation filter
+        Parameters:
+            epoch(src.data_types.date.Epoch): epoch to process
+            obs_data (src.data_mng.gnss.observation_data.EpochData) : instance of `EpochData` (GNSS observable database
+                for a single epoch)
+            state(GnssStateSpace) : state vector to process
+
+        Returns:
+            bool : True if the process succeeds and False if it fails. In that case debug information is written in the
+                log file
+        """
         # begin iterative process for this epoch
         iteration = 0
         rms = rms_prev = 1
@@ -214,10 +239,6 @@ class GnssSolver:
 
         # build system geometry for this epoch
         system_geometry = SystemGeometry(obs_data, self.sat_clocks, self.sat_orbits)
-
-        # check data availability for this epoch
-        if not self._check_model_availability(system_geometry, epoch):
-            return False  # not enough data to process this epoch
 
         self.log.info(f"Processing epoch {str(epoch)}")
         self.log.debug(f"Available Satellites: {system_geometry.get_satellites()}")
@@ -230,7 +251,7 @@ class GnssSolver:
             # solve the Least Squares
             try:
                 postfit_residuals, prefit_residuals, dop_matrix, rms = \
-                    self._compute(system_geometry, obs_data, state, epoch)
+                    self._iterate_pos(system_geometry, obs_data, state, epoch)
             except SolverError as e:
                 self.log.warning(f"Least Squares failed for {str(epoch)} on iteration {iteration}."
                                  f"Reason: {e}")
@@ -245,30 +266,26 @@ class GnssSolver:
             rms_prev = rms
             iteration += 1
 
+        # end of iterative procedure
+        if iteration == self._metadata["MAX_ITER"]:
+            self.log.warning(f"PVT failed to converge for epoch {str(epoch)}, with RMS={rms}. "
+                             f"No solution will be computed for this epoch.")
+            return False
+
         # perform additional iteration after elevation filter
         if apply_elevation_filter:
             self.log.info(f"Applying elevation filter with threshold {self._metadata['ELEVATION_FILTER']} [deg] "
                           f"and performing additional iteration")
             self._elevation_filter(system_geometry, self._metadata["ELEVATION_FILTER"])
 
-            # check data availability for this epoch
-            if not self._check_model_availability(system_geometry, epoch):
-                return False  # not enough data to process this epoch
-
             # solve the Least Squares
             try:
                 prefit_residuals, postfit_residuals, dop_matrix, rms = \
-                    self._compute(system_geometry, obs_data, state, epoch)
+                    self._iterate_pos(system_geometry, obs_data, state, epoch)
             except SolverError as e:
-                self.log.warning(f"Least Squares failed for {str(epoch)} on additional iteration (elevation filter). "
-                                 f"Reason: {e}")
+                self.log.warning(f"Least Squares failed for {str(epoch)} on additional iteration "
+                                 f"(after elevation filter). Reason: {e}")
                 return False
-
-        # end of iterative procedure
-        if iteration == self._metadata["MAX_ITER"]:
-            self.log.warning(f"PVT failed to converge for epoch {str(epoch)}, with RMS={rms}. "
-                             f"No solution will be computed for this epoch.")
-            return False
 
         # save other iteration data to state variable
         state.add_additional_info("geometry", system_geometry)
@@ -279,7 +296,10 @@ class GnssSolver:
 
         return True
 
-    def _compute(self, system_geometry, obs_data, state, epoch):
+    def _iterate_pos(self, system_geometry, obs_data, state, epoch):
+        """ Low-level function to solve a single iteration of the position estimation iterative process """
+        self._check_model_availability(system_geometry, epoch)
+
         satellite_list = system_geometry.get_satellites()
         state.update_sat_list(satellite_list)
 
@@ -291,24 +311,13 @@ class GnssSolver:
         # solve LS problem
         return lsq_engine.solve_ls(state)
 
-    def _compute_vel(self, system_geometry, obs_data, state, epoch):
-        satellite_list = system_geometry.get_satellites()
-
-        reconstructor = RangeRateReconstructor(system_geometry,
-                                               self._metadata,
-                                               state)
-
-        # build LSQ Engine matrices for all satellites
-        lsq_engine = LSQ_Engine_Velocity(satellite_list, self._metadata, epoch, obs_data, reconstructor)
-
-        # solve LS problem
-        return lsq_engine.solve_ls(state)
-
-    def _check_model_availability(self, system_geometry, epoch):
+    def _check_model_availability(self, system_geometry, epoch) -> None:
         """
         Checks if it is possible to perform the dual frequency / single frequency PVT estimation, or, in contrast,
         we have not enough data to perform the computations.
 
+        Raises:
+            SolverError : raises an exception there is not enough information to process this epoch
         """
         MIN_SAT = 4  # default: estimate position + clock (dimension 4)
         if len(self._metadata["CONSTELLATIONS"]) != 1:
@@ -319,15 +328,13 @@ class GnssSolver:
 
         # check number of available satellites
         if len(sat_list) < MIN_SAT:
-            self.log.warning(
+            raise SolverError(
                 f"Not enough satellites to compute model PVT positioning at {str(epoch)}. "
                 f"Available satellites with data for provided codes: "
                 f"{sat_list}. Minimum number of satellites is {MIN_SAT}. Aborting the solution for this epoch...")
-            return False
 
-        return True
-
-    def _elevation_filter(self, system_geometry, cutoff):
+    def _elevation_filter(self, system_geometry, cutoff: float):
+        """ Apply elevation filter to remove satellites below the provided cutoff elevation """
         # get elevation threshold in radians
         sats_to_remove = []
         for sat, sat_info in system_geometry.items():
@@ -344,30 +351,55 @@ class GnssSolver:
         if sats_to_remove:
             self.log.debug(f"Removing satellites {sats_to_remove} due to elevation filter. ")
 
+    def _iterate_vel(self, system_geometry, obs_data, state, epoch):
+        """ Low-level function to solve a single iteration of the velocity estimation process """
+        satellite_list = system_geometry.get_satellites()
+
+        reconstructor = RangeRateReconstructor(system_geometry,
+                                               self._metadata,
+                                               state)
+
+        # build LSQ Engine matrices for all satellites
+        lsq_engine = LSQ_Engine_Velocity(satellite_list, self._metadata, epoch, obs_data, reconstructor)
+
+        # solve LS problem
+        return lsq_engine.solve_ls(state)
+
     def _estimate_velocity(self, state, epoch):
+        """
+        Sub function to launch the velocity estimation procedure
 
+        Parameters:
+            epoch(src.data_types.date.Epoch): epoch to process
+            state(GnssStateSpace) : state vector to process
+
+        Returns:
+            bool : True if the process succeeds and False if it fails. In that case debug information is written in the
+                log file
+        """
         # get observations and system geometry for this epoch
-        obs_for_epoch = self.raw_obs_data.get_epoch_data(epoch)
+        obs_for_epoch = self.obs_data_for_vel.get_epoch_data(epoch)
         system_geometry = state.get_additional_info("geometry")
-
-        # check data availability for this epoch
-        # TODO: check if we have enough data to process this (check if we have doppler measurements)...
 
         self.log.info(f"Applying velocity estimation {str(epoch)}")
         self.log.debug(f"Available Satellites: {system_geometry.get_satellites()}")
 
         # Least-Squares algorithm
-        # This is not an iterative procedure, because no linearization is needed for velocity estimation
         try:
             prefit_residuals, postfit_residuals, _, rms = \
-                self._compute_vel(system_geometry, obs_for_epoch, state, epoch)
+                self._iterate_vel(system_geometry, obs_for_epoch, state, epoch)
         except SolverError as e:
             self.log.warning(f"Least Squares failed for {str(epoch)}. Reason: {e}")
             return False
-        exit()
+
         # save other iteration data to state variable
         state.add_additional_info("vel_prefit_residuals", prefit_residuals)
         state.add_additional_info("vel_postfit_residuals", postfit_residuals)
         state.add_additional_info("vel_rms", rms)
 
         return True
+
+    @staticmethod
+    def _stop(rms_old, rms_new, stop_criteria):
+        """ Apply stop condition for the iteration procedure """
+        return abs((rms_old - rms_new) / rms_old) <= stop_criteria

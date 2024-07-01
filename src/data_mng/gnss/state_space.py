@@ -51,7 +51,10 @@ class GnssStateSpace(Container):
         self.epoch = epoch
 
     def clone(self):
-        """Returns a copy of this GnssStateSpace object. All state variables are deep-copied."""
+        """Returns a copy of this GnssStateSpace object. All state variables are deep-copied.
+        Returns:
+            GnssStateSpace : cloned GnssStateSpace object
+        """
         _states = self.get_additional_info("states")
         state = GnssStateSpace(position=self.position, velocity=self.velocity, clock_bias=self.clock_bias,
                                epoch=self.epoch, clock_bias_rate=self.clock_bias_rate)
@@ -147,7 +150,11 @@ class GnssStateSpace(Container):
         self.add_additional_info("states", _states)
 
     def update_sat_list(self, sat_list):
-        """"""
+        """ Update the satellite list of the internal iono state with the one provided as argument
+
+        Parameters:
+            sat_list(list[src.data_types.gnss.Satellite]) : list of available satellites
+        """
         for sat in sat_list:
             if sat not in self.iono:
                 self.iono[sat] = 0.0  # add new satellite
@@ -243,4 +250,8 @@ class GnssStateSpace(Container):
             exportable_lst.append("prefit_residuals")
         if "postfit_residuals" in self._info:
             exportable_lst.append("postfit_residuals")
+        if "vel_prefit_residuals" in self._info:
+            exportable_lst.append("vel_prefit_residuals")
+        if "vel_postfit_residuals" in self._info:
+            exportable_lst.append("vel_postfit_residuals")
         return exportable_lst
