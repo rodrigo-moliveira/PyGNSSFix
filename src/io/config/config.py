@@ -21,8 +21,8 @@ class Config(dict):
 
     def init(self, initial_dict, alg="gnss"):
 
-        if alg.lower() not in ("gnss", "performance"):
-            raise ValueError(f"illegal value for {alg} argument. Available values are 'gnss', 'performance'")
+        if alg.lower() not in ("gnss", "post_processing"):
+            raise ValueError(f"illegal value for {alg} argument. Available values are 'gnss', 'post_processing'")
 
         super().__init__()  # Call the parent class (dict) constructor
 
@@ -30,15 +30,17 @@ class Config(dict):
         self._validate(initial_dict, alg)
 
         self.update(initial_dict)  # Update the dictionary with the values from initial_dict
+
         # model initializations
-        self["model"]["mode"] = EnumPositioningMode.init_model(self["model"]["mode"])
-        self.get_obs_std()
+        if alg.lower() == "gnss":
+            self["model"]["mode"] = EnumPositioningMode.init_model(self["model"]["mode"])
+            self.get_obs_std()
 
     def _validate(self, initial_dict, alg):
         # Read the schema from the file
         if alg.lower() == "gnss":
             schema_path = PROJECT_PATH / "src/io/config/resources/gnss_schema.json"
-        elif alg.lower() == "performance":
+        elif alg.lower() == "post_processing":
             schema_path = PROJECT_PATH / "src/io/config/resources/performance_schema.json"
         else:
             raise ValueError(f"invalid value for argument alg: {alg}")

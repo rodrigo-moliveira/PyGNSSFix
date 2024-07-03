@@ -1,52 +1,37 @@
-tasks for preliminary version:
-    [ ] no output, permitir escolher qual a timetag de output (RX Time, GPST, GST, UTC...)
+tasks release 1.0:
     [ ] add shapiro correction (Eq. 19.14 of handbook)
     [ ] improve computation of weight matrix W, taking inspiration from https://gnss-sdr.org/docs/sp-blocks/pvt/#precise-point-positioning
-    [ ] com precise products, passa a ser necessário utilizar DCBs para converter os relógios (tal como para o NEXA)
-        [ ] os dcbs podem até vir o rinex nav
     [ ] criar um check que verifique os ficheiros e configurações obrigatórias para cada modelo (SPS, SPS_IF, PPPP...)
-        por exemplo, por agora o ficheiro nav é sempre obrigatório, mas isso tem de mudar depois..
-    [ ] ver o que acontece quando configuro 3 observações. Deve dar um erro!! Este SW apenas dá para 1 ou 2
-    [ ] fix all documentation docstrings to either Args or Arguments... Same for return or returns...
-    [ ] state.add_additional_info("vel_prefit_residuals", prefit_residuals)
-        state.add_additional_info("vel_postfit_residuals", postfit_residuals)
-        Esta info é guardada no state mas não no ficheiro!!! Dar fix a isto
-
-
-    code cleanup:
-    [ ] limpar o código / solve all TODOs
-    [ ] update documentation
-    [ ] add trace file with tropo, iono, clock delays, ggto, etc... that form the observable
-    [ ] fazer cleanup ao theory notes
+        [ ] por exemplo, por agora o ficheiro nav é sempre obrigatório, mas isso tem de mudar depois..
+        [ ] ver o que acontece quando configuro 3 observações. Deve dar um erro!! Este SW apenas dá para 1 ou 2
+    [ ] fix all documentation docstrings
+        [ ] to either Args or Arguments... Same for return or returns...
+        [ ] limpar o código / solve all TODOs
 
     melhorar o modulo de post processing:
-    [ ] criar plot com 3 subplots, um para cada componente. Melhorar depois o script sat_orbits.py
-    [ ] aplicar os pontos em ficheiros kml? Um plot de google maps ou assim.
-    [ ] see the residual analysis in https://gnss-sdr.org/docs/sp-blocks/pvt/#solution-validation
-    [ ]  mover a config do PPT (post processing tool) para um json proprio
-    [ ] fazer plot do observation data
-    [ ] plot Iono states
-    [ ] compute mean and std of pre/postfit residuals -> mean should be zero. STD should be sigma_URE (user range error). This should be computed for each satellite
-    [ ] plot residuals
-    [ ] plot position covariance (3D plot, 2D surfaces, etc...)
-    [ ] consistency of residuals. Residuals divided by covariance matrix? See Tapler book and maybe my thesis, if I remember well
-    [ ] plot 3d sigma of estimation error
-    [ ] compute allan variance of clock bias and plot it
-
+        [ ] dar update ao modulo PP
+        [ ] criar plot com 3 subplots, um para cada componente. Melhorar depois o script sat_orbits.py
+        [ ] aplicar os pontos em ficheiros kml? Um plot de google maps ou assim.
+        [ ] see the residual analysis in https://gnss-sdr.org/docs/sp-blocks/pvt/#solution-validation
+        [ ] fazer plot do observation data
+        [ ] plot all state variables (Iono states, tropo, isb,...)
+        [ ] compute mean and std of pre/postfit residuals -> mean should be zero. STD should be sigma_URE (user range error). This should be computed for each satellite
+        [ ] plot residuals
+        [ ] plot position covariance (3D plot, 2D surfaces, etc...)
+        [ ] consistency of residuals. Residuals divided by covariance matrix? See Tapler book and maybe my thesis, if I remember well
+        [ ] plot 3d sigma of estimation error
+        [ ] compute allan variance of clock bias and plot it
     [ ] revisão final do repositório. Update readme
-
     [ ] fazer uma "campanha de validação": comparar precise vs nav products. Single freq / Single const vs Dual freq / Dual Const...
         e brincar com as configurações para fazer fine tuning ao algo
 
-    ---> THIS FINISHES FIRST RELEASE 1.0<---
 
 
---- ### ---
 
 # Release 1.1 (PPPP Mode)
-caminhar para PPPP:
+    [ ] fazer cleanup ao theory notes
     [ ] criar um config field com o modo (SPS ou PPPP)
-    [ ] Adicionar Leitura e Modelo de Clocks, Sp3, IONEX (criar um PPPP)
+    [ ] Adicionar Leitura e Modelo de IONEX (criar um PPPP)
     [ ] substituir alguns modelos do SPS pelos respetivos do PPPP
     [ ] outras correçoes: PCVs...
     [ ] adicionar um DCB Manager
@@ -60,8 +45,14 @@ finalizar o GNSS user positioning com:
     [ ] Adicionar Kalman filter com user dynamics
 
 
+nice to have, but not for now
+    [ ] no output, permitir escolher qual a timetag de output (RX Time, GPST, GST, UTC...)
+    [ ] add trace file with tropo, iono, clock delays, ggto, etc... that form the observable
+
+
 
 # Relase 1.2 (INS - IMU Emulator - Loosely Coupled)
+    [ ] implement unit convertion when reading from csv file
 loosely coupled:
     [ ] attitude basics
     [ ] sensor emulator

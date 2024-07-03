@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.data_mng.csv_data import CSVData
+from src.data_mng.csv.csv_data import CSVData
 from src.models.frames import cartesian2geodetic, latlon2dcm_e_enu, latlon2dcm_e_ned
 
 

@@ -1,8 +1,7 @@
 import os
 
-from src.data_mng.csv_data_mng import GnssRunStorageManager
 from .error import *
-from .plot_manager import *
+from .plots import *
 
 
 def format_time_for_plot(time_in):
