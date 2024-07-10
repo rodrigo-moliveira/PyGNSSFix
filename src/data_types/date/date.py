@@ -144,6 +144,7 @@ class Epoch:
     """Default scale"""
 
     DEFAULT_FORMAT = "%Y-%m-%d %H:%M:%S"
+    ISO_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
     def __init__(self, *args, scale=DEFAULT_SCALE, **kwargs):
         """

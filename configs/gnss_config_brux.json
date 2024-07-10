@@ -62,7 +62,7 @@
 
    "model": {
       "constellations": ["GPS", "GAL"],
-      "mode": "SPS_IF",
+      "mode": "SPS",
       "_comment": "available modes are SPS, SPS_IF",
 
       "estimate_velocity": true,
@@ -79,7 +79,7 @@
          "map": "Saastamoinen",
 
          "_comment3": "Select `true` to estimate tropospheric wet delay or `false` to disable tropo estimation",
-         "estimate_tropo_wet": false
+         "estimate_tropo_wet": true
       },
 
       "GPS": {

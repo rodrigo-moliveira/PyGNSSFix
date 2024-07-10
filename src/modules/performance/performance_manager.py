@@ -2,20 +2,16 @@ import os
 
 from .error import *
 from .plots import *
+import pandas as pd
 
 
-def format_time_for_plot(time_in):
-    # TODO: convert to Epoch object (first need to create constructor from gps secs and week to Epoch)
-    time_out = [t[1] for t in time_in]
-    return time_out
-
-
-class PerformanceEvaluation:
+class PerformanceManager:
 
     def __init__(self, data_manager, config):
+        # TODO: add logger..
         self.data_manager = data_manager
         self.config = config
-        self.is_static = False
+
         self.true_pos = None
         self.error_ecef = None
         self.error_enu = None
@@ -34,9 +30,14 @@ class PerformanceEvaluation:
             print(f"Creating directory to store plots {plot_dir}...")
             os.makedirs(plot_dir)
 
+        print("Running post-processing scripts ")
+        print("1 - Processing estimation errors...")
         self._process_errors(post_proc_dir)
 
-        # 3- plots
+        print("2 - Running residual analysis")
+        # TODO...
+
+        # plots
         print("Plotting simulation data...")
         self._plot()
 
@@ -47,10 +48,9 @@ class PerformanceEvaluation:
 
         # compute Root Mean Square Error (RMSE) in ECEF and ENU frames
         print("Computing estimation error and root mean square error...")
-        self.is_static = self.config["performance_evaluation"]["static"]
-        if self.is_static:
-            true_pos_dict = self.config["performance_evaluation"]["true_static_position"]
-            self.true_pos = [true_pos_dict["x_ecef"], true_pos_dict["y_ecef"], true_pos_dict["z_ecef"]]
+        is_static = self.config.get("performance_evaluation", "static")
+        if is_static:
+            self.true_pos = self.config.get("performance_evaluation", "true_static_position")
             self.error_ecef, self.error_enu = compute_error_static(position, self.true_pos, local="ENU")
         else:
             raise NotImplementedError(f"Dynamic error computation not yet implemented...")
@@ -65,14 +65,15 @@ class PerformanceEvaluation:
     def _write_outputs(self, output_dir, time, rms_ecef, rms_enu):
         f_rms_stats = open(output_dir / "EstimationStats.txt", "w")
 
-        error_ecef_ = np.concatenate((time.data, self.error_ecef), axis=1)
-        error_enu_ = np.concatenate((time.data, self.error_enu), axis=1)
+        # Create DataFrame for error matrix
+        ecef_df = pd.DataFrame(self.error_ecef, columns=['x_error[m]', 'y_error[m]', 'z_error[m]'])
+        error_ecef_df = pd.concat([time.data, ecef_df], axis=1)
+        enu_df = pd.DataFrame(self.error_enu, columns=['east_error[m]', 'north_error[m]', 'up_error[m]'])
+        error_enu_df = pd.concat([time.data, enu_df], axis=1)
 
-        # write headers
-        np.savetxt(output_dir / "error_ecef.txt", error_ecef_, delimiter=',',
-                   header='GPS_Week,GPS_TOW,x_error[m],y_error[m],z_error[m]', comments="")
-        np.savetxt(output_dir / "error_enu.txt", error_enu_, delimiter=',',
-                   header='GPS_Week,GPS_TOW,east_error[m],north_error[m],up_error[m]', comments="")
+        # Save the error dataframes
+        error_ecef_df.to_csv(output_dir / "error_ecef.txt", index=False)
+        error_enu_df.to_csv(output_dir / "error_enu.txt", index=False)
 
         # Overall Estimation Stats
         stats = "Root Mean Square Error:\n" \
@@ -94,38 +95,54 @@ class PerformanceEvaluation:
 
     def _plot(self):
         # fetch estimated data
-        _time = self.data_manager.get_data("time")
-        time = format_time_for_plot(_time.data)
+        time = format_time_for_plot(self.data_manager.get_data("time").data)
         position = self.data_manager.get_data("position")
-        clock_bias = self.data_manager.get_data("clock_bias")
+
         dop_ecef = self.data_manager.get_data("dop_ecef")
         dop_enu = self.data_manager.get_data("dop_local")
         azel = self.data_manager.get_data("satellite_azel")
         residuals = self.data_manager.get_data("postfit_residuals")
 
-        plot_1D(time, clock_bias.data, x_label="Time", y_label="clock [s]", title="Receiver Clock Bias")
+        self._plot_clock_bias(time)
 
-        true_pos = self.true_pos if self.is_static else None
-        plot_3D_trajectory(position.data, true_position=true_pos,
-                           x_label="X ECEF [m]", y_label="Y ECEF [m]", z_label="Z ECEF [m]",
-                           title="Estimated VS True position")
-
-        self._plot_errors(time, self.error_ecef, "ECEF", "X", "Y", "Z")
-        self._plot_errors(time, self.error_enu, "ENU", "East", "North", "Up")
-        self._plot_dops(time, dop_ecef, dop_enu)
-
-        plot_satellite_availability(residuals.data, x_label="Time", y_label="Number of Sats",
-                                    title="Satellite Availability")
-        plot_skyplot(azel.data)
-
-        plot_2D_trajectory(self.error_enu,
-                           x_label="East [m]", y_label="North [m]", title="Horizontal Position Error")
+        # plot_3D_trajectory(position.data, true_position=self.true_pos,
+        #                    x_label="X ECEF [m]", y_label="Y ECEF [m]", z_label="Z ECEF [m]",
+        #                    title="Estimated VS True position")
+        #
+        # self._plot_errors(time, self.error_ecef, "ECEF", "X", "Y", "Z")
+        # self._plot_errors(time, self.error_enu, "ENU", "East", "North", "Up")
+        # self._plot_dops(time, dop_ecef, dop_enu)
+        #
+        # plot_satellite_availability(residuals.data, x_label="Time", y_label="Number of Sats",
+        #                             title="Satellite Availability")
+        # plot_skyplot(azel.data)
+        #
+        # plot_2D_trajectory(self.error_enu,
+        #                    x_label="East [m]", y_label="North [m]", title="Horizontal Position Error")
 
         """
         if not estimated_iono.is_empty():
             GNSSQualityManager.plot_iono(estimated_iono)
         """
         show_all()
+
+    def _plot_clock_bias(self, time):
+        clock_bias = self.data_manager.get_data("clock_bias")
+        data_matrix = clock_bias.to_data_array()
+
+        clock_series = data_matrix[:, 0]
+        sigma_series = np.sqrt(data_matrix[:, 1])
+
+        ax = plot_1D(time, clock_series, x_label="Time", label='clock bias', color='blue')
+        ax = plot_1D(time, clock_series+sigma_series, ax=ax, x_label="Time", label="+/- sigma [s]", linestyle='--',
+                     linewidth=1.0, color='lightblue')
+        ax = plot_1D(time, clock_series-sigma_series, ax=ax, x_label="Time", linestyle='--',
+                     linewidth=1.0, title=clock_bias.title, set_legend=True, y_label="clock bias [s]",
+                     color='lightblue')
+        ax.fill_between(time, clock_series + sigma_series, clock_series - sigma_series, color='lightblue', alpha=0.3)
+        # Plot +/- sigma now...
+        # ax = plot_1D(time, clock_bias., x_label="Time", y_label="clock [s]", title="Receiver Clock Bias")
+        # ax = plot_1D(time, clock_bias. x_label="Time", y_label="clock [s]", title="Receiver Clock Bias")
 
     def _plot_errors(self, time, error, title, x_label, y_label, z_label):
         ax = None

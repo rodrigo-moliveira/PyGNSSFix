@@ -1,7 +1,16 @@
 import matplotlib.pyplot as plt
 
 from src.modules.performance.skyplot import plot_sky
+from src.data_types.date import Epoch
 
+
+def format_time_for_plot(time_in):
+    time_out = []
+    for t in time_in["Epoch_timetag"]:
+        args = t.split()
+        epoch = Epoch.strptime(args[0], format=Epoch.ISO_FORMAT, scale=args[1])
+        time_out.append(epoch)
+    return time_out
 
 def plot_observables(observation_data, satellite, datatype, **kwargs):
     epochs = observation_data.get_epochs()
@@ -86,7 +95,8 @@ def plot_1D(x, y, **kwargs):
         fig, ax = plt.subplots()
 
     ax.plot(x, y, linewidth=kwargs.get("linewidth", 2.0), label=kwargs.get("label", None),
-            marker=kwargs.get("marker", ''), markersize=kwargs.get("markersize", 5))
+            marker=kwargs.get("marker", ''), markersize=kwargs.get("markersize", 5),
+            linestyle=kwargs.get("linestyle", "solid"), color=kwargs.get('color', None))
     ax.set_xlabel(kwargs.get("x_label", ""))
     ax.set_ylabel(kwargs.get("y_label", ""))
     ax.set_title(kwargs.get("title", ""))

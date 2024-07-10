@@ -1,7 +1,7 @@
 {
   "performance_evaluation": {
     "_comment0": "Select run folder (or 'last')",
-    "run": "tmp/2024-07-01T09H36M01S",
+    "run": "tmp/2024-07-04T08H25M28S",
 
     "_comment1":"select static or dynamic reference trajectory (coordinates with respect to ECEF frame [meters])",
     "static": true,

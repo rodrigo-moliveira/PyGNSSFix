@@ -6,21 +6,24 @@ from .csv_data import CSVData
 
 class GnssRunStorageManager(Container):
     __rx_based__ = ["time", "position", "velocity", "clock_bias",
-                    "dop_ecef", "dop_local"]
-    __sat_based__ = ["prefit_residuals", "postfit_residuals"]
+                    "dop_ecef", "dop_local",
+                    "clock_bias_rate", "isb", "tropo_wet"]
+    __sat_based__ = ["prefit_residuals", "postfit_residuals",
+                     "iono", "satellite_azel", "vel_prefit_residuals", "vel_postfit_residuals"]
 
     __slots__ = __rx_based__ + __sat_based__ + ["_available"]
 
     def __init__(self):
         super().__init__()
-        # TODO: colocar todos os possiveis ficheiros (incluindo ISB, Iono...)
+
         # time
         self.time = CSVData(name="time",
                             description="Time in GPS Time Scale",
-                            units=['WN', 's'],
-                            legend=['week_number', 'seconds_of_week'],
+                            units=None,
+                            legend=None,
                             title="GPS Time Scale",
-                            cols=(0, 1))
+                            time_cols=(0, 1),
+                            data_cols=(2,))
 
         # position in ECEF
         self.position = CSVData(name="position",
@@ -28,15 +31,26 @@ class GnssRunStorageManager(Container):
                                 units=['m', 'm', 'm'],
                                 legend=['pos_x', 'pos_y', 'pos_z'],
                                 title="Position (ECEF)",
-                                cols=(2, 3, 4))
+                                time_cols=(0, 1),
+                                data_cols=(2, 3, 4))
 
         # clock bias
         self.clock_bias = CSVData(name="clock_bias",
                                   description="Receiver Clock Bias",
-                                  units=['s'],
-                                  legend=['time'],
-                                  title="Receiver Clock Bias",
-                                  cols=(2,))
+                                  units=['s', 's^2'],
+                                  legend=['clock_bias', 'cov'],
+                                  title="Estimated Receiver Clock Bias",
+                                  time_cols=(0, 1),
+                                  data_cols=(2, 3))
+
+        # clock bias rate
+        self.clock_bias_rate = CSVData(name="clock_bias_rate",
+                                       description="Receiver Clock Bias Rate",
+                                       units=['s/s'],
+                                       legend=['clock rate'],
+                                       title="Receiver Clock Bias Rate",
+                                       time_cols=(0, 1),
+                                       data_cols=(2,))
 
         # velocity in ECEF
         self.velocity = CSVData(name="velocity",
@@ -44,7 +58,8 @@ class GnssRunStorageManager(Container):
                                 units=['m/s', 'm/s', 'm/s'],
                                 legend=['vel_x', 'vel_y', 'vel_z'],
                                 title="Velocity (ECEF)",
-                                cols=(2, 3, 4))
+                                time_cols=(0, 1),
+                                data_cols=(2, 3, 4))
 
         # Dilution of Precision (DOP)
         self.dop_ecef = CSVData(name="DOP_ECEF",
@@ -52,40 +67,95 @@ class GnssRunStorageManager(Container):
                                 units=['', '', '', '', '', ''],
                                 legend=['dop_x', 'dop_y', 'dop_z', 'dop_time', 'dop_geometry', 'dop_position'],
                                 title="Dilution of Precision (ECEF)",
-                                cols=(2, 3, 4, 5, 6, 7))
+                                time_cols=(0, 1),
+                                data_cols=(2, 3, 4, 5, 6, 7))
 
         self.dop_local = CSVData(name="DOP_local",
                                  description="Dilution of Precision in local (ENU) frame",
                                  units=['', '', '', ''],
                                  legend=['dop_east', 'dop_north', 'dop_up', 'dop_horizontal'],
                                  title="Dilution of Precision (ENU)",
-                                 cols=(2, 3, 4, 5))
+                                 time_cols=(0, 1),
+                                 data_cols=(2, 3, 4, 5))
 
         # prefit residuals
         self.prefit_residuals = CSVData(name="prefit_residuals",
-                                        description="Prefit Residuals",
+                                        description="Pseudorange Prefit Residuals",
                                         units=None,
                                         legend=None,
-                                        title="Prefit Residuals",
-                                        cols=(2, 3, 4, 5),
-                                        dtype='U3')  # for residuals, we need to read the csv as string cells
+                                        title="Pseudorange Prefit Residuals",
+                                        time_cols=(0, 1),
+                                        data_cols=(2, 3, 4, 5),
+                                        dtype='U20')  # for residuals, we need to read the csv as string cells
 
         # postfit residuals
         self.postfit_residuals = CSVData(name="postfit_residuals",
-                                         description="Postfit Residuals",
+                                         description="Pseudorange Postfit Residuals",
                                          units=None,
                                          legend=None,
-                                         title="Postfit Residuals",
-                                         cols=(2, 3, 4, 5),
-                                         dtype='U3')  # for residuals, we need to read the csv as string cells
+                                         title="Pseudorange Postfit Residuals",
+                                         time_cols=(0, 1),
+                                         data_cols=(2, 3, 4, 5),
+                                         dtype='U20')  # for residuals, we need to read the csv as string cells
 
-        # # satellite azimuth elevation
-        # self.satellite_azel = CSVData(name="satellite_azel",
-        #                               description="Satellite Azimuth Elevation",
-        #                               units=['deg', 'deg'],
-        #                               legend=['azimuth', 'elevation'],
-        #                               title="Satellite Azimuth and Elevation")
+        # velocity prefit residuals
+        self.vel_prefit_residuals = CSVData(name="vel_prefit_residuals",
+                                            description="Pseudorange Rate Prefit Residuals",
+                                            units=None,
+                                            legend=None,
+                                            title="Pseudorange Prefit Residuals",
+                                            time_cols=(0, 1),
+                                            data_cols=(2, 3, 4, 5),
+                                            dtype='U20')  # for residuals, we need to read the csv as string cells
 
+        # postfit residuals
+        self.vel_postfit_residuals = CSVData(name="vel_postfit_residuals",
+                                             description="Pseudorange Rate Postfit Residuals",
+                                             units=None,
+                                             legend=None,
+                                             title="Pseudorange Rate Postfit Residuals",
+                                             time_cols=(0, 1),
+                                             data_cols=(2, 3, 4, 5),
+                                             dtype='U20')  # for residuals, we need to read the csv as string cells
+
+        # satellite azimuth elevation
+        self.satellite_azel = CSVData(name="satellite_azel",
+                                      description="Satellite Azimuth Elevation",
+                                      units=['deg', 'deg'],
+                                      legend=['sat', 'azimuth', 'elevation'],
+                                      title="Satellite Azimuth and Elevation",
+                                      time_cols=(0, 1),
+                                      data_cols=(2, 3, 4),
+                                      )
+
+        # Inter System Bias ISB
+        self.isb = CSVData(name="isb",
+                           description="Inter System Bias ISB",
+                           units=['s'],
+                           legend=['isb'],
+                           title="Inter System Bias ISB",
+                           time_cols=(0, 1),
+                           data_cols=(2,),
+                           )
+
+        # Iono
+        self.iono = CSVData(name="iono",
+                            description="Ionosphere",
+                            units=['m'],
+                            legend=['sat', 'iono'],
+                            title="Ionosphere",
+                            time_cols=(0, 1),
+                            data_cols=(2, 3),
+                            )
+
+        self.tropo_wet = CSVData(name="tropo",
+                                 description="Troposphere",
+                                 units=['m'],
+                                 legend=['tropo_wet'],
+                                 title="Troposphere",
+                                 time_cols=(0, 1),
+                                 data_cols=(2,),
+                                 )
         # available data for the current simulation
         self._available = []
 
@@ -113,12 +183,11 @@ class GnssRunStorageManager(Container):
         return self._available
 
     def read_data(self, output_folder):
+        """ TODO: add docstrings"""
         for output_name in GnssRunStorageManager.__rx_based__ + GnssRunStorageManager.__sat_based__:
-            print("Reading", output_name)
-            getattr(self, output_name).read_data(output_folder / OUTPUT_FILENAME_MAP[output_name])
-            self._available.append(output_name)
-
-        # format satellite-based datasets
-        for output_name in GnssRunStorageManager.__sat_based__:
-            print("Formatting satellite based", output_name)
-            getattr(self, output_name).format_sat_data()
+            try:
+                print("Reading", output_name)
+                getattr(self, output_name).read_data(output_folder / OUTPUT_FILENAME_MAP[output_name])
+                self._available.append(output_name)
+            except Exception as e:
+                print(f"[WARN] did not successfully import data {output_name} due to: {e}")

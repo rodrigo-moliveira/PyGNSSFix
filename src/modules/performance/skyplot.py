@@ -6,8 +6,7 @@ from src import constants
 
 
 def plot_sky(trajectory, target_name, ax=None, style_kwargs=None,
-             north_to_east_ccw=True, grid=True,
-             warn_below_horizon=False):
+             north_to_east_ccw=True, grid=True):
     # Note: this function is adapted from https://github.com/astropy/astroplan/blob/master/astroplan/plots/sky.py
 
     # Set up axes & plot styles if needed.

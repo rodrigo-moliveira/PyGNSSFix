@@ -4,13 +4,12 @@ from src.data_mng.csv.csv_data import CSVData
 from src.models.frames import cartesian2geodetic, latlon2dcm_e_enu, latlon2dcm_e_ned
 
 
-def error_vector(x, true_pos, rot_matrix=np.eye(3)):
-    return rot_matrix @ (true_pos - x)
+def error_vector(row, true_pos, rot_matrix=np.eye(3)):
+    pos = np.array([row['pos_x'], row['pos_y'], row['pos_z']])
+    return rot_matrix @ (pos - true_pos)
 
 
-def compute_error_static(est_vec: CSVData, true_vec, true_pos=None, local="ENU"):
-    if true_pos is None:
-        true_pos = true_vec
+def compute_error_static(est_data: CSVData, true_pos, local="ENU"):
     [lat, lon, _] = cartesian2geodetic(*true_pos)
 
     if local == "ENU":
@@ -18,10 +17,15 @@ def compute_error_static(est_vec: CSVData, true_vec, true_pos=None, local="ENU")
     elif local == "NED":
         rot_e_local = latlon2dcm_e_ned(lat, lon)  # rotation matrix from ECEF to NED
     else:
-        raise ValueError(f"argument local must either be 'ENU' or 'NED'")
+        raise ValueError(f"Argument `local` must either be 'ENU' or 'NED' (local={local})")
 
-    error_matrix_ecef = np.apply_along_axis(error_vector, 1, est_vec.data, true_vec)
-    error_matrix_local = np.apply_along_axis(error_vector, 1, est_vec.data, true_vec, rot_e_local)
+    # Compute errors without rotation matrix (default identity matrix)
+    errors_ecef = est_data.data.apply(lambda row: error_vector(row, true_pos), axis=1)
+    error_matrix_ecef = np.vstack(errors_ecef.values)
+
+    # Compute errors with the specified rotation matrix
+    errors_local = est_data.data.apply(lambda row: error_vector(row, true_pos, rot_e_local), axis=1)
+    error_matrix_local = np.vstack(errors_local.values)
 
     return error_matrix_ecef, error_matrix_local
 
