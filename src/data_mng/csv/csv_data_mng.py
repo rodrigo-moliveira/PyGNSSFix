@@ -28,11 +28,12 @@ class GnssRunStorageManager(Container):
         # position in ECEF
         self.position = CSVData(name="position",
                                 description="position in the ECEF frame",
-                                units=['m', 'm', 'm'],
-                                legend=['pos_x', 'pos_y', 'pos_z'],
-                                title="Position (ECEF)",
+                                units=['m', 'm', 'm', 'm^2', 'm^2', 'm^2', 'm^2', 'm^2', 'm^2'],
+                                legend=['pos_x', 'pos_y', 'pos_z', 'cov_xx', 'cov_yy', 'cov_zz', 'cov_xy', 'cov_xz',
+                                        'cov_yz'],
+                                title="Estimated Position in the ECEF Frame",
                                 time_cols=(0, 1),
-                                data_cols=(2, 3, 4))
+                                data_cols=(2, 3, 4, 5, 6, 7, 8, 9, 10))
 
         # clock bias
         self.clock_bias = CSVData(name="clock_bias",

@@ -5,6 +5,10 @@ from .plots import *
 import pandas as pd
 
 
+# TODO List
+#   * fazer o plot do erro em ENU 3D com as covs
+#   * alterar os argumentos do plot 3D traj para receber já a cov
+
 class PerformanceManager:
 
     def __init__(self, data_manager, config):
@@ -15,6 +19,8 @@ class PerformanceManager:
         self.true_pos = None
         self.error_ecef = None
         self.error_enu = None
+        self.cov_ecef = None
+        self.cov_enu = None
 
     def process(self, output_dir):
 
@@ -51,7 +57,7 @@ class PerformanceManager:
         is_static = self.config.get("performance_evaluation", "static")
         if is_static:
             self.true_pos = self.config.get("performance_evaluation", "true_static_position")
-            self.error_ecef, self.error_enu = compute_error_static(position, self.true_pos, local="ENU")
+            self.error_ecef, self.error_enu, self.cov_ecef, self.cov_enu = compute_error_static(position, self.true_pos, local="ENU")
         else:
             raise NotImplementedError(f"Dynamic error computation not yet implemented...")
 
@@ -98,27 +104,29 @@ class PerformanceManager:
         time = format_time_for_plot(self.data_manager.get_data("time").data)
         position = self.data_manager.get_data("position")
 
-        dop_ecef = self.data_manager.get_data("dop_ecef")
-        dop_enu = self.data_manager.get_data("dop_local")
         azel = self.data_manager.get_data("satellite_azel")
         residuals = self.data_manager.get_data("postfit_residuals")
 
         self._plot_clock_bias(time)
+        plot_3D_trajectory_with_avg_covariance(position.to_data_array(), self.cov_ecef, true_position=self.true_pos,
+                           x_label="X ECEF [m]", y_label="Y ECEF [m]", z_label="Z ECEF [m]",
+                           title=position.title)
 
-        # plot_3D_trajectory(position.data, true_position=self.true_pos,
-        #                    x_label="X ECEF [m]", y_label="Y ECEF [m]", z_label="Z ECEF [m]",
-        #                    title="Estimated VS True position")
-        #
-        # self._plot_errors(time, self.error_ecef, "ECEF", "X", "Y", "Z")
-        # self._plot_errors(time, self.error_enu, "ENU", "East", "North", "Up")
-        # self._plot_dops(time, dop_ecef, dop_enu)
+        plot_3D_trajectory_with_avg_covariance(self.error_enu, self.cov_enu, true_position=[0, 0, 0],
+                                               x_label="East [m]", y_label="North [m]", z_label="Up [m]",
+                                               title="3D ENU Error")
+
+        self._plot_errors(time, self.error_ecef, "ECEF", "X", "Y", "Z")
+        self._plot_errors(time, self.error_enu, "ENU", "East", "North", "Up")
+        self._plot_dops(time)
         #
         # plot_satellite_availability(residuals.data, x_label="Time", y_label="Number of Sats",
         #                             title="Satellite Availability")
         # plot_skyplot(azel.data)
         #
-        # plot_2D_trajectory(self.error_enu,
-        #                    x_label="East [m]", y_label="North [m]", title="Horizontal Position Error")
+
+        plot_2D_trajectory(self.error_enu,self.cov_enu,
+                           x_label="East [m]", y_label="North [m]", title="Horizontal Position Error")
 
         """
         if not estimated_iono.is_empty():
@@ -134,15 +142,12 @@ class PerformanceManager:
         sigma_series = np.sqrt(data_matrix[:, 1])
 
         ax = plot_1D(time, clock_series, x_label="Time", label='clock bias', color='blue')
-        ax = plot_1D(time, clock_series+sigma_series, ax=ax, x_label="Time", label="+/- sigma [s]", linestyle='--',
+        ax = plot_1D(time, clock_series + sigma_series, ax=ax, x_label="Time", label="+/- sigma [s]", linestyle='--',
                      linewidth=1.0, color='lightblue')
-        ax = plot_1D(time, clock_series-sigma_series, ax=ax, x_label="Time", linestyle='--',
+        ax = plot_1D(time, clock_series - sigma_series, ax=ax, x_label="Time", linestyle='--',
                      linewidth=1.0, title=clock_bias.title, set_legend=True, y_label="clock bias [s]",
                      color='lightblue')
         ax.fill_between(time, clock_series + sigma_series, clock_series - sigma_series, color='lightblue', alpha=0.3)
-        # Plot +/- sigma now...
-        # ax = plot_1D(time, clock_bias., x_label="Time", y_label="clock [s]", title="Receiver Clock Bias")
-        # ax = plot_1D(time, clock_bias. x_label="Time", y_label="clock [s]", title="Receiver Clock Bias")
 
     def _plot_errors(self, time, error, title, x_label, y_label, z_label):
         ax = None
@@ -157,19 +162,21 @@ class PerformanceManager:
         plot_1D(time, z_error, ax=ax, x_label="Time", y_label="Position error [m]", label=z_label,
                 title=f"Estimation Error in {title}", set_legend=True)
 
-    def _plot_dops(self, time, dop_ecef, dop_enu):
+    def _plot_dops(self, time):
+        dop_ecef = self.data_manager.get_data("dop_ecef").to_data_array()
+        dop_enu = self.data_manager.get_data("dop_local").to_data_array()
 
-        x_dop = [dop[0] for dop in dop_ecef.data]
-        y_dop = [dop[1] for dop in dop_ecef.data]
-        z_dop = [dop[2] for dop in dop_ecef.data]
-        t_dop = [dop[3] for dop in dop_ecef.data]
-        geometry_dop = [dop[4] for dop in dop_ecef.data]
-        position_dop = [dop[5] for dop in dop_ecef.data]
+        x_dop = [dop[0] for dop in dop_ecef]
+        y_dop = [dop[1] for dop in dop_ecef]
+        z_dop = [dop[2] for dop in dop_ecef]
+        t_dop = [dop[3] for dop in dop_ecef]
+        geometry_dop = [dop[4] for dop in dop_ecef]
+        position_dop = [dop[5] for dop in dop_ecef]
 
-        east_dop = [dop[0] for dop in dop_enu.data]
-        north_dop = [dop[1] for dop in dop_enu.data]
-        up_dop = [dop[2] for dop in dop_enu.data]
-        horizontal_dop = [dop[3] for dop in dop_enu.data]
+        east_dop = [dop[0] for dop in dop_enu]
+        north_dop = [dop[1] for dop in dop_enu]
+        up_dop = [dop[2] for dop in dop_enu]
+        horizontal_dop = [dop[3] for dop in dop_enu]
 
         ax = plot_1D(time, geometry_dop, label="geometry")
         plot_1D(time, position_dop, ax=ax, label="position")
@@ -186,7 +193,6 @@ class PerformanceManager:
         plot_1D(time, north_dop, ax=ax, label="north")
         plot_1D(time, up_dop, ax=ax, x_label="Time", y_label="DOPs [m]", label="up",
                 title="Dilution of Precision in ENU", set_legend=True)
-
 
     def plot_iono(self, iono_tm):
         ax = None

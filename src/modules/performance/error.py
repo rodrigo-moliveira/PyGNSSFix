@@ -8,6 +8,13 @@ def error_vector(row, true_pos, rot_matrix=np.eye(3)):
     pos = np.array([row['pos_x'], row['pos_y'], row['pos_z']])
     return rot_matrix @ (pos - true_pos)
 
+def get_cov_local(row, rot_matrix=np.eye(3)):
+    cov_ecef = np.array([[row['cov_xx'], row['cov_xy'], row['cov_xz']],
+                         [row['cov_xy'], row['cov_yy'], row['cov_yz']],
+                         [row['cov_xz'], row['cov_yz'], row['cov_zz']]])
+    cov_local = rot_matrix @ cov_ecef @ rot_matrix.T
+    return cov_local
+
 
 def compute_error_static(est_data: CSVData, true_pos, local="ENU"):
     [lat, lon, _] = cartesian2geodetic(*true_pos)
@@ -27,7 +34,13 @@ def compute_error_static(est_data: CSVData, true_pos, local="ENU"):
     errors_local = est_data.data.apply(lambda row: error_vector(row, true_pos, rot_e_local), axis=1)
     error_matrix_local = np.vstack(errors_local.values)
 
-    return error_matrix_ecef, error_matrix_local
+    # Get ECEF Covariance per epoch
+    cov_ecef = est_data.data.apply(lambda row: get_cov_local(row), axis=1)
+
+    # Rotate covariance matrix from ECEF to local frame
+    cov_local = est_data.data.apply(lambda row: get_cov_local(row, rot_e_local), axis=1)
+
+    return error_matrix_ecef, error_matrix_local, list(cov_ecef), list(cov_local)
 
 
 def compute_rms_error(error_matrix):
