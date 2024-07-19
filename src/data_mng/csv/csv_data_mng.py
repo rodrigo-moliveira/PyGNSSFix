@@ -48,10 +48,10 @@ class GnssRunStorageManager(Container):
         self.clock_bias_rate = CSVData(name="clock_bias_rate",
                                        description="Receiver Clock Bias Rate",
                                        units=['s/s'],
-                                       legend=['clock rate'],
+                                       legend=['constellation', 'clock rate', 'cov'],
                                        title="Receiver Clock Bias Rate",
                                        time_cols=(0, 1),
-                                       data_cols=(2,))
+                                       data_cols=(2, 3, 4))
 
         # velocity in ECEF
         self.velocity = CSVData(name="velocity",

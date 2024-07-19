@@ -128,7 +128,8 @@ class EnumTropoMap(Enum):
 class EnumTransmissionTime(Enum):
     GEOMETRIC = 0
     PSEUDORANGE = 1
+    NAPEOS = 2
 
     @classmethod
     def show_options(cls):
-        return f"[0 - GEOMETRIC, 1 - PSEUDORANGE]"
+        return f"[0 - GEOMETRIC, 1 - PSEUDORANGE, 2 - NAPEOS]"

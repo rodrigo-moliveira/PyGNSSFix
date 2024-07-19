@@ -119,7 +119,7 @@
         "algorithm": {"type": "string", "enum": ["WSL"]},
         "n_iteration": {"type": "integer", "minimum": 1},
         "stop_criteria": {"type": "number"},
-        "transmission_time_alg": {"type": "integer", "minimum": 0, "maximum": 1},
+        "transmission_time_alg": {"type": "integer", "minimum": 0, "maximum": 2},
         "relativistic_corrections": {"type": "integer", "minimum": 0, "maximum": 1},
         "elevation_filter": {"type": "number"},
         "initial_pos_std": {"type": "array", "items": {"type": "number"}},

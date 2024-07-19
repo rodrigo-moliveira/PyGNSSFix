@@ -226,7 +226,8 @@ def plot_1D(x, y, **kwargs):
     ax.set_title(kwargs.get("title", ""))
 
     if "set_legend" in kwargs:
-        ax.legend()
+        #ax.legend()
+        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
     if kwargs.get("tight_layout", False) is True:
         plt.tight_layout()
@@ -325,7 +326,7 @@ def plot_2D_trajectory(data, cov, **kwargs):
     ax.set_title(kwargs.get("title", ""))
 
     # Show legend
-    ax.legend()
+    ax.legend(loc='upper right')
 
     return ax
 

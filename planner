@@ -7,6 +7,7 @@ tasks release 1.0:
     [ ] fix all documentation docstrings
         [ ] to either Args or Arguments... Same for return or returns...
         [ ] limpar o código / solve all TODOs
+    [ ] consider implementing equation 6.73 of IOCE Vol3 para o cálculo do geometrical range (sem ter de calcular o tempo da viagem)
 
     melhorar o modulo de post processing:
         [ ] dar update ao modulo PP
@@ -19,6 +20,7 @@ tasks release 1.0:
         [ ] plot residuals
         [ ] plot position covariance (3D plot, 2D surfaces, etc...)
         [ ] consistency of residuals. Residuals divided by covariance matrix? See Tapler book and maybe my thesis, if I remember well
+        [ ] testar os resíduos com aqueles testes estatísticos? Tenho algures no pc um script python the faz isso creio eu
         [ ] plot 3d sigma of estimation error
         [ ] compute allan variance of clock bias and plot it
     [ ] revisão final do repositório. Update readme

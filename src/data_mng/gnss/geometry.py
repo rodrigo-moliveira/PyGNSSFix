@@ -1,6 +1,8 @@
 from datetime import timedelta
 import numpy as np
 
+from src.constants import SPEED_OF_LIGHT, MU_WGS84, EARTH_ANGULAR_RATE
+from src.io.config import EnumTransmissionTime
 from src.models.frames import enu2azel, ecef2enu, cartesian2geodetic
 from src.data_mng import Container
 from src.errors import TimeSeriesError
@@ -83,15 +85,19 @@ class SatelliteGeometry(Container):
         time_reception = epoch + timedelta(seconds=-rec_bias)
 
         # algorithm to compute Transmission time (in GNSS time)
-        time_emission, transit = compute_tx_time(model=compute_tx, r_receiver=rec_pos, t_reception=epoch,
+        time_emission, transit = compute_tx_time(model=compute_tx, r_receiver=rec_pos,
+                                                 t_reception=epoch, v_receiver=state.velocity,
                                                  dt_receiver=rec_bias, pseudorange_obs=PR_obs, sat_orbits=sat_orbits,
                                                  sat_clocks=sat_clocks, sat=sat)
 
-        # get and satellite position at RX ECEF frame
+        # get satellite position and velocity at RX ECEF frame
         p_sat, v_sat, dt_relative, drift_relative = sat_orbits.compute_orbit_at_rx_time(sat, time_emission, transit)
 
-        # compute true range
-        true_range = np.linalg.norm(p_sat - rec_pos)
+        # Compute geometrical range
+        if compute_tx != EnumTransmissionTime.NAPEOS:
+            true_range = np.linalg.norm(p_sat - rec_pos)
+        else:
+            true_range = transit * SPEED_OF_LIGHT
 
         # TODO: apply shapiro correction here
         # Shapiro correction (Eq. (19.14) of [1])

@@ -3,6 +3,7 @@
 """
 
 from datetime import timedelta
+import numpy as np
 from numpy import sqrt, cos, sin, linalg, array
 
 from src import constants
@@ -63,10 +64,13 @@ def compute_tx_time(model=None, **kwargs):
     There are two alternatives, depending on the user configuration:
         * Geometric algorithm: Purely Geometric Algorithm from section 5.1.1.1 of [1]
         * Pseudorange-based algorithm: A Pseudorange-Based Algorithm from section 5.1.1.1 of [1]
+        * NAPEOS algorithm: the transmission time and true range are computed using satellite position and velocity
+            data evaluated at the reception time (see [2])
 
     Reference:
         [1] ESA GNSS DATA PROCESSING, Volume I: Fundamentals and Algorithms, J. Sanz Subirana,
         J.M. Juan Zornoza and M. Hernández-Pajares
+        [2] NAPEOS Mathematical Models and Algorithms, DOPS-SYS-TN-0100-OPS-GN, 5-NOV-2009
 
     Args:
         model(EnumTransmissionTime): enumeration that evaluates to `EnumTransmissionTime.GEOMETRIC` or
@@ -81,6 +85,8 @@ def compute_tx_time(model=None, **kwargs):
         return tx_time_geometric(**kwargs)
     elif model == EnumTransmissionTime.PSEUDORANGE:
         return tx_time_pseudorange(**kwargs)
+    elif model == EnumTransmissionTime.NAPEOS:
+        return tx_time_napeos(**kwargs)
 
 
 def tx_time_geometric(r_receiver=None, t_reception=None, dt_receiver=None, sat=None, sat_orbits=None, **_):
@@ -110,7 +116,7 @@ def tx_time_geometric(r_receiver=None, t_reception=None, dt_receiver=None, sat=N
     Return:
         tuple [src.data_types.date.Epoch, float] : computed TX epoch, computed transit time
     """
-    max_iter = 5
+    max_iter = 10
     residual_th = 1E-8
     rho_previous = 0
     residual = 1
@@ -173,6 +179,61 @@ def tx_time_pseudorange(pseudorange_obs=None, t_reception=None, sat=None, sat_cl
 
     # compute transmission time, using Eq. (5.6)
     T_emission = t_emission + timedelta(seconds=-dt_sat)  # t(emission)^{GPS} = t(emission)^{satellite} - dt_sat
+    return T_emission, tau
+
+
+def tx_time_napeos(r_receiver=None, v_receiver=None, dt_receiver=None, sat=None, t_reception=None,
+                   sat_orbits=None, **_):
+    """
+    NAPEOS algorithm: the transmission time and true range are computed using only satellite position and velocity
+            data evaluated at the reception time (see [1])
+
+    Reference:
+        [1] NAPEOS Mathematical Models and Algorithms, DOPS-SYS-TN-0100-OPS-GN, 5-NOV-2009
+
+    Args:
+        r_receiver (numpy.ndarray): position of receiver at reception time `t(reception)^{receiver}`
+        v_receiver (numpy.ndarray): velocity of receiver at reception time `t(reception)^{receiver}`
+        dt_receiver (float): current estimate of the receiver clock bias (seconds)
+        t_reception (src.data_types.date.Epoch): time of signal reception, measured by receiver
+            `t(reception)^{receiver}`, i.e., RINEX obs time tag
+        sat(src.data_types.gnss.Satellite): the satellite to compute the transmission time
+        sat_orbits(src.data_mng.gnss.sat_orbit_data.SatelliteOrbits): `SatelliteOrbits` object with orbit data
+    Return:
+        tuple [src.data_types.date.Epoch, float] : computed TX epoch, computed transit time
+    """
+    MU = constants.MU_WGS84 if sat.sat_system.is_gps() else constants.MU_GTRF
+
+    # get satellite position and velocity at TX ECEF frame
+    pos_sat, vel_sat, _, _ = sat_orbits.get_orbit(sat, t_reception)
+    vel_sat += np.cross(constants.EARTH_ANGULAR_RATE, pos_sat)  # convert to inertial
+    pos_rec = r_receiver
+    vel_rec = v_receiver + np.cross(constants.EARTH_ANGULAR_RATE, pos_rec)  # convert to inertial
+
+    sat_radius = np.linalg.norm(pos_sat)
+    pos_dif = pos_sat - pos_rec
+    vel_dif = vel_sat - vel_rec
+
+    geom_range = np.linalg.norm(pos_dif)
+    unit_los = pos_dif / geom_range
+    range_rate = np.dot(unit_los, vel_dif)
+
+    # corrections
+    nGravitationalEffect = np.dot(pos_sat, unit_los) * MU / (sat_radius ** 3)
+    nSecondOrderRangeRateEffect = -(range_rate * range_rate) / geom_range
+    nSecondOrderVelocityEffect = np.dot(vel_dif, vel_dif) / geom_range
+    nTotalSecondOrderEffect = nSecondOrderRangeRateEffect + nSecondOrderVelocityEffect + nGravitationalEffect
+    nTimeTagError = -dt_receiver
+    nTimeTagCorrection = nTimeTagError * (range_rate + nTimeTagError * nTotalSecondOrderEffect / 2.0)
+    nZeroOrderFlightTime = geom_range / constants.SPEED_OF_LIGHT
+    nVelocityCorrection = -nZeroOrderFlightTime * np.dot(vel_sat, unit_los)
+    nAccelCorrection = -(nZeroOrderFlightTime ** 2) * nGravitationalEffect / 2.0
+    nTimeCorrection = nVelocityCorrection + nAccelCorrection
+    # nRelCorrection = 2 * np.dot(pos_sat, vel_sat) / constants.SPEED_OF_LIGHT
+    # true_range = geom_range - nTimeTagCorrection + nTimeCorrection  # + nRelCorrection
+    tau = (geom_range - nTimeTagCorrection + nTimeCorrection) / constants.SPEED_OF_LIGHT
+
+    T_emission = t_reception + timedelta(seconds=-tau - dt_receiver)
     return T_emission, tau
 
 

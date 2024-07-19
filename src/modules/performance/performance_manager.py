@@ -8,6 +8,7 @@ import pandas as pd
 # TODO List
 #   * fazer o plot do erro em ENU 3D com as covs
 #   * alterar os argumentos do plot 3D traj para receber já a cov
+#   * todos os datamanager.get_data() têm que estar protegidos por um try catch
 
 class PerformanceManager:
 
@@ -108,6 +109,8 @@ class PerformanceManager:
         residuals = self.data_manager.get_data("postfit_residuals")
 
         self._plot_clock_bias(time)
+        self._plot_clock_rate(time)
+
         plot_3D_trajectory_with_avg_covariance(position.to_data_array(), self.cov_ecef, true_position=self.true_pos,
                            x_label="X ECEF [m]", y_label="Y ECEF [m]", z_label="Z ECEF [m]",
                            title=position.title)
@@ -116,16 +119,17 @@ class PerformanceManager:
                                                x_label="East [m]", y_label="North [m]", z_label="Up [m]",
                                                title="3D ENU Error")
 
-        self._plot_errors(time, self.error_ecef, "ECEF", "X", "Y", "Z")
-        self._plot_errors(time, self.error_enu, "ENU", "East", "North", "Up")
+        self._plot_errors(time, self.error_ecef, self.cov_ecef, "ECEF", "X", "Y", "Z")
+        self._plot_errors(time, self.error_enu, self.cov_enu, "ENU", "East", "North", "Up")
         self._plot_dops(time)
         #
         # plot_satellite_availability(residuals.data, x_label="Time", y_label="Number of Sats",
         #                             title="Satellite Availability")
         # plot_skyplot(azel.data)
         #
+        # TODO: plot the remaining states (iono, tropo, isb,..., clock drift, velocity, postfit residuals)
 
-        plot_2D_trajectory(self.error_enu,self.cov_enu,
+        plot_2D_trajectory(self.error_enu, self.cov_enu,
                            x_label="East [m]", y_label="North [m]", title="Horizontal Position Error")
 
         """
@@ -149,18 +153,61 @@ class PerformanceManager:
                      color='lightblue')
         ax.fill_between(time, clock_series + sigma_series, clock_series - sigma_series, color='lightblue', alpha=0.3)
 
-    def _plot_errors(self, time, error, title, x_label, y_label, z_label):
+    def _plot_clock_rate(self, time):
+        try:
+            clock_rate = self.data_manager.get_data("clock_bias_rate")
+
+            # Set colors for ±σ signals
+            colors = {'GPS': 'blue', 'GAL': 'green'}
+
+            # Get unique constellations
+            unique_constellations = clock_rate.data['constellation'].unique()
+
+            # Create sub-dataframes for each constellation
+            sub_dataframes = {constellation: clock_rate.data[clock_rate.data['constellation'] == constellation]
+                              for constellation in unique_constellations}
+
+            # Plot clock rate and covariance for each constellation
+            ax = None
+            for constellation, sub_df in sub_dataframes.items():
+                rate = sub_df['clock rate']
+                sigma = np.sqrt(sub_df['cov'])
+
+                ax = plot_1D(time, rate, ax=ax, x_label="Time", label=f'clock rate for {constellation}',
+                             color=colors[constellation])
+                ax = plot_1D(time, rate + sigma, ax=ax, x_label="Time", label=f"+/- sigma [s/s] for {constellation}",
+                             linestyle='--',
+                             linewidth=1.0, color=f'light{colors[constellation]}')
+                ax = plot_1D(time, rate - sigma, ax=ax, x_label="Time", linestyle='--',
+                             linewidth=1.0, title=clock_rate.title, set_legend=True, y_label="clock rate [s/s]",
+                             color=f'light{colors[constellation]}')
+                ax.fill_between(time, rate + sigma, rate - sigma, color=f'light{colors[constellation]}',
+                                alpha=0.3)
+
+        except Exception as e:
+            print(f"Not plotting clock bias rate due to: {e}")
+
+    def _plot_errors(self, time, error, cov, title, x_label, y_label, z_label):
         ax = None
         x_error = error[:, 0]
         y_error = error[:, 1]
         z_error = error[:, 2]
-        norm = np.linalg.norm(error, axis=1)
+        x_sigma = [np.sqrt(x[0,0]) for x in cov]
+        y_sigma = [np.sqrt(x[1, 1]) for x in cov]
+        z_sigma = [np.sqrt(x[2, 2]) for x in cov]
 
+        norm = np.linalg.norm(error, axis=1)
+        # TODO: formatar isto em termos de linewidth e assim.
         ax = plot_1D(time, norm, ax=ax, label="Norm")
         plot_1D(time, x_error, ax=ax, label=x_label)
         plot_1D(time, y_error, ax=ax, label=y_label)
-        plot_1D(time, z_error, ax=ax, x_label="Time", y_label="Position error [m]", label=z_label,
+        plot_1D(time, z_error, ax=ax, label=z_label)
+
+        plot_1D(time, x_sigma, ax=ax, label="x sigma")
+        plot_1D(time, y_sigma, ax=ax, label="y sigma")
+        plot_1D(time, z_sigma, ax=ax, x_label="Time", y_label="Position error [m]", label="z sigma",
                 title=f"Estimation Error in {title}", set_legend=True)
+
 
     def _plot_dops(self, time):
         dop_ecef = self.data_manager.get_data("dop_ecef").to_data_array()
