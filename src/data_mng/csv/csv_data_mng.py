@@ -82,22 +82,16 @@ class GnssRunStorageManager(Container):
         # prefit residuals
         self.prefit_residuals = CSVData(name="prefit_residuals",
                                         description="Pseudorange Prefit Residuals",
-                                        units=None,
-                                        legend=None,
                                         title="Pseudorange Prefit Residuals",
                                         time_cols=(0, 1),
-                                        data_cols=(2, 3, 4, 5),
-                                        dtype='U20')  # for residuals, we need to read the csv as string cells
+                                        data_cols=(2, 3, 4, 5))
 
         # postfit residuals
         self.postfit_residuals = CSVData(name="postfit_residuals",
                                          description="Pseudorange Postfit Residuals",
-                                         units=None,
-                                         legend=None,
                                          title="Pseudorange Postfit Residuals",
                                          time_cols=(0, 1),
-                                         data_cols=(2, 3, 4, 5),
-                                         dtype='U20')  # for residuals, we need to read the csv as string cells
+                                         data_cols=(2, 3, 4, 5))
 
         # velocity prefit residuals
         self.vel_prefit_residuals = CSVData(name="vel_prefit_residuals",
@@ -106,8 +100,7 @@ class GnssRunStorageManager(Container):
                                             legend=None,
                                             title="Pseudorange Prefit Residuals",
                                             time_cols=(0, 1),
-                                            data_cols=(2, 3, 4, 5),
-                                            dtype='U20')  # for residuals, we need to read the csv as string cells
+                                            data_cols=(2, 3, 4, 5))
 
         # postfit residuals
         self.vel_postfit_residuals = CSVData(name="vel_postfit_residuals",
@@ -116,8 +109,7 @@ class GnssRunStorageManager(Container):
                                              legend=None,
                                              title="Pseudorange Rate Postfit Residuals",
                                              time_cols=(0, 1),
-                                             data_cols=(2, 3, 4, 5),
-                                             dtype='U20')  # for residuals, we need to read the csv as string cells
+                                             data_cols=(2, 3, 4, 5))
 
         # satellite azimuth elevation
         self.satellite_azel = CSVData(name="satellite_azel",
@@ -133,29 +125,28 @@ class GnssRunStorageManager(Container):
         self.isb = CSVData(name="isb",
                            description="Inter System Bias ISB",
                            units=['s'],
-                           legend=['isb'],
                            title="Inter System Bias ISB",
                            time_cols=(0, 1),
-                           data_cols=(2,),
+                           data_cols=(2, 3),
                            )
 
         # Iono
         self.iono = CSVData(name="iono",
                             description="Ionosphere",
                             units=['m'],
-                            legend=['sat', 'iono'],
-                            title="Ionosphere",
+                            legend=['sat', 'iono', 'cov'],
+                            title="Estimated Ionosphere Delay",
                             time_cols=(0, 1),
-                            data_cols=(2, 3),
+                            data_cols=(2, 3, 4),
                             )
 
         self.tropo_wet = CSVData(name="tropo",
                                  description="Troposphere",
                                  units=['m'],
                                  legend=['tropo_wet'],
-                                 title="Troposphere",
+                                 title="Estimated Troposphere (Wet Delay)",
                                  time_cols=(0, 1),
-                                 data_cols=(2,),
+                                 data_cols=(2, 3),
                                  )
         # available data for the current simulation
         self._available = []

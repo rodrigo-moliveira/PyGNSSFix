@@ -7,7 +7,6 @@ tasks release 1.0:
     [ ] fix all documentation docstrings
         [ ] to either Args or Arguments... Same for return or returns...
         [ ] limpar o código / solve all TODOs
-    [ ] consider implementing equation 6.73 of IOCE Vol3 para o cálculo do geometrical range (sem ter de calcular o tempo da viagem)
 
     melhorar o modulo de post processing:
         [ ] dar update ao modulo PP
@@ -16,6 +15,7 @@ tasks release 1.0:
         [ ] see the residual analysis in https://gnss-sdr.org/docs/sp-blocks/pvt/#solution-validation
         [ ] fazer plot do observation data
         [ ] plot all state variables (Iono states, tropo, isb,...)
+        [ ] residual analysis - see https://chatgpt.com/c/cf055e6c-e594-497f-abb8-76c62081d108
         [ ] compute mean and std of pre/postfit residuals -> mean should be zero. STD should be sigma_URE (user range error). This should be computed for each satellite
         [ ] plot residuals
         [ ] plot position covariance (3D plot, 2D surfaces, etc...)

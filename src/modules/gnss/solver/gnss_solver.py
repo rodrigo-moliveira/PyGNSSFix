@@ -250,7 +250,7 @@ class GnssSolver:
 
             # solve the Least Squares
             try:
-                postfit_residuals, prefit_residuals, dop_matrix, rms = \
+                prefit_residuals, postfit_residuals, dop_matrix, rms = \
                     self._iterate_pos(system_geometry, obs_data, state, epoch)
             except SolverError as e:
                 self.log.warning(f"Least Squares failed for {str(epoch)} on iteration {iteration}."

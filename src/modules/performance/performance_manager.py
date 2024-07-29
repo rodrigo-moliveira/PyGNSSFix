@@ -3,12 +3,33 @@ import os
 from .error import *
 from .plots import *
 import pandas as pd
+from src.data_types.date import Epoch
+
+import plotly.express as px
+import plotly.graph_objects as go
 
 
 # TODO List
 #   * fazer o plot do erro em ENU 3D com as covs
 #   * alterar os argumentos do plot 3D traj para receber já a cov
 #   * todos os datamanager.get_data() têm que estar protegidos por um try catch
+
+import re
+
+def extract_constellations(input_string):
+    # Define the regex pattern to match the master and slave constellations
+    pattern = r'ISB\(master=(\w+) slave=(\w+)\)'
+
+    # Search for the pattern in the input string
+    match = re.search(pattern, input_string)
+
+    # If a match is found, extract the master and slave values
+    if match:
+        master = match.group(1)
+        slave = match.group(2)
+        return master, slave
+    else:
+        return None, None
 
 class PerformanceManager:
 
@@ -105,9 +126,6 @@ class PerformanceManager:
         time = format_time_for_plot(self.data_manager.get_data("time").data)
         position = self.data_manager.get_data("position")
 
-        azel = self.data_manager.get_data("satellite_azel")
-        residuals = self.data_manager.get_data("postfit_residuals")
-
         self._plot_clock_bias(time)
         self._plot_clock_rate(time)
 
@@ -123,35 +141,79 @@ class PerformanceManager:
         self._plot_errors(time, self.error_enu, self.cov_enu, "ENU", "East", "North", "Up")
         self._plot_dops(time)
         #
-        # plot_satellite_availability(residuals.data, x_label="Time", y_label="Number of Sats",
-        #                             title="Satellite Availability")
-        # plot_skyplot(azel.data)
+
         #
-        # TODO: plot the remaining states (iono, tropo, isb,..., clock drift, velocity, postfit residuals)
+        # TODO: plot the remaining states (velocity, )
 
         plot_2D_trajectory(self.error_enu, self.cov_enu,
                            x_label="East [m]", y_label="North [m]", title="Horizontal Position Error")
+        # TODO: plot lat-long plot
 
-        """
-        if not estimated_iono.is_empty():
-            GNSSQualityManager.plot_iono(estimated_iono)
-        """
+        # TODO: continuar aqui
+        self._plot_residuals(time, self.data_manager.get_data("prefit_residuals"))
+        self._plot_residuals(time, self.data_manager.get_data("postfit_residuals"))
+
+
+        #self._plot_iono(time)
+
+        self._plot_tropo(time)
+        #show_all()
+        #self._plot_velocity()
+        #self._plot_velocity_error()
+        plot_satellite_availability(self.data_manager.get_data("prefit_residuals").data, x_label="Time", y_label="Number of Sats",
+                                     title="Satellite Availability")
+        plot_skyplot(self.data_manager.get_data("satellite_azel").data)
+
         show_all()
 
+    def _plot_residuals(self, time, residuals):
+
+        ax = None
+        # Group the data by satellite and data type
+        grouped = residuals.data.groupby(['sat', 'data_type'])
+
+        # Add a line for each satellite and data type combination
+        for (sat, data_type), group in grouped:
+            sow_array = group.iloc[:, 1].values
+            week_array = group.iloc[:, 0].values
+            residual_array = group.iloc[:, 5].values
+            this_time = [Epoch.from_gnss_time(week, sow, scale="GPST") for (sow, week) in zip(sow_array, week_array)]
+
+            merged_time = Epoch.merge_time_arrays(time, this_time)
+            ax=plot_1D(merged_time, residual_array, ax=ax, x_label="Time", label=f'Residual for {sat} {data_type}',
+                         set_legend=True, scatter=True, markersize=5)
+        ax.set_title(residuals.title)
+
     def _plot_clock_bias(self, time):
+        # TODO: find name of master constellation and add it to label
+        # TODO: add clock bias + ISB and plot slave clock bias
         clock_bias = self.data_manager.get_data("clock_bias")
-        data_matrix = clock_bias.to_data_array()
+        master_clock = clock_bias.to_data_array()
 
-        clock_series = data_matrix[:, 0]
-        sigma_series = np.sqrt(data_matrix[:, 1])
+        isb = self.data_manager.get_data("isb")
+        isb_data = isb.to_data_array()
+        # Extract master and slave constellations
+        master, slave = extract_constellations(isb.data.columns[2])
 
-        ax = plot_1D(time, clock_series, x_label="Time", label='clock bias', color='blue')
-        ax = plot_1D(time, clock_series + sigma_series, ax=ax, x_label="Time", label="+/- sigma [s]", linestyle='--',
+        master_clock_series = master_clock[:, 0]
+        sigma_series = np.sqrt(master_clock[:, 1])
+
+        isb_series = isb_data[:, 0]
+        isb_sigma_series = np.sqrt(isb_data[:, 1])
+
+        slave_clock_series = master_clock_series + isb_series
+
+        ax = plot_1D(time, master_clock_series, x_label="Time", label=f'clock bias ({master})', color='blue')
+        ax = plot_1D(time, slave_clock_series, x_label="Time", ax=ax, label=f'clock bias ({slave})', color='orange')
+        ax = plot_1D(time, master_clock_series + sigma_series, ax=ax, x_label="Time", label="+/- sigma [s]", linestyle='--',
                      linewidth=1.0, color='lightblue')
-        ax = plot_1D(time, clock_series - sigma_series, ax=ax, x_label="Time", linestyle='--',
-                     linewidth=1.0, title=clock_bias.title, set_legend=True, y_label="clock bias [s]",
+        ax = plot_1D(time, master_clock_series - sigma_series, ax=ax, x_label="Time", linestyle='--',
+                     linewidth=1.0, title=f"{clock_bias.title} for {master}", set_legend=True, y_label="clock bias [s]",
                      color='lightblue')
-        ax.fill_between(time, clock_series + sigma_series, clock_series - sigma_series, color='lightblue', alpha=0.3)
+        ax.fill_between(time, master_clock_series + sigma_series, master_clock_series - sigma_series, color='lightblue', alpha=0.3)
+
+        ax2 = plot_1D(time, isb_series, x_label="Time", title=f"{isb.title} (master={master}, slave={slave})", label="ISB", set_legend=True, y_label="ISB [s]", color='blue')
+        ax2.fill_between(time, isb_series + isb_sigma_series, isb_series - isb_sigma_series, label="sigma", color='lightblue', alpha=0.3)
 
     def _plot_clock_rate(self, time):
         try:
@@ -192,21 +254,23 @@ class PerformanceManager:
         x_error = error[:, 0]
         y_error = error[:, 1]
         z_error = error[:, 2]
-        x_sigma = [np.sqrt(x[0,0]) for x in cov]
-        y_sigma = [np.sqrt(x[1, 1]) for x in cov]
-        z_sigma = [np.sqrt(x[2, 2]) for x in cov]
+        x_sigma = np.array([np.sqrt(x[0,0]) for x in cov])
+        y_sigma = np.array([np.sqrt(x[1, 1]) for x in cov])
+        z_sigma = np.array([np.sqrt(x[2, 2]) for x in cov])
 
         norm = np.linalg.norm(error, axis=1)
-        # TODO: formatar isto em termos de linewidth e assim.
-        ax = plot_1D(time, norm, ax=ax, label="Norm")
-        plot_1D(time, x_error, ax=ax, label=x_label)
-        plot_1D(time, y_error, ax=ax, label=y_label)
-        plot_1D(time, z_error, ax=ax, label=z_label)
+        ax = plot_1D(time, norm, ax=ax, label="Norm", linewidth=2.0, linestyle="solid", color="k")
+        plot_1D(time, x_error, ax=ax, label=x_label, linewidth=2.0, linestyle="solid", color="r")
+        plot_1D(time, y_error, ax=ax, label=y_label, linewidth=2.0, linestyle="solid", color="b")
+        plot_1D(time, z_error, ax=ax, label=z_label, linewidth=2.0, linestyle="solid", color="g")
 
-        plot_1D(time, x_sigma, ax=ax, label="x sigma")
-        plot_1D(time, y_sigma, ax=ax, label="y sigma")
-        plot_1D(time, z_sigma, ax=ax, x_label="Time", y_label="Position error [m]", label="z sigma",
-                title=f"Estimation Error in {title}", set_legend=True)
+        plot_1D(time, x_sigma, ax=ax, label=f"{x_label} sigma", linewidth=1.0, linestyle="dashed", color="r")
+        plot_1D(time, y_sigma, ax=ax, label=f"{y_label} sigma", linewidth=1.0, linestyle="dashed", color="b")
+        plot_1D(time, -x_sigma, ax=ax, linewidth=1.0, linestyle="dashed", color="r")
+        plot_1D(time, -y_sigma, ax=ax, linewidth=1.0, linestyle="dashed", color="b")
+        plot_1D(time, z_sigma, ax=ax, label=f"{z_label} sigma", linewidth=1.0, linestyle="dashed", color="g")
+        plot_1D(time, -z_sigma, ax=ax, x_label="Time", linewidth=1.0, linestyle="dashed", color="g",
+                y_label="Position error [m]", title=f"Estimation Error in {title}", set_legend=True)
 
 
     def _plot_dops(self, time):
@@ -241,21 +305,35 @@ class PerformanceManager:
         plot_1D(time, up_dop, ax=ax, x_label="Time", y_label="DOPs [m]", label="up",
                 title="Dilution of Precision in ENU", set_legend=True)
 
-    def plot_iono(self, iono_tm):
-        ax = None
-        sat_data = {}
-        epochs = iono_tm.get_all_epochs()
+    def _plot_iono(self, time):
+        iono = self.data_manager.get_data("iono")
+        # Group the data by satellite and data type
+        grouped = iono.data.groupby(['sat'])
 
-        for epoch in epochs:
-            data = iono_tm.get_data_for_epoch(epoch)
-            for sat, iono in data:
-                if sat not in sat_data:
-                    sat_data[sat] = []
-                sat_data[sat].append([epoch, iono])
+        # Add a line for each satellite and data type combination
+        for (sat,), group in grouped:
+            sow_array = group.iloc[:, 1].values
+            week_array = group.iloc[:, 0].values
+            iono_array = group.iloc[:, 3].values
 
-        for sat, data in sat_data.items():
-            epoch = [x[0] for x in data]
-            iono = [x[1] for x in data]
+            sigma_array = np.sqrt(group.iloc[:, 4].values)
+            this_time = [Epoch.from_gnss_time(week, sow, scale="GPST") for (sow, week) in zip(sow_array, week_array)]
 
-            ax = plot_1D(epoch, iono, ax=ax, label=sat, x_label="Time", y_label="Ionosphere [m]",
-                         title="Estimated Ionosphere", set_legend=True)
+            merged_time = Epoch.merge_time_arrays(time, this_time)
+
+            ax = plot_1D(merged_time, iono_array, label="iono", linewidth=2.0, linestyle="solid", color="b")
+            plot_1D(merged_time, iono_array + sigma_array, ax=ax, linewidth=1.0, linestyle="dashed", color="lightblue")
+            plot_1D(merged_time, iono_array - sigma_array, ax=ax, label=f"sigma", linewidth=1.0, linestyle="dashed", color="lightblue",
+                    x_label="Time", y_label="Ionosphere [m]", title=f"{iono.title} for sat {sat}")
+
+    def _plot_tropo(self, time):
+        tropo = self.data_manager.get_data("tropo_wet")
+        tropo_data = tropo.to_data_array()
+
+        tropo_array = tropo_data[:, 0]
+        sigma_series = np.sqrt(tropo_data[:, 1])
+
+        ax = plot_1D(time, tropo_array, label="tropo", linewidth=2.0, linestyle="solid", color="b")
+        plot_1D(time, tropo_array + sigma_series, ax=ax, linewidth=1.0, linestyle="dashed", color="lightblue")
+        plot_1D(time, tropo_array - sigma_series, ax=ax, label=f"sigma", linewidth=1.0, linestyle="dashed",
+                color="lightblue", x_label="Time", y_label="Wet Delay [m]", title=f"{tropo.title}")

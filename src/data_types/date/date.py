@@ -458,12 +458,21 @@ class Epoch:
         sow = dt - week * 3600 * 24 * 7
         return sow, week
 
+    @classmethod
+    def from_gnss_time(cls, week, sow, scale=DEFAULT_SCALE, **kwargs):
+        tmp = cls.GPS_ORIGIN + timedelta(seconds=week * 3600 * 24 * 7 + sow)
+        return Epoch(tmp, scale=scale, **kwargs)
+
     @property
     def doy(self):
         """Computes day of year"""
         if "doy" not in self._cache.keys():
             self._cache["doy"] = self.datetime.timetuple().tm_yday
         return self._cache["doy"]
+
+    @staticmethod
+    def merge_time_arrays(array1, array2):
+        return sorted(list(set(array1) & set(array2)))
 
 
 # This part is here to allow matplotlib to display Epoch objects directly

@@ -50,16 +50,14 @@ def plot_observables(observation_data, satellite, datatype, **kwargs):
 def plot_skyplot(azel):
     ax = None
 
-    _data = {}
-    for epoch, sat_info in azel.items():
-        for sat, info in sat_info.items():
+    grouped = azel.groupby(['sat'])
 
-            if str(sat) not in _data:
-                _data[str(sat)] = []
-            _data[str(sat)].append(info)
-
-    for sat, data in _data.items():
-        ax = plot_sky(data, sat, north_to_east_ccw=False, style_kwargs={'s': 10}, ax=ax)
+    # Add a line for each satellite and data type combination
+    for (sat,), group in grouped:
+        az_array = group.iloc[:, 3].values
+        el_array = group.iloc[:, 4].values
+        traj = [[az, el] for az, el in zip(az_array, el_array)]
+        ax = plot_sky(traj, sat, north_to_east_ccw=False, style_kwargs={'s': 10}, ax=ax)
 
     ax.set_title("Sky Plot")
     ax.legend(loc='center left', bbox_to_anchor=(1.25, 0.5))
@@ -218,16 +216,20 @@ def plot_1D(x, y, **kwargs):
     if ax is None:
         fig, ax = plt.subplots()
 
-    ax.plot(x, y, linewidth=kwargs.get("linewidth", 2.0), label=kwargs.get("label", None),
-            marker=kwargs.get("marker", ''), markersize=kwargs.get("markersize", 5),
-            linestyle=kwargs.get("linestyle", "solid"), color=kwargs.get('color', None))
+    if kwargs.get("scatter", False):
+        ax.scatter(x, y, label=kwargs.get("label", None), s=kwargs.get("markersize", 5),
+                color=kwargs.get('color', None))
+    else:
+        ax.plot(x, y, linewidth=kwargs.get("linewidth", 2.0), label=kwargs.get("label", None),
+                marker=kwargs.get("marker", ''), markersize=kwargs.get("markersize", 5),
+                linestyle=kwargs.get("linestyle", "solid"), color=kwargs.get('color', None))
     ax.set_xlabel(kwargs.get("x_label", ""))
     ax.set_ylabel(kwargs.get("y_label", ""))
     ax.set_title(kwargs.get("title", ""))
 
     if "set_legend" in kwargs:
         #ax.legend()
-        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        ax.legend(loc='upper right')#, bbox_to_anchor=(1, 0.5))
 
     if kwargs.get("tight_layout", False) is True:
         plt.tight_layout()
@@ -266,6 +268,13 @@ def plot_satellite_availability(sat_info, **kwargs):
     from matplotlib.ticker import MaxNLocator
     time = []
     sats = []
+
+    grouped = sat_info.groupby(['sat'])
+
+    # Add a line for each satellite and data type combination
+    for (sat,), group in grouped:
+        print(sat)
+    exit()
 
     for epoch, data in sat_info.items():
         time.append(float(epoch[1]))
@@ -316,9 +325,10 @@ def plot_2D_trajectory(data, cov, **kwargs):
 
     # Calculate the mean covariance matrix
     mean_cov_matrix = np.mean(np.array([np.array(c) for c in cov]), axis=0)
+    mean_error_matrix = np.mean(np.array([np.array(c) for c in data]), axis=0)
 
     # Plot the covariance ellipse
-    plot_covariance_ellipse(ax, mean_cov_matrix, kwargs.get("ellipse_color", 'r'))
+    plot_covariance_ellipse(ax, mean_cov_matrix, center=mean_error_matrix[0:2], color=kwargs.get("ellipse_color", 'r'))
 
     # Set labels and title
     ax.set_xlabel(kwargs.get("x_label", ""))
@@ -331,7 +341,7 @@ def plot_2D_trajectory(data, cov, **kwargs):
     return ax
 
 
-def plot_covariance_ellipse(ax, cov_matrix, color='r'):
+def plot_covariance_ellipse(ax, cov_matrix, center=(0, 0), color='r'):
     """
     Plots a 2D covariance ellipse based on the covariance matrix.
 
@@ -353,7 +363,7 @@ def plot_covariance_ellipse(ax, cov_matrix, color='r'):
     width, height = 2 * np.sqrt(eigvals)
 
     # Create and add the ellipse patch
-    ellipse = Ellipse((0, 0), width, height, angle, edgecolor=color, facecolor='none', linewidth=2)
+    ellipse = Ellipse(center, width, height, angle, edgecolor=color, facecolor='none', linewidth=2)
     ax.add_patch(ellipse)
     ellipse.set_label('Covariance Ellipse')
 

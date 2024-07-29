@@ -138,7 +138,7 @@ class LSQ_Engine:
         self._update_state(state, x_hat, cov)
 
         # build the postfit residuals vector
-        post_fit = self.y_vec - self.design_mat[:, 0:3] @ x_hat[0:3]
+        post_fit = self.y_vec - self.design_mat @ x_hat
         norm = np.linalg.norm(post_fit)
 
         # build prefit and postfit residual dicts for output

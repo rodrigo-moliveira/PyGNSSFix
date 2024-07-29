@@ -28,7 +28,7 @@ def get_file_header(state_variable, state):
         master = state.get_additional_info("clock_master")
         return f"Week_Number({epoch_system}),Time_of_Week[s],clock_bias(master={master})[s],cov[s^2]"
     elif state_variable == "clock_bias_rate":
-        return f"Week_Number({epoch_system}),Time_of_Week[s],constellation,clock_bias_rate[],cov[]"
+        return f"Week_Number({epoch_system}),Time_of_Week[s],constellation,clock_bias_rate[s/s],cov[(s/s)^2]"
     elif state_variable == "iono":
         return f"Week_Number({epoch_system}),Time_of_Week[s],sat,iono[m],cov[m^2]"
     elif state_variable == "tropo_wet":
@@ -52,7 +52,7 @@ def get_file_header(state_variable, state):
     elif state_variable == "isb":
         master = state.get_additional_info("clock_master")
         slave = state.get_additional_info("clock_slave")
-        return f"Week_Number({epoch_system}),Time_of_Week[s],ISB(master={master},slave={slave})[s],cov[s^2]"
+        return f"Week_Number({epoch_system}),Time_of_Week[s],ISB(master={master} slave={slave})[s],cov[s^2]"
     else:
         raise ValueError(f"Undefined header due to unknown state_variable '{state_variable}'")
 

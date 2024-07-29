@@ -1,6 +1,8 @@
 from scipy.interpolate import interp1d
 from src.utils.deprecated import deprecated
+import numpy as np
 
+# TODO: review all docstrings and add newton divided method into the configuration
 
 # @deprecated("use function :py:function:`src.utils.interpolation.linear_interpolation` instead")
 def linear_interpolation_scipy(x, x_vals, y_vals):
@@ -148,3 +150,75 @@ def lagrange_interpolation_derivative_alternative(x_values, y_values, degree):
         return velocity
 
     return velocity_function
+
+
+def newton_divided_differences(x_values, y_values, degree):
+    """
+    Perform Newton's Divided Differences interpolation for vector-valued functions.
+
+    Parameters:
+        x_values (numpy.ndarray): Vector of x-values (data points).
+        y_values (numpy.ndarray): Matrix of corresponding y-values, where each row is a vector [y0, y1, ..., yn].
+        degree (int): Desired degree of the Newton interpolation polynomial.
+
+    Returns:
+        function: A function representing the Newton interpolation polynomial.
+    """
+    # Ensure x_values is a column vector
+    x_values = np.atleast_2d(x_values).T if x_values.ndim == 1 else x_values
+    if x_values.shape[1] != 1:
+        raise ValueError('x_values must be a column vector')
+
+    # Ensure the number of data points in y_values matches the number of x_values
+    if y_values.shape[0] != x_values.shape[0]:
+        raise ValueError('Number of rows in y_values must match the length of x_values')
+
+    # Ensure the number of data points is sufficient for the desired degree
+    if len(x_values) < degree + 1:
+        raise ValueError('Not enough data points for the desired degree of interpolation')
+
+    # Use only the first degree + 1 points
+    x_values = x_values[:degree + 1]
+    y_values = y_values[:degree + 1, :]
+
+    # Number of data points and dimensions
+    n = len(x_values)
+    num_dimensions = y_values.shape[1]
+
+    # Initialize divided differences table
+    divided_diffs = np.zeros((n, n, num_dimensions))
+    divided_diffs[:, 0, :] = y_values
+
+    # Compute the divided differences table
+    for j in range(1, n):
+        for i in range(n - j):
+            for dim in range(num_dimensions):
+                divided_diffs[i, j, dim] = (
+                                                   divided_diffs[i + 1, j - 1, dim] - divided_diffs[i, j - 1, dim]
+                                           ) / (x_values[i + j] - x_values[i])
+
+    def newton_poly_func(x):
+        result = np.zeros(num_dimensions)
+        for dim in range(num_dimensions):
+            term = divided_diffs[0, 0, dim]
+            for j in range(1, n):
+                term_j = divided_diffs[0, j, dim]
+                for k in range(j):
+                    term_j *= (x - x_values[k])
+                term += term_j
+            result[dim] = term
+        return result
+
+    return newton_poly_func
+
+
+# Example Usage
+if __name__ == "__main__":
+    x_values_ = np.array([0, 1, 2, 3]).reshape(-1, 1)
+    y_values_ = np.array([[1, 2], [2, 3], [3, 4], [4, 5]])
+    degree = 2
+
+    newton_poly = newton_divided_differences(x_values_, y_values_, degree)
+    x_test = np.array([1.5])
+    y_test = newton_poly(x_test)
+    print(y_test)

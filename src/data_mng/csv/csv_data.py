@@ -16,7 +16,7 @@ class CSVData:
 
     """
 
-    def __init__(self, name, description, time_cols, data_cols, units=None, legend=None, title="", dtype=None):
+    def __init__(self, name, description, time_cols, data_cols, units=None, legend=None, title=""):
         """
         Initializes the CSVData object.
 
@@ -32,8 +32,6 @@ class CSVData:
             time_cols(list[int] or None): optional. List with the column indexes in the csv file containing the time
                 information
             data_cols(list[int] or None): optional. List with the column indexes in the csv file containing the data
-            dtype(str or None): string specifying the data type to read the csv cells. (See `numpy.loadtxt`
-                for more information)
         """
         self.name = name
         self.description = description
@@ -45,7 +43,6 @@ class CSVData:
         self._dim = len(data_cols)  # dimension of the data for each array (1D, 2D, 3D, etc.)
         self.units = units
         self.legend = legend
-        self.dtype = dtype
 
         # if self.units is not None and len(units) != self._dim:
         #     raise ValueError(f"Inconsistency between length of arguments 'units' {units} and 'data_cols' "
@@ -100,6 +97,11 @@ class CSVData:
         # Select the clock_bias and sigma columns
         data_matrix = self.data.iloc[:, list(self.data_cols)].values
         return data_matrix
+
+    def to_time_array(self):
+        # Select the clock_bias and sigma columns
+        time_matrix = self.data.iloc[:, list(self.time_cols)].values
+        return time_matrix
 
     # def format_sat_data(self):
     #    cols = list(self.time_cols) + list(self.data_cols)
