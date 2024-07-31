@@ -39,10 +39,23 @@ class PerformanceManager:
         self.config = config
 
         self.true_pos = None
-        self.error_ecef = None
-        self.error_enu = None
-        self.cov_ecef = None
-        self.cov_enu = None
+        self.true_vel = None
+
+        self.pos_error = {
+            "error_ecef": None,
+            "error_enu": None,
+            "cov_ecef": None,
+            "cov_enu": None
+        }
+        self.vel_error = {
+            "error_ecef": None,
+            "error_enu": None,
+            "cov_ecef": None,
+            "cov_enu": None
+        }
+
+    # TODO: adicionar flexibility para os casos em que não sabemos a true pos. Nesses casos apenas fazer plot dos
+    #   estados e etc.
 
     def process(self, output_dir):
 
@@ -73,18 +86,26 @@ class PerformanceManager:
         # fetch estimated data
         time = self.data_manager.get_data("time")
         position = self.data_manager.get_data("position")
+        velocity = self.data_manager.get_data("velocity")
 
         # compute Root Mean Square Error (RMSE) in ECEF and ENU frames
         print("Computing estimation error and root mean square error...")
         is_static = self.config.get("performance_evaluation", "static")
         if is_static:
             self.true_pos = self.config.get("performance_evaluation", "true_static_position")
-            self.error_ecef, self.error_enu, self.cov_ecef, self.cov_enu = compute_error_static(position, self.true_pos, local="ENU")
+            self.true_vel = [0, 0, 0]
+            self.pos_error["error_ecef"], self.pos_error["error_enu"], self.pos_error["cov_ecef"], \
+                self.pos_error["cov_enu"] = compute_error_static(position, self.true_pos, self.true_pos, local="ENU")
+
+            self.vel_error["error_ecef"], self.vel_error["error_enu"], self.vel_error["cov_ecef"], \
+                self.vel_error["cov_enu"] = compute_error_static(velocity, self.true_vel, self.true_pos,
+                                                                      local="ENU")
+
         else:
             raise NotImplementedError(f"Dynamic error computation not yet implemented...")
 
-        rms_ecef = compute_rms_error(self.error_ecef)
-        rms_enu = compute_rms_error(self.error_enu)
+        rms_ecef = compute_rms_error(self.pos_error["error_ecef"])
+        rms_enu = compute_rms_error(self.pos_error["error_enu"])
 
         # 2- save computed errors to files
         print("Saving computed errors to files...")
@@ -94,9 +115,9 @@ class PerformanceManager:
         f_rms_stats = open(output_dir / "EstimationStats.txt", "w")
 
         # Create DataFrame for error matrix
-        ecef_df = pd.DataFrame(self.error_ecef, columns=['x_error[m]', 'y_error[m]', 'z_error[m]'])
+        ecef_df = pd.DataFrame(self.pos_error["error_ecef"], columns=['x_error[m]', 'y_error[m]', 'z_error[m]'])
         error_ecef_df = pd.concat([time.data, ecef_df], axis=1)
-        enu_df = pd.DataFrame(self.error_enu, columns=['east_error[m]', 'north_error[m]', 'up_error[m]'])
+        enu_df = pd.DataFrame(self.pos_error["error_enu"], columns=['east_error[m]', 'north_error[m]', 'up_error[m]'])
         error_enu_df = pd.concat([time.data, enu_df], axis=1)
 
         # Save the error dataframes
@@ -124,49 +145,64 @@ class PerformanceManager:
     def _plot(self):
         # fetch estimated data
         time = format_time_for_plot(self.data_manager.get_data("time").data)
+
+        self._plot_errors(time, self.vel_error["error_ecef"], self.vel_error["cov_ecef"], "Velocity Estimation Error in ECEF", "Velocity Error [m/s]", "X", "Y", "Z")
+        self._plot_errors(time, self.vel_error["error_enu"], self.vel_error["cov_enu"],
+                          "Velocity Estimation Error in ENU", "Velocity Error [m/s]", "East", "North", "Up")
+
+        self._plot_residuals(time, self.data_manager.get_data("vel_prefit_residuals"), "m/s")
+        self._plot_residuals(time, self.data_manager.get_data("vel_postfit_residuals"), "m/s")
+
         position = self.data_manager.get_data("position")
+
+        plot_satellite_availability(self.data_manager.get_data("prefit_residuals").data, x_label="Time",
+                                     y_label="Number of Sats",
+                                     title="Satellite Availability")
 
         self._plot_clock_bias(time)
         self._plot_clock_rate(time)
 
-        plot_3D_trajectory_with_avg_covariance(position.to_data_array(), self.cov_ecef, true_position=self.true_pos,
+        plot_3D_trajectory_with_avg_covariance(position.to_data_array(), self.pos_error["cov_ecef"], true_position=self.true_pos,
                            x_label="X ECEF [m]", y_label="Y ECEF [m]", z_label="Z ECEF [m]",
                            title=position.title)
 
-        plot_3D_trajectory_with_avg_covariance(self.error_enu, self.cov_enu, true_position=[0, 0, 0],
+        plot_3D_trajectory_with_avg_covariance(self.pos_error["error_enu"], self.pos_error["cov_enu"], true_position=[0, 0, 0],
                                                x_label="East [m]", y_label="North [m]", z_label="Up [m]",
                                                title="3D ENU Error")
 
-        self._plot_errors(time, self.error_ecef, self.cov_ecef, "ECEF", "X", "Y", "Z")
-        self._plot_errors(time, self.error_enu, self.cov_enu, "ENU", "East", "North", "Up")
+        self._plot_errors(time, self.pos_error["error_ecef"], self.pos_error["cov_ecef"], "Position Estimation Error in ECEF", "Position Error [m]", "X", "Y", "Z")
+        self._plot_errors(time, self.pos_error["error_enu"], self.pos_error["cov_enu"], "Position Estimation Error in ENU", "Position Error [m]", "East", "North", "Up")
         self._plot_dops(time)
         #
 
         #
-        # TODO: plot the remaining states (velocity, )
-
-        plot_2D_trajectory(self.error_enu, self.cov_enu,
+        # TODO: remaining plots:
+        #  lat-long plot
+        plot_2D_trajectory(self.pos_error["error_enu"], self.pos_error["cov_enu"],
                            x_label="East [m]", y_label="North [m]", title="Horizontal Position Error")
-        # TODO: plot lat-long plot
 
-        # TODO: continuar aqui
-        self._plot_residuals(time, self.data_manager.get_data("prefit_residuals"))
-        self._plot_residuals(time, self.data_manager.get_data("postfit_residuals"))
+        self._plot_residuals(time, self.data_manager.get_data("prefit_residuals"), "m")
+        self._plot_residuals(time, self.data_manager.get_data("postfit_residuals"), "m")
 
 
-        #self._plot_iono(time)
+        self._plot_iono(time)
 
         self._plot_tropo(time)
-        #show_all()
-        #self._plot_velocity()
-        #self._plot_velocity_error()
-        plot_satellite_availability(self.data_manager.get_data("prefit_residuals").data, x_label="Time", y_label="Number of Sats",
-                                     title="Satellite Availability")
+        self._plot_latlon()
+
+
         plot_skyplot(self.data_manager.get_data("satellite_azel").data)
 
         show_all()
 
-    def _plot_residuals(self, time, residuals):
+
+    def _plot_latlon(self):
+        latlon = compute_latlon(self.data_manager.get_data("position"))
+        true_latlon = cartesian2geodetic(*self.true_pos) * np.array([constants.RAD2DEG, constants.RAD2DEG, 1])
+        plot_2D_trajectory(latlon, None, true_pos=true_latlon,
+                           x_label="Latitude [deg]", y_label="Longitude [deg]", title="Latitude-Longitude estimation")
+
+    def _plot_residuals(self, time, residuals, units):
 
         ax = None
         # Group the data by satellite and data type
@@ -182,6 +218,7 @@ class PerformanceManager:
             merged_time = Epoch.merge_time_arrays(time, this_time)
             ax=plot_1D(merged_time, residual_array, ax=ax, x_label="Time", label=f'Residual for {sat} {data_type}',
                          set_legend=True, scatter=True, markersize=5)
+        ax.set_ylabel(units)
         ax.set_title(residuals.title)
 
     def _plot_clock_bias(self, time):
@@ -249,7 +286,7 @@ class PerformanceManager:
         except Exception as e:
             print(f"Not plotting clock bias rate due to: {e}")
 
-    def _plot_errors(self, time, error, cov, title, x_label, y_label, z_label):
+    def _plot_errors(self, time, error, cov, title, y_axis, x_label, y_label, z_label):
         ax = None
         x_error = error[:, 0]
         y_error = error[:, 1]
@@ -270,7 +307,7 @@ class PerformanceManager:
         plot_1D(time, -y_sigma, ax=ax, linewidth=1.0, linestyle="dashed", color="b")
         plot_1D(time, z_sigma, ax=ax, label=f"{z_label} sigma", linewidth=1.0, linestyle="dashed", color="g")
         plot_1D(time, -z_sigma, ax=ax, x_label="Time", linewidth=1.0, linestyle="dashed", color="g",
-                y_label="Position error [m]", title=f"Estimation Error in {title}", set_legend=True)
+                y_label=y_axis, title=title, set_legend=True)
 
 
     def _plot_dops(self, time):
@@ -324,7 +361,10 @@ class PerformanceManager:
             ax = plot_1D(merged_time, iono_array, label="iono", linewidth=2.0, linestyle="solid", color="b")
             plot_1D(merged_time, iono_array + sigma_array, ax=ax, linewidth=1.0, linestyle="dashed", color="lightblue")
             plot_1D(merged_time, iono_array - sigma_array, ax=ax, label=f"sigma", linewidth=1.0, linestyle="dashed", color="lightblue",
-                    x_label="Time", y_label="Ionosphere [m]", title=f"{iono.title} for sat {sat}")
+                    x_label="Time", y_label="Ionosphere [m]", title=f"{iono.title} for sat {sat}",
+                    set_legend=True)
+            ax.fill_between(merged_time, iono_array - sigma_array, iono_array + sigma_array,
+                            color='lightblue', alpha=0.3)
 
     def _plot_tropo(self, time):
         tropo = self.data_manager.get_data("tropo_wet")
@@ -336,4 +376,7 @@ class PerformanceManager:
         ax = plot_1D(time, tropo_array, label="tropo", linewidth=2.0, linestyle="solid", color="b")
         plot_1D(time, tropo_array + sigma_series, ax=ax, linewidth=1.0, linestyle="dashed", color="lightblue")
         plot_1D(time, tropo_array - sigma_series, ax=ax, label=f"sigma", linewidth=1.0, linestyle="dashed",
-                color="lightblue", x_label="Time", y_label="Wet Delay [m]", title=f"{tropo.title}")
+                color="lightblue", x_label="Time", y_label="Wet Delay [m]", title=f"{tropo.title}",
+                set_legend=True)
+        ax.fill_between(time, tropo_array - sigma_series, tropo_array + sigma_series,
+                        color='lightblue', alpha=0.3)

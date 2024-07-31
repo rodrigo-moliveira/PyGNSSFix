@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 from matplotlib.patches import Ellipse
 from mpl_toolkits.mplot3d import Axes3D
 from typing import List, Tuple, Optional
@@ -264,35 +265,6 @@ def loglog(x, y, **kwargs):
     return ax
 
 
-def plot_satellite_availability(sat_info, **kwargs):
-    from matplotlib.ticker import MaxNLocator
-    time = []
-    sats = []
-
-    grouped = sat_info.groupby(['sat'])
-
-    # Add a line for each satellite and data type combination
-    for (sat,), group in grouped:
-        print(sat)
-    exit()
-
-    for epoch, data in sat_info.items():
-        time.append(float(epoch[1]))
-        sats.append(list(data.keys()))
-
-    availability = [len(_y) for _y in sats]
-
-    # plot
-    fig, ax = plt.subplots()
-
-    ax.plot(time, availability, linewidth=2.0)
-    ax.set_xlabel(kwargs.get("x_label", ""))
-    ax.set_ylabel(kwargs.get("y_label", ""))
-    ax.set_title(kwargs.get("title", ""))
-
-    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-
-
 def plot_2D_trajectory(data, cov, **kwargs):
     """
     Plots the 2D trajectory of estimated positions with an average covariance ellipse.
@@ -319,16 +291,19 @@ def plot_2D_trajectory(data, cov, **kwargs):
     x = [d[0] for d in data]
     y = [d[1] for d in data]
 
+    true_pos = kwargs.get("true_pos", (0, 0))
+
     # Plot the estimated positions
     ax.scatter(x, y, linewidth=0.2, marker=kwargs.get("marker", 'o'), label=kwargs.get("label", "Estimated Positions"))
-    ax.scatter(0, 0, linewidth=0.2, marker='*', label="True Position")
+    ax.scatter(true_pos[0], true_pos[1], linewidth=0.2, marker='*', label="True Position")
 
-    # Calculate the mean covariance matrix
-    mean_cov_matrix = np.mean(np.array([np.array(c) for c in cov]), axis=0)
-    mean_error_matrix = np.mean(np.array([np.array(c) for c in data]), axis=0)
+    if cov is not None:
+        # Calculate the mean covariance matrix
+        mean_cov_matrix = np.mean(np.array([np.array(c) for c in cov]), axis=0)
+        mean_error_matrix = np.mean(np.array([np.array(c) for c in data]), axis=0)
 
-    # Plot the covariance ellipse
-    plot_covariance_ellipse(ax, mean_cov_matrix, center=mean_error_matrix[0:2], color=kwargs.get("ellipse_color", 'r'))
+        # Plot the covariance ellipse
+        plot_covariance_ellipse(ax, mean_cov_matrix, center=mean_error_matrix[0:2], color=kwargs.get("ellipse_color", 'r'))
 
     # Set labels and title
     ax.set_xlabel(kwargs.get("x_label", ""))
@@ -370,3 +345,73 @@ def plot_covariance_ellipse(ax, cov_matrix, center=(0, 0), color='r'):
 
 def show_all():
     plt.show()
+
+
+# Define the function to modify the 'Signal' column
+def to_epoch_column(row):
+    week = row.iloc[0]
+    sow = row.iloc[1]
+    return Epoch.from_gnss_time(week, sow, scale="GPST")
+
+
+
+def plot_satellite_availability(sat_info, **kwargs):
+    df = sat_info.copy()
+
+    # Combine Satellite and Signal for the y-axis labels
+    df['Satellite_Signal'] = df['sat'] + '_' + df['data_type']
+
+    # Convert time into a format suitable for plotting
+    df['Time'] = df.apply(to_epoch_column, axis=1)
+
+    # Assuming dt is 1 second
+    dt = pd.Timedelta(seconds=1)
+
+    # Identify start and end points of intervals
+    intervals = []
+
+    for satellite_signal in df['Satellite_Signal'].unique():
+        subset = df[df['Satellite_Signal'] == satellite_signal]
+        subset = subset.sort_values(by='Time')
+
+        start_time = subset.iloc[0]['Time']
+        end_time = subset.iloc[0]['Time']
+
+        for i in range(1, len(subset)):
+            current_time = subset.iloc[i]['Time']
+            if current_time - end_time > dt:
+                intervals.append((start_time, end_time, satellite_signal))
+                start_time = current_time
+            end_time = current_time
+
+        intervals.append((start_time, end_time, satellite_signal))
+
+    # Create a reduced DataFrame with intervals
+    interval_df = pd.DataFrame(intervals, columns=['Start_Time', 'End_Time', 'Satellite_Signal'])
+
+    # Create a figure and axis
+    fig, ax = plt.subplots(figsize=(15, 10))
+
+    # Get unique Satellite_Signal combinations for the y-axis
+    satellite_signal_combinations = interval_df['Satellite_Signal'].unique()
+    y_labels = {label: i for i, label in enumerate(satellite_signal_combinations)}
+
+    # Plot each interval as a line
+    for _, row in interval_df.iterrows():
+        y = y_labels[row['Satellite_Signal']]
+        ax.plot([row['Start_Time'], row['End_Time']], [y, y], color='blue', linewidth=2)
+
+    # Customize the y-axis
+    ax.set_yticks(range(len(y_labels)))
+    ax.set_yticklabels(y_labels.keys())
+
+    # Set axis labels and title
+    ax.set_xlabel('Time')
+    ax.set_ylabel('Satellite_Signal')
+    ax.set_title('Satellite Signal Availability Over Time')
+
+    # Rotate x-axis labels for better readability
+    plt.xticks(rotation=45)
+
+
+

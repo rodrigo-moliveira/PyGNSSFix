@@ -1,11 +1,12 @@
 import numpy as np
 
+from src import constants
 from src.data_mng.csv.csv_data import CSVData
 from src.models.frames import cartesian2geodetic, latlon2dcm_e_enu, latlon2dcm_e_ned
 
 
 def error_vector(row, true_pos, rot_matrix=np.eye(3)):
-    pos = np.array([row['pos_x'], row['pos_y'], row['pos_z']])
+    pos = np.array([row['x'], row['y'], row['z']])
     return rot_matrix @ (pos - true_pos)
 
 def get_cov_local(row, rot_matrix=np.eye(3)):
@@ -16,7 +17,15 @@ def get_cov_local(row, rot_matrix=np.eye(3)):
     return cov_local
 
 
-def compute_error_static(est_data: CSVData, true_pos, local="ENU"):
+def compute_latlon(position):
+    pos_array = position.to_data_array()
+    latlon = []
+    for x in pos_array[:,0:3]:
+        _lla = cartesian2geodetic(*x)
+        latlon.append([_lla[0]*constants.RAD2DEG, _lla[1]*constants.RAD2DEG])
+    return latlon
+
+def compute_error_static(est_data: CSVData, true_data, true_pos, local="ENU"):
     [lat, lon, _] = cartesian2geodetic(*true_pos)
 
     if local == "ENU":
@@ -27,11 +36,11 @@ def compute_error_static(est_data: CSVData, true_pos, local="ENU"):
         raise ValueError(f"Argument `local` must either be 'ENU' or 'NED' (local={local})")
 
     # Compute errors without rotation matrix (default identity matrix)
-    errors_ecef = est_data.data.apply(lambda row: error_vector(row, true_pos), axis=1)
+    errors_ecef = est_data.data.apply(lambda row: error_vector(row, true_data), axis=1)
     error_matrix_ecef = np.vstack(errors_ecef.values)
 
     # Compute errors with the specified rotation matrix
-    errors_local = est_data.data.apply(lambda row: error_vector(row, true_pos, rot_e_local), axis=1)
+    errors_local = est_data.data.apply(lambda row: error_vector(row, true_data, rot_e_local), axis=1)
     error_matrix_local = np.vstack(errors_local.values)
 
     # Get ECEF Covariance per epoch

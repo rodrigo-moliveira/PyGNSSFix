@@ -29,7 +29,7 @@ class GnssRunStorageManager(Container):
         self.position = CSVData(name="position",
                                 description="position in the ECEF frame",
                                 units=['m', 'm', 'm', 'm^2', 'm^2', 'm^2', 'm^2', 'm^2', 'm^2'],
-                                legend=['pos_x', 'pos_y', 'pos_z', 'cov_xx', 'cov_yy', 'cov_zz', 'cov_xy', 'cov_xz',
+                                legend=['x', 'y', 'z', 'cov_xx', 'cov_yy', 'cov_zz', 'cov_xy', 'cov_xz',
                                         'cov_yz'],
                                 title="Estimated Position in the ECEF Frame",
                                 time_cols=(0, 1),
@@ -57,10 +57,11 @@ class GnssRunStorageManager(Container):
         self.velocity = CSVData(name="velocity",
                                 description="velocity in the ECEF frame",
                                 units=['m/s', 'm/s', 'm/s'],
-                                legend=['vel_x', 'vel_y', 'vel_z'],
+                                legend=['x', 'y', 'z', 'cov_xx', 'cov_yy', 'cov_zz', 'cov_xy', 'cov_xz',
+                                        'cov_yz'],
                                 title="Velocity (ECEF)",
                                 time_cols=(0, 1),
-                                data_cols=(2, 3, 4))
+                                data_cols=(2, 3, 4, 5, 6, 7, 8, 9, 10))
 
         # Dilution of Precision (DOP)
         self.dop_ecef = CSVData(name="DOP_ECEF",
@@ -96,9 +97,7 @@ class GnssRunStorageManager(Container):
         # velocity prefit residuals
         self.vel_prefit_residuals = CSVData(name="vel_prefit_residuals",
                                             description="Pseudorange Rate Prefit Residuals",
-                                            units=None,
-                                            legend=None,
-                                            title="Pseudorange Prefit Residuals",
+                                            title="Pseudorange Rate Prefit Residuals",
                                             time_cols=(0, 1),
                                             data_cols=(2, 3, 4, 5))
 
