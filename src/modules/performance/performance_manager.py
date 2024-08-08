@@ -4,14 +4,10 @@ from .error import *
 from .plots import *
 import pandas as pd
 from src.data_types.date import Epoch
-
-import plotly.express as px
-import plotly.graph_objects as go
+import allantools as at
 
 
 # TODO List
-#   * fazer o plot do erro em ENU 3D com as covs
-#   * alterar os argumentos do plot 3D traj para receber já a cov
 #   * todos os datamanager.get_data() têm que estar protegidos por um try catch
 
 import re
@@ -76,8 +72,8 @@ class PerformanceManager:
         self._process_errors(post_proc_dir)
 
         print("2 - Running residual analysis")
-        # TODO...
-
+        self._residual_analysis()
+        exit()
         # plots
         print("Plotting simulation data...")
         self._plot()
@@ -104,21 +100,27 @@ class PerformanceManager:
         else:
             raise NotImplementedError(f"Dynamic error computation not yet implemented...")
 
-        rms_ecef = compute_rms_error(self.pos_error["error_ecef"])
-        rms_enu = compute_rms_error(self.pos_error["error_enu"])
+        rms_pos_ecef = compute_rms_error(self.pos_error["error_ecef"])
+        rms_pos_enu = compute_rms_error(self.pos_error["error_enu"])
+        rms_vel_ecef = compute_rms_error(self.vel_error["error_ecef"])
+        rms_vel_enu = compute_rms_error(self.vel_error["error_enu"])
 
         # 2- save computed errors to files
         print("Saving computed errors to files...")
-        self._write_outputs(post_proc_dir, time, rms_ecef, rms_enu)
+        self._write_outputs(post_proc_dir, time, rms_pos_ecef, rms_pos_enu, rms_vel_ecef, rms_vel_enu)
 
-    def _write_outputs(self, output_dir, time, rms_ecef, rms_enu):
+    def _write_outputs(self, output_dir, time, rms_pos_ecef, rms_pos_enu, rms_vel_ecef, rms_vel_enu):
+        # TODO: add estimation errors for velocity also
         f_rms_stats = open(output_dir / "EstimationStats.txt", "w")
 
         # Create DataFrame for error matrix
-        ecef_df = pd.DataFrame(self.pos_error["error_ecef"], columns=['x_error[m]', 'y_error[m]', 'z_error[m]'])
-        error_ecef_df = pd.concat([time.data, ecef_df], axis=1)
-        enu_df = pd.DataFrame(self.pos_error["error_enu"], columns=['east_error[m]', 'north_error[m]', 'up_error[m]'])
-        error_enu_df = pd.concat([time.data, enu_df], axis=1)
+        pos_ecef_df = pd.DataFrame(self.pos_error["error_ecef"], columns=['Error x [m]', 'Error y [m]', 'Error z [m]'])
+        vel_ecef_df = pd.DataFrame(self.vel_error["error_ecef"], columns=['Error vx [m/s]', 'Error vy [m/s]', 'Error vz [m/s]'])
+        error_ecef_df = pd.concat([time.data, pos_ecef_df, vel_ecef_df], axis=1)
+        pos_enu_df = pd.DataFrame(self.pos_error["error_enu"], columns=['Error East [m]', 'Error North [m]', 'Error Up [m]'])
+        vel_enu_df = pd.DataFrame(self.vel_error["error_enu"],
+                              columns=['Error Vel East [m]', 'Error Vel North [m]', 'Error Vel Up [m]'])
+        error_enu_df = pd.concat([time.data, pos_enu_df, vel_enu_df], axis=1)
 
         # Save the error dataframes
         error_ecef_df.to_csv(output_dir / "error_ecef.txt", index=False)
@@ -127,20 +129,50 @@ class PerformanceManager:
         # Overall Estimation Stats
         stats = "Root Mean Square Error:\n" \
                 "\tECEF frame\n" \
-                f"\t\tx = {rms_ecef['x']} [m]\n" \
-                f"\t\ty = {rms_ecef['y']} [m]\n" \
-                f"\t\tz = {rms_ecef['z']} [m]\n" \
+                f"\t\tx = {rms_pos_ecef['x']} [m]\n" \
+                f"\t\ty = {rms_pos_ecef['y']} [m]\n" \
+                f"\t\tz = {rms_pos_ecef['z']} [m]\n" \
+                f"\t\tvx = {rms_vel_ecef['x']} [m/s]\n" \
+                f"\t\tvy = {rms_vel_ecef['y']} [m/s]\n" \
+                f"\t\tvz = {rms_vel_ecef['z']} [m/s]\n" \
                 "\n\n\tENU frame\n" \
-                f"\t\teast = {rms_enu['x']} [m]\n" \
-                f"\t\tnorth = {rms_enu['y']} [m]\n" \
-                f"\t\tup = {rms_enu['z']} [m]\n" \
+                f"\t\teast = {rms_pos_enu['x']} [m]\n" \
+                f"\t\tnorth = {rms_pos_enu['y']} [m]\n" \
+                f"\t\tup = {rms_pos_enu['z']} [m]\n" \
+                f"\t\tvel east = {rms_vel_enu['x']} [m/s]\n" \
+                f"\t\tvel north = {rms_vel_enu['y']} [m/s]\n" \
+                f"\t\tvel up = {rms_vel_enu['z']} [m/s]\n" \
                 "\n\n\tOverall\n" \
-                f"\t\tHorizontal Error = {rms_enu['2D']} [m]\n" \
-                f"\t\t3D Position Error = {rms_enu['3D']} [m]\n"
+                f"\t\tHorizontal Position Error = {rms_pos_enu['2D']} [m]\n" \
+                f"\t\tHorizontal Velocity Error = {rms_vel_enu['2D']} [m/s]\n" \
+                f"\t\t3D Position Error = {rms_pos_enu['3D']} [m]\n" \
+                f"\t\t3D Velocity Error = {rms_vel_enu['3D']} [m/s]" \
+                f"\n"
 
         f_rms_stats.write(stats)
         print(stats)
         f_rms_stats.close()
+
+    def _residual_analysis(self):
+        residuals = self.data_manager.get_data("postfit_residuals").data
+
+        # Group the data by satellite and data type
+        grouped = residuals.groupby(['sat', 'data_type'])
+
+        # Add a line for each satellite and data type combination
+        for (sat, data_type), group in grouped:
+            #sow_array = group.iloc[:, 1].values
+            #week_array = group.iloc[:, 0].values
+            residual_array = group.iloc[:, 5].values
+            #time_array = [Epoch.from_gnss_time(week, sow, scale="GPST") for (sow, week) in zip(sow_array, week_array)]
+            mean = np.mean(residual_array)
+            std = np.std(residual_array)
+            # TODO: write to file
+            print(sat, data_type, "mean", mean, "std", std)
+            chi_squared_test(residual_array, 1)
+            shapiro_test(residual_array)
+
+        exit()
 
     def _plot(self):
         # fetch estimated data
@@ -173,11 +205,8 @@ class PerformanceManager:
         self._plot_errors(time, self.pos_error["error_ecef"], self.pos_error["cov_ecef"], "Position Estimation Error in ECEF", "Position Error [m]", "X", "Y", "Z")
         self._plot_errors(time, self.pos_error["error_enu"], self.pos_error["cov_enu"], "Position Estimation Error in ENU", "Position Error [m]", "East", "North", "Up")
         self._plot_dops(time)
-        #
 
-        #
-        # TODO: remaining plots:
-        #  lat-long plot
+
         plot_2D_trajectory(self.pos_error["error_enu"], self.pos_error["cov_enu"],
                            x_label="East [m]", y_label="North [m]", title="Horizontal Position Error")
 
@@ -195,6 +224,21 @@ class PerformanceManager:
 
         show_all()
 
+    def _plot_allandev(self, clock_series, tau0):
+        # Convert clock estimates to frequency deviations
+
+        f = np.diff(clock_series) / tau0
+
+        # Compute Allan deviation using allantools
+        taus, adevs, _, _ = at.oadev(f, rate=1 / tau0, data_type='freq', taus='decade')
+
+        # Plotting
+        plt.loglog(taus, adevs)
+        plt.xlabel('Tau (s)')
+        plt.ylabel('Allan Deviation')
+        plt.title('Allan Deviation of GNSS Clock Estimates')
+        plt.grid(True)
+        plt.show()
 
     def _plot_latlon(self):
         latlon = compute_latlon(self.data_manager.get_data("position"))
@@ -214,7 +258,7 @@ class PerformanceManager:
             week_array = group.iloc[:, 0].values
             residual_array = group.iloc[:, 5].values
             this_time = [Epoch.from_gnss_time(week, sow, scale="GPST") for (sow, week) in zip(sow_array, week_array)]
-
+            # TODO: why merge? simply take the `this_time`...
             merged_time = Epoch.merge_time_arrays(time, this_time)
             ax=plot_1D(merged_time, residual_array, ax=ax, x_label="Time", label=f'Residual for {sat} {data_type}',
                          set_legend=True, scatter=True, markersize=5)
@@ -234,6 +278,8 @@ class PerformanceManager:
 
         master_clock_series = master_clock[:, 0]
         sigma_series = np.sqrt(master_clock[:, 1])
+
+        self._plot_allandev(master_clock_series, (time[1] - time[0]).total_seconds())
 
         isb_series = isb_data[:, 0]
         isb_sigma_series = np.sqrt(isb_data[:, 1])

@@ -17,6 +17,7 @@ IONO = "iono.txt"
 ISB = "isb.txt"
 TROPO = "tropo.txt"
 CLOCK_BIAS_RATE = "clock_bias_rate.txt"
+OBSERVATIONS = "observations.txt"
 
 OUTPUT_FILENAME_MAP = {
     "satellite_azel": AZEL,
@@ -33,5 +34,6 @@ OUTPUT_FILENAME_MAP = {
     "isb": ISB,
     "tropo_wet": TROPO,
     "velocity": VELOCITY,
-    "clock_bias_rate": CLOCK_BIAS_RATE
+    "clock_bias_rate": CLOCK_BIAS_RATE,
+    "obs": OBSERVATIONS
 }

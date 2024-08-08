@@ -411,3 +411,31 @@ class ObservationData:
         obj._data = self._data.copy()
 
         return obj
+
+    def to_csv_file(self):
+        """
+        Export this ObservationData to a csv file format.
+        This function returns the header and body of the file in the following format:
+            Week_Number(SCALE),Time_of_Week[s],Satellite,Observation,Measurement,Noise_Std
+
+        Returns:
+            str: output string with observation data for this object in csv string format
+        """
+        if self._data.is_empty():
+            return "empty observation data"
+        vEpochs = self.get_epochs()
+        epoch_scale = vEpochs[0].scale
+
+        # header
+        out_string = f"Week_Number({epoch_scale}),Time_of_Week[s],Satellite,Observation,Measurement,Noise_Std\n"
+
+        # body
+        for epoch in self.get_epochs():
+            week, sow = epoch.gnss_time
+            epoch_data = self.get_epoch_data(epoch)
+            vSats = epoch_data.get_satellites()
+            for sat in vSats:
+                vObservables = epoch_data.get_observables(sat)
+                for obs in vObservables:
+                    out_string = out_string + f"{week},{sow},{sat},{obs.datatype},{obs.value},{obs.std}\n"
+        return out_string

@@ -168,32 +168,42 @@ class GnssDataManager(Container):
         log.info(f"storing data to {directory}...")
         file_list = {}
 
-        for sim_data in ["nav_solution"]:
-            # fetch sim_data
-            sim = getattr(self, sim_data, None)
-            if sim is not None:
+        # Save state variables (navigation solution)
+        sim = getattr(self, "nav_solution", None)
+        if sim is not None:
+            # iterate over estimated states
+            for state in sim:
 
-                # iterate over estimated states
-                for state in sim:
+                week, sow = state.epoch.gnss_time
+                time_str = f"{week},{sow}"
 
-                    week, sow = state.epoch.gnss_time
-                    time_str = f"{week},{sow}"
+                # save estimated data for this epoch
+                exportable_lst = state.get_exportable_lst()
+                for ext in exportable_lst:
 
-                    # save estimated data for this epoch
-                    exportable_lst = state.get_exportable_lst()
-                    for ext in exportable_lst:
+                    # add this estimable to the file list (only do this once)
+                    if ext not in file_list:
+                        filename = f"{directory}\\{OUTPUT_FILENAME_MAP[ext]}"
+                        file_list[ext] = open(filename, "w")
+                        file_list[ext].write(f"{get_file_header(ext, state)}\n")
+                        log.info(f"creating output file {filename}")
 
-                        # add this estimable to the file list (only do this once)
-                        if ext not in file_list:
-                            filename = f"{directory}\\{OUTPUT_FILENAME_MAP[ext]}"
-                            file_list[ext] = open(filename, "w")
-                            file_list[ext].write(f"{get_file_header(ext, state)}\n")
-                            log.info(f"creating output file {filename}")
+                    # save this epoch data
+                    data = export_to_file(ext, state)
+                    if isinstance(data, str):
+                        file_list[ext].write(f"{time_str},{data}\n")
+                    elif isinstance(data, list):
+                        for entry in data:
+                            file_list[ext].write(f"{time_str},{entry}\n")
 
-                        # save this epoch data
-                        data = export_to_file(ext, state)
-                        if isinstance(data, str):
-                            file_list[ext].write(f"{time_str},{data}\n")
-                        elif isinstance(data, list):
-                            for entry in data:
-                                file_list[ext].write(f"{time_str},{entry}\n")
+        # save observation data
+        obs_data = self.get_clean_obs_data()
+        ext = 'obs'
+        filename = f"{directory}\\{OUTPUT_FILENAME_MAP[ext]}"
+        file_list[ext] = open(filename, "w")
+        file_list[ext].write(f"{obs_data.to_csv_file()}")
+        log.info(f"creating output file {filename}")
+
+        # close all files
+        for ext in file_list.keys():
+            file_list[ext].close()

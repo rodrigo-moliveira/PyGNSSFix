@@ -34,7 +34,6 @@ class Config(dict):
         # model initializations
         if alg.lower() == "gnss":
             self["model"]["mode"] = EnumPositioningMode.init_model(self["model"]["mode"])
-            self.get_obs_std()
 
     def _validate(self, initial_dict, alg):
         # Read the schema from the file

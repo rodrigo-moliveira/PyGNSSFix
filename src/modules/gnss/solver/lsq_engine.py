@@ -323,8 +323,10 @@ class LSQ_Engine_Position(LSQ_Engine):
                         self.design_mat[obs_offset + iSat, -1] = 1.0  # ISB
 
                     # Weight matrix -> as 1/(obs_std^2)
+                    std = reconstructor.get_obs_std(sat, datatype)
+                    obs_data.get_observable(sat, datatype).set_std(std)
                     self.weight_mat[obs_offset + iSat, obs_offset + iSat] = \
-                        1 / (reconstructor.get_obs_std(sat, datatype) ** 2)
+                        1 / (std ** 2)
 
                 obs_offset += n_sats
             if self._metadata["MODEL"][const] == EnumModel.DUAL_FREQ:
@@ -467,8 +469,10 @@ class LSQ_Engine_Velocity(LSQ_Engine):
                 self.design_mat[obs_offset + iSat][3 + const_offset] = 1
 
                 # Weight matrix -> as 1/(obs_std^2)
+                std = reconstructor.get_obs_std(sat, datatype)
+                obs_data.get_observable(sat, datatype).set_std(std)
                 self.weight_mat[obs_offset + iSat, obs_offset + iSat] = \
-                    1 / (reconstructor.get_obs_std(sat, datatype) ** 2)
+                    1 / (std ** 2)
 
             obs_offset += n_sats
             const_offset += 1

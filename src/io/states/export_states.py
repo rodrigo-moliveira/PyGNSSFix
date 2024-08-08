@@ -12,8 +12,8 @@ def get_file_header(state_variable, state):
     Get the header line of the provided `state_variable`
     Args:
         state_variable(str): name of the state variable
-        state(:py:class:`GnssStateSpace`): instance of the `GnssStateSpace` (to get fetch some metadata info about the
-        state)
+        state(:py:class:`GnssStateSpace`): instance of the `GnssStateSpace` (to get fetch some metadata info
+            about the state)
     Returns:
         str: header line string (CSV format)
     """

@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.stats as stats
 
 from src import constants
 from src.data_mng.csv.csv_data import CSVData
@@ -80,3 +81,88 @@ def compute_rms_error(error_matrix):
             "2D": rms_2d,
             "3D": rms_3d
             }
+
+def chi_squared_test(residuals, p):
+    """
+    A chi-square test is a common method to check if the residuals from a Least Squares adjustment in GNSS positioning
+    follow a white noise distribution.
+
+    Formulate Hypotheses:
+        Null Hypothesis (H0): The residuals follow a white noise distribution.
+        Alternative Hypothesis (H1): The residuals do not follow a white noise distribution.
+
+    Steps:
+        Obtain the residuals (difference between observed and predicted measurements)
+        Calculate the Variance of Residuals. Compute the variance of your residuals. This will be used to normalize the residuals.
+        Standardize the Residuals: Convert residuals into standard normal form by dividing them by the variance
+        Compute the Chi-Square Statistic
+        Degrees of Freedom: The degrees of freedom (df) for the chi-square distribution is equal to the number of
+        residuals n minus the number of estimated parameters p in the model.
+        Compare with Critical Value: Determine the critical value from the chi-square distribution table at the desired
+        significance level (e.g., 0.05) with n−p degrees of freedom.
+
+        Decision Rule:
+            * If the computed chi-square statistic is less than the critical value, you fail to reject the null
+                hypothesis (the residuals are consistent with white noise).
+            * If the computed chi-square statistic is greater than the critical value, you reject the null hypothesis
+                (the residuals are not consistent with white noise).
+
+    TODO: check two cases: one when the sigma is the variance of the residuals
+        2) when the sigma is the covariance of the measurements.
+    :return:
+    """
+
+    # Example residuals from Least Squares adjustment
+    n = len(residuals)  # number of residuals
+    p = 6  # number of estimated parameters, typically 4 for GNSS (x, y, z, clock bias)
+
+    # Calculate the variance of residuals
+    variance_residuals = np.var(residuals)
+    std_residuals = np.sqrt(variance_residuals)
+
+    # Calculate the mean of residuals
+    mean_residuals = np.mean(residuals)
+
+    # Standardize the residuals
+    standardized_residuals = (residuals - mean_residuals) / std_residuals
+    std_standard = np.std(standardized_residuals)
+    print("\tmean", mean_residuals, "std", std_residuals, std_standard)
+    # TODO check now that np.std() is 1
+
+    # Degrees of freedom
+    degrees_of_freedom = n - p
+
+    # Compute the chi-square statistic
+    chi_square_statistic = np.sum(standardized_residuals ** 2)
+
+    # Determine the critical value from chi-square distribution at 0.05 significance level
+    alpha = 0.05
+    critical_value = stats.chi2.ppf(1 - alpha, degrees_of_freedom)
+
+    # Decision rule
+    if chi_square_statistic < critical_value:
+        print("Fail to reject the null hypothesis: residuals are consistent with white noise.")
+    else:
+        print("Reject the null hypothesis: residuals are not consistent with white noise.")
+
+    print(f"\tChi-square statistic: {chi_square_statistic}")
+    print(f"\tCritical value (0.05 significance level): {critical_value}\n")
+    #print(f"Degrees of freedom: {degrees_of_freedom}")
+
+
+def shapiro_test(residuals):
+    # Perform the Shapiro-Wilk test
+    statistic, p_value = stats.shapiro(residuals)
+
+    # Set the significance level (alpha)
+    alpha = 0.05
+
+    # Print the results
+    print(f"Shapiro-Wilk Test Statistic: {statistic}")
+    print(f"P-value: {p_value}")
+
+    # Check the p-value against the significance level
+    if p_value > alpha:
+        print("The residuals follow a normal distribution (fail to reject H0)")
+    else:
+        print("The residuals do not follow a normal distribution (reject H0)")

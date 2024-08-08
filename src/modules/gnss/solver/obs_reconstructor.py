@@ -58,6 +58,7 @@ class ObservationReconstructor:
         """
         Returns standard deviation for the provided satellite and `datatype` according to the std defined in
         the user configurations.
+        Updates the std field in the associated Observation object
 
         If the `elevation_mask` configuration is activated, then the returned std is computed as
             std = exp(-elevation) * user_std

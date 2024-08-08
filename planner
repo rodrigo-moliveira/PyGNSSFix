@@ -9,20 +9,11 @@ tasks release 1.0:
         [ ] limpar o código / solve all TODOs
 
     melhorar o modulo de post processing:
-        [ ] dar update ao modulo PP
-        [ ] criar plot com 3 subplots, um para cada componente. Melhorar depois o script sat_orbits.py
-        [ ] aplicar os pontos em ficheiros kml? Um plot de google maps ou assim.
-        [ ] see the residual analysis in https://gnss-sdr.org/docs/sp-blocks/pvt/#solution-validation
         [ ] fazer plot do observation data
-        [ ] plot all state variables (Iono states, tropo, isb,...)
-        [ ] residual analysis - see https://chatgpt.com/c/cf055e6c-e594-497f-abb8-76c62081d108
-        [ ] compute mean and std of pre/postfit residuals -> mean should be zero. STD should be sigma_URE (user range error). This should be computed for each satellite
-        [ ] plot residuals
-        [ ] plot position covariance (3D plot, 2D surfaces, etc...)
-        [ ] consistency of residuals. Residuals divided by covariance matrix? See Tapler book and maybe my thesis, if I remember well
-        [ ] testar os resíduos com aqueles testes estatísticos? Tenho algures no pc um script python the faz isso creio eu
-        [ ] plot 3d sigma of estimation error
-        [ ] compute allan variance of clock bias and plot it
+        [ ] clean everything up (pain)
+        [ ] Clean up dos scripts sat_orbits e sat_clocks
+        [ ] Criar script plot_observations
+
     [ ] revisão final do repositório. Update readme
     [ ] fazer uma "campanha de validação": comparar precise vs nav products. Single freq / Single const vs Dual freq / Dual Const...
         e brincar com as configurações para fazer fine tuning ao algo

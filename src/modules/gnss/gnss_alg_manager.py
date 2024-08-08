@@ -7,7 +7,7 @@ from src import RUNS_PATH
 from src.io.config import config_dict, EnumPositioningMode
 from src.models.frames import cartesian2geodetic, latlon2dcm_e_enu
 from src.errors import ConfigError
-from src.common_log import MAIN_LOG, get_logger
+from src.common_log import MAIN_LOG, get_logger, set_logs
 
 from .solver.gnss_solver import GnssSolver
 from .preprocessor import PreprocessorManager
@@ -19,7 +19,11 @@ class GnssAlgorithmManager:
     def __init__(self):
         # create output folder
         data_dir = config_dict.get("output", "output_path")
+
         self.data_dir = self._check_data_dir(data_dir)
+
+        # initialize logger objects
+        set_logs(config_dict.get("log", "minimum_level"), f"{self.data_dir}\\log.txt")
 
         # create data members
         self.data_manager = GnssDataManager()
@@ -34,6 +38,8 @@ class GnssAlgorithmManager:
             raise ConfigError(f"Selected Model {model} not valid. Available options are "
                               f"SPS, SPS_IF")
         self.main_log.info(f"Running GNSS algorithm {model}")
+
+        config_dict.get_obs_std()
 
         # Input Reader Module
         try:

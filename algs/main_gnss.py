@@ -4,7 +4,6 @@ import shutil
 
 from src.modules.gnss import GnssAlgorithmManager
 from src.io.config import config_dict
-from src.common_log import set_logs
 
 
 def main():
@@ -28,9 +27,6 @@ def main():
     # create algorithm and algorithm manager
     try:
         alg_mng = GnssAlgorithmManager()
-
-        # initialize logger objects
-        set_logs(config_dict.get("log", "minimum_level"), f"{alg_mng.data_dir}\\log.txt")
 
         # run algorithm
         alg_mng.run()

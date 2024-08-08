@@ -2,13 +2,12 @@
 """
 
 import numpy as np
-
 # PI
-PI = 3.1415926535898
+PI = 3.141592653589793
 
 # RAD - DEG Conversions
-DEG2RAD = 0.01745329251994
-RAD2DEG = 57.2957795130823
+DEG2RAD = PI / 180
+RAD2DEG = 180 / PI
 
 # GNSS Frequencies (Hz)
 # GPS Frequencies
