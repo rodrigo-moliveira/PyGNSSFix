@@ -12,6 +12,10 @@ import allantools as at
 
 import re
 
+from ...io.rinex_parser.utils import RINEX_SATELLITE_SYSTEM, RINEX_OBS_TYPES_UNITS
+
+
+# TODO: tirar isto daqui
 def extract_constellations(input_string):
     # Define the regex pattern to match the master and slave constellations
     pattern = r'ISB\(master=(\w+) slave=(\w+)\)'
@@ -29,10 +33,10 @@ def extract_constellations(input_string):
 
 class PerformanceManager:
 
-    def __init__(self, data_manager, config):
-        # TODO: add logger..
+    def __init__(self, data_manager, config, log):
         self.data_manager = data_manager
         self.config = config
+        self.log = log
 
         self.true_pos = None
         self.true_vel = None
@@ -55,13 +59,13 @@ class PerformanceManager:
 
     def process(self, output_dir):
 
-        # create post-processing folder, if not exists
+        # create post-processing folder, if not yet created
         post_proc_dir = output_dir / 'post_proc'
         if not os.path.exists(post_proc_dir):
             print(f"Creating directory to store computed errors {post_proc_dir}...")
             os.makedirs(post_proc_dir)
 
-        # create plot folder, if not exists
+        # create plot folder, if not yet created
         plot_dir = output_dir / 'plot'
         if not os.path.exists(plot_dir):
             print(f"Creating directory to store plots {plot_dir}...")
@@ -72,8 +76,8 @@ class PerformanceManager:
         self._process_errors(post_proc_dir)
 
         print("2 - Running residual analysis")
-        self._residual_analysis()
-        exit()
+        #self._residual_analysis()
+
         # plots
         print("Plotting simulation data...")
         self._plot()
@@ -178,6 +182,10 @@ class PerformanceManager:
         # fetch estimated data
         time = format_time_for_plot(self.data_manager.get_data("time").data)
 
+
+
+        self._plot_obs()
+
         self._plot_errors(time, self.vel_error["error_ecef"], self.vel_error["cov_ecef"], "Velocity Estimation Error in ECEF", "Velocity Error [m/s]", "X", "Y", "Z")
         self._plot_errors(time, self.vel_error["error_enu"], self.vel_error["cov_enu"],
                           "Velocity Estimation Error in ENU", "Velocity Error [m/s]", "East", "North", "Up")
@@ -238,7 +246,7 @@ class PerformanceManager:
         plt.ylabel('Allan Deviation')
         plt.title('Allan Deviation of GNSS Clock Estimates')
         plt.grid(True)
-        plt.show()
+        #plt.show()
 
     def _plot_latlon(self):
         latlon = compute_latlon(self.data_manager.get_data("position"))
@@ -426,3 +434,34 @@ class PerformanceManager:
                 set_legend=True)
         ax.fill_between(time, tropo_array - sigma_series, tropo_array + sigma_series,
                         color='lightblue', alpha=0.3)
+
+    def _plot_obs(self):
+        observations = self.data_manager.get_data("obs")
+
+        # Group the data by satellite and data type
+        grouped = observations.data.groupby(['Satellite', 'Observation'])
+
+        ax_dict = {}
+
+        # Add a line for each satellite and data type combination
+        for (sat, data_type), group in grouped:
+            key = f"{sat[0]}_{data_type}"
+            ax = ax_dict.get(key, None)
+
+            sow_array = group.iloc[:, 1].values
+            week_array = group.iloc[:, 0].values
+            obs_array = group.iloc[:, 4].values
+            this_time = [Epoch.from_gnss_time(week, sow, scale="GPST") for (sow, week) in zip(sow_array, week_array)]
+            # TODO: why merge? simply take the `this_time`...
+            ax = plot_1D(this_time, obs_array, ax=ax, x_label="Time", label=f'{sat} {data_type}',
+                         set_legend=True, scatter=True, markersize=5)
+            ax_dict[key] = ax
+
+
+        for key, ax in ax_dict.items():
+            const = RINEX_SATELLITE_SYSTEM[key[0]]
+            data_type = re.match(r'^[A-Za-z]+', key[2:]).group()
+            units = RINEX_OBS_TYPES_UNITS.get(data_type, 'XX')
+
+            ax.set_ylabel(f"{data_type} [{units}]")
+            ax.set_title(f'Observation {key[2:]} for {const}')

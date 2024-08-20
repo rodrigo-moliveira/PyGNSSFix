@@ -1,3 +1,6 @@
+""" Module with CSV Data Manager that manages all input data for the Post Processing GNSS Run """
+import traceback
+
 from src.io.states import OUTPUT_FILENAME_MAP
 from src.data_mng.container import Container
 
@@ -5,29 +8,25 @@ from .csv_data import CSVData
 
 
 class GnssRunStorageManager(Container):
-    __rx_based__ = ["time", "position", "velocity", "clock_bias",
-                    "dop_ecef", "dop_local",
-                    "clock_bias_rate", "isb", "tropo_wet"]
-    __sat_based__ = ["prefit_residuals", "postfit_residuals",
-                     "iono", "satellite_azel", "vel_prefit_residuals", "vel_postfit_residuals"]
+    __inputs__ = ["time", "position", "velocity", "clock_bias", "dop_ecef", "dop_local", "clock_bias_rate", "isb",
+                  "tropo_wet", "pr_prefit_residuals", "pr_postfit_residuals", "iono", "satellite_azel",
+                  "pr_rate_prefit_residuals", "pr_rate_postfit_residuals", "obs"]
+    __slots__ = __inputs__ + ["_available", "log"]
 
-    __slots__ = __rx_based__ + __sat_based__ + ["_available"]
-
-    def __init__(self):
+    def __init__(self, log):
         super().__init__()
+        self.log = log
 
         # time
         self.time = CSVData(name="time",
                             description="Time in GPS Time Scale",
-                            units=None,
-                            legend=None,
                             title="GPS Time Scale",
                             time_cols=(0, 1),
                             data_cols=(2,))
 
         # position in ECEF
         self.position = CSVData(name="position",
-                                description="position in the ECEF frame",
+                                description="Position in the ECEF frame",
                                 units=['m', 'm', 'm', 'm^2', 'm^2', 'm^2', 'm^2', 'm^2', 'm^2'],
                                 legend=['x', 'y', 'z', 'cov_xx', 'cov_yy', 'cov_zz', 'cov_xy', 'cov_xz',
                                         'cov_yz'],
@@ -47,7 +46,7 @@ class GnssRunStorageManager(Container):
         # clock bias rate
         self.clock_bias_rate = CSVData(name="clock_bias_rate",
                                        description="Receiver Clock Bias Rate",
-                                       units=['s/s'],
+                                       units=['', 's/s', '(s/s)^2'],
                                        legend=['constellation', 'clock rate', 'cov'],
                                        title="Receiver Clock Bias Rate",
                                        time_cols=(0, 1),
@@ -55,11 +54,12 @@ class GnssRunStorageManager(Container):
 
         # velocity in ECEF
         self.velocity = CSVData(name="velocity",
-                                description="velocity in the ECEF frame",
-                                units=['m/s', 'm/s', 'm/s'],
+                                description="Velocity in the ECEF frame",
+                                units=['m/s', 'm/s', 'm/s', '(m/s)^2', '(m/s)^2', '(m/s)^2', '(m/s)^2', '(m/s)^2',
+                                       '(m/s)^2'],
                                 legend=['x', 'y', 'z', 'cov_xx', 'cov_yy', 'cov_zz', 'cov_xy', 'cov_xz',
                                         'cov_yz'],
-                                title="Velocity (ECEF)",
+                                title="Estimated Velocity in the ECEF Frame",
                                 time_cols=(0, 1),
                                 data_cols=(2, 3, 4, 5, 6, 7, 8, 9, 10))
 
@@ -81,39 +81,37 @@ class GnssRunStorageManager(Container):
                                  data_cols=(2, 3, 4, 5))
 
         # prefit residuals
-        self.prefit_residuals = CSVData(name="prefit_residuals",
-                                        description="Pseudorange Prefit Residuals",
-                                        title="Pseudorange Prefit Residuals",
-                                        time_cols=(0, 1),
-                                        data_cols=(2, 3, 4, 5))
+        self.pr_prefit_residuals = CSVData(name="pr_prefit_residuals",
+                                           description="Pseudorange Prefit Residuals",
+                                           title="Pseudorange Prefit Residuals",
+                                           time_cols=(0, 1),
+                                           data_cols=(2, 3, 4, 5))
 
         # postfit residuals
-        self.postfit_residuals = CSVData(name="postfit_residuals",
-                                         description="Pseudorange Postfit Residuals",
-                                         title="Pseudorange Postfit Residuals",
-                                         time_cols=(0, 1),
-                                         data_cols=(2, 3, 4, 5))
-
-        # velocity prefit residuals
-        self.vel_prefit_residuals = CSVData(name="vel_prefit_residuals",
-                                            description="Pseudorange Rate Prefit Residuals",
-                                            title="Pseudorange Rate Prefit Residuals",
+        self.pr_postfit_residuals = CSVData(name="pr_postfit_residuals",
+                                            description="Pseudorange Postfit Residuals",
+                                            title="Pseudorange Postfit Residuals",
                                             time_cols=(0, 1),
                                             data_cols=(2, 3, 4, 5))
 
+        # velocity prefit residuals
+        self.pr_rate_prefit_residuals = CSVData(name="pr_rate_prefit_residuals",
+                                                description="Pseudorange Rate Prefit Residuals",
+                                                title="Pseudorange Rate Prefit Residuals",
+                                                time_cols=(0, 1),
+                                                data_cols=(2, 3, 4, 5))
+
         # postfit residuals
-        self.vel_postfit_residuals = CSVData(name="vel_postfit_residuals",
-                                             description="Pseudorange Rate Postfit Residuals",
-                                             units=None,
-                                             legend=None,
-                                             title="Pseudorange Rate Postfit Residuals",
-                                             time_cols=(0, 1),
-                                             data_cols=(2, 3, 4, 5))
+        self.pr_rate_postfit_residuals = CSVData(name="pr_rate_postfit_residuals",
+                                                 description="Pseudorange Rate Postfit Residuals",
+                                                 title="Pseudorange Rate Postfit Residuals",
+                                                 time_cols=(0, 1),
+                                                 data_cols=(2, 3, 4, 5))
 
         # satellite azimuth elevation
         self.satellite_azel = CSVData(name="satellite_azel",
                                       description="Satellite Azimuth Elevation",
-                                      units=['deg', 'deg'],
+                                      units=['', 'deg', 'deg'],
                                       legend=['sat', 'azimuth', 'elevation'],
                                       title="Satellite Azimuth and Elevation",
                                       time_cols=(0, 1),
@@ -123,7 +121,7 @@ class GnssRunStorageManager(Container):
         # Inter System Bias ISB
         self.isb = CSVData(name="isb",
                            description="Inter System Bias ISB",
-                           units=['s'],
+                           units=['s', 's^2'],
                            title="Inter System Bias ISB",
                            time_cols=(0, 1),
                            data_cols=(2, 3),
@@ -132,7 +130,7 @@ class GnssRunStorageManager(Container):
         # Iono
         self.iono = CSVData(name="iono",
                             description="Ionosphere",
-                            units=['m'],
+                            units=['', 'm', 'm^2'],
                             legend=['sat', 'iono', 'cov'],
                             title="Estimated Ionosphere Delay",
                             time_cols=(0, 1),
@@ -141,12 +139,20 @@ class GnssRunStorageManager(Container):
 
         self.tropo_wet = CSVData(name="tropo",
                                  description="Troposphere",
-                                 units=['m'],
-                                 legend=['tropo_wet'],
+                                 units=['m', 'm^2'],
+                                 legend=['tropo_wet', 'cov'],
                                  title="Estimated Troposphere (Wet Delay)",
                                  time_cols=(0, 1),
                                  data_cols=(2, 3),
                                  )
+
+        # velocity prefit residuals
+        self.obs = CSVData(name="obs",
+                           description="GNSS Observations",
+                           title="GNSS Observations",
+                           time_cols=(0, 1),
+                           data_cols=(2, 3, 4, 5))
+
         # available data for the current simulation
         self._available = []
 
@@ -174,11 +180,13 @@ class GnssRunStorageManager(Container):
         return self._available
 
     def read_data(self, output_folder):
-        """ TODO: add docstrings"""
-        for output_name in GnssRunStorageManager.__rx_based__ + GnssRunStorageManager.__sat_based__:
+        """ Read all input files available for this run """
+        for output_name in GnssRunStorageManager.__inputs__:
             try:
-                print("Reading", output_name)
-                getattr(self, output_name).read_data(output_folder / OUTPUT_FILENAME_MAP[output_name])
+                in_file = output_folder / OUTPUT_FILENAME_MAP[output_name]
+                self.log.info(f"reading data ´{output_name}´ stored in file {in_file}...")
+
+                getattr(self, output_name).read_data(in_file)
                 self._available.append(output_name)
             except Exception as e:
-                print(f"[WARN] did not successfully import data {output_name} due to: {e}")
+                self.log.warn(f"Did not successfully import data ´{output_name}´ due to: {repr(e)}")

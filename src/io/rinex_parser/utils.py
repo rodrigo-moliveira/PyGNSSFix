@@ -21,6 +21,13 @@ RINEX_OBS_TYPES_TO_READ = {"C",  # pseudo range
                            "S",  # signal-to-noise ratio
                            "D"}  # doppler
 
+RINEX_OBS_TYPES_UNITS = {
+    "PR": "m",
+    "SPR": "m",
+    "CP": "m",  # carrier phase is converted internally from cycles to meters
+    "D": "Hz",  # Doppler is provided in Hz
+    "S": "dB-Hz"  # default units of SNR
+}
 
 def to_float(nmb: str) -> float:
     """

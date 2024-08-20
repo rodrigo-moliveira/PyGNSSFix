@@ -1,6 +1,13 @@
 {
   "type": "object",
   "properties": {
+    "log": {
+      "type": "object",
+      "properties": {
+        "minimum_level": {"type": "string", "enum": ["DEBUG", "INFO", "WARN", "ERROR", "FATAL"]}
+      },
+      "required": ["minimum_level"]
+    },
     "performance_evaluation": {
       "type": "object",
       "properties": {
@@ -11,5 +18,5 @@
       "required": ["run", "static", "true_static_position"]
     }
   },
-  "required": ["performance_evaluation"]
+  "required": ["log", "performance_evaluation"]
 }

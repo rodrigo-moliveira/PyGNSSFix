@@ -9,10 +9,10 @@ tasks release 1.0:
         [ ] limpar o código / solve all TODOs
 
     melhorar o modulo de post processing:
-        [ ] fazer plot do observation data
         [ ] clean everything up (pain)
+        [ ] allow for using obs std in residual test normalization
         [ ] Clean up dos scripts sat_orbits e sat_clocks
-        [ ] Criar script plot_observations
+        [ ] Criar script plot_observations from input rinex file
 
     [ ] revisão final do repositório. Update readme
     [ ] fazer uma "campanha de validação": comparar precise vs nav products. Single freq / Single const vs Dual freq / Dual Const...
@@ -21,7 +21,7 @@ tasks release 1.0:
 
 
 
-# Release 1.1 (PPPP Mode)
+# Release 1.1 (PPPP/PPP Mode)
     [ ] fazer cleanup ao theory notes
     [ ] criar um config field com o modo (SPS ou PPPP)
     [ ] Adicionar Leitura e Modelo de IONEX (criar um PPPP)
@@ -33,6 +33,7 @@ tasks release 1.0:
         [ ] develop code accordingly for each DCB type
         [ ] ler sat DCBs e criar uma classe que substitua o modelo atual
         [ ] permitir também correções de OSB
+    [ ] float carrier processing
 
 finalizar o GNSS user positioning com:
     [ ] Adicionar Kalman filter com user dynamics

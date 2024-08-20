@@ -29,8 +29,10 @@ class GnssStateSpace(Container):
         * geometry
         * dop_ecef
         * dop_local
-        * prefit_residuals
-        * postfit_residuals
+        * pr_prefit_residuals
+        * pr_postfit_residuals
+        * pr_rate_prefit_residuals
+        * pr_rate_postfit_residuals
     """
     __states__ = ["position", "velocity", "clock_bias", "iono", "tropo_wet", "isb", "clock_bias_rate"]
     __covs__ = ["cov_position", "cov_velocity", "cov_clock_bias", "cov_iono", "cov_tropo_wet", "cov_isb",
@@ -246,12 +248,12 @@ class GnssStateSpace(Container):
             exportable_lst.append("dop_ecef")
         if "dop_local" in self._info:
             exportable_lst.append("dop_local")
-        if "prefit_residuals" in self._info:
-            exportable_lst.append("prefit_residuals")
-        if "postfit_residuals" in self._info:
-            exportable_lst.append("postfit_residuals")
-        if "vel_prefit_residuals" in self._info:
-            exportable_lst.append("vel_prefit_residuals")
-        if "vel_postfit_residuals" in self._info:
-            exportable_lst.append("vel_postfit_residuals")
+        if "pr_prefit_residuals" in self._info:
+            exportable_lst.append("pr_prefit_residuals")
+        if "pr_postfit_residuals" in self._info:
+            exportable_lst.append("pr_postfit_residuals")
+        if "pr_rate_prefit_residuals" in self._info:
+            exportable_lst.append("pr_rate_prefit_residuals")
+        if "pr_rate_postfit_residuals" in self._info:
+            exportable_lst.append("pr_rate_postfit_residuals")
         return exportable_lst

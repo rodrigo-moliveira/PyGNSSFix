@@ -416,7 +416,7 @@ class ObservationData:
         """
         Export this ObservationData to a csv file format.
         This function returns the header and body of the file in the following format:
-            Week_Number(SCALE),Time_of_Week[s],Satellite,Observation,Measurement,Noise_Std
+            Week_Number(SCALE),Time_of_Week[s],sat,data_type,value,noise_std
 
         Returns:
             str: output string with observation data for this object in csv string format
@@ -427,7 +427,7 @@ class ObservationData:
         epoch_scale = vEpochs[0].scale
 
         # header
-        out_string = f"Week_Number({epoch_scale}),Time_of_Week[s],Satellite,Observation,Measurement,Noise_Std\n"
+        out_string = f"Week_Number({epoch_scale}),Time_of_Week[s],sat,data_type,value,noise_std\n"
 
         # body
         for epoch in self.get_epochs():

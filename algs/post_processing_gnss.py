@@ -3,6 +3,7 @@ import sys
 import os
 
 from src import RUNS_PATH
+from src.common_log import set_logs, get_logger, POST_PROC_LOG
 from src.data_mng.csv.csv_data_mng import GnssRunStorageManager
 from src.io.config import config_dict
 from src.modules.performance.performance_manager import PerformanceManager
@@ -31,7 +32,6 @@ def main():
     try:
         run_path = config_dict.get("performance_evaluation", "run")
         run_path = RUNS_PATH / run_path
-        print(f"Running Post-Processing Performance Evaluation Module for run {run_path}")
     except IndexError:
         print("ERROR: No valid run path was provided in the configurations")
         print("Please check the field 'performance_evaluation.run' of the json file")
@@ -42,19 +42,25 @@ def main():
         print(f"ERROR: Provided path {run_path} does not exist")
         exit(-1)
 
+    # initialize logger object
+    set_logs(config_dict.get("log", "minimum_level"), f"{run_path}\\log_post_proc.txt")
+    log = get_logger("POST_PROC_LOG")
+
     # Launching post processing algorithm
     try:
+        log.info(f"Starting Post Processing Script for GNSS Run in {run_path}")
+
         # load run
-        data_manager = GnssRunStorageManager()
+        data_manager = GnssRunStorageManager(log)
         data_manager.read_data(run_path / 'output')
 
         # run Performance Evaluation Module
-        print("Executing Performance Evaluation Manager for GNSS run...")
-        eval_manager = PerformanceManager(data_manager, config_dict)
+        log.info("Executing the GNSS Performance Evaluation Manager...")
+        eval_manager = PerformanceManager(data_manager, config_dict, log)
         eval_manager.process(run_path)
 
     except Exception as e:
-        print(f"Unexpected error running while running program: {e}")
+        log.error(f"Unexpected error running while running program: {e}")
         exit()
 
 
