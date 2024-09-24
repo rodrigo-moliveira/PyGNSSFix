@@ -184,9 +184,9 @@ class GnssRunStorageManager(Container):
         for output_name in GnssRunStorageManager.__inputs__:
             try:
                 in_file = output_folder / OUTPUT_FILENAME_MAP[output_name]
-                self.log.info(f"reading data ´{output_name}´ stored in file {in_file}...")
+                self.log.info(f"reading data '{output_name}' stored in file {in_file}...")
 
                 getattr(self, output_name).read_data(in_file)
                 self._available.append(output_name)
             except Exception as e:
-                self.log.warn(f"Did not successfully import data ´{output_name}´ due to: {repr(e)}")
+                self.log.warn(f"Did not successfully import data '{output_name}' due to: {repr(e)}")

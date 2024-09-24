@@ -6,16 +6,31 @@
 
   "performance_evaluation": {
     "_comment0": "Select run folder (or 'last')",
-    "run": "tmp/2024-08-20T11H56M45S",
+    "run_folder": "tmp/2024-08-20T11H56M45S",
 
-    "_comment1":"select static or dynamic reference trajectory (coordinates with respect to ECEF frame [meters])",
-    "static": true,
-    "true_static_position": [
-      4027881.6280,
-      306998.5370,
-      4919498.9840
-    ],
-    "traj_file": ""
+    "run_error_computation": true,
+    "run_residual_analysis": true,
+    "run_plot_manager": true,
 
+    "residual_configs": {
+
+    },
+
+    "plot_configs":
+    {
+      "show_plots": true,
+      "save_plots": true
+    },
+
+    "error_configs": {
+      "_comment1":"select static or dynamic reference trajectory (coordinates with respect to ECEF frame [meters])",
+      "static": true,
+      "true_static_position": [
+        4027881.6280,
+        306998.5370,
+        4919498.9840
+      ],
+      "traj_file": ""
+    }
   }
 }

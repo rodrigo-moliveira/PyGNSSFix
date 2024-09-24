@@ -91,11 +91,11 @@ class CSVData:
         return self.data is None
 
     def to_data_array(self):
-        """ Return a matrix with the data columns """
-        data_matrix = self.data.iloc[:, list(self.data_cols)].values
+        """ Return a dataframe with the data columns """
+        data_matrix = self.data.iloc[:, list(self.data_cols)]
         return data_matrix
 
     def to_time_array(self):
-        """ Return a matrix with the time columns """
-        time_matrix = self.data.iloc[:, list(self.time_cols)].values
+        """ Return a dataframe with the time columns """
+        time_matrix = self.data.iloc[:, list(self.time_cols)]
         return time_matrix

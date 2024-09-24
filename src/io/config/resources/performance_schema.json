@@ -11,11 +11,39 @@
     "performance_evaluation": {
       "type": "object",
       "properties": {
-        "run": {"type": "string"},
-        "static": {"type": "boolean"},
-        "true_static_position": {"type": "array", "items": {"type": "number"}}
+        "run_folder": {"type": "string"},
+        "run_error_computation": {"type": "boolean"},
+        "run_residual_analysis": {"type": "boolean"},
+        "run_plot_manager": {"type": "boolean"},
+
+        "residual_configs": {
+          "type": "object",
+          "properties": {
+
+          },
+          "required": []
+        },
+
+        "plot_configs": {
+          "type": "object",
+          "properties": {
+            "show_plots": {"type": "boolean"},
+            "save_plots": {"type": "boolean"}
+          },
+          "required": ["show_plots", "save_plots"]
+        },
+
+        "error_configs": {
+          "type": "object",
+          "properties": {
+            "static": {"type": "boolean"},
+            "true_static_position": {"type": "array", "items": {"type": "number"}}
+          },
+          "required": ["static", "true_static_position"]
+        }
       },
-      "required": ["run", "static", "true_static_position"]
+      "required": ["run_folder", "run_error_computation", "run_residual_analysis",
+        "run_plot_manager", "residual_configs", "plot_configs", "error_configs"]
     }
   },
   "required": ["log", "performance_evaluation"]
