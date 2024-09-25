@@ -13,7 +13,21 @@
     "run_plot_manager": true,
 
     "residual_configs": {
+      "chi_squared_test":
+      {
+        "_comment0": "Select number of estimated states involved in the position estimation. For example, if position(3), clock(1), troposphere(1) and ionosphere(1) are the active states, it is 6",
+        "pr_estimated_params": 6,
 
+        "_comment1": "Select number of estimated states involved in the velocity estimation. For example, if velocity(3) and clock drift(1) are the active states, it is 4",
+        "pr_rate_estimated_params": 4,
+
+        "significance_level": 0.05
+      },
+
+      "shapiro_test":
+      {
+        "significance_level": 0.05
+      }
     },
 
     "plot_configs":

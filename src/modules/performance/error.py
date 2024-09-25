@@ -63,21 +63,17 @@ def compute_error_static(est_data, true_data, true_pos, local="ENU"):
 def compute_rms_error(error_matrix):
     """
     Computes the Root Mean Square (RMS) Error for the provided error matrix time series.
-
     The RMS error is calculated for each component (x, y, z), as well as for the 2D (x, y) and 3D (x, y, z)
     vectors.
 
     The RMS error for a component `c` is computed as:
-
         RMS_c = sqrt(1/N * sum((error_c[i])^2 for i in range(N)))
-
     where `N` is the number of estimation epochs, and `error_c[i]` is the error for the `i`-th epoch.
 
     Args:
         error_matrix (numpy.ndarray): An Nx3 array representing the estimation error for each epoch, where N is
                                       the number of estimation epochs. Each row corresponds to the error in the
                                       x, y, and z components for a single epoch.
-
     Returns:
         dict: A dictionary containing the computed RMS errors with the following keys:
 
@@ -190,19 +186,7 @@ def get_cov(row, rot_matrix=np.eye(3)):
     return cov_local
 
 
-# TO BE CLEANED
-
-
-def compute_latlon(position):
-    pos_array = position.to_data_array()
-    latlon = []
-    for x in pos_array[:, 0:3]:
-        _lla = cartesian2geodetic(*x)
-        latlon.append([_lla[0] * constants.RAD2DEG, _lla[1] * constants.RAD2DEG])
-    return latlon
-
-
-def chi_squared_test(residuals, p):
+def chi_squared_test(residuals, p, alpha):
     """
     This function performs the chi-square test, which is a common method to check if the residuals from
     a Least Squares adjustment in GNSS positioning follow a white noise distribution.
@@ -226,14 +210,20 @@ def chi_squared_test(residuals, p):
         * If the computed chi-square statistic is greater than the critical value, you reject the null hypothesis
             (the residuals are not consistent with white noise).
 
+    Arguments:
+        residuals (numpy.ndarray): An array-like object of size N representing the residuals to be evaluated.
+        p (int): number of estimated parameters affecting the residuals. For example if position(3) , clock(1),
+            troposphere (1) and ionosphere (1) are estimated, p should be 6
+        alpha(float): significance level for the chi-squared distribution (usually 0.05)
+    Returns:
+        str: a string report with the test results, to be written to a file
+
     TODO: check two cases: one when the sigma is the variance of the residuals
         2) when the sigma is the covariance of the measurements.
-    :return:
     """
-
+    report = ""
     # Example residuals from Least Squares adjustment
     n = len(residuals)  # number of residuals
-    p = 6  # number of estimated parameters, typically 4 for GNSS (x, y, z, clock bias)
 
     # Calculate the variance of residuals
     variance_residuals = np.var(residuals)
@@ -252,33 +242,71 @@ def chi_squared_test(residuals, p):
     chi_square_statistic = np.sum(standardized_residuals ** 2)
 
     # Determine the critical value from chi-square distribution at 0.05 significance level
-    alpha = 0.05
     critical_value = stats.chi2.ppf(1 - alpha, degrees_of_freedom)
 
     # Decision rule
     if chi_square_statistic < critical_value:
-        print("Fail to reject the null hypothesis: residuals are consistent with white noise.")
+        report += "Fail to reject the null hypothesis (chi_square_statistic < critical_value): " \
+                  "residuals are consistent with white noise.\n"
     else:
-        print("Reject the null hypothesis: residuals are not consistent with white noise.")
+        report += "Reject the null hypothesis (chi_square_statistic >= critical_value): " \
+                  "residuals are not consistent with white noise.\n"
+    report += f"\t* Chi-square statistic = {chi_square_statistic}\n"
+    report += f"\t* Critical value ({alpha} significance level, {degrees_of_freedom} degrees of freedom)" \
+              f" = {critical_value}\n"
+    return report
 
-    print(f"\tChi-square statistic: {chi_square_statistic}")
-    print(f"\tCritical value (0.05 significance level): {critical_value}\n")
-    print(f"Degrees of freedom: {degrees_of_freedom}")
 
+def shapiro_test(residuals, alpha):
+    """
+    Performs the Shapiro-Wilk test for normality on a set of residuals.
 
-def shapiro_test(residuals):
-    # Perform the Shapiro-Wilk test
+    The Shapiro-Wilk test evaluates the null hypothesis that a given sample
+    comes from a normally distributed population. It is particularly useful for
+    small to moderate sample sizes and is commonly used to assess the
+    normality of residuals in regression models.
+
+    Parameters:
+        residuals(numpy.ndarray) : an array-like with a sequence of residuals (or any numerical data) to be
+            tested for normality.
+        alpha(float): significance level for the chi-squared distribution (usually 0.05)
+
+    Returns:
+        str: A string report detailing the outcome of the Shapiro-Wilk test,
+            including whether the null hypothesis of normality was rejected or not.
+            The report contains:
+            - The test statistic.
+            - The p-value.
+            - The decision based on the specified significance level.
+    """
+    report = ""
+
     statistic, p_value = stats.shapiro(residuals)
-
-    # Set the significance level (alpha)
-    alpha = 0.05
-
-    # Print the results
-    print(f"Shapiro-Wilk Test Statistic: {statistic}")
-    print(f"P-value: {p_value}")
 
     # Check the p-value against the significance level
     if p_value > alpha:
-        print("The residuals follow a normal distribution (fail to reject H0)")
+        report += "Fail to reject the null hypothesis (p_value > alpha): " \
+                  "The residuals follow a normal distribution.\n"
     else:
-        print("The residuals do not follow a normal distribution (reject H0)")
+        report += "Reject the null hypothesis (p_value <= alpha): " \
+                  "residuals are not consistent with a normal distribution.\n"
+
+    report += f"\t* Statistic={statistic}\n\t* p_value={p_value}\n\t* significance_level={alpha}\n"
+    return report
+
+
+# TO BE CLEANED
+
+
+def compute_latlon(position):
+    pos_array = position.to_data_array()
+    latlon = []
+    for x in pos_array[:, 0:3]:
+        _lla = cartesian2geodetic(*x)
+        latlon.append([_lla[0] * constants.RAD2DEG, _lla[1] * constants.RAD2DEG])
+    return latlon
+
+
+
+
+

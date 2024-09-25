@@ -90,7 +90,7 @@ class PerformanceManager:
         if self.config.get("performance_evaluation", "run_residual_analysis"):
             self.log.info("Running Task: Processing residual analysis...")
             try:
-                self._residual_analysis()
+                self._residual_analysis(post_proc_dir)
             except Exception as e:
                 self.log.error(f"Error when running residual analysis due to: {e}")
 
@@ -187,36 +187,72 @@ class PerformanceManager:
         self.log.info(stats)
         f_rms_stats.close()
 
-    def _residual_analysis(self):
+    def _residual_analysis(self, output_dir):
         """ Performs residual analysis. Two statistical tests are performed to the GNSS post-fit residuals:
-
-            * Chi Squared Test
-            * Shapiro Test
+            * Chi Squared Test: Check if the residuals are consistent with white noise (mean of zero and uncorrelated).
+            * Shapiro Test: Check if the residuals follow a normal distribution.
 
         The post-fit residuals of both pseudorange and pseudorange rate observations are evaluated, if available.
         The tests are performed for each pair of available satellites and datatypes
         """
-        residuals = self.data_manager.get_data("pr_postfit_residuals").data
+        residuals_file = open(output_dir / "ResidualsStatistics.txt", "w")
 
-        # Group the data by satellite and data type
-        grouped = residuals.groupby(['sat', 'data_type'])
+        for res_name, data_name, df_name in zip(["pr_postfit_residuals", "pr_rate_postfit_residuals"],
+                                                ["Pseudorange", "PseudorangeRate"],
+                                                ["pr_estimated_params", "pr_rate_estimated_params"]):
+            residuals = None
+            empty = False
+            try:
+                residuals = self.data_manager.get_data(res_name)
+            except ValueError:
+                empty = True
+            else:
+                if residuals.is_empty():
+                    empty = True
 
-        # Add a line for each satellite and data type combination
-        for (sat, data_type), group in grouped:
-            residual_array = group.iloc[:, 5].values
-            mean = np.mean(residual_array)
-            std = np.std(residual_array)
-            # TODO: write to file
-            print(sat, data_type, "mean", mean, "std", std)
-            error.chi_squared_test(residual_array, 1)
-            # error.shapiro_test(residual_array)
-            exit()
+            if empty:
+                self.log.warn(f"Skipping residual analysis for {data_name} observables")
+                continue
+            self.log.info(f"Performing residual analysis for {data_name} observables")
 
-        exit()
+            # Group the data by satellite and data type
+            grouped = residuals.data.groupby(['sat', 'data_type'])
+
+            chi_sq_file = open(output_dir / f"ChiSquaredResidualAnalysis_{data_name}.txt", "w")
+            shapiro_file = open(output_dir / f"ShapiroTestAnalysis.txt_{data_name}.txt", "w")
+
+            df = self.config.get("performance_evaluation", "residual_configs", "chi_squared_test", df_name)
+            chi_sq_alpha = self.config.get("performance_evaluation", "residual_configs", "chi_squared_test",
+                                           "significance_level")
+            shapiro_alpha = self.config.get("performance_evaluation", "residual_configs", "shapiro_test",
+                                            "significance_level")
+
+            self.log.info(f"Chi-Squared test for {data_name} observables: significance_level={chi_sq_alpha}, "
+                          f"number of states={df}. Results are stored in {os.path.basename(chi_sq_file.name)}")
+            self.log.info(f"Shapiro test for {data_name} observables: significance_level={shapiro_alpha}. "
+                          f"Results are stored in {os.path.basename(shapiro_file.name)}")
+
+            # Perform the tests for each satellite and data type combination
+            for (sat, data_type), group in grouped:
+                residual_array = group.iloc[:, 5].values
+                mean = np.mean(residual_array)
+                std = np.std(residual_array)
+
+                residuals_file.write(f"{sat}, {data_type}, mean residual = {mean}, std = {std}\n")
+
+                report_chi_sq = error.chi_squared_test(residual_array, df, chi_sq_alpha)
+                report_shapiro = error.shapiro_test(residual_array, shapiro_alpha)
+
+                chi_sq_file.write(f"Report for {sat} and {data_type}:\n{report_chi_sq}\n")
+                shapiro_file.write(f"Report for {sat} and {data_type}:\n{report_shapiro}\n")
+
+            chi_sq_file.close()
+            shapiro_file.close()
+        residuals_file.close()
 
     def _plot(self):
         # fetch estimated data
-
+        # limpar aqui...
         self._plot_obs()
 
         self._plot_errors(time, self.vel_error["error_ecef"], self.vel_error["cov_ecef"],
