@@ -1,17 +1,20 @@
 import os
 
-from . import error
-from .plots import *
+import numpy as np
 import pandas as pd
-from src.data_types.date import Epoch
-import allantools as at
+
+from . import error
+from .plots import plot_gnss
 
 # TODO List
 #   * todos os datamanager.get_data() têm que estar protegidos por um try catch
 
 import re
 
+from .plots.utils import show_all
+from ...data_types.date import Epoch
 from ...io.rinex_parser.utils import RINEX_SATELLITE_SYSTEM, RINEX_OBS_TYPES_UNITS
+from ...utils.str_utils import replace_whitespace_with_underscore
 
 
 # TODO: tirar isto daqui
@@ -98,7 +101,7 @@ class PerformanceManager:
         if self.config.get("performance_evaluation", "run_plot_manager"):
             self.log.info("Running Task: Plotting data...")
             try:
-                self._plot()
+                self._plot(plot_dir)
             except Exception as e:
                 self.log.error(f"Error when plotting data due to: {e}")
 
@@ -250,20 +253,14 @@ class PerformanceManager:
             shapiro_file.close()
         residuals_file.close()
 
-    def _plot(self):
-        # fetch estimated data
-        # limpar aqui...
-        self._plot_obs()
+    def _plot(self, plot_dir):
+        #self._plot_obs(plot_dir)
 
-        self._plot_errors(time, self.vel_error["error_ecef"], self.vel_error["cov_ecef"],
-                          "Velocity Estimation Error in ECEF", "Velocity Error [m/s]", "X", "Y", "Z")
-        self._plot_errors(time, self.vel_error["error_enu"], self.vel_error["cov_enu"],
-                          "Velocity Estimation Error in ENU", "Velocity Error [m/s]", "East", "North", "Up")
+        #self._plot_errors(plot_dir)
 
-        self._plot_residuals(time, self.data_manager.get_data("vel_prefit_residuals"), "m/s")
-        self._plot_residuals(time, self.data_manager.get_data("vel_postfit_residuals"), "m/s")
+        #self._plot_residuals(plot_dir)
 
-        position = self.data_manager.get_data("position")
+        # parei aqui!
 
         plot_satellite_availability(self.data_manager.get_data("prefit_residuals").data, x_label="Time",
                                     y_label="Number of Sats",
@@ -282,17 +279,10 @@ class PerformanceManager:
                                                x_label="East [m]", y_label="North [m]", z_label="Up [m]",
                                                title="3D ENU Error")
 
-        self._plot_errors(time, self.pos_error["error_ecef"], self.pos_error["cov_ecef"],
-                          "Position Estimation Error in ECEF", "Position Error [m]", "X", "Y", "Z")
-        self._plot_errors(time, self.pos_error["error_enu"], self.pos_error["cov_enu"],
-                          "Position Estimation Error in ENU", "Position Error [m]", "East", "North", "Up")
         self._plot_dops(time)
 
         plot_2D_trajectory(self.pos_error["error_enu"], self.pos_error["cov_enu"],
                            x_label="East [m]", y_label="North [m]", title="Horizontal Position Error")
-
-        self._plot_residuals(time, self.data_manager.get_data("prefit_residuals"), "m")
-        self._plot_residuals(time, self.data_manager.get_data("postfit_residuals"), "m")
 
         self._plot_iono(time)
 
@@ -301,7 +291,10 @@ class PerformanceManager:
 
         plot_skyplot(self.data_manager.get_data("satellite_azel").data)
 
-        show_all()
+        if self.config.get("performance_evaluation", "plot_configs", "show_plots"):
+            show_all()
+        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
+            pass
 
     def _plot_allandev(self, clock_series, tau0):
         # Convert clock estimates to frequency deviations
@@ -325,24 +318,7 @@ class PerformanceManager:
         plot_2D_trajectory(latlon, None, true_pos=true_latlon,
                            x_label="Latitude [deg]", y_label="Longitude [deg]", title="Latitude-Longitude estimation")
 
-    def _plot_residuals(self, time, residuals, units):
 
-        ax = None
-        # Group the data by satellite and data type
-        grouped = residuals.data.groupby(['sat', 'data_type'])
-
-        # Add a line for each satellite and data type combination
-        for (sat, data_type), group in grouped:
-            sow_array = group.iloc[:, 1].values
-            week_array = group.iloc[:, 0].values
-            residual_array = group.iloc[:, 5].values
-            this_time = [Epoch.from_gnss_time(week, sow, scale="GPST") for (sow, week) in zip(sow_array, week_array)]
-            # TODO: why merge? simply take the `this_time`...
-            merged_time = Epoch.merge_time_arrays(time, this_time)
-            ax = plot_1D(merged_time, residual_array, ax=ax, x_label="Time", label=f'Residual for {sat} {data_type}',
-                         set_legend=True, scatter=True, markersize=5)
-        ax.set_ylabel(units)
-        ax.set_title(residuals.title)
 
     def _plot_clock_bias(self, time):
         # TODO: find name of master constellation and add it to label
@@ -414,29 +390,6 @@ class PerformanceManager:
 
         except Exception as e:
             print(f"Not plotting clock bias rate due to: {e}")
-
-    def _plot_errors(self, time, error, cov, title, y_axis, x_label, y_label, z_label):
-        ax = None
-        x_error = error[:, 0]
-        y_error = error[:, 1]
-        z_error = error[:, 2]
-        x_sigma = np.array([np.sqrt(x[0, 0]) for x in cov])
-        y_sigma = np.array([np.sqrt(x[1, 1]) for x in cov])
-        z_sigma = np.array([np.sqrt(x[2, 2]) for x in cov])
-
-        norm = np.linalg.norm(error, axis=1)
-        ax = plot_1D(time, norm, ax=ax, label="Norm", linewidth=2.0, linestyle="solid", color="k")
-        plot_1D(time, x_error, ax=ax, label=x_label, linewidth=2.0, linestyle="solid", color="r")
-        plot_1D(time, y_error, ax=ax, label=y_label, linewidth=2.0, linestyle="solid", color="b")
-        plot_1D(time, z_error, ax=ax, label=z_label, linewidth=2.0, linestyle="solid", color="g")
-
-        plot_1D(time, x_sigma, ax=ax, label=f"{x_label} sigma", linewidth=1.0, linestyle="dashed", color="r")
-        plot_1D(time, y_sigma, ax=ax, label=f"{y_label} sigma", linewidth=1.0, linestyle="dashed", color="b")
-        plot_1D(time, -x_sigma, ax=ax, linewidth=1.0, linestyle="dashed", color="r")
-        plot_1D(time, -y_sigma, ax=ax, linewidth=1.0, linestyle="dashed", color="b")
-        plot_1D(time, z_sigma, ax=ax, label=f"{z_label} sigma", linewidth=1.0, linestyle="dashed", color="g")
-        plot_1D(time, -z_sigma, ax=ax, x_label="Time", linewidth=1.0, linestyle="dashed", color="g",
-                y_label=y_axis, title=title, set_legend=True)
 
     def _plot_dops(self, time):
         dop_ecef = self.data_manager.get_data("dop_ecef").to_data_array()
@@ -510,32 +463,63 @@ class PerformanceManager:
         ax.fill_between(time, tropo_array - sigma_series, tropo_array + sigma_series,
                         color='lightblue', alpha=0.3)
 
-    def _plot_obs(self):
+    def _plot_obs(self, plot_dir):
+        """ Plot the GNSS observables """
         observations = self.data_manager.get_data("obs")
+        ax_dict = plot_gnss.plot_observations(observations)
 
-        # Group the data by satellite and data type
-        grouped = observations.data.groupby(['Satellite', 'Observation'])
+        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
+            for ax in ax_dict.values():
+                plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
+                plot_path = plot_dir / plot_name
+                self.log.info(f"Saving figure {plot_path}")
+                ax.figure.savefig(plot_path, format='png')
 
-        ax_dict = {}
+    def _plot_errors(self, plot_dir):
+        """ Plot the estimation errors """
+        time = self.data_manager.get_data("time")
+        sow_array = time.data.iloc[:, 1].values
+        week_array = time.data.iloc[:, 0].values
+        time_array = [Epoch.from_gnss_time(week, sow, scale="GPST") for (sow, week) in zip(sow_array, week_array)]
 
-        # Add a line for each satellite and data type combination
-        for (sat, data_type), group in grouped:
-            key = f"{sat[0]}_{data_type}"
-            ax = ax_dict.get(key, None)
+        ax1 = plot_gnss.plot_estimation_errors(time_array, self.vel_error["error_ecef"], self.vel_error["cov_ecef"],
+                                               "Velocity Estimation Error in ECEF", "Velocity Error [m/s]", "X", "Y",
+                                               "Z")
+        ax2 = plot_gnss.plot_estimation_errors(time_array, self.vel_error["error_enu"], self.vel_error["cov_enu"],
+                                               "Velocity Estimation Error in ENU", "Velocity Error [m/s]", "East",
+                                               "North", "Up")
+        ax3 = plot_gnss.plot_estimation_errors(time_array, self.pos_error["error_ecef"], self.pos_error["cov_ecef"],
+                                               "Position Estimation Error in ECEF", "Position Error [m]", "X", "Y", "Z")
+        ax4 = plot_gnss.plot_estimation_errors(time_array, self.pos_error["error_enu"], self.pos_error["cov_enu"],
+                                               "Position Estimation Error in ENU", "Position Error [m]", "East",
+                                               "North", "Up")
+        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
+            for ax in [ax1, ax2, ax3, ax4]:
+                plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
+                plot_path = plot_dir / plot_name
+                self.log.info(f"Saving figure {plot_path}")
+                ax.figure.savefig(plot_path, format='png')
 
-            sow_array = group.iloc[:, 1].values
-            week_array = group.iloc[:, 0].values
-            obs_array = group.iloc[:, 4].values
-            this_time = [Epoch.from_gnss_time(week, sow, scale="GPST") for (sow, week) in zip(sow_array, week_array)]
-            # TODO: why merge? simply take the `this_time`...
-            ax = plot_1D(this_time, obs_array, ax=ax, x_label="Time", label=f'{sat} {data_type}',
-                         set_legend=True, scatter=True, markersize=5)
-            ax_dict[key] = ax
+    def _plot_residuals(self, plot_dir):
+        """ Plot the GNSS prefit and postfit residuals of the estimation process """
+        ax1 = ax2 = ax3 = ax4 = None
+        try:
+            ax1 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("pr_rate_prefit_residuals"), "m/s")
+        except Exception: pass
+        try:
+            ax2 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("pr_rate_postfit_residuals"), "m/s")
+        except Exception: pass
+        try:
+            ax3 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("pr_prefit_residuals"), "m")
+        except Exception: pass
+        try:
+            ax4 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("pr_postfit_residuals"), "m")
+        except Exception: pass
 
-        for key, ax in ax_dict.items():
-            const = RINEX_SATELLITE_SYSTEM[key[0]]
-            data_type = re.match(r'^[A-Za-z]+', key[2:]).group()
-            units = RINEX_OBS_TYPES_UNITS.get(data_type, 'XX')
-
-            ax.set_ylabel(f"{data_type} [{units}]")
-            ax.set_title(f'Observation {key[2:]} for {const}')
+        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
+            for ax in [ax1, ax2, ax3, ax4]:
+                if ax is not None:
+                    plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
+                    plot_path = plot_dir / plot_name
+                    self.log.info(f"Saving figure {plot_path}")
+                    ax.figure.savefig(plot_path, format='png')

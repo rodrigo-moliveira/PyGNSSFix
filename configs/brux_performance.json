@@ -9,7 +9,7 @@
     "run_folder": "tmp/2024-08-20T11H56M45S",
 
     "run_error_computation": true,
-    "run_residual_analysis": true,
+    "run_residual_analysis": false,
     "run_plot_manager": true,
 
     "residual_configs": {

@@ -217,9 +217,6 @@ def chi_squared_test(residuals, p, alpha):
         alpha(float): significance level for the chi-squared distribution (usually 0.05)
     Returns:
         str: a string report with the test results, to be written to a file
-
-    TODO: check two cases: one when the sigma is the variance of the residuals
-        2) when the sigma is the covariance of the measurements.
     """
     report = ""
     # Example residuals from Least Squares adjustment

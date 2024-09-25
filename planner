@@ -1,6 +1,4 @@
 tasks release 1.0:
-    [ ] add shapiro correction (Eq. 19.14 of handbook)
-    [ ] improve computation of weight matrix W, taking inspiration from https://gnss-sdr.org/docs/sp-blocks/pvt/#precise-point-positioning
     [ ] criar um check que verifique os ficheiros e configurações obrigatórias para cada modelo (SPS, SPS_IF, PPPP...)
         [ ] por exemplo, por agora o ficheiro nav é sempre obrigatório, mas isso tem de mudar depois..
         [ ] ver o que acontece quando configuro 3 observações. Deve dar um erro!! Este SW apenas dá para 1 ou 2
@@ -10,9 +8,9 @@ tasks release 1.0:
 
     melhorar o modulo de post processing:
         [ ] clean everything up (pain)
-        [ ] allow for using obs std in residual test normalization
         [ ] Clean up dos scripts sat_orbits e sat_clocks
         [ ] Criar script plot_observations from input rinex file
+            - no futuro poderá ficar um script de observation analysis (compute code-carrier divergence por exemplo)
 
     [ ] revisão final do repositório. Update readme
     [ ] fazer uma "campanha de validação": comparar precise vs nav products. Single freq / Single const vs Dual freq / Dual Const...
@@ -21,31 +19,37 @@ tasks release 1.0:
 
 
 
-# Release 1.1 (PPPP/PPP Mode)
+# Release 1.1 (PPPP Mode)
     [ ] fazer cleanup ao theory notes
     [ ] criar um config field com o modo (SPS ou PPPP)
     [ ] Adicionar Leitura e Modelo de IONEX (criar um PPPP)
     [ ] substituir alguns modelos do SPS pelos respetivos do PPPP
-    [ ] outras correçoes: PCVs...
     [ ] adicionar um DCB Manager
         [ ] read DCB files
         [ ] understand different kind of DCB corrections (read papers)
         [ ] develop code accordingly for each DCB type
         [ ] ler sat DCBs e criar uma classe que substitua o modelo atual
-        [ ] permitir também correções de OSB
-    [ ] float carrier processing
+    [ ] Adicionar OSB Manager
 
 finalizar o GNSS user positioning com:
     [ ] Adicionar Kalman filter com user dynamics
 
 
+# Release 1.2 PPP e PPP-AR
+    [ ] float carrier processing
+    [ ] outras correçoes: PCVs...
+    [ ] cycle slip detection
+    [ ] PPP e PPP-AR com OSBs
+
+
 nice to have, but not for now
     [ ] no output, permitir escolher qual a timetag de output (RX Time, GPST, GST, UTC...)
     [ ] add trace file with tropo, iono, clock delays, ggto, etc... that form the observable
+    [ ] add shapiro correction (Eq. 19.14 of handbook)
+    [ ] improve computation of weight matrix W, taking inspiration from https://gnss-sdr.org/docs/sp-blocks/pvt/#precise-point-positioning
 
 
-
-# Relase 1.2 (INS - IMU Emulator - Loosely Coupled)
+# Relase 1.3 (INS - IMU Emulator - Loosely Coupled)
     [ ] implement unit convertion when reading from csv file
 loosely coupled:
     [ ] attitude basics
@@ -56,6 +60,3 @@ loosely coupled:
         https://confluence.elecnor-deimos.com/display/GNCCC/%5BNaviKA%5D+Hybrid+Navigation+for+Launchers+and+Re-entry+Vehicles?src=contextnavpagetreemode
 
 ...
-# Release 1.3
-    [ ] cycle slip detection
-    [ ] PPP e PPP-AR com OSBs
