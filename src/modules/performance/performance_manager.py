@@ -8,6 +8,7 @@ from .plots import plot_gnss
 
 # TODO List
 #   * todos os datamanager.get_data() têm que estar protegidos por um try catch
+#   * nos plots quando faço datamanager.get_data() verificar se is_empty()
 
 import re
 
@@ -18,20 +19,7 @@ from ...utils.str_utils import replace_whitespace_with_underscore
 
 
 # TODO: tirar isto daqui
-def extract_constellations(input_string):
-    # Define the regex pattern to match the master and slave constellations
-    pattern = r'ISB\(master=(\w+) slave=(\w+)\)'
 
-    # Search for the pattern in the input string
-    match = re.search(pattern, input_string)
-
-    # If a match is found, extract the master and slave values
-    if match:
-        master = match.group(1)
-        slave = match.group(2)
-        return master, slave
-    else:
-        return None, None
 
 
 class PerformanceManager:
@@ -254,39 +242,33 @@ class PerformanceManager:
         residuals_file.close()
 
     def _plot(self, plot_dir):
-        #self._plot_obs(plot_dir)
-
-        #self._plot_errors(plot_dir)
-
-        #self._plot_residuals(plot_dir)
-
-        # parei aqui!
-
-        plot_satellite_availability(self.data_manager.get_data("prefit_residuals").data, x_label="Time",
-                                    y_label="Number of Sats",
-                                    title="Satellite Availability")
-
-        self._plot_clock_bias(time)
-        self._plot_clock_rate(time)
+        # TODO: self.log.info("plotting...")
+        # self._plot_obs(plot_dir)
+        # self._plot_errors(plot_dir)
+        # self._plot_residuals(plot_dir)
+        # self._plot_clock_bias(plot_dir)
+        # self._plot_clock_rate(plot_dir)
+        # self._plot_iono(plot_dir)
+        # self._plot_tropo(plot_dir)
+        # self._plot_sat_availability(plot_dir)
 
         plot_3D_trajectory_with_avg_covariance(position.to_data_array(), self.pos_error["cov_ecef"],
                                                true_position=self.true_pos,
                                                x_label="X ECEF [m]", y_label="Y ECEF [m]", z_label="Z ECEF [m]",
                                                title=position.title)
-
+        show_all()
+        exit()
         plot_3D_trajectory_with_avg_covariance(self.pos_error["error_enu"], self.pos_error["cov_enu"],
                                                true_position=[0, 0, 0],
                                                x_label="East [m]", y_label="North [m]", z_label="Up [m]",
                                                title="3D ENU Error")
-
-        self._plot_dops(time)
-
         plot_2D_trajectory(self.pos_error["error_enu"], self.pos_error["cov_enu"],
                            x_label="East [m]", y_label="North [m]", title="Horizontal Position Error")
 
-        self._plot_iono(time)
+        self._plot_dops(time)
 
-        self._plot_tropo(time)
+
+
         self._plot_latlon()
 
         plot_skyplot(self.data_manager.get_data("satellite_azel").data)
@@ -296,100 +278,12 @@ class PerformanceManager:
         if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
             pass
 
-    def _plot_allandev(self, clock_series, tau0):
-        # Convert clock estimates to frequency deviations
-
-        f = np.diff(clock_series) / tau0
-
-        # Compute Allan deviation using allantools
-        taus, adevs, _, _ = at.oadev(f, rate=1 / tau0, data_type='freq', taus='decade')
-
-        # Plotting
-        plt.loglog(taus, adevs)
-        plt.xlabel('Tau (s)')
-        plt.ylabel('Allan Deviation')
-        plt.title('Allan Deviation of GNSS Clock Estimates')
-        plt.grid(True)
-        # plt.show()
-
     def _plot_latlon(self):
         latlon = compute_latlon(self.data_manager.get_data("position"))
         true_latlon = cartesian2geodetic(*self.true_pos) * np.array([constants.RAD2DEG, constants.RAD2DEG, 1])
         plot_2D_trajectory(latlon, None, true_pos=true_latlon,
                            x_label="Latitude [deg]", y_label="Longitude [deg]", title="Latitude-Longitude estimation")
 
-
-
-    def _plot_clock_bias(self, time):
-        # TODO: find name of master constellation and add it to label
-        # TODO: add clock bias + ISB and plot slave clock bias
-        clock_bias = self.data_manager.get_data("clock_bias")
-        master_clock = clock_bias.to_data_array()
-
-        isb = self.data_manager.get_data("isb")
-        isb_data = isb.to_data_array()
-        # Extract master and slave constellations
-        master, slave = extract_constellations(isb.data.columns[2])
-
-        master_clock_series = master_clock[:, 0]
-        sigma_series = np.sqrt(master_clock[:, 1])
-
-        self._plot_allandev(master_clock_series, (time[1] - time[0]).total_seconds())
-
-        isb_series = isb_data[:, 0]
-        isb_sigma_series = np.sqrt(isb_data[:, 1])
-
-        slave_clock_series = master_clock_series + isb_series
-
-        ax = plot_1D(time, master_clock_series, x_label="Time", label=f'clock bias ({master})', color='blue')
-        ax = plot_1D(time, slave_clock_series, x_label="Time", ax=ax, label=f'clock bias ({slave})', color='orange')
-        ax = plot_1D(time, master_clock_series + sigma_series, ax=ax, x_label="Time", label="+/- sigma [s]",
-                     linestyle='--',
-                     linewidth=1.0, color='lightblue')
-        ax = plot_1D(time, master_clock_series - sigma_series, ax=ax, x_label="Time", linestyle='--',
-                     linewidth=1.0, title=f"{clock_bias.title} for {master}", set_legend=True, y_label="clock bias [s]",
-                     color='lightblue')
-        ax.fill_between(time, master_clock_series + sigma_series, master_clock_series - sigma_series, color='lightblue',
-                        alpha=0.3)
-
-        ax2 = plot_1D(time, isb_series, x_label="Time", title=f"{isb.title} (master={master}, slave={slave})",
-                      label="ISB", set_legend=True, y_label="ISB [s]", color='blue')
-        ax2.fill_between(time, isb_series + isb_sigma_series, isb_series - isb_sigma_series, label="sigma",
-                         color='lightblue', alpha=0.3)
-
-    def _plot_clock_rate(self, time):
-        try:
-            clock_rate = self.data_manager.get_data("clock_bias_rate")
-
-            # Set colors for ±σ signals
-            colors = {'GPS': 'blue', 'GAL': 'green'}
-
-            # Get unique constellations
-            unique_constellations = clock_rate.data['constellation'].unique()
-
-            # Create sub-dataframes for each constellation
-            sub_dataframes = {constellation: clock_rate.data[clock_rate.data['constellation'] == constellation]
-                              for constellation in unique_constellations}
-
-            # Plot clock rate and covariance for each constellation
-            ax = None
-            for constellation, sub_df in sub_dataframes.items():
-                rate = sub_df['clock rate']
-                sigma = np.sqrt(sub_df['cov'])
-
-                ax = plot_1D(time, rate, ax=ax, x_label="Time", label=f'clock rate for {constellation}',
-                             color=colors[constellation])
-                ax = plot_1D(time, rate + sigma, ax=ax, x_label="Time", label=f"+/- sigma [s/s] for {constellation}",
-                             linestyle='--',
-                             linewidth=1.0, color=f'light{colors[constellation]}')
-                ax = plot_1D(time, rate - sigma, ax=ax, x_label="Time", linestyle='--',
-                             linewidth=1.0, title=clock_rate.title, set_legend=True, y_label="clock rate [s/s]",
-                             color=f'light{colors[constellation]}')
-                ax.fill_between(time, rate + sigma, rate - sigma, color=f'light{colors[constellation]}',
-                                alpha=0.3)
-
-        except Exception as e:
-            print(f"Not plotting clock bias rate due to: {e}")
 
     def _plot_dops(self, time):
         dop_ecef = self.data_manager.get_data("dop_ecef").to_data_array()
@@ -423,45 +317,8 @@ class PerformanceManager:
         plot_1D(time, up_dop, ax=ax, x_label="Time", y_label="DOPs [m]", label="up",
                 title="Dilution of Precision in ENU", set_legend=True)
 
-    def _plot_iono(self, time):
-        iono = self.data_manager.get_data("iono")
-        # Group the data by satellite and data type
-        grouped = iono.data.groupby(['sat'])
 
-        # Add a line for each satellite and data type combination
-        for (sat,), group in grouped:
-            sow_array = group.iloc[:, 1].values
-            week_array = group.iloc[:, 0].values
-            iono_array = group.iloc[:, 3].values
 
-            sigma_array = np.sqrt(group.iloc[:, 4].values)
-            this_time = [Epoch.from_gnss_time(week, sow, scale="GPST") for (sow, week) in zip(sow_array, week_array)]
-
-            merged_time = Epoch.merge_time_arrays(time, this_time)
-
-            ax = plot_1D(merged_time, iono_array, label="iono", linewidth=2.0, linestyle="solid", color="b")
-            plot_1D(merged_time, iono_array + sigma_array, ax=ax, linewidth=1.0, linestyle="dashed", color="lightblue")
-            plot_1D(merged_time, iono_array - sigma_array, ax=ax, label=f"sigma", linewidth=1.0, linestyle="dashed",
-                    color="lightblue",
-                    x_label="Time", y_label="Ionosphere [m]", title=f"{iono.title} for sat {sat}",
-                    set_legend=True)
-            ax.fill_between(merged_time, iono_array - sigma_array, iono_array + sigma_array,
-                            color='lightblue', alpha=0.3)
-
-    def _plot_tropo(self, time):
-        tropo = self.data_manager.get_data("tropo_wet")
-        tropo_data = tropo.to_data_array()
-
-        tropo_array = tropo_data[:, 0]
-        sigma_series = np.sqrt(tropo_data[:, 1])
-
-        ax = plot_1D(time, tropo_array, label="tropo", linewidth=2.0, linestyle="solid", color="b")
-        plot_1D(time, tropo_array + sigma_series, ax=ax, linewidth=1.0, linestyle="dashed", color="lightblue")
-        plot_1D(time, tropo_array - sigma_series, ax=ax, label=f"sigma", linewidth=1.0, linestyle="dashed",
-                color="lightblue", x_label="Time", y_label="Wet Delay [m]", title=f"{tropo.title}",
-                set_legend=True)
-        ax.fill_between(time, tropo_array - sigma_series, tropo_array + sigma_series,
-                        color='lightblue', alpha=0.3)
 
     def _plot_obs(self, plot_dir):
         """ Plot the GNSS observables """
@@ -505,16 +362,20 @@ class PerformanceManager:
         ax1 = ax2 = ax3 = ax4 = None
         try:
             ax1 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("pr_rate_prefit_residuals"), "m/s")
-        except Exception: pass
+        except ValueError:
+            self.log.warn("Pseudorange Rate Prefit Residuals not found. Skipping this plot")
         try:
             ax2 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("pr_rate_postfit_residuals"), "m/s")
-        except Exception: pass
+        except ValueError:
+            self.log.warn("Pseudorange Rate Postfit Residuals not found. Skipping this plot")
         try:
             ax3 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("pr_prefit_residuals"), "m")
-        except Exception: pass
+        except ValueError:
+            self.log.warn("Pseudorange Prefit Residuals not found. Skipping this plot")
         try:
             ax4 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("pr_postfit_residuals"), "m")
-        except Exception: pass
+        except ValueError:
+            self.log.warn("Pseudorange Postfit Residuals not found. Skipping this plot")
 
         if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
             for ax in [ax1, ax2, ax3, ax4]:
@@ -523,3 +384,107 @@ class PerformanceManager:
                     plot_path = plot_dir / plot_name
                     self.log.info(f"Saving figure {plot_path}")
                     ax.figure.savefig(plot_path, format='png')
+
+    def _plot_clock_bias(self, plot_dir):
+        """
+        Performs the following plots, if available:
+            * Plot clock bias (master and slave clocks)
+            * Plot the estimated ISB
+            * Plot the Allan Deviation of the clock bias
+        """
+        clock_bias = isb = None
+        try:
+            clock_bias = self.data_manager.get_data("clock_bias")
+            isb = self.data_manager.get_data("isb")
+        except ValueError:
+            pass
+
+        if clock_bias is None or clock_bias.is_empty():
+            self.log.warn("Clock Bias state not found. Skipping this plot")
+            return
+        if isb is None or isb.is_empty():
+            self.log.warn("ISB state not found. This is expected if the scenario is single constellation. "
+                          "Skipping this plot")
+
+        ax1, ax2 = plot_gnss.plot_clock_bias(clock_bias, isb)
+        ax3 = plot_gnss.plot_allan_deviation(clock_bias)
+        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
+            for ax in [ax1, ax2, ax3]:
+                if ax is not None:
+                    plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
+                    plot_path = plot_dir / plot_name
+                    self.log.info(f"Saving figure {plot_path}")
+                    ax.figure.savefig(plot_path, format='png')
+
+    def _plot_clock_rate(self, plot_dir):
+        """ Plot estimated clock bias rate """
+        try:
+            clock_rate = self.data_manager.get_data("clock_bias_rate")
+            if clock_rate.is_empty():
+                raise ValueError
+        except ValueError:
+            self.log.warn("Clock Bias Rate state not found. Skipping this plot")
+            return
+
+        ax = plot_gnss.plot_clock_bias_rate(clock_rate)
+
+        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
+            if ax is not None:
+                plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
+                plot_path = plot_dir / plot_name
+                self.log.info(f"Saving figure {plot_path}")
+                ax.figure.savefig(plot_path, format='png')
+
+    def _plot_iono(self, plot_dir):
+        """ Plot Iono estimated states for all available satellites """
+        try:
+            iono = self.data_manager.get_data("iono")
+            if iono.is_empty():
+                raise ValueError
+        except ValueError:
+            self.log.warn("Satellite Iono state not found. Skipping this plot")
+            return
+
+        ax_list = plot_gnss.plot_iono_states(iono)
+        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
+            for ax in ax_list:
+                plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
+                plot_path = plot_dir / plot_name
+                self.log.info(f"Saving figure {plot_path}")
+                ax.figure.savefig(plot_path, format='png')
+
+    def _plot_tropo(self, plot_dir):
+        """ Plot the estimated troposphere wet delay """
+        try:
+            tropo = self.data_manager.get_data("tropo_wet")
+            if tropo.is_empty():
+                raise ValueError
+        except ValueError:
+            self.log.warn("Satellite Tropo state not found. Skipping this plot")
+            return
+
+        ax = plot_gnss.plot_tropo_wet_delay(tropo)
+        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
+            plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
+            plot_path = plot_dir / plot_name
+            self.log.info(f"Saving figure {plot_path}")
+            ax.figure.savefig(plot_path, format='png')
+
+    def _plot_sat_availability(self, plot_dir):
+        """ Plot satellite availability """
+        try:
+            prefit_residuals = self.data_manager.get_data("pr_prefit_residuals")
+            position = self.data_manager.get_data("position")
+            if prefit_residuals.is_empty() or position.is_empty():
+                raise ValueError
+        except ValueError:
+            self.log.warn("Satellite information (prefit-residuals) not found. Skipping this plot")
+            return
+
+        obs_time = float(position.data.iloc[1, 1]) - float(position.data.iloc[0, 1])
+        ax = plot_gnss.plot_satellite_availability(prefit_residuals, obs_time)
+        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
+            plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
+            plot_path = plot_dir / plot_name
+            self.log.info(f"Saving figure {plot_path}")
+            ax.figure.savefig(plot_path, format='png')

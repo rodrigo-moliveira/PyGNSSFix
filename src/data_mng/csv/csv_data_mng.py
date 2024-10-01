@@ -38,7 +38,7 @@ class GnssRunStorageManager(Container):
         self.clock_bias = CSVData(name="clock_bias",
                                   description="Receiver Clock Bias",
                                   units=['s', 's^2'],
-                                  legend=['clock_bias', 'cov'],
+                                  # legend=['clock_bias', 'cov'],
                                   title="Estimated Receiver Clock Bias",
                                   time_cols=(0, 1),
                                   data_cols=(2, 3))
