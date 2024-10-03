@@ -10,16 +10,15 @@ from .plots import plot_gnss
 #   * todos os datamanager.get_data() têm que estar protegidos por um try catch
 #   * nos plots quando faço datamanager.get_data() verificar se is_empty()
 
-import re
 
 from .plots.utils import show_all
+from ... import constants
 from ...data_types.date import Epoch
-from ...io.rinex_parser.utils import RINEX_SATELLITE_SYSTEM, RINEX_OBS_TYPES_UNITS
+from ...models.frames import cartesian2geodetic
 from ...utils.str_utils import replace_whitespace_with_underscore
 
 
 # TODO: tirar isto daqui
-
 
 
 class PerformanceManager:
@@ -251,74 +250,17 @@ class PerformanceManager:
         # self._plot_iono(plot_dir)
         # self._plot_tropo(plot_dir)
         # self._plot_sat_availability(plot_dir)
-
-        plot_3D_trajectory_with_avg_covariance(position.to_data_array(), self.pos_error["cov_ecef"],
-                                               true_position=self.true_pos,
-                                               x_label="X ECEF [m]", y_label="Y ECEF [m]", z_label="Z ECEF [m]",
-                                               title=position.title)
-        show_all()
-        exit()
-        plot_3D_trajectory_with_avg_covariance(self.pos_error["error_enu"], self.pos_error["cov_enu"],
-                                               true_position=[0, 0, 0],
-                                               x_label="East [m]", y_label="North [m]", z_label="Up [m]",
-                                               title="3D ENU Error")
-        plot_2D_trajectory(self.pos_error["error_enu"], self.pos_error["cov_enu"],
-                           x_label="East [m]", y_label="North [m]", title="Horizontal Position Error")
-
-        self._plot_dops(time)
-
-
-
-        self._plot_latlon()
-
-        plot_skyplot(self.data_manager.get_data("satellite_azel").data)
+        # self._plot_3D_traj(plot_dir)
+        # self._plot_3D_errors(plot_dir)
+        # self._plot_2D_errors(plot_dir)
+        # self._plot_latlon(plot_dir)
+        # self._plot_dops(plot_dir)
+        self._skyplot(plot_dir)
 
         if self.config.get("performance_evaluation", "plot_configs", "show_plots"):
             show_all()
         if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
             pass
-
-    def _plot_latlon(self):
-        latlon = compute_latlon(self.data_manager.get_data("position"))
-        true_latlon = cartesian2geodetic(*self.true_pos) * np.array([constants.RAD2DEG, constants.RAD2DEG, 1])
-        plot_2D_trajectory(latlon, None, true_pos=true_latlon,
-                           x_label="Latitude [deg]", y_label="Longitude [deg]", title="Latitude-Longitude estimation")
-
-
-    def _plot_dops(self, time):
-        dop_ecef = self.data_manager.get_data("dop_ecef").to_data_array()
-        dop_enu = self.data_manager.get_data("dop_local").to_data_array()
-
-        x_dop = [dop[0] for dop in dop_ecef]
-        y_dop = [dop[1] for dop in dop_ecef]
-        z_dop = [dop[2] for dop in dop_ecef]
-        t_dop = [dop[3] for dop in dop_ecef]
-        geometry_dop = [dop[4] for dop in dop_ecef]
-        position_dop = [dop[5] for dop in dop_ecef]
-
-        east_dop = [dop[0] for dop in dop_enu]
-        north_dop = [dop[1] for dop in dop_enu]
-        up_dop = [dop[2] for dop in dop_enu]
-        horizontal_dop = [dop[3] for dop in dop_enu]
-
-        ax = plot_1D(time, geometry_dop, label="geometry")
-        plot_1D(time, position_dop, ax=ax, label="position")
-        plot_1D(time, horizontal_dop, ax=ax, x_label="Time", y_label="DOPs [m]", label="horizontal",
-                title="Dilution of Precision", set_legend=True)
-
-        ax = plot_1D(time, x_dop, label="x")
-        plot_1D(time, y_dop, ax=ax, label="y")
-        plot_1D(time, t_dop, ax=ax, label="t")
-        plot_1D(time, z_dop, ax=ax, x_label="Time", y_label="DOPs [m]", label="z",
-                title="Dilution of Precision in ECEF", set_legend=True)
-
-        ax = plot_1D(time, east_dop, label="east")
-        plot_1D(time, north_dop, ax=ax, label="north")
-        plot_1D(time, up_dop, ax=ax, x_label="Time", y_label="DOPs [m]", label="up",
-                title="Dilution of Precision in ENU", set_legend=True)
-
-
-
 
     def _plot_obs(self, plot_dir):
         """ Plot the GNSS observables """
@@ -483,6 +425,111 @@ class PerformanceManager:
 
         obs_time = float(position.data.iloc[1, 1]) - float(position.data.iloc[0, 1])
         ax = plot_gnss.plot_satellite_availability(prefit_residuals, obs_time)
+        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
+            plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
+            plot_path = plot_dir / plot_name
+            self.log.info(f"Saving figure {plot_path}")
+            ax.figure.savefig(plot_path, format='png')
+
+    def _plot_3D_traj(self, plot_dir):
+        """ plot the 3D estimated trajectory and covariance """
+        position_df = self.data_manager.get_data("position")
+        positions = position_df.data.loc[:, ['x', 'y', 'z']].values
+        ax = plot_gnss.plot_3D_trajectory_with_avg_covariance(positions, self.pos_error["cov_ecef"],
+                                                              true_position=self.true_pos,
+                                                              x_label="X ECEF [m]", y_label="Y ECEF [m]",
+                                                              z_label="Z ECEF [m]", title=position_df.title)
+
+        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
+            plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
+            plot_path = plot_dir / plot_name
+            self.log.info(f"Saving figure {plot_path}")
+            ax.figure.savefig(plot_path, format='png')
+
+    def _plot_3D_errors(self, plot_dir):
+        """ Plot the absolute 3D trajectory and covariance, as well as the 3D errors in ENU and ECEF frames """
+        ax1 = plot_gnss.plot_3D_trajectory_with_avg_covariance(self.pos_error["error_enu"], self.pos_error["cov_enu"],
+                                                               true_position=[0, 0, 0],
+                                                               x_label="East [m]", y_label="North [m]",
+                                                               z_label="Up [m]",
+                                                               title="3D ENU Error")
+        ax2 = plot_gnss.plot_3D_trajectory_with_avg_covariance(self.pos_error["error_ecef"], self.pos_error["cov_ecef"],
+                                                               true_position=[0, 0, 0],
+                                                               x_label="X [m]", y_label="Y [m]",
+                                                               z_label="Z [m]",
+                                                               title="3D ECEF Error")
+        for ax in [ax1, ax2]:
+            if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
+                plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
+                plot_path = plot_dir / plot_name
+                self.log.info(f"Saving figure {plot_path}")
+                ax.figure.savefig(plot_path, format='png')
+
+    def _plot_2D_errors(self, plot_dir):
+        """ Plot the 2D errors in the ENU frame """
+        ax = plot_gnss.plot_2D_trajectory(self.pos_error["error_enu"], self.pos_error["cov_enu"], true_pos=[0, 0],
+                                          x_label="East [m]", y_label="North [m]", title="Horizontal Position Error",
+                                          label="Error Estimates")
+
+        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
+            plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
+            plot_path = plot_dir / plot_name
+            self.log.info(f"Saving figure {plot_path}")
+            ax.figure.savefig(plot_path, format='png')
+
+    def _plot_latlon(self, plot_dir):
+        """ Plot the Latitude-Longitude in a 2D figure"""
+        position_df = self.data_manager.get_data("position")
+        latlon = []
+
+        def to_latlon(row):
+            _lla = cartesian2geodetic(row.x, row.y, row.z)
+            latlon.append([_lla[0] * constants.RAD2DEG, _lla[1] * constants.RAD2DEG])
+
+        position_df.data.apply(to_latlon, axis=1)
+        true_latlon = cartesian2geodetic(*self.true_pos) * np.array([constants.RAD2DEG, constants.RAD2DEG, 1])
+        ax = plot_gnss.plot_2D_trajectory(latlon, None, true_pos=true_latlon, label="Position Estimates",
+                                          x_label="Latitude [deg]", y_label="Longitude [deg]",
+                                          title="Latitude-Longitude estimation")
+
+        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
+            plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
+            plot_path = plot_dir / plot_name
+            self.log.info(f"Saving figure {plot_path}")
+            ax.figure.savefig(plot_path, format='png')
+
+    def _plot_dops(self, plot_dir):
+        """ Plot the DOP figures """
+        try:
+            dop_ecef = self.data_manager.get_data("dop_ecef")
+            dop_enu = self.data_manager.get_data("dop_local")
+            if dop_ecef.is_empty() or dop_enu.is_empty():
+                raise ValueError
+        except ValueError:
+            self.log.warn("DOPs not found. Skipping this plot")
+            return
+
+        ax1, ax2, ax3 = plot_gnss.plot_dops(dop_ecef, dop_enu)
+
+        for ax in [ax1, ax2, ax3]:
+            if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
+                plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
+                plot_path = plot_dir / plot_name
+                self.log.info(f"Saving figure {plot_path}")
+                ax.figure.savefig(plot_path, format='png')
+
+    def _skyplot(self, plot_dir):
+        """ Plot the skyplot of the satellites in view """
+        try:
+            satellite_azel = self.data_manager.get_data("satellite_azel")
+            if satellite_azel.is_empty():
+                raise ValueError
+        except ValueError:
+            self.log.warn("Satellite Azimuth-Elevation information not found. Skipping this plot")
+            return
+
+        ax = plot_gnss.plot_skyplot(satellite_azel)
+
         if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
             plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
             plot_path = plot_dir / plot_name

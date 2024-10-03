@@ -1,11 +1,16 @@
 import re
 
 import allantools as at
+import numpy as np
+import pandas as pd
+from matplotlib.patches import Ellipse
+from mpl_toolkits.mplot3d import Axes3D
 
 from src.data_mng.csv.csv_data import CSVData
 from src.data_types.date import Epoch
 from src.io.rinex_parser.utils import RINEX_SATELLITE_SYSTEM, RINEX_OBS_TYPES_UNITS
 from src.utils.str_utils import extract_constellations
+from src.modules.performance.plots import skyplot
 from .utils import *
 
 
@@ -395,5 +400,237 @@ def plot_satellite_availability(residuals: CSVData, obs_time):
     ax.set_ylabel('Number of Sats')
     ax.set_title('Satellite Signal Availability Over Time')
     ax.grid(True)
+
+    return ax
+
+
+def plot_3D_trajectory_with_avg_covariance(data_points, cov,
+                                           true_position=None, x_label: str = "X-axis",
+                                           y_label: str = "Y-axis",
+                                           z_label: str = "Z-axis",
+                                           title: str = "3D Trajectory with Covariance") -> Axes3D:
+    """
+    Plots the 3D trajectory of the estimated positions. If available, an average covariance ellipsoid and the true
+    static position are also depicted.
+
+    Arguments:
+        data_points (list[tuple[float, float, float]]): List of estimated positions
+        cov (list[np.ndarray]): List of estimated covariance matrices
+        true_position (tuple[float, float, float]): True static position
+        x_label(str): Label for the X-axis
+        y_label(str): Label for the Y-axis
+        z_label(str): Label for the Z-axis
+        title(str): Title of the plot
+    Returns:
+        Axes3D: returns the Axes object with the 3D plot
+    """
+    # Validate data_points
+    if not all(len(point) == 3 for point in data_points):
+        raise ValueError("Each data point must have 3 elements (pos_x, pos_y, pos_z).")
+
+    # Validate true_position
+    if true_position and len(true_position) != 3:
+        raise ValueError("True position must be a 3-dimensional point.")
+
+    # If no axis is provided, create a new one
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+
+    # Plot estimated positions
+    positions = np.array([[x[0], x[1], x[2]] for x in data_points])
+    ax.scatter(positions[:, 0], positions[:, 1], positions[:, 2],
+               label="Estimated Position", marker='o', color='k', s=20)
+
+    # Calculate the average covariance matrix
+    mean_cov_matrix = np.mean(np.array([np.array(c) for c in cov]), axis=0)
+
+    # Plot the average covariance ellipsoid at the mean position
+    mean_position = np.mean(positions, axis=0)
+    plot_covariance_ellipsoid(ax, mean_position, mean_cov_matrix)
+
+    # Plot mean estimated position
+    ax.scatter(mean_position[0], mean_position[1], mean_position[2],
+               label="Mean Estimated Position", s=80, marker='D', color='b')
+
+    # Plot true position if provided
+    if true_position:
+        ax.scatter(true_position[0], true_position[1], true_position[2],
+                   label="True Static Position", marker='*', color='r', s=80)
+
+    # Set labels and title
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    ax.set_zlabel(z_label)
+    ax.set_title(title)
+
+    # Format the ticks
+    ax.ticklabel_format(useOffset=False)
+
+    # Show legend
+    ax.legend()
+
+    return ax
+
+
+def plot_covariance_ellipsoid(ax, pos, cov, n_std=1.0):
+    """
+    Plot a 3D covariance ellipsoid in the provided Axes3D object
+
+    Parameters:
+        ax (Axes3D): Axes on which to plot.
+        pos (tuple[float, float, float]): Center position of the ellipsoid.
+        cov (numpy.ndarray): Covariance matrix (3x3).
+        n_std (float): Number of standard deviations to scale the ellipsoid. For example if n_std is 1, the 1-sigma
+                        surface of the covariance is plotted
+    """
+    # Eigenvalues and eigenvectors of the covariance matrix
+    eigvals, eigvecs = np.linalg.eigh(cov)
+    # Sort the eigenvalues and eigenvectors
+    order = eigvals.argsort()[::-1]
+    eigvals, eigvecs = eigvals[order], eigvecs[:, order]
+
+    # Compute radii of the ellipsoid
+    radii = n_std * np.sqrt(eigvals)
+
+    # Generate points on a unit sphere
+    u = np.linspace(0, 2 * np.pi, 100)
+    v = np.linspace(0, np.pi, 50)
+    x = np.outer(np.cos(u), np.sin(v))
+    y = np.outer(np.sin(u), np.sin(v))
+    z = np.outer(np.ones_like(u), np.cos(v))
+
+    # Transform the unit sphere into the ellipsoid
+    for i in range(x.shape[0]):
+        for j in range(x.shape[1]):
+            [x[i, j], y[i, j], z[i, j]] = np.dot(eigvecs,
+                                                 [x[i, j] * radii[0], y[i, j] * radii[1], z[i, j] * radii[2]]) + pos
+
+    # Plot the surface
+    ax.plot_surface(x, y, z, rstride=4, cstride=4, color='c', alpha=0.1, edgecolor='k', linewidth=0.5)
+
+
+def plot_2D_trajectory(data, cov=None, true_pos=None, label="", x_label="", y_label="", title="", ax=None):
+    """
+    Plots the 2D trajectory of the estimated positions with an average covariance ellipse.
+
+    Parameters:
+        data (list[tuple[float, float]]): List of estimated positions in the ENU frame.
+        cov (list[numpy.ndarray]): List of the estimated covariance matrices.
+        true_pos (tuple[float, float]): True position
+        label (str): Label for the estimated positions
+        x_label (str): Label for the X-axis
+        y_label (str): Label for the Y-axis
+        title (str): Title of the plot
+        ax (matplotlib.pyplot.Axes): pre-existing Axes object to plot write the plots
+
+    Returns:
+        matplotlib.pyplot.Axes: The axes with the plot
+    """
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    x = [d[0] for d in data]
+    y = [d[1] for d in data]
+
+    mean_error_matrix = np.mean(np.array([np.array(c) for c in data]), axis=0)
+
+    # Plot the estimated positions
+    ax.scatter(x, y, linewidth=0.2, marker='o', label=label)
+    ax.scatter(mean_error_matrix[0], mean_error_matrix[1], linewidth=2, marker='D', label="Mean Estimate")
+    if true_pos is not None:
+        ax.scatter(true_pos[0], true_pos[1], linewidth=2, marker='*', label="True Position")
+
+    if cov is not None:
+        # Calculate the mean covariance matrix
+        mean_cov_matrix = np.mean(np.array([np.array(c) for c in cov]), axis=0)
+
+        # Plot the covariance ellipse
+        plot_covariance_ellipse(ax, mean_cov_matrix[0:2, 0:2], center=mean_error_matrix[0:2], color='r')
+
+    # Set labels and title
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    ax.set_title(title)
+
+    # Show legend
+    ax.legend(loc='upper right')
+
+    return ax
+
+
+def plot_covariance_ellipse(ax, cov_matrix, center=(0, 0), color='r'):
+    """
+    Plots a 2D covariance ellipse based on the covariance matrix.
+
+    Parameters:
+        ax (matplotlib.axes.Axes): The axes to plot on.
+        cov_matrix (numpy.ndarray): The 2x2 covariance matrix.
+        center (tuple[float, float]): Center of the ellipse
+        color (str): Color of the ellipse.
+    """
+    # Calculate the eigenvalues and eigenvectors
+    eigvals, eigvecs = np.linalg.eigh(cov_matrix)
+    order = eigvals.argsort()[::-1]
+    eigvals, eigvecs = eigvals[order], eigvecs[:, order]
+
+    # Calculate the angle and width/height of the ellipse
+    angle = np.degrees(np.arctan2(*eigvecs[:, 0][::-1]))
+    width, height = 2 * np.sqrt(eigvals)
+
+    # Create and add the ellipse patch
+    ellipse = Ellipse(center, width, height, angle, edgecolor=color, facecolor='none', linewidth=2)
+    ax.add_patch(ellipse)
+    ellipse.set_label('Covariance Ellipse')
+
+
+def plot_dops(dop_ecef: CSVData, dop_enu: CSVData):
+    """
+    Plots the DOP parameters in three plots:
+        * geometry, position and horizontal DOPs
+        * ECEF x, y, z and time DOPs
+        * East, North and UP DOPs
+
+    Parameters:
+        dop_ecef (CSVData): input CSVData object with the DOP ECEF dataframe
+        dop_enu (CSVData): input CSVData object with the DOP ENU dataframe
+    Returns:
+        list[matplotlib.pyplot.Axes]: The list with the plotted axes
+    """
+    sow_array = dop_ecef.data.iloc[:, 1].values
+    week_array = dop_ecef.data.iloc[:, 0].values
+    time_array = [Epoch.from_gnss_time(week, sow, scale="GPST") for (sow, week) in zip(sow_array, week_array)]
+
+    ax1 = plot_1D(time_array, dop_ecef.data['dop_geometry'].values, label="geometry")
+    plot_1D(time_array, dop_ecef.data['dop_position'].values, ax=ax1, label="position")
+    plot_1D(time_array, dop_enu.data['dop_horizontal'].values, ax=ax1, x_label="Time", y_label="DOPs [m]",
+            label="horizontal", title="Dilution of Precision", set_legend=True)
+
+    ax2 = plot_1D(time_array, dop_ecef.data['dop_x'].values, label="x-axis")
+    plot_1D(time_array, dop_ecef.data['dop_y'].values, ax=ax2, label="y-axis")
+    plot_1D(time_array, dop_ecef.data['dop_time'].values, ax=ax2, label="time")
+    plot_1D(time_array, dop_ecef.data['dop_z'].values, ax=ax2, x_label="Time", y_label="DOPs [m]", label="z-axis",
+            title="Dilution of Precision in ECEF", set_legend=True)
+
+    ax3 = plot_1D(time_array, dop_enu.data['dop_east'].values, label="east")
+    plot_1D(time_array, dop_enu.data['dop_north'].values, ax=ax3, label="north")
+    plot_1D(time_array, dop_enu.data['dop_up'].values, ax=ax3, x_label="Time", y_label="DOPs [m]", label="up",
+            title="Dilution of Precision in ENU", set_legend=True)
+
+    return ax1, ax2, ax3
+
+
+def plot_skyplot(azel: CSVData):
+    ax = None
+    grouped = azel.data.groupby(['sat'])
+
+    # Add a line for each satellite and data type combination
+    for (sat,), group in grouped:
+        az_array = group['azimuth'].values
+        el_array = group['elevation'].values
+        traj = [[az, el] for az, el in zip(az_array, el_array)]
+        ax = skyplot.plot(traj, sat, north_to_east_ccw=False, style_kwargs={'s': 10}, ax=ax)
+
+    ax.set_title("Sky Plot")
+    ax.legend(loc='center left', bbox_to_anchor=(1.25, 0.5))
 
     return ax

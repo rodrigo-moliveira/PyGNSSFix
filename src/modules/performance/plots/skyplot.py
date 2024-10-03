@@ -5,9 +5,9 @@ from src import constants
 # Note -> elevation is positive towards East, that is elevation = 90 [deg] points towards East
 
 
-def plot_sky(trajectory, target_name, ax=None, style_kwargs=None,
+# Note: this function is adapted from https://github.com/astropy/astroplan/blob/master/astroplan/plots/sky.py
+def plot(trajectory, target_name, ax=None, style_kwargs=None,
              north_to_east_ccw=True, grid=True):
-    # Note: this function is adapted from https://github.com/astropy/astroplan/blob/master/astroplan/plots/sky.py
 
     # Set up axes & plot styles if needed.
     if ax is None:

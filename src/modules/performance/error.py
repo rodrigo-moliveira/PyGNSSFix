@@ -290,20 +290,3 @@ def shapiro_test(residuals, alpha):
 
     report += f"\t* Statistic={statistic}\n\t* p_value={p_value}\n\t* significance_level={alpha}\n"
     return report
-
-
-# TO BE CLEANED
-
-
-def compute_latlon(position):
-    pos_array = position.to_data_array()
-    latlon = []
-    for x in pos_array[:, 0:3]:
-        _lla = cartesian2geodetic(*x)
-        latlon.append([_lla[0] * constants.RAD2DEG, _lla[1] * constants.RAD2DEG])
-    return latlon
-
-
-
-
-
