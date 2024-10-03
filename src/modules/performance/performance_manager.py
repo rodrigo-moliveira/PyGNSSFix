@@ -18,8 +18,6 @@ from ...models.frames import cartesian2geodetic
 from ...utils.str_utils import replace_whitespace_with_underscore
 
 
-# TODO: tirar isto daqui
-
 
 class PerformanceManager:
     """
@@ -241,91 +239,106 @@ class PerformanceManager:
         residuals_file.close()
 
     def _plot(self, plot_dir):
-        # TODO: self.log.info("plotting...")
-        # self._plot_obs(plot_dir)
-        # self._plot_errors(plot_dir)
-        # self._plot_residuals(plot_dir)
-        # self._plot_clock_bias(plot_dir)
-        # self._plot_clock_rate(plot_dir)
-        # self._plot_iono(plot_dir)
-        # self._plot_tropo(plot_dir)
-        # self._plot_sat_availability(plot_dir)
-        # self._plot_3D_traj(plot_dir)
-        # self._plot_3D_errors(plot_dir)
-        # self._plot_2D_errors(plot_dir)
-        # self._plot_latlon(plot_dir)
-        # self._plot_dops(plot_dir)
-        self._skyplot(plot_dir)
+
+        if self.config.get("performance_evaluation", "plot_configs", "plot_observations"):
+            self.log.info("Plotting observations and additional information (satellite availability and skyplot...")
+            self._plot_obs(plot_dir)
+            self._plot_sat_availability(plot_dir)
+            self._skyplot(plot_dir)
+
+        if self.config.get("performance_evaluation", "plot_configs", "plot_estimation_errors"):
+            self.log.info("Plotting estimation errors...")
+            self._plot_errors(plot_dir)
+            self._plot_3D_errors(plot_dir)
+            self._plot_2D_errors(plot_dir)
+
+        if self.config.get("performance_evaluation", "plot_configs", "plot_residuals"):
+            self.log.info("Plotting residuals...")
+            self._plot_residuals(plot_dir)
+
+        if self.config.get("performance_evaluation", "plot_configs", "plot_estimated_states"):
+            self.log.info("Plotting estimated states...")
+            self._plot_clock_bias(plot_dir)
+            self._plot_clock_rate(plot_dir)
+            self._plot_iono(plot_dir)
+            self._plot_tropo(plot_dir)
+
+        if self.config.get("performance_evaluation", "plot_configs", "plot_dops"):
+            self.log.info("Plotting DOPs...")
+            self._plot_dops(plot_dir)
+
+        if self.config.get("performance_evaluation", "plot_configs", "plot_trajectories"):
+            self.log.info("Plotting trajectories...")
+            self._plot_latlon(plot_dir)
+            self._plot_3D_traj(plot_dir)
 
         if self.config.get("performance_evaluation", "plot_configs", "show_plots"):
             show_all()
-        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
-            pass
 
     def _plot_obs(self, plot_dir):
         """ Plot the GNSS observables """
-        observations = self.data_manager.get_data("obs")
-        ax_dict = plot_gnss.plot_observations(observations)
+        try:
+            observations = self.data_manager.get_data("obs")
+            if observations.is_empty():
+                raise ValueError
+        except ValueError:
+            self.log.warn("Observations dataframe not found or is empty. Skipping plot_obs")
+            return
+        try:
+            ax_dict = plot_gnss.plot_observations(observations)
 
-        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
             for ax in ax_dict.values():
-                plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
-                plot_path = plot_dir / plot_name
-                self.log.info(f"Saving figure {plot_path}")
-                ax.figure.savefig(plot_path, format='png')
+                self._save_figure(plot_dir, ax)
+        except Exception as e:
+            self.log.error(f"Unexpected error when performing plot_obs function: {e}")
 
     def _plot_errors(self, plot_dir):
         """ Plot the estimation errors """
-        time = self.data_manager.get_data("time")
-        sow_array = time.data.iloc[:, 1].values
-        week_array = time.data.iloc[:, 0].values
-        time_array = [Epoch.from_gnss_time(week, sow, scale="GPST") for (sow, week) in zip(sow_array, week_array)]
+        try:
+            time = self.data_manager.get_data("time")
+            sow_array = time.data.iloc[:, 1].values
+            week_array = time.data.iloc[:, 0].values
+            time_array = [Epoch.from_gnss_time(week, sow, scale="GPST") for (sow, week) in zip(sow_array, week_array)]
 
-        ax1 = plot_gnss.plot_estimation_errors(time_array, self.vel_error["error_ecef"], self.vel_error["cov_ecef"],
-                                               "Velocity Estimation Error in ECEF", "Velocity Error [m/s]", "X", "Y",
-                                               "Z")
-        ax2 = plot_gnss.plot_estimation_errors(time_array, self.vel_error["error_enu"], self.vel_error["cov_enu"],
-                                               "Velocity Estimation Error in ENU", "Velocity Error [m/s]", "East",
-                                               "North", "Up")
-        ax3 = plot_gnss.plot_estimation_errors(time_array, self.pos_error["error_ecef"], self.pos_error["cov_ecef"],
-                                               "Position Estimation Error in ECEF", "Position Error [m]", "X", "Y", "Z")
-        ax4 = plot_gnss.plot_estimation_errors(time_array, self.pos_error["error_enu"], self.pos_error["cov_enu"],
-                                               "Position Estimation Error in ENU", "Position Error [m]", "East",
-                                               "North", "Up")
-        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
+            ax1 = plot_gnss.plot_estimation_errors(time_array, self.vel_error["error_ecef"], self.vel_error["cov_ecef"],
+                                                   "Velocity Estimation Error in ECEF", "Velocity Error [m/s]", "X",
+                                                   "Y", "Z")
+            ax2 = plot_gnss.plot_estimation_errors(time_array, self.vel_error["error_enu"], self.vel_error["cov_enu"],
+                                                   "Velocity Estimation Error in ENU", "Velocity Error [m/s]", "East",
+                                                   "North", "Up")
+            ax3 = plot_gnss.plot_estimation_errors(time_array, self.pos_error["error_ecef"], self.pos_error["cov_ecef"],
+                                                   "Position Estimation Error in ECEF", "Position Error [m]", "X", "Y",
+                                                   "Z")
+            ax4 = plot_gnss.plot_estimation_errors(time_array, self.pos_error["error_enu"], self.pos_error["cov_enu"],
+                                                   "Position Estimation Error in ENU", "Position Error [m]", "East",
+                                                   "North", "Up")
             for ax in [ax1, ax2, ax3, ax4]:
-                plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
-                plot_path = plot_dir / plot_name
-                self.log.info(f"Saving figure {plot_path}")
-                ax.figure.savefig(plot_path, format='png')
+                self._save_figure(plot_dir, ax)
+        except Exception as e:
+            self.log.error(f"Unexpected error when performing plot_errors function: {e}")
 
     def _plot_residuals(self, plot_dir):
         """ Plot the GNSS prefit and postfit residuals of the estimation process """
         ax1 = ax2 = ax3 = ax4 = None
         try:
             ax1 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("pr_rate_prefit_residuals"), "m/s")
-        except ValueError:
-            self.log.warn("Pseudorange Rate Prefit Residuals not found. Skipping this plot")
+        except Exception as e:
+            self.log.warn(f"Error plotting Pseudorange Rate Prefit Residuals in function plot_residuals: {e}")
         try:
             ax2 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("pr_rate_postfit_residuals"), "m/s")
-        except ValueError:
-            self.log.warn("Pseudorange Rate Postfit Residuals not found. Skipping this plot")
+        except Exception as e:
+            self.log.warn(f"Error plotting Pseudorange Rate Postfit Residuals in function plot_residuals: {e}")
         try:
             ax3 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("pr_prefit_residuals"), "m")
-        except ValueError:
-            self.log.warn("Pseudorange Prefit Residuals not found. Skipping this plot")
+        except Exception as e:
+            self.log.warn(f"Error plotting Pseudorange Prefit Residuals in function plot_residuals: {e}")
         try:
             ax4 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("pr_postfit_residuals"), "m")
-        except ValueError:
-            self.log.warn("Pseudorange Postfit Residuals not found. Skipping this plot")
+        except Exception as e:
+            self.log.warn(f"Error plotting Pseudorange Postfit Residuals in function plot_residuals: {e}")
 
-        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
-            for ax in [ax1, ax2, ax3, ax4]:
-                if ax is not None:
-                    plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
-                    plot_path = plot_dir / plot_name
-                    self.log.info(f"Saving figure {plot_path}")
-                    ax.figure.savefig(plot_path, format='png')
+        for ax in [ax1, ax2, ax3, ax4]:
+            self._save_figure(plot_dir, ax)
 
     def _plot_clock_bias(self, plot_dir):
         """
@@ -342,21 +355,19 @@ class PerformanceManager:
             pass
 
         if clock_bias is None or clock_bias.is_empty():
-            self.log.warn("Clock Bias state not found. Skipping this plot")
+            self.log.warn("Clock Bias dataframe not found or is empty. Skipping plot_clock_bias")
             return
         if isb is None or isb.is_empty():
-            self.log.warn("ISB state not found. This is expected if the scenario is single constellation. "
-                          "Skipping this plot")
+            self.log.warn("ISB state dataframe not found or is empty. "
+                          "This is expected if the scenario is single constellation.")
 
-        ax1, ax2 = plot_gnss.plot_clock_bias(clock_bias, isb)
-        ax3 = plot_gnss.plot_allan_deviation(clock_bias)
-        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
+        try:
+            ax1, ax2 = plot_gnss.plot_clock_bias(clock_bias, isb)
+            ax3 = plot_gnss.plot_allan_deviation(clock_bias)
             for ax in [ax1, ax2, ax3]:
-                if ax is not None:
-                    plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
-                    plot_path = plot_dir / plot_name
-                    self.log.info(f"Saving figure {plot_path}")
-                    ax.figure.savefig(plot_path, format='png')
+                self._save_figure(plot_dir, ax)
+        except Exception as e:
+            self.log.error(f"Unexpected error when performing plot_clock_bias function: {e}")
 
     def _plot_clock_rate(self, plot_dir):
         """ Plot estimated clock bias rate """
@@ -365,17 +376,13 @@ class PerformanceManager:
             if clock_rate.is_empty():
                 raise ValueError
         except ValueError:
-            self.log.warn("Clock Bias Rate state not found. Skipping this plot")
+            self.log.warn("Clock Bias Rate dataframe not found or is empty. Skipping plot_clock_rate")
             return
-
-        ax = plot_gnss.plot_clock_bias_rate(clock_rate)
-
-        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
-            if ax is not None:
-                plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
-                plot_path = plot_dir / plot_name
-                self.log.info(f"Saving figure {plot_path}")
-                ax.figure.savefig(plot_path, format='png')
+        try:
+            ax = plot_gnss.plot_clock_bias_rate(clock_rate)
+            self._save_figure(plot_dir, ax)
+        except Exception as e:
+            self.log.error(f"Unexpected error when performing plot_clock_rate function: {e}")
 
     def _plot_iono(self, plot_dir):
         """ Plot Iono estimated states for all available satellites """
@@ -384,16 +391,14 @@ class PerformanceManager:
             if iono.is_empty():
                 raise ValueError
         except ValueError:
-            self.log.warn("Satellite Iono state not found. Skipping this plot")
+            self.log.warn("Satellite Iono dataframe not found or is empty. Skipping plot_iono")
             return
-
-        ax_list = plot_gnss.plot_iono_states(iono)
-        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
+        try:
+            ax_list = plot_gnss.plot_iono_states(iono)
             for ax in ax_list:
-                plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
-                plot_path = plot_dir / plot_name
-                self.log.info(f"Saving figure {plot_path}")
-                ax.figure.savefig(plot_path, format='png')
+                self._save_figure(plot_dir, ax)
+        except Exception as e:
+            self.log.error(f"Unexpected error when performing plot_iono function: {e}")
 
     def _plot_tropo(self, plot_dir):
         """ Plot the estimated troposphere wet delay """
@@ -402,15 +407,13 @@ class PerformanceManager:
             if tropo.is_empty():
                 raise ValueError
         except ValueError:
-            self.log.warn("Satellite Tropo state not found. Skipping this plot")
+            self.log.warn("Satellite Tropo dataframe not found or is empty. Skipping plot_tropo")
             return
-
-        ax = plot_gnss.plot_tropo_wet_delay(tropo)
-        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
-            plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
-            plot_path = plot_dir / plot_name
-            self.log.info(f"Saving figure {plot_path}")
-            ax.figure.savefig(plot_path, format='png')
+        try:
+            ax = plot_gnss.plot_tropo_wet_delay(tropo)
+            self._save_figure(plot_dir, ax)
+        except Exception as e:
+            self.log.error(f"Unexpected error when performing plot_tropo function: {e}")
 
     def _plot_sat_availability(self, plot_dir):
         """ Plot satellite availability """
@@ -420,83 +423,91 @@ class PerformanceManager:
             if prefit_residuals.is_empty() or position.is_empty():
                 raise ValueError
         except ValueError:
-            self.log.warn("Satellite information (prefit-residuals) not found. Skipping this plot")
+            self.log.warn("Satellite information (prefit-residuals) dataframe not found or is empty. "
+                          "Skipping plot_sat_availability")
             return
 
-        obs_time = float(position.data.iloc[1, 1]) - float(position.data.iloc[0, 1])
-        ax = plot_gnss.plot_satellite_availability(prefit_residuals, obs_time)
-        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
-            plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
-            plot_path = plot_dir / plot_name
-            self.log.info(f"Saving figure {plot_path}")
-            ax.figure.savefig(plot_path, format='png')
+        try:
+            obs_time = float(position.data.iloc[1, 1]) - float(position.data.iloc[0, 1])
+            ax = plot_gnss.plot_satellite_availability(prefit_residuals, obs_time)
+            self._save_figure(plot_dir, ax)
+        except Exception as e:
+            self.log.error(f"Unexpected error when performing plot_sat_availability function: {e}")
 
     def _plot_3D_traj(self, plot_dir):
         """ plot the 3D estimated trajectory and covariance """
-        position_df = self.data_manager.get_data("position")
-        positions = position_df.data.loc[:, ['x', 'y', 'z']].values
-        ax = plot_gnss.plot_3D_trajectory_with_avg_covariance(positions, self.pos_error["cov_ecef"],
-                                                              true_position=self.true_pos,
-                                                              x_label="X ECEF [m]", y_label="Y ECEF [m]",
-                                                              z_label="Z ECEF [m]", title=position_df.title)
-
-        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
-            plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
-            plot_path = plot_dir / plot_name
-            self.log.info(f"Saving figure {plot_path}")
-            ax.figure.savefig(plot_path, format='png')
+        try:
+            position_df = self.data_manager.get_data("position")
+            if position_df.is_empty():
+                raise ValueError
+        except ValueError:
+            self.log.warn("Estimated Position dataframe not found or is empty. Skipping plot_3D_traj")
+            return
+        try:
+            positions = position_df.data.loc[:, ['x', 'y', 'z']].values
+            ax = plot_gnss.plot_3D_trajectory_with_avg_covariance(positions, self.pos_error["cov_ecef"],
+                                                                  true_position=self.true_pos,
+                                                                  x_label="X ECEF [m]", y_label="Y ECEF [m]",
+                                                                  z_label="Z ECEF [m]", title=position_df.title)
+            self._save_figure(plot_dir, ax)
+        except Exception as e:
+            self.log.error(f"Unexpected error when performing plot_3D_traj function: {e}")
 
     def _plot_3D_errors(self, plot_dir):
         """ Plot the absolute 3D trajectory and covariance, as well as the 3D errors in ENU and ECEF frames """
-        ax1 = plot_gnss.plot_3D_trajectory_with_avg_covariance(self.pos_error["error_enu"], self.pos_error["cov_enu"],
-                                                               true_position=[0, 0, 0],
-                                                               x_label="East [m]", y_label="North [m]",
-                                                               z_label="Up [m]",
-                                                               title="3D ENU Error")
-        ax2 = plot_gnss.plot_3D_trajectory_with_avg_covariance(self.pos_error["error_ecef"], self.pos_error["cov_ecef"],
-                                                               true_position=[0, 0, 0],
-                                                               x_label="X [m]", y_label="Y [m]",
-                                                               z_label="Z [m]",
-                                                               title="3D ECEF Error")
-        for ax in [ax1, ax2]:
-            if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
-                plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
-                plot_path = plot_dir / plot_name
-                self.log.info(f"Saving figure {plot_path}")
-                ax.figure.savefig(plot_path, format='png')
+        try:
+            ax1 = plot_gnss.plot_3D_trajectory_with_avg_covariance(self.pos_error["error_enu"],
+                                                                   self.pos_error["cov_enu"],
+                                                                   true_position=[0, 0, 0],
+                                                                   x_label="East [m]", y_label="North [m]",
+                                                                   z_label="Up [m]",
+                                                                   title="3D ENU Error")
+            ax2 = plot_gnss.plot_3D_trajectory_with_avg_covariance(self.pos_error["error_ecef"],
+                                                                   self.pos_error["cov_ecef"],
+                                                                   true_position=[0, 0, 0],
+                                                                   x_label="X [m]", y_label="Y [m]",
+                                                                   z_label="Z [m]",
+                                                                   title="3D ECEF Error")
+            for ax in [ax1, ax2]:
+                self._save_figure(plot_dir, ax)
+        except Exception as e:
+            self.log.error(f"Unexpected error when performing plot_3D_errors function: {e}")
 
     def _plot_2D_errors(self, plot_dir):
         """ Plot the 2D errors in the ENU frame """
-        ax = plot_gnss.plot_2D_trajectory(self.pos_error["error_enu"], self.pos_error["cov_enu"], true_pos=[0, 0],
-                                          x_label="East [m]", y_label="North [m]", title="Horizontal Position Error",
-                                          label="Error Estimates")
-
-        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
-            plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
-            plot_path = plot_dir / plot_name
-            self.log.info(f"Saving figure {plot_path}")
-            ax.figure.savefig(plot_path, format='png')
+        try:
+            ax = plot_gnss.plot_2D_trajectory(self.pos_error["error_enu"], self.pos_error["cov_enu"], true_pos=[0, 0],
+                                              x_label="East [m]", y_label="North [m]", title="Horizontal Position Error",
+                                              label="Error Estimates")
+            self._save_figure(plot_dir, ax)
+        except Exception as e:
+            self.log.error(f"Unexpected error when performing plot_2D_errors function: {e}")
 
     def _plot_latlon(self, plot_dir):
         """ Plot the Latitude-Longitude in a 2D figure"""
-        position_df = self.data_manager.get_data("position")
-        latlon = []
+        try:
+            position_df = self.data_manager.get_data("position")
+            if position_df.is_empty():
+                raise ValueError
+        except ValueError:
+            self.log.warn("Estimated Position dataframe not found or is empty. Skipping plot_latlon")
+            return
 
-        def to_latlon(row):
-            _lla = cartesian2geodetic(row.x, row.y, row.z)
-            latlon.append([_lla[0] * constants.RAD2DEG, _lla[1] * constants.RAD2DEG])
+        try:
+            latlon = []
 
-        position_df.data.apply(to_latlon, axis=1)
-        true_latlon = cartesian2geodetic(*self.true_pos) * np.array([constants.RAD2DEG, constants.RAD2DEG, 1])
-        ax = plot_gnss.plot_2D_trajectory(latlon, None, true_pos=true_latlon, label="Position Estimates",
-                                          x_label="Latitude [deg]", y_label="Longitude [deg]",
-                                          title="Latitude-Longitude estimation")
+            def to_latlon(row):
+                _lla = cartesian2geodetic(row.x, row.y, row.z)
+                latlon.append([_lla[0] * constants.RAD2DEG, _lla[1] * constants.RAD2DEG])
 
-        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
-            plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
-            plot_path = plot_dir / plot_name
-            self.log.info(f"Saving figure {plot_path}")
-            ax.figure.savefig(plot_path, format='png')
+            position_df.data.apply(to_latlon, axis=1)
+            true_latlon = cartesian2geodetic(*self.true_pos) * np.array([constants.RAD2DEG, constants.RAD2DEG, 1])
+            ax = plot_gnss.plot_2D_trajectory(latlon, None, true_pos=true_latlon, label="Position Estimates",
+                                              x_label="Latitude [deg]", y_label="Longitude [deg]",
+                                              title="Latitude-Longitude estimation")
+            self._save_figure(plot_dir, ax)
+        except Exception as e:
+            self.log.error(f"Unexpected error when performing plot_latlon function: {e}")
 
     def _plot_dops(self, plot_dir):
         """ Plot the DOP figures """
@@ -506,17 +517,14 @@ class PerformanceManager:
             if dop_ecef.is_empty() or dop_enu.is_empty():
                 raise ValueError
         except ValueError:
-            self.log.warn("DOPs not found. Skipping this plot")
+            self.log.warn("DOPs dataframe not found or is empty. Skipping plot_dops")
             return
-
-        ax1, ax2, ax3 = plot_gnss.plot_dops(dop_ecef, dop_enu)
-
-        for ax in [ax1, ax2, ax3]:
-            if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
-                plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
-                plot_path = plot_dir / plot_name
-                self.log.info(f"Saving figure {plot_path}")
-                ax.figure.savefig(plot_path, format='png')
+        try:
+            ax1, ax2, ax3 = plot_gnss.plot_dops(dop_ecef, dop_enu)
+            for ax in [ax1, ax2, ax3]:
+                self._save_figure(plot_dir, ax)
+        except Exception as e:
+            self.log.error(f"Unexpected error when performing plot_dops function: {e}")
 
     def _skyplot(self, plot_dir):
         """ Plot the skyplot of the satellites in view """
@@ -525,12 +533,16 @@ class PerformanceManager:
             if satellite_azel.is_empty():
                 raise ValueError
         except ValueError:
-            self.log.warn("Satellite Azimuth-Elevation information not found. Skipping this plot")
+            self.log.warn("Satellite Azimuth-Elevation dataframe not found or is empty. Skipping skyplot")
             return
+        try:
+            ax = plot_gnss.plot_skyplot(satellite_azel)
+            self._save_figure(plot_dir, ax)
+        except Exception as e:
+            self.log.error(f"Unexpected error when performing skyplot function: {e}")
 
-        ax = plot_gnss.plot_skyplot(satellite_azel)
-
-        if self.config.get("performance_evaluation", "plot_configs", "save_plots"):
+    def _save_figure(self, plot_dir, ax):
+        if self.config.get("performance_evaluation", "plot_configs", "save_plots") and ax is not None:
             plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
             plot_path = plot_dir / plot_name
             self.log.info(f"Saving figure {plot_path}")

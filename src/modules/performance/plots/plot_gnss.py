@@ -7,7 +7,6 @@ from matplotlib.patches import Ellipse
 from mpl_toolkits.mplot3d import Axes3D
 
 from src.data_mng.csv.csv_data import CSVData
-from src.data_types.date import Epoch
 from src.io.rinex_parser.utils import RINEX_SATELLITE_SYSTEM, RINEX_OBS_TYPES_UNITS
 from src.utils.str_utils import extract_constellations
 from src.modules.performance.plots import skyplot
@@ -620,6 +619,14 @@ def plot_dops(dop_ecef: CSVData, dop_enu: CSVData):
 
 
 def plot_skyplot(azel: CSVData):
+    """
+    Plot the skyplot of the satellites in view
+
+    Parameters:
+        azel (CSVData): input CSVData object with the Satellite Azimuth/Elevation dataframe
+    Returns:
+        matplotlib.pyplot.Axes: The Axes object with the skyplot
+    """
     ax = None
     grouped = azel.data.groupby(['sat'])
 
@@ -628,7 +635,7 @@ def plot_skyplot(azel: CSVData):
         az_array = group['azimuth'].values
         el_array = group['elevation'].values
         traj = [[az, el] for az, el in zip(az_array, el_array)]
-        ax = skyplot.plot(traj, sat, north_to_east_ccw=False, style_kwargs={'s': 10}, ax=ax)
+        ax = skyplot.plot(traj, sat, north_to_east_ccw=False, ax=ax)
 
     ax.set_title("Sky Plot")
     ax.legend(loc='center left', bbox_to_anchor=(1.25, 0.5))

@@ -33,7 +33,14 @@
     "plot_configs":
     {
       "show_plots": true,
-      "save_plots": true
+      "save_plots": true,
+
+      "plot_observations": true,
+      "plot_estimation_errors": true,
+      "plot_estimated_states": true,
+      "plot_dops": true,
+      "plot_residuals": true,
+      "plot_trajectories": true
     },
 
     "error_configs": {

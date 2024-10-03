@@ -1,20 +1,33 @@
+""" Method to perform the skyplot """
 from matplotlib import pyplot as plt
-
 from src import constants
 
-# Note -> elevation is positive towards East, that is elevation = 90 [deg] points towards East
 
+def plot(trajectory, target_name, ax=None, north_to_east_ccw=True, grid=True):
+    """
+    Skyplot of all satellites in view, based on input azimuth/elevation information.
+    This function only plots the skyplot path for a single satellite, so if several paths are intended, it should be
+    called several times.
 
-# Note: this function is adapted from https://github.com/astropy/astroplan/blob/master/astroplan/plots/sky.py
-def plot(trajectory, target_name, ax=None, style_kwargs=None,
-             north_to_east_ccw=True, grid=True):
+    This function is adapter from the following reference:
+        https://github.com/astropy/astroplan/blob/master/astroplan/plots/sky.py
+
+    Note: elevation is positive towards East, that is elevation = 90 [deg] points towards East
+
+    Arguments:
+        trajectory (list[tuple[float, float]]): list with the azimuth-elevation path for a single satellite in view
+        target_name (str): string with the target or satellite name
+        ax (matplotlib.pyplot.Axes): input Axes object with the skyplot path of other satellites
+        north_to_east_ccw (bool): if true, the direction of azimuth increase is counter-clockwise
+        grid (bool): if True, the plot grid is shown
+    Returns:
+        matplotlib.pyplot.Axes: The Axes object with the skyplot
+    """
 
     # Set up axes & plot styles if needed.
     if ax is None:
         fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
-    if style_kwargs is None:
-        style_kwargs = {}
-    style_kwargs = dict(style_kwargs)
+    style_kwargs = dict()
     style_kwargs.setdefault('marker', 'o')
     style_kwargs.setdefault('label', target_name)
     style_kwargs.setdefault('s', 20)
