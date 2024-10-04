@@ -1,33 +1,45 @@
+""" Module with the Performance Manager class definition """
 import os
-
 import numpy as np
 import pandas as pd
 
+import src.data_mng.csv.csv_data_mng
 from . import error
 from .plots import plot_gnss
-
-# TODO List
-#   * todos os datamanager.get_data() têm que estar protegidos por um try catch
-#   * nos plots quando faço datamanager.get_data() verificar se is_empty()
-
-
 from .plots.utils import show_all
-from ... import constants
-from ...data_types.date import Epoch
-from ...models.frames import cartesian2geodetic
-from ...utils.str_utils import replace_whitespace_with_underscore
-
+from src import constants
+from src.data_types.date import Epoch
+from src.models.frames import cartesian2geodetic
+from src.utils.str_utils import replace_whitespace_with_underscore
+from src.io.config import config_dict
 
 
 class PerformanceManager:
     """
-    TODO: add docs
+    GNSS Performance manager class.
+
+    This class runs the post-processing / performance manager stage of the previously executed GNSS run.
+
+    Three main tasks are performed:
+        * Processing estimation errors
+        * Processing residual analysis
+        * Plotting data
+
+    See Also:
+        `algs/post_processing_gnss.py`: To execute this class, run this script.
     """
 
-    def __init__(self, data_manager, config, log):
-        """TODO: add docstring"""
+    def __init__(self, data_manager, log):
+        """
+        Constructor of the PerformanceManager class.
+
+        Args:
+            data_manager(src.data_mng.csv.csv_data_mng.GnssRunStorageManager): Data Manager (GnssRunStorageManager)
+                with all the information about the GNSS to process
+            log():
+
+        """
         self.data_manager = data_manager
-        self.config = config
         self.log = log
 
         # Declaring variables to store error computations
@@ -50,11 +62,7 @@ class PerformanceManager:
         }
 
     def process(self, output_dir):
-        """ Main function of the performance manager. 3 tasks are performed:
-            * Processing estimation errors
-            * Processing residual analysis
-            * Plotting data
-         """
+        """ Main function of the performance manager """
 
         # create post-processing folder, if not yet created
         post_proc_dir = output_dir / 'post_proc'
@@ -68,14 +76,14 @@ class PerformanceManager:
             self.log.info(f"Creating directory to store plots {plot_dir}...")
             os.makedirs(plot_dir)
 
-        if self.config.get("performance_evaluation", "run_error_computation"):
+        if config_dict.get("performance_evaluation", "run_error_computation"):
             self.log.info("Running Task: Processing estimation errors...")
             try:
                 self._process_errors(post_proc_dir)
             except Exception as e:
                 self.log.error(f"Error when processing estimation errors due to: {e}")
 
-        if self.config.get("performance_evaluation", "run_residual_analysis"):
+        if config_dict.get("performance_evaluation", "run_residual_analysis"):
             self.log.info("Running Task: Processing residual analysis...")
             try:
                 self._residual_analysis(post_proc_dir)
@@ -83,12 +91,19 @@ class PerformanceManager:
                 self.log.error(f"Error when running residual analysis due to: {e}")
 
         # plots
-        if self.config.get("performance_evaluation", "run_plot_manager"):
+        if config_dict.get("performance_evaluation", "run_plot_manager"):
             self.log.info("Running Task: Plotting data...")
             try:
                 self._plot(plot_dir)
             except Exception as e:
                 self.log.error(f"Error when plotting data due to: {e}")
+
+        self.log.info("Performance Manager finished execution.")
+
+    def show_plots(self):
+        """ Method to show all the plots"""
+        if config_dict.get("performance_evaluation", "plot_configs", "show_plots"):
+            show_all()
 
     def _process_errors(self, post_proc_dir):
         """ Computes the estimation error and RMS statistics for position and velocity in ECEF and local ENU frames """
@@ -98,8 +113,8 @@ class PerformanceManager:
 
         # compute Root Mean Square Error (RMSE) in ECEF and ENU frames
         self.log.info("Computing estimation error and root mean square error...")
-        if self.config.get("performance_evaluation", "error_configs", "static"):
-            self.true_pos = self.config.get("performance_evaluation", "error_configs", "true_static_position")
+        if config_dict.get("performance_evaluation", "error_configs", "static"):
+            self.true_pos = config_dict.get("performance_evaluation", "error_configs", "true_static_position")
             self.true_vel = [0, 0, 0]  # in static conditions, ECEF velocity is 0
 
             # compute position errors
@@ -209,10 +224,10 @@ class PerformanceManager:
             chi_sq_file = open(output_dir / f"ChiSquaredResidualAnalysis_{data_name}.txt", "w")
             shapiro_file = open(output_dir / f"ShapiroTestAnalysis.txt_{data_name}.txt", "w")
 
-            df = self.config.get("performance_evaluation", "residual_configs", "chi_squared_test", df_name)
-            chi_sq_alpha = self.config.get("performance_evaluation", "residual_configs", "chi_squared_test",
+            df = config_dict.get("performance_evaluation", "residual_configs", "chi_squared_test", df_name)
+            chi_sq_alpha = config_dict.get("performance_evaluation", "residual_configs", "chi_squared_test",
                                            "significance_level")
-            shapiro_alpha = self.config.get("performance_evaluation", "residual_configs", "shapiro_test",
+            shapiro_alpha = config_dict.get("performance_evaluation", "residual_configs", "shapiro_test",
                                             "significance_level")
 
             self.log.info(f"Chi-Squared test for {data_name} observables: significance_level={chi_sq_alpha}, "
@@ -240,40 +255,37 @@ class PerformanceManager:
 
     def _plot(self, plot_dir):
 
-        if self.config.get("performance_evaluation", "plot_configs", "plot_observations"):
+        if config_dict.get("performance_evaluation", "plot_configs", "plot_observations"):
             self.log.info("Plotting observations and additional information (satellite availability and skyplot...")
             self._plot_obs(plot_dir)
             self._plot_sat_availability(plot_dir)
             self._skyplot(plot_dir)
 
-        if self.config.get("performance_evaluation", "plot_configs", "plot_estimation_errors"):
+        if config_dict.get("performance_evaluation", "plot_configs", "plot_estimation_errors"):
             self.log.info("Plotting estimation errors...")
             self._plot_errors(plot_dir)
             self._plot_3D_errors(plot_dir)
             self._plot_2D_errors(plot_dir)
 
-        if self.config.get("performance_evaluation", "plot_configs", "plot_residuals"):
+        if config_dict.get("performance_evaluation", "plot_configs", "plot_residuals"):
             self.log.info("Plotting residuals...")
             self._plot_residuals(plot_dir)
 
-        if self.config.get("performance_evaluation", "plot_configs", "plot_estimated_states"):
+        if config_dict.get("performance_evaluation", "plot_configs", "plot_estimated_states"):
             self.log.info("Plotting estimated states...")
             self._plot_clock_bias(plot_dir)
             self._plot_clock_rate(plot_dir)
             self._plot_iono(plot_dir)
             self._plot_tropo(plot_dir)
 
-        if self.config.get("performance_evaluation", "plot_configs", "plot_dops"):
+        if config_dict.get("performance_evaluation", "plot_configs", "plot_dops"):
             self.log.info("Plotting DOPs...")
             self._plot_dops(plot_dir)
 
-        if self.config.get("performance_evaluation", "plot_configs", "plot_trajectories"):
+        if config_dict.get("performance_evaluation", "plot_configs", "plot_trajectories"):
             self.log.info("Plotting trajectories...")
             self._plot_latlon(plot_dir)
             self._plot_3D_traj(plot_dir)
-
-        if self.config.get("performance_evaluation", "plot_configs", "show_plots"):
-            show_all()
 
     def _plot_obs(self, plot_dir):
         """ Plot the GNSS observables """
@@ -477,8 +489,8 @@ class PerformanceManager:
         """ Plot the 2D errors in the ENU frame """
         try:
             ax = plot_gnss.plot_2D_trajectory(self.pos_error["error_enu"], self.pos_error["cov_enu"], true_pos=[0, 0],
-                                              x_label="East [m]", y_label="North [m]", title="Horizontal Position Error",
-                                              label="Error Estimates")
+                                              x_label="East [m]", y_label="North [m]",
+                                              title="Horizontal Position Error", label="Error Estimates")
             self._save_figure(plot_dir, ax)
         except Exception as e:
             self.log.error(f"Unexpected error when performing plot_2D_errors function: {e}")
@@ -542,7 +554,7 @@ class PerformanceManager:
             self.log.error(f"Unexpected error when performing skyplot function: {e}")
 
     def _save_figure(self, plot_dir, ax):
-        if self.config.get("performance_evaluation", "plot_configs", "save_plots") and ax is not None:
+        if config_dict.get("performance_evaluation", "plot_configs", "save_plots") and ax is not None:
             plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
             plot_path = plot_dir / plot_name
             self.log.info(f"Saving figure {plot_path}")

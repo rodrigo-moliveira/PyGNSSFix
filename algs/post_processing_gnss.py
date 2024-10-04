@@ -58,8 +58,11 @@ def main():
 
         # run Performance Evaluation Module
         log.info("Executing the GNSS Performance Evaluation Manager...")
-        eval_manager = PerformanceManager(data_manager, config_dict, log)
+        eval_manager = PerformanceManager(data_manager, log)
         eval_manager.process(run_path)
+
+        log.info("Exiting Post Processing Script!")
+        eval_manager.show_plots()
 
     except Exception as e:
         log.error(f"Unexpected error running while running program: {e}")
