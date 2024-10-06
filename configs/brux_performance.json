@@ -40,7 +40,8 @@
       "plot_estimated_states": true,
       "plot_dops": true,
       "plot_residuals": true,
-      "plot_trajectories": true
+      "plot_trajectories": true,
+      "plot_planimetric": true
     },
 
     "error_configs": {

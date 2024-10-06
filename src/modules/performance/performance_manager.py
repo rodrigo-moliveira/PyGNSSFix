@@ -4,9 +4,10 @@ import numpy as np
 import pandas as pd
 
 import src.data_mng.csv.csv_data_mng
-from . import error
-from .plots import plot_gnss
-from .plots.utils import show_all
+from ...models.error_analysis import error
+from ...models.plots import plot_gnss
+from src.models.plots import planimetric
+from src.models.plots.utils import show_all
 from src import constants
 from src.data_types.date import Epoch
 from src.models.frames import cartesian2geodetic
@@ -287,6 +288,10 @@ class PerformanceManager:
             self._plot_latlon(plot_dir)
             self._plot_3D_traj(plot_dir)
 
+        if config_dict.get("performance_evaluation", "plot_configs", "plot_planimetric"):
+            self.log.info("Plotting Planimetric Maps...")
+            self._plot_planimetric(plot_dir)
+
     def _plot_obs(self, plot_dir):
         """ Plot the GNSS observables """
         try:
@@ -552,6 +557,33 @@ class PerformanceManager:
             self._save_figure(plot_dir, ax)
         except Exception as e:
             self.log.error(f"Unexpected error when performing skyplot function: {e}")
+
+    def _plot_planimetric(self, plot_dir):
+        try:
+            position_df = self.data_manager.get_data("position")
+            if position_df.is_empty():
+                raise ValueError
+        except ValueError:
+            self.log.warn("Estimated Position dataframe not found or is empty. Skipping plot_planimetric")
+            return
+
+        try:
+            latlon = []
+
+            def to_latlon(row):
+                _lla = cartesian2geodetic(row.x, row.y, row.z)
+                latlon.append([_lla[0] * constants.RAD2DEG, _lla[1] * constants.RAD2DEG, _lla[2]])
+
+            position_df.data.apply(to_latlon, axis=1)
+
+            planimetric.create_kml_file(latlon, f"{plot_dir}/estimated_points.kml")
+            self.log.info(f"KML file created successfully in {plot_dir}/estimated_points.kml")
+
+            planimetric.create_map_html_file(latlon, f"{plot_dir}/estimated_map.html")
+            self.log.info(f"HTML Map file created successfully in {plot_dir}/estimated_map.html")
+
+        except Exception as e:
+            self.log.error(f"Unexpected error when performing plot_planimetric function: {e}")
 
     def _save_figure(self, plot_dir, ax):
         if config_dict.get("performance_evaluation", "plot_configs", "save_plots") and ax is not None:

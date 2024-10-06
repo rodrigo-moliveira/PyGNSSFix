@@ -1,20 +1,22 @@
 tasks release 1.0:
-    [ ] criar um check que verifique os ficheiros e configurações obrigatórias para cada modelo (SPS, SPS_IF, PPPP...)
-        [ ] por exemplo, por agora o ficheiro nav é sempre obrigatório, mas isso tem de mudar depois..
-        [ ] ver o que acontece quando configuro 3 observações. Deve dar um erro!! Este SW apenas dá para 1 ou 2
-    [ ] fix all documentation docstrings
-        [ ] to either Args or Arguments... Same for return or returns...
-        [ ] limpar o código / solve all TODOs
-
-    melhorar o modulo de post processing:
-        [ ] clean everything up (pain)
+    [ ] melhorar o modulo de post processing:
+        [X] clean everything up (pain)
+        [ ] adicionar o plot planimetrico
         [ ] Clean up dos scripts sat_orbits e sat_clocks
         [ ] Criar script plot_observations from input rinex file
             - no futuro poderá ficar um script de observation analysis (compute code-carrier divergence por exemplo)
+    [ ] fix all documentation docstrings
+        [ ] to either Args or Arguments... Same for return or returns...
+            - see https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html
+        [ ] limpar o código / solve all TODOs
+
+    [ ] criar um check que verifique os ficheiros e configurações obrigatórias para cada modelo (SPS, SPS_IF, PPPP...)
+        [ ] por exemplo, por agora o ficheiro nav é sempre obrigatório, mas isso tem de mudar depois..
+        [ ] ver o que acontece quando configuro 3 observações. Deve dar um erro!! Este SW apenas dá para 1 ou 2
 
     [ ] revisão final do repositório. Update readme
     [ ] fazer uma "campanha de validação": comparar precise vs nav products. Single freq / Single const vs Dual freq / Dual Const...
-        e brincar com as configurações para fazer fine tuning ao algo
+        e brincar com as configurações para fazer fine tuning ao algo. Criar cenários, etc.
 
 
 
@@ -30,6 +32,7 @@ tasks release 1.0:
         [ ] develop code accordingly for each DCB type
         [ ] ler sat DCBs e criar uma classe que substitua o modelo atual
     [ ] Adicionar OSB Manager
+    [ ] Adicionar differential SPS/PPPP. D-GNSS para PR only
 
 finalizar o GNSS user positioning com:
     [ ] Adicionar Kalman filter com user dynamics

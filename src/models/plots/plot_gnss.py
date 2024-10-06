@@ -9,7 +9,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from src.data_mng.csv.csv_data import CSVData
 from src.io.rinex_parser.utils import RINEX_SATELLITE_SYSTEM, RINEX_OBS_TYPES_UNITS
 from src.utils.str_utils import extract_constellations
-from src.modules.performance.plots import skyplot
+from src.models.plots import skyplot
 from .utils import *
 
 

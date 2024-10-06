@@ -49,10 +49,12 @@
             "plot_estimated_states": {"type": "boolean"},
             "plot_dops": {"type": "boolean"},
             "plot_residuals": {"type": "boolean"},
-            "plot_trajectories": {"type": "boolean"}
+            "plot_trajectories": {"type": "boolean"},
+            "plot_planimetric": {"type": "boolean"}
           },
           "required": ["show_plots", "save_plots", "plot_observations", "plot_estimation_errors",
-            "plot_estimated_states", "plot_dops", "plot_residuals", "plot_trajectories"
+            "plot_estimated_states", "plot_dops", "plot_residuals", "plot_trajectories",
+            "plot_planimetric"
           ]
         },
 
