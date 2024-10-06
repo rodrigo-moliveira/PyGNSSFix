@@ -1,105 +1,164 @@
-import datetime
+""" Script to plot the differences between precise and navigation orbits (position + velocity).
+ Two tests are executed:
+    1) Orbit differences: the precise and navigation orbits are evaluated at the knot points defined in the SP3 file
+    2) Interpolation Error: the orbit differences are computed with interpolated precise and navigation orbits formed
+                            at the defined interpolation epochs
 
+The configurations for the script (path to SP3 and RINEX Nav files), and the epochs to perform the test are
+defined in the main function.
+ """
+import datetime
+import os
+import time
+
+from src import RUNS_PATH
 from src.io.rinex_parser import RinexNavReader
 from src.data_mng.gnss.sat_orbit_data import SatelliteOrbits
 from src.data_mng.gnss.navigation_data import NavigationData
-from src.data_types.gnss.satellite import get_satellite
 from src.common_log import set_logs, MAIN_LOG, get_logger
-from src.models.plots import plot_1D, show_all
 from src.data_types.date import Epoch
+from src.models.plots import utils
 
 
-def plots(time_vec, data_vec):
+def _plot(time_vec, data_vec, x_label, y_label, title):
+    ax = utils.plot_1D(time_vec, [x[0] for x in data_vec], x_label=x_label, y_label=y_label, title=title, label="X")
+    utils.plot_1D(time_vec, [x[1] for x in data_vec], x_label=x_label, y_label=y_label, title=title, ax=ax, label="Y")
+    utils.plot_1D(time_vec, [x[2] for x in data_vec], x_label=x_label, y_label=y_label, title=title, ax=ax, label="Z",
+                  set_legend=True)
+    return ax
+
+
+def plots(log, plot_dir, time_vec, data_vec, product, interpolation=False):
     for sat, data in data_vec.items():
-        plot_1D(time_vec, [x[0] for x in data], x_label="Time", y_label="Position error [m]",
-                title=f"Orbit differences in X for {str(sat)}")
-        plot_1D(time_vec, [x[1] for x in data], x_label="Time", y_label="Position error [m]",
-                title=f"Orbit differences in Y for {str(sat)}")
-        plot_1D(time_vec, [x[2] for x in data], x_label="Time", y_label="Position error [m]",
-                title=f"Orbit differences in Z for {str(sat)}")
-    show_all()
+        if interpolation:
+            title = f"{product[0]} Interpolation Differences (Precise Minus Navigation Interpolated Orbits) for" \
+                    f" {str(sat)}"
+        else:
+            title = f"{product[0]} Differences (Precise Minus Navigation Orbits) for {str(sat)}"
+
+        ax = _plot(time_vec, data, x_label="Time", y_label=f"{product[0]} error [{product[1]}]", title=title)
+
+        plot_path = plot_dir + "\\" + f"{product[0]}_{str(sat)}" + ".png"
+        log.info(f"Saving figure {plot_path}")
+        ax.figure.savefig(plot_path, format='png')
+
+    # utils.show_all()
 
 
-def plots_1d(time_vec, data_vec):
-    for sat, data in data_vec.items():
-        plot_1D(time_vec, [x for x in data], x_label="Time", y_label="dt error [s]",
-                title=f"Time differences for {str(sat)}")
-
-    show_all()
-
-
-def apply_test_interpolation(log, sat_orbits, sats_to_plot):
-    first_epoch = Epoch.strptime("2019-01-14 12:00:00", scale="GPST")
+def apply_test_interpolation(log, output_dir, sat_orbits, first_interpolation_epoch,
+                             last_interpolation_epoch, interpolation_period):
     sat_list = sat_orbits.get_satellites()
-    epoch_list = [first_epoch + datetime.timedelta(seconds=60*i) for i in range(100)]
+    first = Epoch.strptime(first_interpolation_epoch, scale="GPST")
+    last = Epoch.strptime(last_interpolation_epoch, scale="GPST")
+
+    epoch_list = list()
+    ep = first
+    while ep <= last:
+        epoch_list.append(ep)
+        ep = ep + datetime.timedelta(seconds=interpolation_period)
 
     time_vec = []
-    data_vec = {}
-    for sat in sats_to_plot:
-        data_vec[sat] = []
+    pos_vec = {}
+    vel_vec = {}
+    for sat in sat_list:
+        pos_vec[sat] = []
+        vel_vec[sat] = []
 
     for epoch in epoch_list:
         time_vec.append(epoch)
         for sat in sat_list:
-            precise_pos, precise_vel, precise_dt = sat_orbits.get_orbit_precise(sat, epoch)
-            nav_pos, nav_vel, nav_dt = sat_orbits.get_orbit_broadcast(sat, epoch)
+            precise_pos, precise_vel, _ = sat_orbits.get_orbit_precise(sat, epoch)
+            nav_pos, nav_vel, _, _ = sat_orbits.get_orbit_broadcast(sat, epoch)
 
-            if sat in sats_to_plot:
-                log.info(f"[POS] {epoch}, {sat}, nav position={nav_pos}[m], precise position={precise_pos}[m] : "
-                         f"diff={precise_pos - nav_pos}[m]")
-                #log.info(f"[VEL] {epoch}, {sat}, nav velocity={nav_vel}[m/s], precise velocity={precise_vel}[m/s] : "
-                #         f"diff={precise_vel - nav_vel}[m/s]")
-                #log.info(f"[DT] {epoch}, {sat}, nav dt={nav_dt}[s], precise dt={precise_dt}[s] : "
-                #         f"diff={precise_dt - nav_dt}[s]")
+            log.info(f"[POS] {epoch}, {sat}, nav position={nav_pos}[m], precise position={precise_pos}[m] : "
+                     f"diff={precise_pos - nav_pos}[m]")
+            log.info(f"[VEL] {epoch}, {sat}, nav velocity={nav_vel}[m/s], precise velocity={precise_vel}[m/s] : "
+                     f"diff={precise_vel - nav_vel}[m/s]")
 
-                data_vec[sat].append(precise_pos - nav_pos)
+            pos_vec[sat].append(precise_pos - nav_pos)
+            vel_vec[sat].append(precise_vel - nav_vel)
 
-    plots(time_vec, data_vec)
+    plots(log, f"{output_dir}\\interpolated_orbits", time_vec, pos_vec, ["Position", "m"], True)
+    plots(log, f"{output_dir}\\interpolated_orbits", time_vec, vel_vec, ["Velocity", "m/s"], True)
 
 
-def apply_test(log, sat_orbits, sats_to_plot):
+def apply_test(log, output_dir, sat_orbits):
     sat_list = sat_orbits.get_satellites()
     epoch_list = list(sat_orbits.get_epochs())
     epoch_list = epoch_list[5:-5]
 
     time_vec = []
-    data_vec = {}
-    for sat in sats_to_plot:
-        data_vec[sat] = []
+    pos_vec = {}
+    vel_vec = {}
+    for sat in sat_list:
+        pos_vec[sat] = []
+        vel_vec[sat] = []
 
     for epoch in epoch_list:
         time_vec.append(epoch)
         for sat in sat_list:
-            precise_pos, precise_vel, precise_dt = sat_orbits.get_orbit_precise(sat, epoch)
-            nav_pos, nav_vel, nav_dt = sat_orbits.get_orbit_broadcast(sat, epoch)
+            precise_pos, precise_vel, _ = sat_orbits.get_orbit_precise(sat, epoch)
+            nav_pos, nav_vel, _, _ = sat_orbits.get_orbit_broadcast(sat, epoch)
 
-            if sat in sats_to_plot:
-                log.info(f"[POS] {epoch}, {sat}, nav position={nav_pos}[m], precise position={precise_pos}[m] : "
-                         f"diff={precise_pos - nav_pos}[m]")
-                #log.info(f"[VEL] {epoch}, {sat}, nav velocity={nav_vel}[m/s], precise velocity={precise_vel}[m/s] : "
-                #         f"diff={precise_vel - nav_vel}[m/s]")
-                #log.info(f"[DT] {epoch}, {sat}, nav dt={nav_dt}[s], precise dt={precise_dt}[s] : "
-                #         f"diff={precise_dt - nav_dt}[s]")
+            log.info(f"[POS] {epoch}, {sat}, nav position={nav_pos}[m], precise position={precise_pos}[m] : "
+                     f"diff={precise_pos - nav_pos}[m]")
+            log.info(f"[VEL] {epoch}, {sat}, nav velocity={nav_vel}[m/s], precise velocity={precise_vel}[m/s] : "
+                     f"diff={precise_vel - nav_vel}[m/s]")
 
-                data_vec[sat].append(precise_dt - nav_dt)
+            pos_vec[sat].append(precise_pos - nav_pos)
+            vel_vec[sat].append(precise_vel - nav_vel)
 
-    plots_1d(time_vec, data_vec)
+    plots(log, f"{output_dir}\\orbit_differences", time_vec, pos_vec, ["Position", "m"], False)
+    plots(log, f"{output_dir}\\orbit_differences", time_vec, vel_vec, ["Velocity", "m/s"], False)
+
+
+def create_folder():
+    data_dir = str(RUNS_PATH)
+    if data_dir[-1] != '//':
+        data_dir = data_dir + '//'
+    data_dir = data_dir + time.strftime('%Y-%m-%dT%HH%MM%SS', time.localtime()) + '_SAT_ORBITS//'
+    data_dir = os.path.abspath(data_dir)
+
+    # try to create data dir
+    if not os.path.exists(data_dir):
+        try:
+            data_dir = os.path.abspath(data_dir)
+            os.makedirs(data_dir)
+            os.makedirs(f"{data_dir}\\orbit_differences")
+            os.makedirs(f"{data_dir}\\interpolated_orbits")
+
+        except:
+            raise IOError(f"Cannot create dir: {data_dir}")
+    return data_dir
 
 
 def main():
-    # initialize logger objects
-    set_logs("DEBUG")
-    log = get_logger(MAIN_LOG)
-
-    log.info("Satellite Orbits Tests - (SP3 vs RINEX NAV orbit differences")
-
+    ########################################
+    # ------- Script Configurations ------ #
     # configuring sp3 and nav files
     sp3_file = ["datasets/gnss/BRUX/COD0R03FIN_20190140000_01D_05M_ORB.SP3"]
     rnx_nav_file = "datasets/gnss/BRUX/BRDC00IGS_R_20190140000_01D_MN.rnx"
     gal_nav_type = "FNAV"  # FNAV or INAV
-    sat_lst = ["E01", "E02",
-               "G01", "G02"]
-    sats_to_plot = [get_satellite(x) for x in sat_lst]  # select satellites to plot
+
+    # Define first and last epochs for the test (optional, set to None to run the full file)
+    first_epoch = "2019-01-14 10:00:00"  # may be set to None
+    last_epoch = "2019-01-14 18:00:00"  # may be set to None
+
+    # Define interpolation interval and time period
+    first_interpolation_epoch = "2019-01-14 10:15:00"
+    last_interpolation_epoch = "2019-01-14 10:16:00"
+    interpolation_period = 1  # in seconds
+
+    # --- End of Script Configurations --- #
+    ########################################
+
+    output_dir = create_folder()
+
+    # initialize logger objects
+    set_logs("DEBUG", f"{output_dir}\\log.txt")
+    log = get_logger(MAIN_LOG)
+
+    log.info("Executing test: Satellite Orbit Differences - SP3 vs RINEX Nav orbit differences")
 
     # construct data managers
     nav_data = NavigationData()
@@ -111,12 +170,17 @@ def main():
     RinexNavReader(rnx_nav_file, nav_data, gal_nav_type)
 
     log.info("Launching SatelliteOrbits constructor")
-    sat_orbits.init(nav_data, sp3_file, True, interp_order=9, first_epoch="2019-01-14 10:00:00",
-                    last_epoch="2019-01-14 15:00:00")
+    sat_orbits.init(nav_data, sp3_file, True, interp_order=9, first_epoch=first_epoch, last_epoch=last_epoch)
 
-    apply_test_interpolation(log, sat_orbits, sats_to_plot)
+    log.info("Executing Satellite Orbit Test 1: (SP3 vs RINEX Nav) orbit differences")
+    apply_test(log, output_dir, sat_orbits)
 
-    log.info("Test finished successfully")
+    log.info("Executing Satellite Orbit Test 2: (SP3 vs RINEX Nav) interpolated orbit differences")
+    apply_test_interpolation(log, output_dir, sat_orbits, first_interpolation_epoch,
+                             last_interpolation_epoch, interpolation_period)
+
+    log.info("Test finished successfully!")
+    log.info(f"Outputs saved to {output_dir}")
 
 
 print("#--------------------------------------------------#")

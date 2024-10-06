@@ -1,10 +1,9 @@
 tasks release 1.0:
     [ ] melhorar o modulo de post processing:
         [X] clean everything up (pain)
-        [ ] adicionar o plot planimetrico
-        [ ] Clean up dos scripts sat_orbits e sat_clocks
-        [ ] Criar script plot_observations from input rinex file
-            - no futuro poderá ficar um script de observation analysis (compute code-carrier divergence por exemplo)
+        [X] adicionar o plot planimetrico
+        [X] Clean up dos scripts sat_orbits e sat_clocks
+
     [ ] fix all documentation docstrings
         [ ] to either Args or Arguments... Same for return or returns...
             - see https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html
@@ -50,6 +49,8 @@ nice to have, but not for now
     [ ] add trace file with tropo, iono, clock delays, ggto, etc... that form the observable
     [ ] add shapiro correction (Eq. 19.14 of handbook)
     [ ] improve computation of weight matrix W, taking inspiration from https://gnss-sdr.org/docs/sp-blocks/pvt/#precise-point-positioning
+    [ ] Criar script plot_observations from input rinex file
+            - no futuro poderá ficar um script de observation analysis (compute code-carrier divergence por exemplo)
 
 
 # Relase 1.3 (INS - IMU Emulator - Loosely Coupled)
