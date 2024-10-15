@@ -1,5 +1,7 @@
-""" GNSSNavPy Script that launches the execution of the GNSS Positioning and Time (PNT) Solver.
-Depending on the user configurations, the Solver may execute a different PNT algorithm.
+""" Main scrip to execute the GNSS Positioning and Time (PNT) Solver.
+
+The `main_gnss.py` script launches the execution of the GNSS Positioning and Time (PNT) Solver.
+Depending on the user configurations, the Solver may execute different PNT algorithms.
 Currently, the available algorithms are:
     * Single Point Positioning (SPS)
     * Pseudorange Precise Point Positioning (PR-PPP)
@@ -7,7 +9,14 @@ Currently, the available algorithms are:
 To run `main_gnss.py` please do:
     $ python main_gnss.py <path_to_config>
 
-The configuration are stored in the `configs` folder.
+where:
+    <path_to_config>: Path to the configuration file. Examples of configuration files are stored in the project folder
+        :file:`../configs`
+
+Usage:
+    To execute the script, pass the path to the configuration file:
+
+        $ python main_gnss.py configs/sample_config.xml
 """
 import sys
 import json

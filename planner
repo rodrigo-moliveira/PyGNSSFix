@@ -1,5 +1,5 @@
 tasks release 1.0:
-    [ ] melhorar o modulo de post processing:
+    [X] melhorar o modulo de post processing:
         [X] clean everything up (pain)
         [X] adicionar o plot planimetrico
         [X] Clean up dos scripts sat_orbits e sat_clocks
@@ -9,13 +9,16 @@ tasks release 1.0:
             - see https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html
         [ ] limpar o código / solve all TODOs
 
+    [ ] Update readme and cleanup all repository.
+    [ ] fazer uma "campanha de validação". Fazer setup da config dos datasets. comparar precise vs nav products. Single freq / Single const vs Dual freq / Dual Const...
+        e brincar com as configurações para fazer fine tuning ao algo. Criar cenários, etc.
+    [ ] Merge to develop and start new branch
+
     [ ] criar um check que verifique os ficheiros e configurações obrigatórias para cada modelo (SPS, SPS_IF, PPPP...)
         [ ] por exemplo, por agora o ficheiro nav é sempre obrigatório, mas isso tem de mudar depois..
         [ ] ver o que acontece quando configuro 3 observações. Deve dar um erro!! Este SW apenas dá para 1 ou 2
 
-    [ ] revisão final do repositório. Update readme
-    [ ] fazer uma "campanha de validação": comparar precise vs nav products. Single freq / Single const vs Dual freq / Dual Const...
-        e brincar com as configurações para fazer fine tuning ao algo. Criar cenários, etc.
+
 
 
 

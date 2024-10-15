@@ -1,4 +1,7 @@
-"""GNSSNavPy Script that launches the execution of the GNSS Post Processing / Performance Manager algorithm.
+""" Main scrip to execute the GNSS Post Processing / Performance Manager algorithm.
+
+The post_processing_gnss.py` script launches the execution of the GNSS Post Processing algorithm.
+
 This algorithm is responsible for evaluating the performance of the PNT estimation:
     * Computes the estimation positioning errors
     * Performs statistical tests on the Normal Equations post-fit residuals (residual analysis)
@@ -7,7 +10,14 @@ This algorithm is responsible for evaluating the performance of the PNT estimati
 To run `post_processing_gnss.py` please do:
     $ python post_processing_gnss.py <path_to_config>
 
-The configuration are stored in the `configs` folder.
+where:
+    <path_to_config>: Path to the configuration file. Examples of configuration files are stored in the project folder
+        :file:`../configs`
+
+Usage:
+    To execute the script, pass the path to the configuration file:
+
+        $ python post_processing_gnss.py configs/sample_config.xml
 """
 import json
 import sys
