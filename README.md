@@ -7,6 +7,8 @@ cd /c/Users/rooo/Documents/other_projects/PyGNSSFix/
  pip freeze > requirements.txt
 
 
+to use sphinx, in pycharm terminal do:
+	 ./make.bat html
 
 
 Documentation:

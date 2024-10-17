@@ -141,4 +141,4 @@ class RinexClockReader:
 
                     self.clocks.set_data(date, sat, clock_bias)
                 except Exception as e:
-                    self.log.warn(f"Unable to process line: {line} due to error: {e}")
+                    self.log.warning(f"Unable to process line: {line} due to error: {e}")

@@ -1,5 +1,5 @@
 """ Module with CSV Data Manager that manages all input data for the Post Processing GNSS Run """
-import traceback
+import logging
 
 from src.io.states import OUTPUT_FILENAME_MAP
 from src.data_mng.container import Container
@@ -8,12 +8,38 @@ from .csv_data import CSVData
 
 
 class GnssRunStorageManager(Container):
+    """
+        Data Manager class that stores all the data saved during the execution of the PNT GNSS algorithm. This
+        data manager is used by the Post-Processing / Performance Evaluation algorithm.
+
+        Derives from the :py:class:`Container` class.
+
+        All outputs are stored as instances of the :py:class:`CSVData` class.
+
+        Attributes:
+            time(CSVData)
+            position(CSVData)
+            velocity(CSVData)
+            clock_bias(CSVData)
+            dop_ecef(CSVData)
+            dop_local(CSVData)
+            clock_bias_rate(CSVData)
+            isb(CSVData)
+            tropo_wet(CSVData)
+            pr_prefit_residuals(CSVData)
+            pr_postfit_residuals(CSVData)
+            iono(CSVData)
+            satellite_azel(CSVData)
+            pr_rate_prefit_residuals(CSVData)
+            pr_rate_postfit_residuals(CSVData)
+            obs(CSVData)
+        """
     __inputs__ = ["time", "position", "velocity", "clock_bias", "dop_ecef", "dop_local", "clock_bias_rate", "isb",
                   "tropo_wet", "pr_prefit_residuals", "pr_postfit_residuals", "iono", "satellite_azel",
                   "pr_rate_prefit_residuals", "pr_rate_postfit_residuals", "obs"]
     __slots__ = __inputs__ + ["_available", "log"]
 
-    def __init__(self, log):
+    def __init__(self, log: logging.Logger):
         super().__init__()
         self.log = log
 
@@ -163,12 +189,14 @@ class GnssRunStorageManager(Container):
         """
         Returns the required CSVData object from the data manager.
 
-        Arguments:
+        Args:
             name(str): name of CSVData object to fetch
 
         Returns:
             CSVData: returns the fetched CSVData object.
-                If the requested data is unavailable, raises a ValueError exception
+
+        Raises:
+            ValueError: If the requested data is unavailable, an exception is raised
         """
         if name in self._available:
             return getattr(self, name)
@@ -189,4 +217,4 @@ class GnssRunStorageManager(Container):
                 getattr(self, output_name).read_data(in_file)
                 self._available.append(output_name)
             except Exception as e:
-                self.log.warn(f"Did not successfully import data '{output_name}' due to: {repr(e)}")
+                self.log.warning(f"Did not successfully import data '{output_name}' due to: {repr(e)}")

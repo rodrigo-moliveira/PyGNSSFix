@@ -1,19 +1,22 @@
+""" Satellite Geometry Module.
+This module computes several geometry-related data for the reconstruction of GNSS observation equations.
+"""
 from datetime import timedelta
 import numpy as np
 
-from src.constants import SPEED_OF_LIGHT, MU_WGS84, EARTH_ANGULAR_RATE
+from src.constants import SPEED_OF_LIGHT
 from src.io.config import EnumTransmissionTime
 from src.models.frames import enu2azel, ecef2enu, cartesian2geodetic
 from src.data_mng import Container
-from src.errors import TimeSeriesError
 from src.models.gnss_models.navigation import compute_tx_time
 from src.common_log import MODEL_LOG, get_logger
 
 
 class SatelliteGeometry(Container):
     """
-    SatelliteGeometry class. This class is a container that stores geometry-related data for the
-    reconstruction of GNSS observation equations. It stores the following data (for a single epoch and satellite):
+    `SatelliteGeometry` class, inherits from the `Container` class.
+    This class is a container that stores geometry-related data for the reconstruction of GNSS observation
+    equations. It stores the following data (for a single epoch and satellite):
 
     Attributes:
         transit_time(float): transmission time (time that signal takes to travel from the satellite to the receiver)
@@ -35,6 +38,7 @@ class SatelliteGeometry(Container):
                  "drift_rel_correction"]
 
     def __init__(self):
+        """ Base Constructor with no arguments. The attributes are filled in the `compute` method.  """
         super().__init__()
         self.transit_time = 0
         self.time_emission = None
@@ -60,8 +64,8 @@ class SatelliteGeometry(Container):
 
     def compute(self, sat, epoch, state, constellation, compute_tx, PR_obs, sat_orbits, sat_clocks):
         """
-        compute satellite-related quantities (tropo, iono, transmission time, etc.) to be used in the PVT gnss_models
-        reconstruction equation, for a given satellite.
+        compute satellite-related quantities (tropo, iono, transmission time, etc.) to be used in the reconstruction
+        of GNSS observables, for a given satellite.
 
         Args:
             sat(src.data_types.gnss.Satellite): the satellite to compute the geometry data
@@ -75,7 +79,8 @@ class SatelliteGeometry(Container):
 
 
         Reference:
-            [1] Springer Handbook of Global Navigation Satellite Systems, Peter J.G. Teunissen, Oliver Montenbruck, Springer Cham, 2017
+            [1] Springer Handbook of Global Navigation Satellite Systems, Peter J.G. Teunissen, Oliver Montenbruck,
+                Springer Cham, 2017
         """
         rec_pos = state.position
         time_correction = sat_clocks.nav_data.header.time_correction if sat_clocks.nav_data is not None else None
@@ -99,8 +104,7 @@ class SatelliteGeometry(Container):
         else:
             true_range = transit * SPEED_OF_LIGHT
 
-        # TODO: apply shapiro correction here
-        # Shapiro correction (Eq. (19.14) of [1])
+        # TODO: apply shapiro correction here (Eq. (19.14) of ref [1])
 
         # get satellite elevation and azimuth angles (from the receiver), ENU frame
         lat, long, h = cartesian2geodetic(rec_pos[0], rec_pos[1], rec_pos[2])
@@ -125,6 +129,9 @@ class SatelliteGeometry(Container):
 
 
 class SystemGeometry:
+    """ System Geometry class.
+    This class is serves as a dataframe to store `SatelliteGeometry` objects for all available satellites.
+    """
     def __init__(self, obs_data, sat_clocks, sat_orbits):
         """
         Constructor of the SystemGeometry. This is a container that stores data (instances of `SatelliteGeometry`)
@@ -151,24 +158,52 @@ class SystemGeometry:
         return self._data.items()
 
     def get_satellites(self):
-        """Return list of available satellites"""
+        """ Return list of available satellites.
+
+        Returns:
+            list[src.data_types.gnss.Satellite]: list of all available satellites.
+        """
         return list(self._data.keys())
 
     def remove(self, sat):
-        """Remove a satellite from the internal dict"""
+        """ Remove a satellite from the internal dataframe dict """
         if sat in self._data:
             self._data.pop(sat)
 
     def get(self, attribute, sat):
+        """
+        Returns the required attribute for the given satellite. The attribute is one of the attributes of the
+        :py:class:`SatelliteGeometry` class.
+
+        Args:
+             attribute(str): the string name of the attribute to fetch
+             sat(src.data_types.gnss.Satellite): the satellite to fetch the data
+
+        Returns:
+            Any: The value of the queried attribute. The method returns None if the satellite is not available in
+                the internal dataframe dict.
+        """
         if sat in self._data:
             return getattr(self._data[sat], attribute)
         return None
 
     def set(self, attribute, value, sat):
+        """
+        Sets the provided attribute for the given satellite. The attribute is one of the attributes of the
+        :py:class:`SatelliteGeometry` class.
+
+        Args:
+             attribute(str): the string name of the attribute to set
+             value(Any): the value of the attribute
+             sat(src.data_types.gnss.Satellite): the satellite to fill in the attribute data
+
+        Raises:
+            KeyError: a `KeyError` exception is raised if the provided satellite is unavailable
+        """
         if sat in self._data:
             setattr(self._data[sat], attribute, value)
         else:
-            raise TimeSeriesError(f"Satellite {sat} not in SystemGeometry data structure")
+            raise KeyError(f"Satellite {sat} not in SystemGeometry data structure")
 
     def compute(self, epoch, state, metadata):
         """
@@ -201,7 +236,7 @@ class SystemGeometry:
                 geometry.compute(sat, epoch, state, sat.sat_system, metadata["TX_TIME_ALG"], observable_lst[0],
                                  self.sat_orbits, self.sat_clocks)
                 self._data[sat] = geometry
-            except (KeyError, TimeSeriesError) as e:
+            except Exception as e:
                 log = get_logger(MODEL_LOG)
                 log.warning(f"Failed to compute geometry for sat {sat} at epoch {epoch} due to:"
                             f" {e}")
@@ -218,7 +253,7 @@ class SystemGeometry:
         Args:
             sat (src.data_types.gnss.Satellite) : satellite to compute the LOS vector
 
-        Return:
+        Returns:
             numpy.ndarray : Line of sight for [x, y, z] axis of ECEF frame
         """
         return self.get("los", sat)
@@ -227,4 +262,5 @@ class SystemGeometry:
         return str(self._data)
 
     def __len__(self):
+        """ Returns the number of available satellites """
         return len(self.get_satellites())

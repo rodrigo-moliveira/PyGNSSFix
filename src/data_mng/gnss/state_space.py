@@ -1,3 +1,5 @@
+""" GNSS Sate Space Module
+"""
 import numpy as np
 
 from src.data_mng import Container
@@ -53,9 +55,9 @@ class GnssStateSpace(Container):
         self.epoch = epoch
 
     def clone(self):
-        """Returns a copy of this GnssStateSpace object. All state variables are deep-copied.
+        """ Returns a copy of this GnssStateSpace object. All state variables are deep-copied.
         Returns:
-            GnssStateSpace : cloned GnssStateSpace object
+            GnssStateSpace : cloned GnssStateSpace instance
         """
         _states = self.get_additional_info("states")
         state = GnssStateSpace(position=self.position, velocity=self.velocity, clock_bias=self.clock_bias,
@@ -154,7 +156,7 @@ class GnssStateSpace(Container):
     def update_sat_list(self, sat_list):
         """ Update the satellite list of the internal iono state with the one provided as argument
 
-        Parameters:
+        Args:
             sat_list(list[src.data_types.gnss.Satellite]) : list of available satellites
         """
         for sat in sat_list:
@@ -191,11 +193,13 @@ class GnssStateSpace(Container):
     def get_clock_bias(self, constellation, time_correction):
         """
         Computes the clock bias for the required constellation, applying the ISB correction
-        in case the slave constellation is selected
+        in case the slave constellation is selected.
 
         Args:
-             constellation(str)
-             time_correction(dict or None): dict with the GGTO data from the NavigationData header
+             constellation(str): the clock bias is computed with respect to the system time defined by the
+                `constellation` parameter
+             time_correction(dict or None): dict with the GGTO data from the
+                :py:class:`src.data_mng.gnss.navigation_data.NavigationHeader` instance
         """
         if "isb" in self.get_additional_info("states"):
             if constellation == self.get_additional_info("clock_master"):
@@ -208,6 +212,33 @@ class GnssStateSpace(Container):
         return clock
 
     def get_isb(self, constellation, time_correction):
+        """
+        Fetches the ISB (Inter-System bias) for the required constellation. Two alternatives are available:
+            * the filter estimates the ISB together with the GGTO (GPS-to-GAL Time Offset), that is
+                filter_ISB = (dr(B) - dr(A)) - t^AB
+            * the filter applies the GGTO correction from the navigation data and only estimates the ISB, that is
+                filter_ISB = (dr(B) - dr(A))
+
+        In any case, the convertion from the clock bias of the master to the slave constellation is as follows:
+            dtr(B) = dtr(A) + ISB(AB)
+        where:
+            ISB = (dr(B) - dr(A)) - t^AB
+            dtr(A) and dtr(B) are the master and slave receiver clock biases
+            dr(A) and dr(B) are the master and slave receiver hardware biases
+            t^AB is the system time offset of B wrt A (t_B - t_A)
+
+        For more information, see the discussion of Eqs. (21.60) and (21.61) of [1].
+
+        Args:
+             constellation(str): the clock bias is computed with respect to the system time defined by the
+                `constellation` parameter
+             time_correction(dict or None): dict with the GGTO data from the
+                :py:class:`src.data_mng.gnss.navigation_data.NavigationHeader` instance
+
+        Reference:
+            [1] Springer Handbook of Global Navigation Satellite Systems, Peter J.G. Teunissen, Oliver Montenbruck,
+                Springer Cham, 2017
+        """
         estimate_ggto = config_dict.get("model", "estimate_ggto")
 
         ggto = 0.0
@@ -222,7 +253,7 @@ class GnssStateSpace(Container):
         # else: GGTO is estimated together with the ISB
         return self.isb - ggto
 
-    def add_additional_info(self, arg, val):
+    def add_additional_info(self, arg: str, val):
         self._info[arg] = val
 
     def get_additional_info(self, arg):

@@ -1,5 +1,6 @@
-"""Data Manager for GNSS Algorithms
+""" Data Manager for GNSS Algorithms
 """
+import os
 
 from src.io.states import OUTPUT_FILENAME_MAP, get_file_header, export_to_file
 from src.io.config import config_dict, EnumPositioningMode
@@ -26,21 +27,22 @@ class GnssDataManager(Container):
         sat_orbits(SatelliteOrbits): manager of satellite orbits (precise or navigation orbits)
         smooth_obs_data(ObservationData): processed smooth observation data
         iono_free_obs_data(ObservationData): processed iono-free observation data
-        nav_solution(list): navigation solution, list of :py:class:`~src.data_mng.gnss.state_space.GnssStateSpace`
+        nav_solution(list): navigation solution, list of :py:class:`src.data_mng.gnss.state_space.GnssStateSpace`
             objects
 
     """
     __slots__ = [
-        "nav_data",  # Input
-        "obs_data",  # Input
-        "sat_clocks",  # Input
-        "sat_orbits",  # Input
-        "smooth_obs_data",  # Internal data
-        "iono_free_obs_data",  # Internal data
-        "nav_solution"  # Output
+        "nav_data",             # Input
+        "obs_data",             # Input
+        "sat_clocks",           # Input
+        "sat_orbits",           # Input
+        "smooth_obs_data",      # Internal data
+        "iono_free_obs_data",   # Internal data
+        "nav_solution"          # Output
     ]
 
     def __init__(self):
+        """ Default constructor with no arguments """
         super().__init__()
 
         self.nav_data = NavigationData()  # Input Navigation Data
@@ -59,32 +61,39 @@ class GnssDataManager(Container):
 
     def add_data(self, data_name, data):
         """
-        Add data to available.
+        Adds the provided data to this DataManager instance.
+
         Args:
-            data_name(str): data name matching one of the class attributes
-            data: data object
+            data_name(str): the string name of the data to fill, matching one of the class attributes
+            data(Any): data object to be stored
+
+        Raises:
+            AttributeError: an `AttributeError` is raised if the `data_name` string does not match one of the
+                class attributes
         """
         if data_name in self.__slots__:
             setattr(self, data_name, data)
         else:
-            raise ValueError(f"Unsupported data: {data_name}, not in {self.__slots__[0:-2]}")
+            raise AttributeError(f"Unsupported data: {data_name}, not in {self.__slots__}")
 
     def get_data(self, data_name):
         """
         Args:
             data_name(str): the data to be fetched
+        Returns:
+            Any: returns the queried data for the provided `data_name` attribute
         """
         # single data
         if isinstance(data_name, str):
             if data_name in self.__slots__:
                 return getattr(self, data_name)
             else:
-                raise ValueError(f'{data_name} is not available.')
+                raise AttributeError(f'{data_name} is not available.')
 
     def get_clean_obs_data(self):
         """
-        Return:
-            returns the observation data for the PVT processing, depending on user configuration
+        Returns:
+            ObservationData: returns the observation data for the PVT processing, depending on user configuration
         """
         model = config_dict.get("model", "mode")
         if config_dict.get("preprocessor", "compute_smooth"):
@@ -95,6 +104,10 @@ class GnssDataManager(Container):
             return self.obs_data
 
     def get_raw_obs_data(self):
+        """
+        Returns:
+            ObservationData: returns the raw observation data for the PVT processing
+        """
         return self.obs_data
 
     def read_inputs(self, trace_dir):
@@ -102,8 +115,6 @@ class GnssDataManager(Container):
         Function to read the input data. The data files are read from the user configurations
         according to the chosen algorithm.
         There are mandatory inputs for each model (SPS, PPP).
-
-        TODO: this is the place to implement the mode manager (SPS / PPP require different mandatory files)
 
         Args:
             trace_dir(str): path to write trace files
@@ -145,7 +156,7 @@ class GnssDataManager(Container):
             self._trace_files(trace_dir, use_precise_products)
 
     def _trace_files(self, trace_dir, use_precise_products):
-        import os
+
         inputs_dir = f"{trace_dir}\\inputs"
         try:
             os.makedirs(inputs_dir)
@@ -163,7 +174,7 @@ class GnssDataManager(Container):
                 file.write(str(self.get_data("sat_orbits")))
 
     def save_data(self, directory):
-        """Saves the output data (contained in nav_solution) to the provided directory"""
+        """ Saves the navigation solution (contained in the `nav_solution` attribute) to the output file """
         log = get_logger(IO_LOG)
         log.info(f"storing data to {directory}...")
         file_list = {}

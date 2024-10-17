@@ -1,3 +1,8 @@
+""" Satellite Orbits Module
+This module implements the Satellite Orbits manager, that manages the computation of satellite orbits in the 
+reconstruction of GNSS observations.
+"""
+
 from collections import OrderedDict
 import numpy
 import numpy as np
@@ -17,23 +22,32 @@ __all__ = ["SatelliteOrbits"]
 
 class SatelliteOrbits:
     """
-    Satellite Orbits DataFrame class
-    this class stores and manages satellite orbits, either provided from:
-        * navigation message (RINEX NAV)
-        * precise products (SP3)
+    Satellite Orbits Manager class.
+    This class stores and manages satellite orbits, either provided from:
+        * navigation message (RINEX Navigation files)
+        * precise products (SP3 files)
+
+    Attributes:
+        precise_data(OrderedDict): attribute that stores the precise orbit products. It is an :py:class:`OrderedDict`
+            defined as:
+                * keys -> :py:class:`Satellite` instances.
+                * values -> :py:class:`TimeSeries` instances with the orbit products.
+        nav_data(src.data_mng.gnss.navigation_data.NavigationData): attribute that stores the broadcast navigation data
+        use_precise_products(bool): True to use precise orbits and False to use broadcast orbits
+        interp_order(int): interpolation order for satellite orbits
     """
 
     def __init__(self):
-        """Constructor of the `SatelliteOrbits` object"""
-        self._data = OrderedDict()  # contains the SP3 data
+        """ Constructor of the `SatelliteOrbits` instance """
+        self.precise_data = OrderedDict()  # contains the SP3 data
         self.nav_data = None  # contains the broadcast navigation data
         self.use_precise_products = False
         self.interp_order = 0
 
     def init(self, nav_data, sp3_files, use_precise_products, interp_order=9, first_epoch=None, last_epoch=None):
         """
-        Initialize this SatelliteOrbits instance with navigation and precise data.
-        The argument `use_precise_products` allows to select which satellite orbits to output.
+        Initialize this `SatelliteOrbits` instance with navigation and precise data.
+        The argument `use_precise_products` allows to select which satellite orbits to use.
         If it is set to True, then the precise SP3 data is used, if set to False the
         navigation orbits are used instead
 
@@ -43,8 +57,8 @@ class SatelliteOrbits:
             sp3_files(list): list of SP3 files from the user configuration
             use_precise_products(bool): True to use precise orbits and False to use broadcast navigation orbits
             interp_order(int): interpolation order for satellite clocks (default order is 9)
-            first_epoch(str or None): first observation epoch
-            last_epoch(str or None): last observation epoch
+            first_epoch(str or None): first observation epoch to read
+            last_epoch(str or None): last observation epoch to read
         """
         self.nav_data = nav_data
         self.use_precise_products = use_precise_products
@@ -57,20 +71,24 @@ class SatelliteOrbits:
                 SP3OrbitReader(file, self, first_epoch, last_epoch)
 
     def __str__(self):
-        """Print the SP3 data to a string, for debug purposes"""
+        """ Print the precise orbit data to a string, for debug purposes """
         myStr = f"SatelliteOrbits:\n"
-        for sat, data in self._data.items():
+        for sat, data in self.precise_data.items():
             myStr += str(sat) + f"\n{str(data)}\n"
 
         return myStr
 
     def set_data(self, epoch: Epoch, satellite: Satellite, position: numpy.ndarray):
         """
-        method to set a satellite orbit data point for a given epoch and satellite
+        Method to set a satellite orbit data point for a given epoch and satellite
+
         Args:
-            epoch (Epoch)
-            satellite (Satellite)
+            epoch (Epoch): epoch to set the orbit data point
+            satellite (Satellite): satellite to set the orbit data point
             position (numpy.ndarray) : satellite orbit from the SP3 Clock file (ECEF cartesian components)
+
+        Raises:
+            AttributeError: this exception is raised if one of the input arguments is not of the valid type.
         """
 
         if not isinstance(epoch, Epoch):
@@ -83,30 +101,38 @@ class SatelliteOrbits:
             raise AttributeError(f'Third argument should be a numpy.ndarray object. Type {type(position)} '
                                  f'was provided instead')
 
-        if satellite in self._data:
-            self._data[satellite].set_data(epoch, position)
+        if satellite in self.precise_data:
+            self.precise_data[satellite].set_data(epoch, position)
         else:
             timeseries = TimeSeries()
             timeseries.set_data(epoch, position)
-            self._data[satellite] = timeseries
+            self.precise_data[satellite] = timeseries
 
     # Getters
-    def get_data(self):
-        return self._data
+    def get_data(self) -> OrderedDict:
+        """ Returns the precise orbit products. """
+        return self.precise_data
 
-    def get_sat_data(self, sat):
+    def get_sat_data(self, sat) -> TimeSeries:
+        """
+        Returns:
+            TimeSeries: returns the precise orbit products (saved in a TimeSeries) for the queried satellite
+
+        Raises:
+              KeyError: an exception is raised if the satellite is not available.
+        """
         try:
-            return self._data[sat]
+            return self.precise_data[sat]
         except KeyError:
             raise KeyError(f"The provided SP3 files do not have data for satellite {str(sat)}")
 
-    def get_satellites(self):
-        """Returns a list with all available satellites (from SP3 file)"""
-        return list(self._data.keys())
+    def get_satellites(self) -> list[Satellite]:
+        """ Returns a list with all available satellites (defined in the precise products) """
+        return list(self.precise_data.keys())
 
-    def get_epochs(self):
-        """Returns a list with all available epochs (from SP3 file)"""
-        for key, val in self._data.items():
+    def get_epochs(self) -> list[Epoch]:
+        """ Returns a list with all available epochs (defined in the precise products) """
+        for key, val in self.precise_data.items():
             return val.get_all_epochs()
 
     def get_orbit(self, sat, epoch):
@@ -118,8 +144,8 @@ class SatelliteOrbits:
         they are computed from the provided navigation data.
 
         Args:
-            sat(src.data_types.gnss.Satellite)
-            epoch(src.data_types.date.Epoch)
+            sat(src.data_types.gnss.Satellite): satellite to compute the orbit data
+            epoch(src.data_types.date.Epoch): epoch for the computation
         Returns:
             tuple[numpy.ndarray,numpy.ndarray,float,float]: tuple with satellite position, velocity, relativistic
                 clock correction in [s] and clock drift in [s/s] for the provided satellite and epoch
@@ -136,8 +162,8 @@ class SatelliteOrbits:
         Applies lagrange interpolation when needed (when the provided epoch is in-between data points).
 
         Args:
-            sat(src.data_types.gnss.Satellite)
-            epoch(src.data_types.date.Epoch)
+            sat(src.data_types.gnss.Satellite): satellite to compute the orbit data
+            epoch(src.data_types.date.Epoch): epoch for the computation
         Returns:
             tuple[numpy.ndarray,numpy.ndarray,float]: tuple with satellite position, velocity and clock relativistic
                 correction for the provided satellite and epoch
@@ -175,8 +201,8 @@ class SatelliteOrbits:
         Compute the broadcast satellite orbits from the provided RINEX Navigation data.
 
         Args:
-            sat(src.data_types.gnss.Satellite)
-            epoch(src.data_types.date.Epoch)
+            sat(src.data_types.gnss.Satellite): satellite to compute the orbit data
+            epoch(src.data_types.date.Epoch): epoch for the computation
         Returns:
             tuple[numpy.ndarray,numpy.ndarray,float,float]: tuple with satellite position, velocity, relativistic
                 clock correction in [s] and clock drift in [s/s] for the provided satellite and epoch
@@ -202,7 +228,7 @@ class SatelliteOrbits:
         the receiver and satellite vectors must refer to a common ECEF frame
 
         Args:
-            sat (src.data_types.gnss.Satellite)
+            sat (src.data_types.gnss.Satellite): satellite to compute the orbit data
             time_emission (src.data_types.date.Epoch) : Signal emission time (wrt GPS time system)
             transit (float) : Computed transit time in seconds. Used to rotate the computed satellite ephemeride to the
                             ECEF frame at reception time

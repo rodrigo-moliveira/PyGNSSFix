@@ -1,3 +1,7 @@
+""" Satellite Clocks Module
+This module implements the Satellite Clocks manager, that manages the computation of satellite clock corrections in the
+reconstruction of GNSS observations.
+"""
 from collections import OrderedDict
 
 from src.data_types.date import Epoch
@@ -13,15 +17,24 @@ __all__ = ["SatelliteClocks"]
 
 class SatelliteClocks:
     """
-    Satellite Clocks DataFrame class
-    this class stores and manages satellite clocks, either provided from:
-        * navigation message (RINEX NAV)
-        * precise products (RINEX CLOCK)
+    Satellite Clocks Manager class.
+    This class stores and manages satellite clocks, either provided from:
+        * navigation message (RINEX Navigation files)
+        * precise products (RINEX Clock files)
+
+    Attributes:
+        precise_data(OrderedDict): attribute that stores the precise clock products. It is an :py:class:`OrderedDict`
+            defined as:
+                * keys -> :py:class:`Satellite` instances.
+                * values -> :py:class:`TimeSeries` instances with the clock products.
+        nav_data(src.data_mng.gnss.navigation_data.NavigationData): attribute that stores the broadcast navigation data
+        use_precise_products(bool): True to use precise clocks and False to use broadcast clocks
+        interp_order(int): interpolation order for satellite clocks
     """
 
     def __init__(self):
-        """Constructor of the `SatelliteClocks` object"""
-        self._data = OrderedDict()  # contains the RINEX Clock data
+        """ Constructor of the `SatelliteClocks` instance """
+        self.precise_data = OrderedDict()  # contains the RINEX Clock data
         self.nav_data = None  # contains the broadcast navigation data
         self.use_precise_products = False
         self.interp_order = 0
@@ -31,7 +44,7 @@ class SatelliteClocks:
         Initialize this SatelliteClocks instance with navigation and precise data.
         The argument `use_precise_products` allows to select which satellite clocks to output.
         If it is set to True, then the RINEX Clocks are used, if set to False the navigation clocks
-        are used instead
+        are used instead.
 
         Args:
             nav_data(src.data_mng.gnss.navigation_data.NavigationData): the `NavigationData` with navigation data
@@ -53,20 +66,24 @@ class SatelliteClocks:
                 RinexClockReader(file, self, first_epoch=first_epoch, last_epoch=last_epoch)
 
     def __str__(self):
-        """Print the RINEX clock data to a string, for debug purposes"""
+        """ Print the RINEX clock data to a string, for debug purposes """
         myStr = f"SatelliteClocks:\n"
-        for sat, data in self._data.items():
+        for sat, data in self.precise_data.items():
             myStr += str(sat) + f"\n{str(data)}\n"
 
         return myStr
 
     def set_data(self, epoch: Epoch, satellite: Satellite, clock: float):
         """
-        method to set a satellite clock data point for a given epoch and satellite
+        Method to set a satellite precise clock correction for a given epoch and satellite
+
         Args:
-            epoch (Epoch)
-            satellite (Satellite)
-            clock (float) : satellite clock bias from the RINEX Clock file
+            epoch (Epoch): epoch to set the correction
+            satellite (Satellite): satellite to set the correction
+            clock (float) : value of the precise clock bias correction [s].
+
+        Raises:
+            AttributeError: this exception is raised if one of the input arguments is not of the valid type.
         """
 
         if not isinstance(epoch, Epoch):
@@ -79,32 +96,40 @@ class SatelliteClocks:
             raise AttributeError(f'Third argument should be a float object. Type {type(clock)} '
                                  f'was provided instead')
 
-        if satellite in self._data:
-            self._data[satellite].set_data(epoch, clock)
+        if satellite in self.precise_data:
+            self.precise_data[satellite].set_data(epoch, clock)
         else:
             timeseries = TimeSeries()
             timeseries.set_data(epoch, clock)
-            self._data[satellite] = timeseries
+            self.precise_data[satellite] = timeseries
 
     # Getters
-    def get_data(self):
-        return self._data
+    def get_data(self) -> OrderedDict:
+        """ Returns the precise clock products. """
+        return self.precise_data
 
-    def get_sat_data(self, sat):
+    def get_sat_data(self, sat) -> TimeSeries:
+        """
+        Returns:
+            TimeSeries: returns the precise clock products (saved in a TimeSeries) for the queried satellite
+
+        Raises:
+              KeyError: an exception is raised if the satellite is not available.
+        """
         try:
-            return self._data[sat]
+            return self.precise_data[sat]
         except KeyError:
-            raise KeyError(f"The provided RINEX Clock files do not have data for satellite {str(sat)}")
+            raise KeyError(f"The loaded precise clock products do not have data for satellite {str(sat)}")
 
     def get_clock(self, sat, epoch):
         """
         Compute the satellite clock and drift.
-        If `use_precise_products` is True then the clocks are computed from the RINEX Clock files. Otherwise,
-        they are computed from the provided navigation data.
+        If the attribute `use_precise_products` is True then the clocks are computed from the precise products.
+        Otherwise, they are computed from the broadcast navigation data.
 
         Args:
-            sat(src.data_types.gnss.Satellite)
-            epoch(src.data_types.date.Epoch)
+            sat(src.data_types.gnss.Satellite): satellite to compute the clock bias and drift
+            epoch(src.data_types.date.Epoch): epoch for the computation
         Returns:
             tuple[float, float]: the clock bias (sec) and drift (sec/sec) for the provided satellite and epoch
         """
@@ -114,23 +139,24 @@ class SatelliteClocks:
         else:
             return self.get_clock_broadcast(sat, epoch)
 
-    def get_satellites(self):
-        """Returns a list with all available satellites (RINEX clock)"""
-        return list(self._data.keys())
+    def get_satellites(self) -> list[Satellite]:
+        """ Returns a list with all available satellites (defined in the precise products) """
+        return list(self.precise_data.keys())
 
     def get_epochs(self):
-        """Returns a list with all available epochs (RINEX clock)"""
-        for key, val in self._data.items():
+        """ Returns a list with all available epochs (defined in the precise products) """
+        for key, val in self.precise_data.items():
             return val.get_all_epochs()
 
     def get_clock_precise(self, sat, epoch):
         """
         Compute the precise satellite clocks from the provided RINEX Clock data.
-        Applies linear interpolation when needed (when the provided epoch is in-between data points).
+        Applies linear interpolation when needed (when the queried epoch is in-between data points).
 
         Args:
-            sat(src.data_types.gnss.Satellite)
-            epoch(src.data_types.date.Epoch)
+            sat(src.data_types.gnss.Satellite): satellite for the computation
+            epoch(src.data_types.date.Epoch): Epoch for the computation
+
         Returns:
             float: the clock bias for the provided satellite and epoch
 
@@ -155,8 +181,8 @@ class SatelliteClocks:
         Compute the broadcast satellite clocks from the provided RINEX Navigation data.
 
         Args:
-            sat(src.data_types.gnss.Satellite)
-            epoch(src.data_types.date.Epoch)
+            sat(src.data_types.gnss.Satellite): satellite for the computation
+            epoch(src.data_types.date.Epoch): Epoch for the computation
         Returns:
             tuple[float, float]: the clock bias and clock drift for the provided satellite and epoch
 
@@ -172,8 +198,8 @@ class SatelliteClocks:
         Fetches the closest navigation message valid for the satellite and epoch.
 
         Args:
-            sat(src.data_types.gnss.Satellite)
-            epoch(src.data_types.date.Epoch)
+            sat(src.data_types.gnss.Satellite): satellite to fetch the data
+            epoch(src.data_types.date.Epoch): epoch to fetch the data
         Returns:
             src.data_mng.gnss.navigation_data.NavigationPoint: navigation message
 

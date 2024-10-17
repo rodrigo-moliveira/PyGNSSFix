@@ -1,6 +1,11 @@
+""" Observation Data Module.
+This module implements classes to store the GNSS Observation Data Messages from RINEX Observation files
+"""
+
 from collections import OrderedDict
 from datetime import timedelta
 
+import src.data_types.gnss
 from src.data_types.gnss import DataType, Satellite, Observation
 from src.data_types.date import Epoch
 from src.data_mng import TimeSeries
@@ -11,9 +16,14 @@ __all__ = ["ObservationData"]
 
 class EpochData:
     """
-    Stores all observations for a single epoch. Consists of an OrderedDict:
-        * keys -> satellites
-        * Values -> List of Observation objects with the observations for the given epoch and satellite
+    Epoch Data class.
+    Stores all GNSS observations for a single epoch (for all available satellites).
+
+    Attributes:
+        _data(OrderedDict): The data is stored as an `OrderedDict` defined as:
+            * keys -> :py:class:`Satellite` instances
+            * values -> List of :py:class:`Observation` instances with the observations for the given epoch and
+                satellite
     """
 
     def __init__(self):
@@ -21,11 +31,11 @@ class EpochData:
 
     def set_observable(self, satellite: Satellite, observation: Observation):
         """
-        set a new observation for the provided satellite
+        Set a new observation for the provided satellite.
 
         Args:
-            satellite (Satellite)
-            observation (Observation)
+            satellite (Satellite):
+            observation (Observation):
 
         Raises:
             TimeSeriesError: raises an exception if the observation has already been set (overwriting is not legal!)
@@ -42,20 +52,23 @@ class EpochData:
 
     def get_observables(self, sat: Satellite):
         """
-        Return a list with all observations for the provided satellite
+        Fetches a list with all observations for the provided satellite.
+
         Args:
-            sat (Satellite)
-        Return:
-            list: list with required observations
+            sat (Satellite):
+        Returns:
+            list[Observation]: list with required observations
         """
         return self._data[sat]
 
     def get_code_observables(self, sat: Satellite):
         """
+        Fetches a list with all code observations for the provided satellite.
+
         Args:
-            sat (Satellite)
-        Return:
-            list : list of all code (pseudorange) observables for the provided satellite (only one epoch)
+            sat (Satellite):
+        Returns:
+            list[Observation]: list of all code (pseudorange) observables for the provided satellite
         """
         observables = []
         for obs in self._data[sat]:
@@ -63,50 +76,62 @@ class EpochData:
                 observables.append(obs)
         return observables
 
-    def get_observable(self, sat, obs):
+    def get_observable(self, sat, datatype):
         """
+        Fetches the observation defined by the provided :py:class:`DataType` for the provided satellite.
+
         Args:
-            sat (Satellite)
-            obs (DataType)
-        Return:
-            Observation : returns the required observation, or raises a TimeSeriesError
+            sat (Satellite): satellite to fetch the data
+            datatype (DataType): datatype to fetch the data
+        Returns:
+            Observation : returns the required observation
+        Raises:
+            TimeSeriesError: an exception is raised if the requested observation could not be fetched
         """
         obs_list = self._data[sat]
         for _obs in obs_list:
-            if obs == _obs.datatype:
+            if datatype == _obs.datatype:
                 return _obs
-        raise TimeSeriesError(f"Observation {str(obs)} not found for satellite {str(sat)}")
+        raise TimeSeriesError(f"Observation {str(datatype)} not found for satellite {str(sat)}")
 
-    def has_observable(self, sat: Satellite, obs: Observation):
-        """Returns True if the provided Observation is available
+    def has_datatype(self, sat: Satellite, datatype: DataType):
+        """ Returns True if the observation for the provided DataType and Satellite is available
 
-        Return:
+        Args:
+            sat (Satellite):
+            datatype (DataType):
+
+        Returns:
             bool: True if the observation is available
         """
         obs_list = self._data[sat]
         for _obs in obs_list:
-            if obs == _obs.datatype:
+            if datatype == _obs.datatype:
                 return True
         return False
 
     def get_satellites(self):
         """
-        Return:
-            list: returns a list with all the available satellites
+        Returns:
+            list[Satellite]: returns a list with all the available satellites
         """
         return list(self._data.keys())
 
     def get_satellites_for_constellation(self, constellation):
         """
-        Return:
-            list: returns a list with all the available satellites for the provided constellation
+        Args:
+            constellation(src.data_types.gnss.constellation.Constellation):
+        Returns:
+            list[Satellite]: returns a list with all the available satellites for the provided constellation
         """
         return [sat for sat in list(self._data.keys()) if constellation == sat.sat_system]
 
     def get_sats_for_datatypes(self, datatype_list):
         """
-        Return:
-            list: returns a list with all the available satellites for the provided Observations
+        Args:
+            datatype_list(list[DataType]): list with DataType instances to be queried
+        Returns:
+            list[Satellite]: returns a list with all the available satellites for the provided Observations
         """
         sat_list = []
 
@@ -115,7 +140,7 @@ class EpochData:
 
             # iterate over all requested types
             for datatype in datatype_list:
-                if datatype is not None and not self.has_observable(sat, datatype):
+                if datatype is not None and not self.has_datatype(sat, datatype):
                     has_type = False  # we found out that actually this satellites does NOT have this type
 
             # if this satellite has data for all requested datatypes, append to the list
@@ -135,7 +160,7 @@ class EpochData:
         return data_str
 
     def remove_observable(self, sat: Satellite, datatype: DataType):
-        """Removes all the observations associated with the provided Satellite and DataType"""
+        """ Removes all the observations associated with the provided Satellite and DataType """
         obs_list = self._data[sat]
         new_obs_list = []
 
@@ -148,7 +173,9 @@ class EpochData:
             self._data.pop(sat)
 
     def remove_for_frequency(self, sat: Satellite, datatype: DataType):
-        """Removes all the observations associated with the provided Satellite and frequency"""
+        """ Removes all the observations associated with the provided Satellite and frequency.
+        The frequency is defined in the attribute `freq` of the DataType instance.
+        """
         obs_list = self._data[sat]
         new_obs_list = []
 
@@ -160,13 +187,13 @@ class EpochData:
         else:
             self._data.pop(sat)
 
-    def remove_satellite(self, sat):
+    def remove_satellite(self, sat: Satellite):
         """Removes all the observations associated with the provided Satellite"""
         if sat in self._data:
             self._data.pop(sat)
 
     def copy(self):
-        # self._data = OrderedDict()
+        """ Returns a deep copy of this `EpochData` instance """
         obj = EpochData()
         for sat, obs_list in self._data.items():
             for obs in obs_list:
@@ -176,11 +203,8 @@ class EpochData:
 
 class ObservationData:
     """
-    Observation Data Frame
-
-    Consists of an Ordered Dict:
-        * keys -> epochs (Epoch objects)
-        * values -> EpochData objects
+    Observation Data Frame.
+    This class stores the GNSS observation data for all satellites, that is read from RINEX Observation files.
     """
 
     def __init__(self):
@@ -190,31 +214,33 @@ class ObservationData:
 
     def __str__(self):
         data_str = f"{str(self._data)}"
-
         return data_str
 
     # Setter Methods
     def set_observable(self, epoch: Epoch, satellite: Satellite, obs_type: DataType, value: float):
         """
-        method to set a new Observation
+        Method to set a new Observation
 
         Args:
-            epoch (Epoch) : time at reception of signal (time tag from rinex_parser)
-            satellite (Satellite)
+            epoch (Epoch) : reception time for the observation
+            satellite (Satellite): the satellite of the observation
             obs_type (DataType) : the datatype of the observation
             value (float) : numeric value of the observation
+        Raises:
+            AttributeError: the exception is raised when one of the arguments does not match the required type
         """
         if not isinstance(epoch, Epoch):
-            raise TypeError(f'First argument should be a valid Epoch object. Type {type(epoch)} was provided instead')
+            raise AttributeError(
+                f'First argument should be a valid Epoch object. Type {type(epoch)} was provided instead')
         if not isinstance(satellite, Satellite):
-            raise TypeError(f'Second argument should be a valid Satellite object. Type {type(satellite)} '
-                            f'was provided instead')
+            raise AttributeError(f'Second argument should be a valid Satellite object. Type {type(satellite)} '
+                                 f'was provided instead')
         if not isinstance(obs_type, DataType):
-            raise TypeError(f'Third argument should be a valid DataType object. Type {type(obs_type)} '
-                            f'was provided instead')
+            raise AttributeError(f'Third argument should be a valid DataType object. Type {type(obs_type)} '
+                                 f'was provided instead')
         if not isinstance(value, float) and not isinstance(value, int):
-            raise TypeError(f'Forth argument should be a valid number (float or integer). Type {type(value)} '
-                            f'was provided instead')
+            raise AttributeError(f'Forth argument should be a valid number (float or integer). Type {type(value)} '
+                                 f'was provided instead')
 
         if isinstance(value, int):
             value = float(value)
@@ -226,12 +252,12 @@ class ObservationData:
 
     def set_observation(self, epoch: Epoch, satellite: Satellite, obs: Observation):
         """
-        method to set a new Observation
+        Method to set a new Observation
 
         Args:
-            epoch (Epoch) : time at reception of signal (time tag from rinex_parser)
-            satellite (Satellite)
-            obs (Observation) : the Observation object to be set
+            epoch (Epoch) : reception time for the observation
+            satellite (Satellite): the satellite of the observation
+            obs (Observation) : the Observation instance to be set
         """
         if not self._data.has_epoch(epoch):
             # create EpochData object and fill it
@@ -251,11 +277,11 @@ class ObservationData:
 
     def set_observations_for_constellation(self, constellation, other):
         """
-        method to copy all observations from another :py:class:`ObservationData` object
+        Method to copy all observations from another :py:class:`ObservationData` object
         for the provided constellation
 
         Args:
-            constellation (str) : time at reception of signal (time tag from rinex_parser)
+            constellation (str) : constellation to copy the observations
             other (ObservationData): the input ObservationData object
         """
         # set observations given an ObservationData object
@@ -275,8 +301,8 @@ class ObservationData:
         Fetch the EpochData object for this epoch
 
         Args:
-            epoch (Epoch)
-        Return:
+            epoch (Epoch): epoch to fetch the data
+        Returns:
             EpochData  : epoch data object for this epoch
         Raises:
             TimeSeriesError : if the observations are not found
@@ -286,17 +312,17 @@ class ObservationData:
         except KeyError:
             raise TimeSeriesError(f"Non Existent observations for epoch {str(epoch)}")
 
-    def get_observables_at_epoch(self, epoch: Epoch, sat: Satellite, datatypes: list = None):
+    def get_observables_at_epoch(self, epoch: Epoch, sat: Satellite, datatypes=None):
         """
         Fetch a list of observations for the requested satellite and epoch
 
         Args:
-            sat (Satellite)
-            epoch (Epoch)
-            datatypes (list)
-        Return:
-            list : list of observables for the provided sat and epoch. If the datatype list is provided, then the return
-            list is filtered accordingly
+            sat (Satellite) : satellite to fetch the data
+            epoch (Epoch): epoch to fetch the data
+            datatypes (list[DataType]): datatype list to fetch the data
+        Returns:
+            list[Observation]: list of observables for the provided sat and epoch. If the datatype list is provided,
+                then the return list is filtered accordingly
         Raises:
             TimeSeriesError : if the observations are not found
         """
@@ -310,50 +336,57 @@ class ObservationData:
             raise TimeSeriesError(f"Non Existent Observation for satellite {str(sat)} "
                                   f"and epoch {str(epoch)}")
 
-    def get_observable_at_epoch(self, sat: Satellite, epoch: Epoch, obs: DataType):
+    def get_observable_at_epoch(self, sat: Satellite, epoch: Epoch, datatype: DataType):
         """
         Fetch the requested Observation from the database
 
         Args:
-            sat (Satellite)
-            epoch (Epoch)
-            obs (DataType)
-        Return:
+            sat (Satellite) : satellite to fetch the data
+            epoch (Epoch): epoch to fetch the data
+            datatype (DataType): datatype to fetch the data
+        Returns:
             Observation : the requested Observation
         Raises:
-            TimeSeriesError : if the Observation is not found
+            TimeSeriesError : the exception is raised if the Observation is not found
         """
         try:
-            return self._data[epoch].get_observable(sat, obs)
+            return self._data[epoch].get_observable(sat, datatype)
         except KeyError:
-            raise TimeSeriesError(f"Non Existent Observation for type {str(obs)}, satellite {str(sat)} "
+            raise TimeSeriesError(f"Non Existent Observation for type {str(datatype)}, satellite {str(sat)} "
                                   f"and epoch {str(epoch)}")
 
-    def get_epochs(self):
+    def get_epochs(self) -> list[Epoch]:
+        """ Returns a list with all available epochs """
         return self._data.get_all_epochs()
 
-    def get_types(self, constellation):
+    def get_types(self, constellation: src.data_types.gnss.Constellation) -> list[DataType]:
+        """ Returns a list with all available datatypes for the provided constellation """
         return self._types[constellation]
 
-    def get_code_types(self, constellation):
+    def get_code_types(self, constellation) -> list[DataType]:
+        """ Returns a list with all available code datatypes for the provided constellation """
         types = list(self.get_types(constellation))
         code_types = [x for x in types if DataType.is_code(x)]
         return code_types
 
-    def get_doppler_types(self, constellation):
+    def get_doppler_types(self, constellation) -> list[DataType]:
+        """ Returns a list with all available doppler datatypes for the provided constellation """
         types = list(self.get_types(constellation))
         code_types = [x for x in types if DataType.is_doppler(x)]
         return code_types
 
-    def get_rate(self):
+    def get_rate(self) -> float:
+        """ Returns the rate between observations in seconds
+        Raises:
+            TimeSeriesError: the exception is raised if the dataset is empty
+        """
         epochs = self.get_epochs()
         if len(epochs) > 2:
             return (epochs[1] - epochs[0]).total_seconds()
         raise TimeSeriesError(f"Observation Data is empty")
 
-    def get_first_arc_epoch(self, sat, epoch, rate):
-        """Return the first epoch of the arc, given the provided rate
-        """
+    def get_first_arc_epoch(self, sat: Satellite, epoch: Epoch, rate: float) -> Epoch:
+        """ Returns the first epoch of the arc, given the provided rate """
         while True:
             try:
                 self.get_observables_at_epoch(epoch, sat)
@@ -365,7 +398,7 @@ class ObservationData:
     # Remove Methods
     def remove_observable(self, sat: Satellite, epoch: Epoch, datatype: DataType):
         """
-        Remove the observable, for the selected epoch, satellite and datatype
+        Removes the observable for the selected epoch, satellite and datatype
 
         Example:
             IN: EpochData = [C1, L1, S1, C2, L2, S2]
@@ -387,6 +420,11 @@ class ObservationData:
         """
         Remove observations for the selected epoch and satellite which are associated to the frequency
         of the provided datatype.
+
+        Example:
+            IN: EpochData = [C1, L1, S1, C2, L2, S2]
+            remove_observable(datatype = C1)
+            OUT: EpochData = [C2, L2, S2]
         """
         try:
             epoch_data = self._data[epoch]
@@ -395,14 +433,21 @@ class ObservationData:
             pass
 
     # Utilities
-    def has_type(self, datatype):
+    def has_type(self, datatype: DataType) -> bool:
+        """ Returns true if the provided datatype is available in the dataset """
         return datatype in self._types[datatype.constellation]
 
-    def has_satellite(self, satellite):
+    def has_satellite(self, satellite: Satellite) -> bool:
+        """ Returns true if the provided satellite is available in the dataset """
         return satellite in self._satellites
 
     def copy(self):
-        """ return a copy of this object"""
+        """
+        Returns a copy of this `ObservationData` instance
+
+        Returns:
+            ObservationData : a deep copy of this instance
+        """
         obj = ObservationData()
 
         # shallow/reference copies and deep copy of data

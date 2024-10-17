@@ -1,3 +1,6 @@
+""" Navigation Data Module.
+This module implements classes to store the Navigation Messages from RINEX Navigation files
+"""
 from collections import OrderedDict
 
 from src.errors import TimeSeriesError, EphemerideError
@@ -10,8 +13,8 @@ __all__ = ["NavigationData"]
 
 class NavigationHeader(Container):
     """
-    NavigationHeader class, inherits from Container
-    Stores relevant data from the header section of a navigation file
+    NavigationHeader class, inherits from the :py:class:`Container` class.
+    Stores relevant data from the header section of a RINEX Navigation file.
 
     Attributes:
         iono_corrections(dict)
@@ -30,6 +33,12 @@ class NavigationHeader(Container):
 
 
 class NavigationPoint(Container):
+    """
+    NavigationPoint class, inherits from the :py:class:`Container` class.
+
+    This is the base class to store GPS and GAL specific navigation messages.
+    The navigation messages refer to the data contained in the RINEX Navigation files.
+    """
 
     def __int__(self):
         super().__init__()
@@ -52,8 +61,8 @@ class NavigationPoint(Container):
 
 class NavigationPointGPS(NavigationPoint):
     """
-    NavigationPointGPS class, inherits from `NavigationPoint`
-    stores the data contained in a single navigation message for GPS satellites
+    NavigationPointGPS class, inherits from the :py:class:`NavigationPoint` class.
+    Stores the data contained in a single navigation message for GPS satellites.
     """
     __slots__ = ["satellite", "toc", "af0", "af1", "af2",       # sv / Toc / sv clk
                  "IODE", "crs", "deltaN", "M0",                 # BROADCAST ORBIT 1
@@ -71,8 +80,8 @@ class NavigationPointGPS(NavigationPoint):
 
 class NavigationPointGAL(NavigationPoint):
     """
-    NavigationPointGPS class, inherits from `NavigationPoint`
-    stores the data contained in a single navigation message for GAL satellites
+    NavigationPointGPS class, inherits from the :py:class:`NavigationPoint` class.
+    stores the data contained in a single navigation message for GAL satellites.
     """
     __slots__ = ["satellite", "toc", "af0", "af1", "af2",       # sv / Toc / sv clk
                  "IODnav", "crs", "deltaN", "M0",               # BROADCAST ORBIT 1
@@ -89,9 +98,15 @@ class NavigationPointGAL(NavigationPoint):
         self.nav_type = None
 
     def find_message_type(self):
-        """Checks if this ephemeride point is I/NAV or F/NAV and fills the attribute `nav_type` accordingly
-        See RINEX NAV documentation (https://igs.org/wg/rinex/#documents-formats) for more information about the
+        """
+        Checks if this ephemeride point is I/NAV or F/NAV and fills the attribute `nav_type` accordingly.
+
+        See RINEX Navigation documentation (https://igs.org/wg/rinex/#documents-formats) for more information about the
         `Data Source` field.
+
+        Raises:
+            EphemerideError: an exception is raised if the `Data Source` (attribute `dataSrc`) field in the navigation
+                message is not a valid one.
         """
         data_source = int(self.dataSrc)
 
@@ -125,10 +140,8 @@ class NavigationPointGAL(NavigationPoint):
 
 class NavigationData:
     """
-    Navigation Data Frame
-    this class stores ephemeride data, read from RINEX NAV files
-
-    NavigationData objects contain _data and _header attributes.
+    Navigation Data Frame.
+    This class stores the navigation data for all satellites, that is read from RINEX Navigation files
     """
 
     def __init__(self):
@@ -136,7 +149,7 @@ class NavigationData:
         self._header = NavigationHeader()
 
     def __str__(self):
-        """Print the navigation data to a string, for debug purposes"""
+        """ Print the navigation data to a string, for debug purposes """
         myStr = f"{repr(self._header)}\n"
         for sat, data in self._data.items():
             myStr += str(sat) + f"\n{str(data)}\n"
@@ -145,11 +158,15 @@ class NavigationData:
 
     def set_data(self, epoch: Epoch, satellite: Satellite, nav_message: NavigationPoint):
         """
-        method to set a navigation data point for a given epoch and satellite
+        Method to set a navigation data point for a given epoch and satellite.
+
         Args:
-            epoch (Epoch)
-            satellite (Satellite)
-            nav_message (NavigationPoint)
+            epoch (Epoch): the epoch correspondent to the Time of Clock (TOC) of the message
+            satellite (Satellite): the satellite associated with the message
+            nav_message (NavigationPoint): the message object (instance of `NavigationPoint`)
+
+        Raises:
+            AttributeError: an exception is raised if one of the input arguments is not of the specified type.
         """
 
         if not isinstance(epoch, Epoch):
@@ -171,9 +188,14 @@ class NavigationData:
 
     def set_header(self, header: NavigationHeader):
         """
-        method to set the navigation header.
+        Method to set the navigation header.
+
         Args:
-            header (NavigationHeader)
+            header (NavigationHeader): instance of `NavigationHeader` to be set.
+
+        Raises:
+            AttributeError: an exception is raised if the input header is not an instance of the required
+                type (`NavigationHeader`)
         """
         if not issubclass(type(header), NavigationHeader):
             raise AttributeError(f'Third argument should be a valid NavigationData object. Type {type(header)} '
@@ -193,13 +215,17 @@ class NavigationData:
 
     def get_closest_message(self, sat, epoch):
         """
-        gets navigation message closest to the provided epoch
+        Gets navigation message of the given satellite closest to the provided epoch.
 
         Args:
             sat (Satellite)
             epoch (Epoch)
-        Return:
+
+        Returns:
             NavigationPoint: navigation data for the given satellite closest to the provided epoch
+
+        Raises:
+            TimeSeriesError: an exception is raised if no valid navigation message was fetched for the given satellite
         """
         try:
             _epoch = self._data[sat].get_closest_epoch(epoch)

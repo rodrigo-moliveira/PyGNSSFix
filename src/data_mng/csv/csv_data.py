@@ -11,14 +11,13 @@ class CSVData:
 
     This class provides methods to load, access, and manipulate data from CSV files, which can include
     position, velocity, timeseries measurements, or other types of numerical data.
-
     """
 
     def __init__(self, name, description, time_cols, data_cols, units=None, legend=None, title=""):
         """
         Initializes the CSVData object.
 
-        Arguments:
+        Args:
             name(str): Short name of the dataset.
             description(str): Description of the dataset.
             time_cols(list[int] or None): List with the column indexes in the csv file containing the time
@@ -31,6 +30,9 @@ class CSVData:
                 dimension of the `data_cols` list. Default is None.
             title(str): optional. Name of the title of the plot. Default is an empty string.
 
+        Raises:
+            ValueError: an exception is raised if there are inconsistencies between the length of the arguments 'units',
+                 'legend' and 'data_cols'.
         """
         self.name = name
         self.description = description
@@ -53,7 +55,7 @@ class CSVData:
         """
         Read data from the provided file. Currently, no unit conversion is performed.
 
-        Arguments:
+        Args:
             file(pathlib.Path or str): path to the input CSV file
         Raises:
             ValueError : an exception is raised if an inconsistency between the shape of the input CSV data and the
@@ -87,15 +89,16 @@ class CSVData:
     def __repr__(self):
         return str(self.data.to_string())
 
-    def is_empty(self):
+    def is_empty(self) -> bool:
+        """ Returns True if the dataset is empty """
         return self.data is None
 
-    def to_data_array(self):
-        """ Return a dataframe with the data columns """
+    def to_data_array(self) -> pd.DataFrame:
+        """ Returns a dataframe with the data columns only """
         data_matrix = self.data.iloc[:, list(self.data_cols)]
         return data_matrix
 
-    def to_time_array(self):
-        """ Return a dataframe with the time columns """
+    def to_time_array(self) -> pd.DataFrame:
+        """ Returns a dataframe with the time columns only """
         time_matrix = self.data.iloc[:, list(self.time_cols)]
         return time_matrix
