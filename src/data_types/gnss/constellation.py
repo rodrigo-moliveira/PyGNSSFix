@@ -1,3 +1,4 @@
+""" Constellation Module """
 from .service_utils import AvailableConstellations, ConstellationToCodeMap
 from src.errors import ConfigError
 
@@ -6,19 +7,20 @@ __all__ = ["Constellation", "get_constellation"]
 
 class Constellation(str):
     """
-    Class Constellation, inherits from string
+    Class Constellation, inherits from :py:class:`str`.
+
     Represents a constellation system (GPS, GAL, GLO, BDS)
     This class is a subclass of str with special utility methods
     """
 
-    def __new__(cls, content):
+    def __new__(cls, content: str):
         if content.upper() in AvailableConstellations:
             return super(Constellation, cls).__new__(cls, content.upper())
         else:
             raise ValueError("Unknown Satellite System {}. Possible systems are GPS or GAL".format(content.upper()))
 
     def __repr__(self):
-        """A repr is useful for debugging"""
+        """ A repr useful for debugging """
         return f'{type(self).__name__}({super().__repr__()})'
 
     def __getattribute__(self, name):
@@ -40,18 +42,21 @@ class Constellation(str):
         else:  # delegate to parent
             return super().__getattribute__(name)
 
-    def is_gps(self):
+    def is_gps(self) -> bool:
+        """ Returns True if this constellation is GPS """
         return self == "GPS"
 
-    def is_gal(self):
+    def is_gal(self) -> bool:
+        """ Returns True if this constellation is GAL """
         return self == "GAL"
 
-    def get_system(self):
+    def get_system(self) -> str:
+        """ Returns the string name of this constellation """
         return type(self)(self)
 
     def get_system_short(self):
         """
-        Return:
+        Returns:
             str : "G" for sensors, "E" for galileo "U" for unknown
         """
         return ConstellationToCodeMap.get(self, "UNKNOWN")
@@ -69,8 +74,10 @@ def get_constellation(system: str):
 
     Args:
         system (str) : short name for the constellation
-    Return:
-        SatelliteSystem : the corresponding system object
+    Returns:
+        Constellation : the corresponding system object
+    Raises:
+        ConfigError: an exception is raised if the provided system is not known
     """
     if system.upper() == "GPS" or system.upper() == "G":
         return _GPS

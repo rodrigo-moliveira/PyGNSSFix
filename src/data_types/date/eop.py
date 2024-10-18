@@ -1,7 +1,11 @@
-"""Retrieve and interpolate data for Earth Orientation and timescales conversions
-This module is imported from
-https://github.com/galactics/beyond/tree/master/beyond/dates
-(all credits to galactics)
+""" Earth Orientation Parameters (EOP) Module
+Retrieve and interpolate data for Earth Orientation and timescales conversions
+
+This module is imported and adapted from the `Beyond Python Package <https://pypi.org/project/beyond/>`__.
+
+See the original implementation `here <https://github.com/galactics/beyond/tree/master/beyond/dates/>`__.
+
+All credits to Jules David, the owner of Beyond library.
 """
 
 from pathlib import Path
@@ -14,12 +18,13 @@ __all__ = ["register", "EopDb", "Eop"]
 
 
 class TaiUtc:
-    """File listing all leap seconds throughout history
+    """ File listing all leap seconds throughout history
 
-    This file could be retrieved `here <http://maia.usno.navy.mil/ser7/tai-utc.dat>`
+    This file can be retrieved `here <http://maia.usno.navy.mil/ser7/tai-utc.dat>`__,
+        but this server seems discontinued.
     """
 
-    def __init__(self, path):
+    def __init__(self, path: str):
 
         self.path = Path(path)
         self.data = []
@@ -46,11 +51,11 @@ class TaiUtc:
                 return value
 
     def get_last_next(self, date):
-        """Provide the last and next leap-second events relative to a date
+        """ Provide the last and next leap-second events relative to a date
 
         Args:
             date (float): Date in MJD
-        Return:
+        Returns:
             tuple: tuple with past and future leap-seconds, as (mjd_past, leap_second_past),(mjd_next, leap_second_next)
         """
         past, future = (None, None), (None, None)
@@ -70,9 +75,12 @@ class GGTO:
 
     def set_time_correction(self, time_correction):
         """
-        the time_correction argument is a dict with the following structure (fetched from the navigation message)
+        Saves the time correction data internally.
 
-        time_correction["GGTO"] = list(A0, A1, SoW_REF, Week_nmb_REF)
+        The `time_correction` argument is a dict with the following structure
+            (available in :py:class:`src.data_mng.gnss.navigation_data.NavigationHeader`):
+
+            time_correction["GGTO"] = list(A0, A1, SoW_REF, Week_nmb_REF)
 
         Args:
             time_correction (dict): dict with GGTO info (as described above).
@@ -82,7 +90,7 @@ class GGTO:
 
 
 class Finals2000A:
-    """History of Earth orientation correction for IAU2000 model
+    """ History of Earth orientation correction for IAU2000 model
 
     Three files are available `here <https://datacenter.iers.org/eop.php>`__ for this model:
 
@@ -154,7 +162,7 @@ class Finals2000A:
 
 
 class Finals(Finals2000A):
-    """History of Earth orientation correction for IAU1980 model
+    """ History of Earth orientation correction for IAU1980 model
 
     Three files are available `here <https://datacenter.iers.org/eop.php>`__ for this model:
 
@@ -169,7 +177,7 @@ class Finals(Finals2000A):
 
 
 class Eop:
-    """Earth Orientation Parameters
+    """ Earth Orientation Parameters
 
     Attributes:
         x(float): polar motion X angle [arcsec]
@@ -182,7 +190,6 @@ class Eop:
         ut1_utc(float): UT1-UTC offset [seconds]
         tai_utc(float): TAI-UTC offset [seconds]
         ggto(dict): dict with GGTO corrections from nav message. See :py:meth:`GGTO.set_time_correction`
-
     """
 
     def __init__(self, **kwargs):
@@ -203,7 +210,7 @@ class Eop:
 
 
 class EopDb:
-    """Class handling the different EOP databases available, in a simple abstraction layer.
+    """ Class handling the different EOP databases available, in a simple abstraction layer.
 
     By defining a simple parameter in the config dict, this class will handle the instantiation
     of the database and queries in a transparent manner.
@@ -222,11 +229,11 @@ class EopDb:
 
     @classmethod
     def db(cls, dbname=DEFAULT_DBNAME):
-        """Retrieve the database
+        """ Retrieve the database
 
         Args:
             dbname: Specify the name of the database to retrieve.
-        Return:
+        Returns:
             object
         """
 
@@ -251,14 +258,13 @@ class EopDb:
 
     @classmethod
     def get(cls, mjd: float, dbname: str = DEFAULT_DBNAME) -> Eop:
-        """Retrieve Earth Orientation Parameters and timescales differences
-        for a given date
+        """ Retrieve Earth Orientation Parameters and timescales differences for a given date
 
         Args:
             mjd: Date expressed as Modified Julian Date
             dbname: Name of the database to use
-        Return:
-            Eop: Interpolated data for this particular MJD
+        Returns:
+            Eop: data for this particular MJD
         """
         try:
             value = cls.db(dbname)[mjd]
@@ -266,7 +272,7 @@ class EopDb:
             msg = f"Missing EOP data for mjd = '{e}'"
             if cls.policy() == cls.WARN:
                 log = get_logger(MODEL_LOG)
-                log.warn(msg)
+                log.warning(msg)
             elif cls.policy() == cls.ERROR:
                 raise e
 
@@ -290,7 +296,7 @@ class EopDb:
 
     @classmethod
     def register(cls, klass, name=DEFAULT_DBNAME):
-        """Register an Eop Database
+        """ Register an Eop Database
 
         The only requirement of this database is that it should have ``__getitem__``
         method accepting MJD as float.
@@ -298,13 +304,13 @@ class EopDb:
         if name in cls._dbs:
             msg = f"'{name}' is already registered for an Eop database. Skipping"
             log = get_logger(MODEL_LOG)
-            log.warn(msg)
+            log.warning(msg)
         else:
             cls._dbs[name] = klass
 
 
 def register(name=EopDb.DEFAULT_DBNAME):
-    """Decorator for registering an Eop Database
+    """ Decorator for registering an Eop Database
 
     Example:
 
@@ -355,7 +361,7 @@ def register(name=EopDb.DEFAULT_DBNAME):
 
 @register
 class SimpleEopDatabase:
-    """Simple implementation of database
+    """ Simple implementation of database
 
     Uses ``tai-utc.dat``, ``finals.all`` and ``finals2000A.all`` files directly
     without caching nor interpolation.

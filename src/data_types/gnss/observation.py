@@ -1,3 +1,4 @@
+""" GNSS Observation Module """
 from .data_type import DataType
 
 
@@ -20,6 +21,8 @@ class Observation:
             datatype (DataType): The DataType of this GNSS observation
             value (float): The numeric value for this observation
             std (float): The noise standard deviation for this observation. Default std is 0
+        Raises:
+            AttributeError: an exception is raised if one of the input arguments if not of the specified type
         """
         if isinstance(datatype, DataType):
             self.datatype = datatype
@@ -47,7 +50,7 @@ class Observation:
 
     # Algebraic methods to allow an Observation object to be treated as a float
     def __add__(self, other):
-        # operator self + other
+        """ operator self + other """
         # keep the noise std
         if isinstance(other, float) or isinstance(other, int):
             return Observation(self.datatype, self.value + other, self.std)
@@ -57,7 +60,7 @@ class Observation:
             raise TypeError(f"unsupported operand type(s) for +: '{type(self)}' and '{type(other)}'")
 
     def __iadd__(self, other):
-        # operator self += other
+        """ operator self += other """
         if isinstance(other, float) or isinstance(other, int):
             self.value += other
         elif isinstance(other, Observation):
@@ -67,7 +70,7 @@ class Observation:
         return self
 
     def __sub__(self, other):
-        # operator self - other
+        """ operator self - other """
         if isinstance(other, float) or isinstance(other, int):
             return Observation(self.datatype, self.value - other, self.std)
         elif isinstance(other, Observation):
@@ -76,7 +79,7 @@ class Observation:
             raise TypeError(f"unsupported operand type(s) for -: '{type(self)}' and '{type(other)}'")
 
     def __isub__(self, other):
-        # operator self -= other
+        """ operator self -= other """
         if isinstance(other, float) or isinstance(other, int):
             self.value -= other
         elif isinstance(other, Observation):
@@ -86,7 +89,7 @@ class Observation:
         return self
 
     def __lt__(self, other):
-        # operator self < other
+        """ operator self < other """
         if isinstance(other, float) or isinstance(other, int):
             return self.value < other
         elif isinstance(other, Observation):
@@ -95,7 +98,7 @@ class Observation:
             raise TypeError(f"unsupported operand type(s) for <: '{type(self)}' and '{type(other)}'")
 
     def __le__(self, other):
-        # operator self <= other
+        """ operator self <= other """
         if isinstance(other, float) or isinstance(other, int):
             return self.value <= other
         elif isinstance(other, Observation):
@@ -104,7 +107,7 @@ class Observation:
             raise TypeError(f"unsupported operand type(s) for <=: '{type(self)}' and '{type(other)}'")
 
     def __gt__(self, other):
-        # operator self > other
+        """ operator self > other """
         if isinstance(other, float) or isinstance(other, int):
             return self.value > other
         elif isinstance(other, Observation):
@@ -113,7 +116,7 @@ class Observation:
             raise TypeError(f"unsupported operand type(s) for >: '{type(self)}' and '{type(other)}'")
 
     def __ge__(self, other):
-        # operator self >= other
+        """ operator self >= other """
         if isinstance(other, float) or isinstance(other, int):
             return self.value >= other
         elif isinstance(other, Observation):
@@ -121,16 +124,17 @@ class Observation:
         else:
             raise TypeError(f"unsupported operand type(s) for >=: '{type(self)}' and '{type(other)}'")
 
-    def __float__(self):
+    def __float__(self) -> float:
+        """ convert the observation value to float """
         return self.value
 
     def copy(self):
         """
-        Return:
+        Returns:
             Observation: returns a deep copy of this object
         """
         return Observation(self.datatype, float(self.value), float(self.std))
 
-    def set_std(self, new_std):
+    def set_std(self, new_std: float):
         """ Update the `std` value for this Observation object """
         self.std = new_std

@@ -1,8 +1,6 @@
-"""Utility maps and dicts to deal with the constellations and observations.
-"""
+""" Utility maps and dicts to deal with the constellations and observations. """
 
-from .data_type import get_data_type, UN
-
+from .data_type import get_data_type, UN, DataType
 
 AvailableConstellations = {"GPS", "GAL", "GLO", "BDS"}
 
@@ -29,7 +27,8 @@ CodeToConstellationMap = {"G": "GPS",
                           "C": "BDS"}
 
 
-def get_code_from_service(service, constellation):
+def get_code_from_service(service: str, constellation: str) -> DataType:
+    """ Converts the service (in RINEX format: string) to the corresponding pseudorange `DataType` instance """
     datatype = None
 
     if constellation == "GPS":
@@ -43,7 +42,8 @@ def get_code_from_service(service, constellation):
     return datatype
 
 
-def get_carrier_from_service(service, constellation):
+def get_carrier_from_service(service: str, constellation: str) -> DataType:
+    """ Converts the service (in RINEX format: string) to the corresponding carrier `DataType` instance """
     datatype = None
 
     if constellation == "GPS":
@@ -57,7 +57,8 @@ def get_carrier_from_service(service, constellation):
     return datatype
 
 
-def get_freq_from_service(service, constellation):
+def get_freq_from_service(service: str, constellation: str) -> DataType:
+    """ Converts the service (in RINEX format: string) to the corresponding frequency `DataType` instance """
     datatype = get_code_from_service(service, constellation)
     if datatype is not None and datatype != UN:
         return datatype.freq
