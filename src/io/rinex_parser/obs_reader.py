@@ -1,4 +1,4 @@
-"""Parser of RINEX OBS files (version 3.XX)
+""" Parser of RINEX Observation files (version 3.XX)
 The official documentation of these files may be found in https://igs.org/wg/rinex/#documents-formats
 """
 
@@ -13,21 +13,31 @@ from src import WORKSPACE_PATH
 from src.common_log import IO_LOG, get_logger
 
 from .utils import *
+from ..config import config_dict
 
 
 class RinexObsReader:
     """
-    Parser of Rinex OBS files
+    Parser of Rinex Observation files
     """
 
-    def __init__(self, obs: ObservationData, file: str, services,
-                 first_arc_epoch=None, last_arc_epoch=None, snr_control_check=0):
+    def __init__(self, file: str, obs: ObservationData):
+        """
+        Reads the provided observation file and stores its content in the `ObservationData` instance.
+
+        Args:
+            file(str): path to the input RINEX Observation file to load
+            obs(ObservationData): the `ObservationData` object to store the observation information extracted from
+                the file
+        """
+        first_epoch = config_dict.get("inputs", "arc", "first_epoch")
+        last_epoch = config_dict.get("inputs", "arc", "last_epoch")
 
         # instance variables
-        self._services = services
+        self._services = config_dict.get_services()
         self._map = {}
         self._obs = obs
-        self._snr_control_check = snr_control_check
+        self._snr_control_check = config_dict.get("inputs", "snr_control")
         self._log = get_logger(IO_LOG)
 
         f_handler = open(f"{WORKSPACE_PATH}/{file}", "r")
@@ -37,8 +47,8 @@ class RinexObsReader:
         self._read_header(f_handler)
 
         # first and final arc epochs to read, if not None
-        self._first_arc_epoch = Epoch.strptime(first_arc_epoch, scale=self.time_system)
-        self._last_arc_epoch = Epoch.strptime(last_arc_epoch, scale=self.time_system)
+        self._first_arc_epoch = Epoch.strptime(first_epoch, scale=self.time_system)
+        self._last_arc_epoch = Epoch.strptime(last_epoch, scale=self.time_system)
 
         self._validate_requested_observations()
 

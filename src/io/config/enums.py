@@ -1,10 +1,11 @@
-"""Definition of some useful python Enumeration objects"""
+""" Definition of some useful python Enumeration objects """
 
 from enum import Enum
 from src.errors import EnumError
 
 
 class EnumSolver(Enum):
+    """ Enumeration for the type of solver (Least-Squares or Weighted Least-Squares) """
     LS = 0
     WLS = 1
 
@@ -23,6 +24,7 @@ class EnumSolver(Enum):
 
 
 class EnumPositioningMode(Enum):
+    """ Enumeration for the GNSS PNT algorithm (SPS, SPS_IF) """
     SPS = 0
     SPS_IF = 1
 
@@ -41,6 +43,7 @@ class EnumPositioningMode(Enum):
 
 
 class EnumModel(Enum):
+    """ Enumeration for the selected GNSS Observation model (single frequency, dual frequency) """
     SINGLE_FREQ = 0
     DUAL_FREQ = 1
 
@@ -50,6 +53,7 @@ class EnumModel(Enum):
 
 
 class EnumOnOff(Enum):
+    """ Enumeration for the activation or deactivation of models (Disabled or Enabled) """
     DISABLED = 0
     ENABLED = 1
 
@@ -59,6 +63,7 @@ class EnumOnOff(Enum):
 
 
 class EnumIonoModel(Enum):
+    """ Enumeration for the Ionosphere Model (Disabled, Klobuchar or NTCM-G) """
     DISABLED = 0
     KLOBUCHAR = 1
     NTCMG = 2
@@ -80,6 +85,7 @@ class EnumIonoModel(Enum):
 
 
 class EnumTropoModel(Enum):
+    """ Enumeration for the Troposphere Model (Disabled, Saastamoinen, GPT3) """
     DISABLED = 0
     SAASTAMOINEM = 1
     GPT3 = 2
@@ -101,6 +107,7 @@ class EnumTropoModel(Enum):
 
 
 class EnumTropoMap(Enum):
+    """ Enumeration for the Troposphere Map function (Saastamoinen, GMF, VMF1, VMF3) """
     SAASTAMOINEM = 0
     GMF = 1
     VMF1 = 2
@@ -126,6 +133,7 @@ class EnumTropoMap(Enum):
 
 
 class EnumTransmissionTime(Enum):
+    """ Enumeration for the Computation of Transmission Time model (Geometric, Pseudorange, NAPEOS) """
     GEOMETRIC = 0
     PSEUDORANGE = 1
     NAPEOS = 2

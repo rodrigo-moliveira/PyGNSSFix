@@ -39,7 +39,7 @@ class SatelliteClocks:
         self.use_precise_products = False
         self.interp_order = 0
 
-    def init(self, nav_data, clock_files, use_precise_products, interp_order=1, first_epoch=None, last_epoch=None):
+    def init(self, nav_data, clock_files, use_precise_products, interp_order=1):
         """
         Initialize this SatelliteClocks instance with navigation and precise data.
         The argument `use_precise_products` allows to select which satellite clocks to output.
@@ -52,8 +52,6 @@ class SatelliteClocks:
             clock_files(list): list of RINEX clock files from the user configuration
             use_precise_products(bool): True to use precise clocks and False to use broadcast navigation clocks
             interp_order(int): interpolation order for satellite clocks (default order is 1)
-            first_epoch(str or None): first observation epoch
-            last_epoch(str or None): last observation epoch
         """
         self.nav_data = nav_data
         self.use_precise_products = use_precise_products
@@ -63,7 +61,7 @@ class SatelliteClocks:
             log = get_logger(IO_LOG)
             log.info("Launching RinexClockReader")
             for file in clock_files:
-                RinexClockReader(file, self, first_epoch=first_epoch, last_epoch=last_epoch)
+                RinexClockReader(file, self)
 
     def __str__(self):
         """ Print the RINEX clock data to a string, for debug purposes """

@@ -1,6 +1,6 @@
-"""Parser of RINEX SP3-c and SP3-d files
+""" Parser of RINEX SP3-c and SP3-d files
 The official documentation of these files may be found in http://epncb.eu/ftp/data/format/sp3d.pdf
-(compatible with SP3-d version)
+(SP3-d version)
 """
 import numpy as np
 import datetime
@@ -20,18 +20,20 @@ class SP3OrbitReader:
     Parser of SP3 files
     """
 
-    def __init__(self, file, orbits, first_epoch=None, last_epoch=None):
+    def __init__(self, file, orbits):
         """
+        Reads the provided SP3 file and stores its content in the provided `SatelliteOrbits` instance.
+
         Args:
             file(str): path to the input RINEX Clock file
             orbits(src.data_mng.gnss.sat_orbit_data.SatelliteOrbits): the `SatelliteOrbits` object to store the
                 satellite orbits (precise)
-            first_epoch(str or None): first observation epoch
-            last_epoch(str or None): last observation epoch
 
         Note that for interpolation purposes, this reader starts saving data from 5 epochs before the `first_epoch`
         until 5 epochs after the `last_epoch` (if possible).
         """
+        first_epoch = config_dict.get("inputs", "arc", "first_epoch")
+        last_epoch = config_dict.get("inputs", "arc", "last_epoch")
 
         # instance variables
         self.orbits = orbits
@@ -90,10 +92,10 @@ class SP3OrbitReader:
         while line[0] != '*':
             line = file.readline()
 
-        return self.get_epoch(line)
+        return self._get_epoch(line)
 
-    def get_epoch(self, line_str):
-        """Build the epoch object for the provided SP3 line"""
+    def _get_epoch(self, line_str):
+        """ Build the epoch object for the provided SP3 line """
         tokens = line_str.split()
 
         year = int(tokens[1])
@@ -120,7 +122,7 @@ class SP3OrbitReader:
 
             # New epoch detected
             if line[0] == '*':
-                curr_epoch = self.get_epoch(line)
+                curr_epoch = self._get_epoch(line)
 
             # check if this entry is inside the valid interval or not
             if self._first_epoch:
@@ -142,4 +144,4 @@ class SP3OrbitReader:
                     orbit = [utils.to_float(tokens[i]) * 1000.0 for i in [1, 2, 3]]  # get x,y,z components, in m (ECEF)
                     self.orbits.set_data(curr_epoch, sat, np.array(orbit))
                 except Exception as e:
-                    self.log.warn(f"Unable to process line: {line} due to error: {e}")
+                    self.log.warning(f"Unable to process line: {line} due to error: {e}")

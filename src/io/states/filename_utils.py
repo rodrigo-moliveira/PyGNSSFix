@@ -1,4 +1,4 @@
-"""Definition of output filenames
+""" Definition of output filenames
 """
 
 # Output file names

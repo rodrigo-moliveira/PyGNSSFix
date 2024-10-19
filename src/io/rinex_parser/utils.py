@@ -1,4 +1,4 @@
-# Utilities for reading RINEX files
+""" Module with utilities for reading RINEX files """
 
 RINEX_FILE_TYPES = {"M": "Meteorological Data",
                     "N": "Navigation Data",
@@ -29,9 +29,17 @@ RINEX_OBS_TYPES_UNITS = {
     "S": "dB-Hz"  # default units of SNR
 }
 
+
 def to_float(nmb: str) -> float:
     """
     Convert numbers from RINEX files (in string format) to python floats
+
+    Args:
+        nmb: the input number in string RINEX format
+    Returns:
+        float: the corresponding number in float
+    Raises:
+        ValueError: if the convertion fails, the exception is raised
 
     RINEX numbers are provided in scientific notation with the ´E´ or ´D´ char, for example:
         * 4.391254341941D-09

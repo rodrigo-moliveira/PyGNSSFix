@@ -1,9 +1,6 @@
-import os
-import time
 import traceback
 import numpy as np
 
-from src import RUNS_PATH
 from src.io.config import config_dict, EnumPositioningMode
 from src.models.frames import cartesian2geodetic, latlon2dcm_e_enu
 from src.errors import ConfigError
@@ -12,6 +9,7 @@ from src.common_log import MAIN_LOG, get_logger, set_logs
 from .solver.gnss_solver import GnssSolver
 from .preprocessor import PreprocessorManager
 from ...data_mng.gnss.gnss_data_mng import GnssDataManager
+from ...io.io_utils import create_output_dir
 
 
 class GnssAlgorithmManager:
@@ -20,7 +18,7 @@ class GnssAlgorithmManager:
         # create output folder
         data_dir = config_dict.get("output", "output_path")
 
-        self.data_dir = self._check_data_dir(data_dir)
+        self.data_dir = create_output_dir(data_dir)
 
         # initialize logger objects
         set_logs(config_dict.get("log", "minimum_level"), f"{self.data_dir}\\log.txt")
@@ -71,35 +69,6 @@ class GnssAlgorithmManager:
             exit(-1)
 
         self.main_log.info(f"Successfully executed GNSS algorithm {model}")
-
-    def _check_data_dir(self, data_dir):
-        """
-        check if data_dir is a valid dir. If not, use the default dir.
-        check if the data_dir exists. If not, create it.
-        Args:
-            data_dir: all generated files are saved in data_dir
-        Returns:
-            data_dir: valid data dir.
-        """
-        # check data dir
-        # data_dir is not specified, automatically create one
-        if data_dir is None or data_dir == '' or data_dir == "default":
-            data_dir = str(RUNS_PATH)
-            if data_dir[-1] != '//':
-                data_dir = data_dir + '//'
-            data_dir = data_dir + time.strftime('%Y-%m-%dT%HH%MM%SS', time.localtime()) + '//'
-            data_dir = os.path.abspath(data_dir)
-
-        # try to create data dir
-        if not os.path.exists(data_dir):
-            try:
-                data_dir = os.path.abspath(data_dir)
-                os.makedirs(data_dir)
-                os.makedirs(f"{data_dir}\\trace")
-                os.makedirs(f"{data_dir}\\output")
-            except:
-                raise IOError(f"Cannot create dir: {data_dir}")
-        return data_dir
 
     def compute_dop(self):
         self.main_log.info("Computing Dilution of Precision (DOP) metrics in ECEF and local (ENU) frames")

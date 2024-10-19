@@ -1,4 +1,4 @@
-"""Parser of RINEX NAV files (version 3.XX)
+""" Parser of RINEX Navigation files (version 3.XX)
 The official documentation of these files may be found in https://igs.org/wg/rinex/#documents-formats
 """
 
@@ -11,21 +11,17 @@ from src import WORKSPACE_PATH
 from src.common_log import IO_LOG, get_logger
 
 
-"""
-Important Note: The time tags of the navigation messages (e.g., time of ephemeris, time of clock) are given in the 
-respective satellite time systems!
-"""
-
-
 class RinexNavReader:
     """
-    Parser of Rinex NAV files
+    Parser of Rinex Navigation files
     """
 
     def __init__(self, file, nav, gal_nav_type):
         """
+        Reads the provided navigation file and stores its content in the `NavigationData` instance.
+
         Args:
-            file(str): path to the input RINEX NAV file
+            file(str): path to the input RINEX Navigation file to load
             nav(NavigationData): the `NavigationData` object to store the navigation information extracted from the file
             gal_nav_type(str): the GAL navigation message (I/NAV of F/NAV), as configured by the user
         """
@@ -101,7 +97,10 @@ class RinexNavReader:
 
     def _read_data(self, file):
         """
-        Read GPS and GAL navigation data
+        Read GPS and GAL navigation data.
+
+        Important Note: The time tags of the navigation messages (e.g., time of ephemeris, time of clock) are given in
+            the respective satellite time systems!
         """
         line = " "
 
@@ -307,4 +306,4 @@ class RinexNavReader:
                         self.nav.set_data(toc, satellite, navMessage)
                     # else: nav message is skipped
                 except Exception as e:
-                    self.log.warn(f"Error reading satellite {satellite} ephemeride for epoch {toc}: {e}")
+                    self.log.warning(f"Error reading satellite {satellite} ephemeride for epoch {toc}: {e}")

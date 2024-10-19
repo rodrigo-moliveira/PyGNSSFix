@@ -1,6 +1,6 @@
-"""Parser of RINEX Clock files (version 3.XX)
-The official documentation of these files may be found in https://files.igs.org/pub/data/format/rinex_clock304.txt
-for v3.04
+""" Parser of RINEX Clock files (version 3.XX)
+The official documentation of these files may be found in
+https://files.igs.org/pub/data/format/rinex_clock304.txt for version v3.04
 """
 import datetime
 
@@ -19,18 +19,20 @@ class RinexClockReader:
     Parser of Rinex Clock files
     """
 
-    def __init__(self, file, clocks, first_epoch=None, last_epoch=None):
+    def __init__(self, file, clocks):
         """
+        Reads the provided RINEX Clock file and stores its content in the provided `SatelliteClocks` instance.
+
         Args:
             file(str): path to the input RINEX Clock file
             clocks(src.data_mng.gnss.sat_clock_data.SatelliteClocks): the `SatelliteClocks` object to store the
                 satellite clocks (precise)
-            first_epoch(str or None): first observation epoch
-            last_epoch(str or None): last observation epoch
 
         Note that for interpolation purposes, this reader starts saving data from 2 minutes before the `first_epoch`
         until 2 minutes after the `last_epoch` (if possible).
         """
+        first_epoch = config_dict.get("inputs", "arc", "first_epoch")
+        last_epoch = config_dict.get("inputs", "arc", "last_epoch")
 
         # instance variables
         self.clocks = clocks

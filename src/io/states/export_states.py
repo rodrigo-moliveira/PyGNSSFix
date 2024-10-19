@@ -1,21 +1,22 @@
-"""Module with functions to write the State Space vectors to output files
-"""
+""" Module with functions to write the State Space vectors to output files. """
 
 from src import constants
-from src.data_mng.gnss.state_space import GnssStateSpace
 
 __all__ = ["get_file_header", "export_to_file"]
 
 
 def get_file_header(state_variable, state):
     """
-    Get the header line of the provided `state_variable`
+    Get the header line of the provided `state_variable`.
+
     Args:
         state_variable(str): name of the state variable
-        state(:py:class:`GnssStateSpace`): instance of the `GnssStateSpace` (to get fetch some metadata info
-            about the state)
+        state(src.data_mng.gnss.state_space.GnssStateSpace): instance of the `GnssStateSpace`
+            (to get fetch some metadata info about the state)
     Returns:
         str: header line string (CSV format)
+    Raises:
+        ValueError: the exception is raised if the provided `state_variable` is unavailable or not known.
     """
     epoch_system = state.epoch.scale
     if state_variable == "position":
@@ -59,12 +60,15 @@ def get_file_header(state_variable, state):
 
 def export_to_file(state_variable, state):
     """
-    Export the provided state to a string (to be written in the output file, in CSV format)
+    Export the provided state to a string (to be written in the output file, in CSV format).
+
     Args:
         state_variable(str): name of the state variable
-        state(:py:class:`GnssStateSpace`): instance of the `GnssStateSpace`
+        state(src.data_mng.gnss.state_space.GnssStateSpace): instance of the `GnssStateSpace`
     Returns:
         str: state variable converted to a string (along with covariance) in CSV format
+    Raises:
+        ValueError: the exception is raised if the provided `state_variable` is unavailable or not known.
     """
     if state_variable == "position":
         cov = state.cov_position

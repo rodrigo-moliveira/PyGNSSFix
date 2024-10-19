@@ -44,7 +44,7 @@ class SatelliteOrbits:
         self.use_precise_products = False
         self.interp_order = 0
 
-    def init(self, nav_data, sp3_files, use_precise_products, interp_order=9, first_epoch=None, last_epoch=None):
+    def init(self, nav_data, sp3_files, use_precise_products, interp_order=9):
         """
         Initialize this `SatelliteOrbits` instance with navigation and precise data.
         The argument `use_precise_products` allows to select which satellite orbits to use.
@@ -57,8 +57,6 @@ class SatelliteOrbits:
             sp3_files(list): list of SP3 files from the user configuration
             use_precise_products(bool): True to use precise orbits and False to use broadcast navigation orbits
             interp_order(int): interpolation order for satellite clocks (default order is 9)
-            first_epoch(str or None): first observation epoch to read
-            last_epoch(str or None): last observation epoch to read
         """
         self.nav_data = nav_data
         self.use_precise_products = use_precise_products
@@ -68,7 +66,7 @@ class SatelliteOrbits:
             log = get_logger(IO_LOG)
             log.info("Launching SP3OrbitReader")
             for file in sp3_files:
-                SP3OrbitReader(file, self, first_epoch, last_epoch)
+                SP3OrbitReader(file, self)
 
     def __str__(self):
         """ Print the precise orbit data to a string, for debug purposes """

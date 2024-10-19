@@ -126,16 +126,12 @@ class GnssDataManager(Container):
         obs_files = config_dict.get("inputs", "obs_files")
         clock_files = config_dict.get("inputs", "clk_files")
         sp3_files = config_dict.get("inputs", "sp3_files")
-        services = config_dict.get_services()
-        first_epoch = config_dict.get("inputs", "arc", "first_epoch")
-        last_epoch = config_dict.get("inputs", "arc", "last_epoch")
-        snr_check = config_dict.get("inputs", "snr_control")
         use_precise_products = config_dict.get("inputs", "use_precise_products")
         gal_nav_type = config_dict.get("model", "GAL", "nav_type")
 
         log.info("Launching RinexObsReader")
         for file in obs_files:
-            RinexObsReader(self.get_data("obs_data"), file, services, first_epoch, last_epoch, snr_check)
+            RinexObsReader(self.get_data("obs_data"), file)
 
         log.info(f"Using precise orbit/clock products: {use_precise_products}")
 
@@ -145,12 +141,10 @@ class GnssDataManager(Container):
             RinexNavReader(file, self.get_data("nav_data"), gal_nav_type)
 
         log.info("Launching SatelliteClocks constructor")
-        self.sat_clocks.init(self.get_data("nav_data"), clock_files, use_precise_products, first_epoch=first_epoch,
-                             last_epoch=last_epoch)
+        self.sat_clocks.init(self.get_data("nav_data"), clock_files, use_precise_products)
 
         log.info("Launching SatelliteOrbits constructor")
-        self.sat_orbits.init(self.get_data("nav_data"), sp3_files, use_precise_products, first_epoch=first_epoch,
-                             last_epoch=last_epoch)
+        self.sat_orbits.init(self.get_data("nav_data"), sp3_files, use_precise_products)
 
         if config_dict.get("inputs", "trace_files"):
             self._trace_files(trace_dir, use_precise_products)
