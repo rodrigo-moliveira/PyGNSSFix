@@ -1,5 +1,5 @@
-"""Module with several utility functions for performing navigation
-(satellite clock and orbit ephemerides, and GNSS time)
+""" Module with several utility functions for performing navigation (computation of satellite clock,
+orbit ephemerides, and GNSS time)
 """
 
 from datetime import timedelta
@@ -44,7 +44,7 @@ def fix_gnss_week_crossovers(time_diff: float) -> float:
 
     Args:
         time_diff (float) : time difference to be fixed
-    Return:
+    Returns:
         float : fixed time difference
     """
     half_week = 302400
@@ -113,7 +113,7 @@ def tx_time_geometric(r_receiver=None, t_reception=None, dt_receiver=None, sat=N
         sat(src.data_types.gnss.Satellite): the satellite to compute the transmission time
         sat_orbits(src.data_mng.gnss.sat_orbit_data.SatelliteOrbits): `SatelliteOrbits` object with orbit data
         dt_receiver (float): current estimate of the receiver clock bias (seconds)
-    Return:
+    Returns:
         tuple [src.data_types.date.Epoch, float] : computed TX epoch, computed transit time
     """
     max_iter = 10
@@ -165,7 +165,7 @@ def tx_time_pseudorange(pseudorange_obs=None, t_reception=None, sat=None, sat_cl
             `t(reception)^{receiver}`, i.e., RINEX obs time tag
         sat(src.data_types.gnss.Satellite): the satellite to compute the transmission time
         sat_clocks(src.data_mng.gnss.sat_clock_data.SatelliteClocks): `SatelliteClocks` object with clock data
-    Return:
+    Returns:
         tuple [src.data_types.date.Epoch, float] : computed TX epoch, computed transit time
     """
     tau = pseudorange_obs.value / constants.SPEED_OF_LIGHT
@@ -199,7 +199,7 @@ def tx_time_napeos(r_receiver=None, v_receiver=None, dt_receiver=None, sat=None,
             `t(reception)^{receiver}`, i.e., RINEX obs time tag
         sat(src.data_types.gnss.Satellite): the satellite to compute the transmission time
         sat_orbits(src.data_mng.gnss.sat_orbit_data.SatelliteOrbits): `SatelliteOrbits` object with orbit data
-    Return:
+    Returns:
         tuple [src.data_types.date.Epoch, float] : computed TX epoch, computed transit time
     """
     MU = constants.MU_WGS84 if sat.sat_system.is_gps() else constants.MU_GTRF
@@ -266,7 +266,7 @@ def broadcast_clock(af0: float, af1: float, af2: float, toc: float, tx_raw: floa
         af2 (float) : clock model second order parameter A2 [sec/sec^2]
         toc (float) : time of clock (in seconds of week). This is the reference epoch for the clock model polynomial
         tx_raw (float) : epoch (in seconds of week) to compute the bias and drift (time of signal transmission)
-    Return:
+    Returns:
         tuple [float, float] : clock bias[s], clock drift[ ]
     """
     dt = fix_gnss_week_crossovers(tx_raw - toc)
@@ -444,7 +444,7 @@ def compute_nav_sat_eph(nav_message, epoch):
             to compute the satellite positions
         epoch (src.data_types.date.Epoch): epoch to compute the satellite ephemerides (must be the
             transmission time epoch, that is, reception time minus transit time)
-    Return:
+    Returns:
         tuple[numpy.ndarray,numpy.ndarray,float,float]: Position vector in [m],
             velocity vector in [m/s], relativistic clock correction in [s] and relativistic clock drift in [s/s]
     """

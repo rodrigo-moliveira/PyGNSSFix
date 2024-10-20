@@ -59,7 +59,7 @@ class Config(dict):
 
         if alg.lower() not in ("gnss", "post_processing"):
             raise ConfigError(f"illegal value for {alg} argument. Available values are 'gnss', 'post_processing'")
-        self.alg = alg
+        self.alg = alg.lower()
 
         # validate config file
         self._validate(initial_dict, alg)
@@ -184,7 +184,7 @@ class Config(dict):
                 raised if there are inconsistencies between number of signals and correspondent observation noise fields
         """
         if self.alg != "gnss":
-            raise ConfigError("The `get_services` function is only available for Config instances initialized"
+            raise ConfigError("The `get_obs_std` function is only available for Config instances initialized"
                               " with the gnss algorithm.")
 
         if "obs_std" not in self:
@@ -227,7 +227,7 @@ class Config(dict):
                 raised if there are inconsistencies between number of signals and correspondent observation noise fields
         """
         if self.alg != "gnss":
-            raise ConfigError("The `get_services` function is only available for Config instances initialized"
+            raise ConfigError("The `update_obs_std` function is only available for Config instances initialized"
                               " with the gnss algorithm.")
 
         # first build the obs_std dict (if not built before)

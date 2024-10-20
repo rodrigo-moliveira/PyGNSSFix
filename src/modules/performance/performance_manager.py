@@ -215,7 +215,7 @@ class PerformanceManager:
                     empty = True
 
             if empty:
-                self.log.warn(f"Skipping residual analysis for {data_name} observables")
+                self.log.warning(f"Skipping residual analysis for {data_name} observables")
                 continue
             self.log.info(f"Performing residual analysis for {data_name} observables")
 
@@ -299,7 +299,7 @@ class PerformanceManager:
             if observations.is_empty():
                 raise ValueError
         except ValueError:
-            self.log.warn("Observations dataframe not found or is empty. Skipping plot_obs")
+            self.log.warning("Observations dataframe not found or is empty. Skipping plot_obs")
             return
         try:
             ax_dict = plot_gnss.plot_observations(observations)
@@ -340,19 +340,19 @@ class PerformanceManager:
         try:
             ax1 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("pr_rate_prefit_residuals"), "m/s")
         except Exception as e:
-            self.log.warn(f"Error plotting Pseudorange Rate Prefit Residuals in function plot_residuals: {e}")
+            self.log.warning(f"Error plotting Pseudorange Rate Prefit Residuals in function plot_residuals: {e}")
         try:
             ax2 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("pr_rate_postfit_residuals"), "m/s")
         except Exception as e:
-            self.log.warn(f"Error plotting Pseudorange Rate Postfit Residuals in function plot_residuals: {e}")
+            self.log.warning(f"Error plotting Pseudorange Rate Postfit Residuals in function plot_residuals: {e}")
         try:
             ax3 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("pr_prefit_residuals"), "m")
         except Exception as e:
-            self.log.warn(f"Error plotting Pseudorange Prefit Residuals in function plot_residuals: {e}")
+            self.log.warning(f"Error plotting Pseudorange Prefit Residuals in function plot_residuals: {e}")
         try:
             ax4 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("pr_postfit_residuals"), "m")
         except Exception as e:
-            self.log.warn(f"Error plotting Pseudorange Postfit Residuals in function plot_residuals: {e}")
+            self.log.warning(f"Error plotting Pseudorange Postfit Residuals in function plot_residuals: {e}")
 
         for ax in [ax1, ax2, ax3, ax4]:
             self._save_figure(plot_dir, ax)
@@ -372,11 +372,11 @@ class PerformanceManager:
             pass
 
         if clock_bias is None or clock_bias.is_empty():
-            self.log.warn("Clock Bias dataframe not found or is empty. Skipping plot_clock_bias")
+            self.log.warning("Clock Bias dataframe not found or is empty. Skipping plot_clock_bias")
             return
         if isb is None or isb.is_empty():
-            self.log.warn("ISB state dataframe not found or is empty. "
-                          "This is expected if the scenario is single constellation.")
+            self.log.warning("ISB state dataframe not found or is empty. "
+                             "This is expected if the scenario is single constellation.")
 
         try:
             ax1, ax2 = plot_gnss.plot_clock_bias(clock_bias, isb)
@@ -393,7 +393,7 @@ class PerformanceManager:
             if clock_rate.is_empty():
                 raise ValueError
         except ValueError:
-            self.log.warn("Clock Bias Rate dataframe not found or is empty. Skipping plot_clock_rate")
+            self.log.warning("Clock Bias Rate dataframe not found or is empty. Skipping plot_clock_rate")
             return
         try:
             ax = plot_gnss.plot_clock_bias_rate(clock_rate)
@@ -408,7 +408,7 @@ class PerformanceManager:
             if iono.is_empty():
                 raise ValueError
         except ValueError:
-            self.log.warn("Satellite Iono dataframe not found or is empty. Skipping plot_iono")
+            self.log.warning("Satellite Iono dataframe not found or is empty. Skipping plot_iono")
             return
         try:
             ax_list = plot_gnss.plot_iono_states(iono)
@@ -424,7 +424,7 @@ class PerformanceManager:
             if tropo.is_empty():
                 raise ValueError
         except ValueError:
-            self.log.warn("Satellite Tropo dataframe not found or is empty. Skipping plot_tropo")
+            self.log.warning("Satellite Tropo dataframe not found or is empty. Skipping plot_tropo")
             return
         try:
             ax = plot_gnss.plot_tropo_wet_delay(tropo)
@@ -440,8 +440,8 @@ class PerformanceManager:
             if prefit_residuals.is_empty() or position.is_empty():
                 raise ValueError
         except ValueError:
-            self.log.warn("Satellite information (prefit-residuals) dataframe not found or is empty. "
-                          "Skipping plot_sat_availability")
+            self.log.warning("Satellite information (prefit-residuals) dataframe not found or is empty. "
+                             "Skipping plot_sat_availability")
             return
 
         try:
@@ -458,7 +458,7 @@ class PerformanceManager:
             if position_df.is_empty():
                 raise ValueError
         except ValueError:
-            self.log.warn("Estimated Position dataframe not found or is empty. Skipping plot_3D_traj")
+            self.log.warning("Estimated Position dataframe not found or is empty. Skipping plot_3D_traj")
             return
         try:
             positions = position_df.data.loc[:, ['x', 'y', 'z']].values
@@ -507,7 +507,7 @@ class PerformanceManager:
             if position_df.is_empty():
                 raise ValueError
         except ValueError:
-            self.log.warn("Estimated Position dataframe not found or is empty. Skipping plot_latlon")
+            self.log.warning("Estimated Position dataframe not found or is empty. Skipping plot_latlon")
             return
 
         try:
@@ -534,7 +534,7 @@ class PerformanceManager:
             if dop_ecef.is_empty() or dop_enu.is_empty():
                 raise ValueError
         except ValueError:
-            self.log.warn("DOPs dataframe not found or is empty. Skipping plot_dops")
+            self.log.warning("DOPs dataframe not found or is empty. Skipping plot_dops")
             return
         try:
             ax1, ax2, ax3 = plot_gnss.plot_dops(dop_ecef, dop_enu)
@@ -550,7 +550,7 @@ class PerformanceManager:
             if satellite_azel.is_empty():
                 raise ValueError
         except ValueError:
-            self.log.warn("Satellite Azimuth-Elevation dataframe not found or is empty. Skipping skyplot")
+            self.log.warning("Satellite Azimuth-Elevation dataframe not found or is empty. Skipping skyplot")
             return
         try:
             ax = plot_gnss.plot_skyplot(satellite_azel)
@@ -564,7 +564,7 @@ class PerformanceManager:
             if position_df.is_empty():
                 raise ValueError
         except ValueError:
-            self.log.warn("Estimated Position dataframe not found or is empty. Skipping plot_planimetric")
+            self.log.warning("Estimated Position dataframe not found or is empty. Skipping plot_planimetric")
             return
 
         try:

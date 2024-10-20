@@ -1,5 +1,4 @@
-"""Klobuchar ionospheric module for GPS
-"""
+""" Klobuchar ionospheric module """
 from math import sin, cos
 
 from src import constants
@@ -15,7 +14,8 @@ class IonoKlobuchar:
     def compute(gps_sow, alfa, beta, user_lat, user_long, sv_el, sv_az, freq):
         """
         This function computes the ionosphere correction using the a priori Klobuchar Ionospheric Model
-        refs:
+
+        References:
             * section 20.3.3.5.2.5 of [NAVSTAR GPS Space Segment/Navigation User Interfaces]
             * https://gssc.esa.int/navipedia/index.php/Klobuchar_Ionospheric_Model
 
@@ -33,6 +33,7 @@ class IonoKlobuchar:
             sv_el(float): satellite elevation in [rad]
             sv_az(float): satellite azimuth in [rad]
             freq(src.data_types.gnss.data_type.DataType): Frequency band required for the iono delay
+
         Returns:
             float : ionosphere correction [m]
         """

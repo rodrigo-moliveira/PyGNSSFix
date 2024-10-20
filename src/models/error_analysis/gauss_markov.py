@@ -1,4 +1,4 @@
-import numpy as np
+"""import numpy as np
 import matplotlib.pyplot as plt
 
 # ver a discussao https://chat.openai.com/c/ea40bb5f-1ca1-4c7d-aec6-aaaf20e3c636
@@ -29,4 +29,4 @@ plt.plot(time_points, process_values)
 plt.xlabel("Time")
 plt.ylabel("Process Value")
 plt.title("Continuous-Time Gauss-Markov Process")
-plt.show()
+plt.show()"""

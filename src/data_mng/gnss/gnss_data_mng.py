@@ -131,7 +131,7 @@ class GnssDataManager(Container):
 
         log.info("Launching RinexObsReader")
         for file in obs_files:
-            RinexObsReader(self.get_data("obs_data"), file)
+            RinexObsReader(file, self.get_data("obs_data"))
 
         log.info(f"Using precise orbit/clock products: {use_precise_products}")
 

@@ -1,3 +1,5 @@
+""" Module for the planimetric plots """
+
 import simplekml
 import folium
 import webbrowser
@@ -10,7 +12,7 @@ def create_kml_file(points, filename):
 
     Note: this file may then be loaded in KML application readers, such as the Google Earth.
 
-    Parameters:
+    Args:
         points (list[tuple[float, float, float]]): geodetic coordinates of the points to be saved in the KML file,
             This is a list of tuples as [latitude (degree), longitude (degree), height (meters)].
         filename (str): The filename of the KML file to be created.
@@ -20,14 +22,13 @@ def create_kml_file(points, filename):
         pnt = kml.newpoint(coords=[(lon, lat, alt)])
         pnt.altitudemode = simplekml.AltitudeMode.absolute
     kml.save(filename)
-    print("here 1")
 
 
 def create_map_html_file(points, filename):
     """
     Plots points on a world map and saves as an HTML file.
 
-    Parameters:
+    Args:
         points (list[tuple[float, float]]): geodetic coordinates of the points to be saved in the KML file,
             This is a list of tuples as [latitude (degree), longitude (degree)].
         filename (str): The filename of the HTML file to be created.

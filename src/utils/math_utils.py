@@ -67,7 +67,7 @@ def vector2skew_symmetric(a):
     """
 
     if a.size != 3:
-        raise TypeError(f"Vector {a} must have shape (3,). Instead, it has shape {a.shape}")
+        raise AttributeError(f"Vector {a} must have shape (3,). Instead, it has shape {a.shape}")
 
     skew = np.array([[0.0, -a[2], a[1]],
                      [a[2], 0.0, -a[0]],
@@ -85,7 +85,7 @@ def skew_symmetric2vector(skew):
     """
 
     if skew.shape != (3, 3):
-        raise TypeError(f"Vector {skew} must have shape (3,3). Instead, it has shape {skew.shape}")
+        raise AttributeError(f"Vector {skew} must have shape (3,3). Instead, it has shape {skew.shape}")
 
     # note: we assume that the matrix is skew symmetric (skew^T = -skew)
     return np.array([-skew[1, 2], skew[0, 2], -skew[0, 1]])
@@ -93,15 +93,15 @@ def skew_symmetric2vector(skew):
 
 def require_len_array(arr: np.ndarray, length=3):
     if not (type(arr) == np.ndarray):
-        raise TypeError(f"not a valid numpy array object (numpy.ndarray). It is of type {type(arr)}")
+        raise AttributeError(f"not a valid numpy array object (numpy.ndarray). It is of type {type(arr)}")
 
     if len(arr) != length or arr.size != length:
         raise ArraySizeError(f"invalid shape of array {arr}: should be an array of size {length}")
 
 
-def require_len_matrix(arr: np.ndarray, nrows, ncols):
+def require_len_matrix(arr: np.ndarray, nrows=3, ncols=3):
     if not (type(arr) == np.ndarray):
-        raise TypeError(f"not a valid numpy array object (numpy.ndarray). It is of type {type(arr)}")
+        raise AttributeError(f"not a valid numpy array object (numpy.ndarray). It is of type {type(arr)}")
 
     rows, cols = arr.shape
 

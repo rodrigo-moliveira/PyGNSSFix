@@ -1,4 +1,4 @@
-""" Method to perform the skyplot """
+""" Module for the skyplot """
 from matplotlib import pyplot as plt
 from src import constants
 
@@ -14,7 +14,7 @@ def plot(trajectory, target_name, ax=None, north_to_east_ccw=True, grid=True):
 
     Note: elevation is positive towards East, that is elevation = 90 [deg] points towards East
 
-    Arguments:
+    Args:
         trajectory (list[tuple[float, float]]): list with the azimuth-elevation path for a single satellite in view
         target_name (str): string with the target or satellite name
         ax (matplotlib.pyplot.Axes): input Axes object with the skyplot path of other satellites

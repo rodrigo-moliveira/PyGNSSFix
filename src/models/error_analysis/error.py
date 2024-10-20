@@ -3,11 +3,8 @@
 import numpy as np
 import scipy.stats as stats
 
-from src import constants
 from src.models.frames import cartesian2geodetic, latlon2dcm_e_enu, latlon2dcm_e_ned
 
-
-# Cleaned
 
 def compute_error_static(est_data, true_data, true_pos, local="ENU"):
     """
@@ -33,6 +30,9 @@ def compute_error_static(est_data, true_data, true_pos, local="ENU"):
               uncertainty in the local frame for each epoch.
 
         where N corresponds to the number of epochs.
+
+    Raises:
+        ValueError: an exception is raised if the `local` argument is not valid
     """
     [lat, lon, _] = cartesian2geodetic(*true_pos)
 
@@ -189,7 +189,7 @@ def get_cov(row, rot_matrix=np.eye(3)):
 def chi_squared_test(residuals, p, alpha):
     """
     This function performs the chi-square test, which is a common method to check if the residuals from
-    a Least Squares adjustment in GNSS positioning follow a white noise distribution.
+    a Least-Squares adjustment in GNSS positioning follow a white noise distribution.
 
     Formulate Hypotheses:
         Null Hypothesis (H0): The residuals follow a white noise distribution.
@@ -210,7 +210,7 @@ def chi_squared_test(residuals, p, alpha):
         * If the computed chi-square statistic is greater than the critical value, you reject the null hypothesis
             (the residuals are not consistent with white noise).
 
-    Arguments:
+    Args:
         residuals (numpy.ndarray): An array-like object of size N representing the residuals to be evaluated.
         p (int): number of estimated parameters affecting the residuals. For example if position(3) , clock(1),
             troposphere (1) and ionosphere (1) are estimated, p should be 6
@@ -263,7 +263,7 @@ def shapiro_test(residuals, alpha):
     small to moderate sample sizes and is commonly used to assess the
     normality of residuals in regression models.
 
-    Parameters:
+    Args:
         residuals(numpy.ndarray) : an array-like with a sequence of residuals (or any numerical data) to be
             tested for normality.
         alpha(float): significance level for the chi-squared distribution (usually 0.05)

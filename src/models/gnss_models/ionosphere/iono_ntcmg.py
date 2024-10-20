@@ -1,5 +1,4 @@
-"""NTCM-G ionospheric module for Galileo
-"""
+""" NTCM-G ionospheric module """
 
 import numpy as np
 from dataclasses import dataclass
@@ -33,7 +32,7 @@ class NTCMG_coefs:
 
 class NTCMG:
     """
-    NTCM-G ionospheric model for Galileo users
+    NTCM-G ionospheric model for Galileo users.
 
     More information can be found in :
         https://www.gsc-europa.eu/sites/default/files/NTCM-G_Ionospheric_Model_Description_-_v1.0.pdf
@@ -41,10 +40,11 @@ class NTCMG:
 
     @staticmethod
     def calculate_azpar(effec_iono: np.array):
-        """Compute Azpar from the `effec_iono` broadcast parameters
+        """ Compute Azpar from the `effec_iono` broadcast parameters.
+
         Args:
             effec_iono(list): Effective ionisation level coefficients a0 a1 a2, length 3
-        Return:
+        Returns:
             float: azpar
         """
         a0 = effec_iono[0]
@@ -56,8 +56,7 @@ class NTCMG:
     @staticmethod
     def calculate_pierce_point_lat_lon(sat_el_rad: float, sat_az_rad: float, user_lat_rad: float,
                                        user_lon_rad: float):
-        """Compute the geographic latitude and longitude of the ionospheric pierce point IPP
-        """
+        """ Compute the geographic latitude and longitude of the ionospheric pierce point IPP """
         # Calculate the earths central angle delta_pp between the user position and the earth projection of the piercing
         # point
         lambda_pp_rad = PI / 2 - sat_el_rad - asin((Re_km / (Re_km + hI_km)) * cos(sat_el_rad))
@@ -73,20 +72,17 @@ class NTCMG:
 
     @staticmethod
     def calculate_local_time(lon_pp_rad: float, universal_time_UT_hours: float):
-        """Computes the local time LT given the `pierce point` longitude and UT
-        """
+        """ Computes the local time LT given the `pierce point` longitude and UT """
         return universal_time_UT_hours + degrees(lon_pp_rad) / 15
 
     @staticmethod
     def calculate_sun_declination(doy: float):
-        """Computes the sun's declination for the applicable day
-        """
+        """ Computes the sun's declination for the applicable day """
         return radians(23.44 * sin(radians(0.9856 * (doy - 80.7))))
 
     @staticmethod
     def calculate_solar_zenith_angle_dependence(lat_pp_rad: float, sun_declination_rad: float):
-        """Computes the dependency of TEC with the solar zenith angle X
-        """
+        """ Computes the dependency of TEC with the solar zenith angle X """
         cos_solar_zenith_double_star = cos(lat_pp_rad - sun_declination_rad) + 0.4
         cos_solar_zenith_triple_star = cos(lat_pp_rad - sun_declination_rad) - (2 / PI) * lat_pp_rad * sin(
             sun_declination_rad)
@@ -95,8 +91,7 @@ class NTCMG:
 
     @staticmethod
     def calculate_geomagnetic_lat_from_geographic(lat_pp_rad: float, lon_pp_rad: float):
-        """Computes the geomagnetic latitude of the `pierce point` based on a magnetic dipole model
-        """
+        """ Computes the geomagnetic latitude of the `pierce point` based on a magnetic dipole model """
         lat_north_pole_rad = radians(lat_north_pole_deg)
         lon_north_pole_rad = radians(lon_north_pole_deg)
         geo_lat_rad = asin(sin(lat_pp_rad) * sin(lat_north_pole_rad) + cos(lat_pp_rad) * cos(lat_north_pole_rad) *
@@ -105,8 +100,7 @@ class NTCMG:
 
     @staticmethod
     def compute_local_time_dependency_F1(lat_pp_rad: float, lon_pp_rad: float, universal_time_hour: float):
-        """Computes the local time dependency
-        """
+        """ Computes the local time dependency """
         cos_double_star, cos_triple_star = NTCMG.calculate_solar_zenith_angle_dependence(lat_pp_rad, lon_pp_rad)
         LT = NTCMG.calculate_local_time(lon_pp_rad, universal_time_hour)
         VD = 2 * PI * (LT - 14) / 24  # Diurnal angular phase
@@ -121,8 +115,7 @@ class NTCMG:
 
     @staticmethod
     def compute_season_dependency_F2(doy: int):
-        """Computes the season dependency term
-        """
+        """ Computes the season dependency term """
         VA = 2 * PI * (doy - 18) / 365.25
         VSA = 4 * PI * (doy - 6) / 365.25
         F2 = 1 + NTCMG_coefs.k6 * cos(VA) + NTCMG_coefs.k7 * cos(VSA)
@@ -131,8 +124,7 @@ class NTCMG:
 
     @staticmethod
     def compute_geomagnetic_field_dependency_F3(lat_pp_rad: float, lon_pp_rad: float):
-        """Computes the geomagnetic field dependency term
-        """
+        """ Computes the geomagnetic field dependency term """
         geo_lat_pp_rad = NTCMG.calculate_geomagnetic_lat_from_geographic(lat_pp_rad, lon_pp_rad)
         F3 = 1 + NTCMG_coefs.k8 * cos(geo_lat_pp_rad)
 
@@ -140,8 +132,7 @@ class NTCMG:
 
     @staticmethod
     def compute_equatorial_anomaly_dependency_F4(lat_pp_rad: float, lon_pp_rad: float):
-        """Computes the equatorial anomaly dependency term
-        """
+        """ Computes the equatorial anomaly dependency term """
         geo_lat_pp_deg = degrees(NTCMG.calculate_geomagnetic_lat_from_geographic(lat_pp_rad, lon_pp_rad))
         oc1_2 = 144
         oc2_2 = 169
@@ -153,16 +144,14 @@ class NTCMG:
 
     @staticmethod
     def compute_solar_activity_dependency_F5(azpar: float):
-        """Computes the solar activity dependency term
-        """
+        """ Computes the solar activity dependency term """
         F5 = NTCMG_coefs.k11 + NTCMG_coefs.k12 * azpar
 
         return F5
 
     @staticmethod
     def compute_vtec(lat_pp_rad: float, lon_pp_rad: float, ut1, azpar: float):
-        """Computes the VTEC
-        """
+        """ Computes the VTEC """
         doy = ut1.timetuple().tm_yday
 
         universal_time_hour = ut1.hour + ut1.minute / 60 + ut1.second / 3600  # Hour and decimal
@@ -175,8 +164,7 @@ class NTCMG:
 
     @staticmethod
     def vtec_to_stec_mapping(sat_el_rad: float):
-        """Computes the VTEC
-        """
+        """ Computes the VTEC """
         sinz = (Re_km / (Re_km + hI_km)) * sin(0.9782 * ((PI / 2) - sat_el_rad))
         return 1 / sqrt(1 - sinz ** 2)
 
@@ -185,7 +173,8 @@ class NTCMG:
         """
         Main function of the NTCM-G model. It computes the ionosphere correction using the a priori
         NTCM-G Model
-        refs:
+
+        Reference:
             * https://www.gsc-europa.eu/sites/default/files/NTCM-G_Ionospheric_Model_Description_-_v1.0.pdf
 
         Args:

@@ -1,3 +1,4 @@
+""" Module with functions for GNSS plotting """
 import re
 
 import allantools as at
@@ -11,13 +12,14 @@ from src.io.rinex_parser.utils import RINEX_SATELLITE_SYSTEM, RINEX_OBS_TYPES_UN
 from src.utils.str_utils import extract_constellations
 from src.models.plots import skyplot
 from .utils import *
+from ...data_types.date import Epoch
 
 
 def plot_observations(observations: CSVData):
     """
-    Plots the GNSS Observables
+    Plots the GNSS Observables.
 
-    Arguments:
+    Args:
         observations(CSVData): input CSVData object with the GNSS Observables dataset
     Returns:
         dict: dict with the different matplotlib.Axes for each constellation and observable datatype
@@ -57,7 +59,7 @@ def plot_estimation_errors(time_array, error, cov, title, y_axis, dim1_label, di
     """
     Plots the position/velocity estimation errors
 
-    Arguments:
+    Args:
         time_array(list): list of Epoch objects of size N
         error(numpy.ndarray): matrix of shape Nx3 with the estimation error for each epoch
         cov( list[numpy.ndarray]): list with length N with the estimation covariance matrices (size 3x3)
@@ -95,9 +97,9 @@ def plot_estimation_errors(time_array, error, cov, title, y_axis, dim1_label, di
 
 def plot_estimation_residuals(residuals: CSVData, units):
     """
-    Plot the GNSS prefit and postfit residuals of the estimation process
+    Plot the GNSS prefit and postfit residuals of the estimation process.
 
-    Arguments:
+    Args:
         residuals(CSVData): input CSVData object with the GNSS Observable Residuals dataset
         units(str): string with the units for the residuals (ex: m or m/s)
     Returns:
@@ -129,7 +131,7 @@ def plot_clock_bias(clock_bias: CSVData, isb: CSVData):
         * the clock for the slave constellation is also plotted together with the master clock
         * an additional plot with the ISB estimated state is depicted as well.
 
-    Arguments:
+    Args:
         clock_bias(CSVData): input CSVData object with the estimated receiver clock bias (master clock)
         isb(str): input CSVData object with the ISB of the master clock wrt the slave clock
     Returns:
@@ -195,8 +197,9 @@ def plot_clock_bias(clock_bias: CSVData, isb: CSVData):
 def plot_allan_deviation(clock_bias):
     """
     Plot the Allan Deviation of the estimated receiver clock bias state.
-    The Allan Deviation is computed using the function :py:func:`allantools.oadev`
-    Arguments:
+    The Allan Deviation is computed using the function :py:func:`allantools.oadev`.
+    
+    Args:
         clock_bias(CSVData): input CSVData object with the estimated receiver clock bias (master clock)
     Returns:
         matplotlib.pyplot.Axes: returns the Axes object for the figure
@@ -225,7 +228,7 @@ def plot_clock_bias_rate(clock_rate: CSVData):
     """
     Plot the estimated receiver clock bias rate state.
 
-    Arguments:
+    Args:
         clock_rate(CSVData): input CSVData object with the estimated receiver clock bias rate (master clock)
     Returns:
         matplotlib.pyplot.Axes: returns the Axes object for the figure
@@ -266,7 +269,7 @@ def plot_tropo_wet_delay(tropo: CSVData):
     """
     Plot the estimated receiver clock bias rate state.
 
-    Arguments:
+    Args:
         tropo(CSVData): input CSVData object with the estimated tropo state
     Returns:
         matplotlib.pyplot.Axes: returns the Axes object for the figure
@@ -291,7 +294,7 @@ def plot_iono_states(iono: CSVData):
     """
     Plot the estimated iono states for each satellite.
 
-    Arguments:
+    Args:
         iono(CSVData): input CSVData object with the estimated states for all available satellites
     Returns:
         list[matplotlib.pyplot.Axes]: returns a list of Axes objects for each available satellite iono state
@@ -322,9 +325,9 @@ def plot_iono_states(iono: CSVData):
 
 def plot_satellite_availability(residuals: CSVData, obs_time):
     """
-    Plot the satellite availability
+    Plot the satellite availability.
 
-    Arguments:
+    Args:
         residuals(CSVData): input CSVData object with the pseudorange residuals for each datatype, satellite and epoch
         obs_time(float): default time between observations, in seconds
     Returns:
@@ -412,7 +415,7 @@ def plot_3D_trajectory_with_avg_covariance(data_points, cov,
     Plots the 3D trajectory of the estimated positions. If available, an average covariance ellipsoid and the true
     static position are also depicted.
 
-    Arguments:
+    Args:
         data_points (list[tuple[float, float, float]]): List of estimated positions
         cov (list[np.ndarray]): List of estimated covariance matrices
         true_position (tuple[float, float, float]): True static position
@@ -422,6 +425,8 @@ def plot_3D_trajectory_with_avg_covariance(data_points, cov,
         title(str): Title of the plot
     Returns:
         Axes3D: returns the Axes object with the 3D plot
+    Raises:
+        ValueError: an exception is raised if the input arguments do not have the required shape
     """
     # Validate data_points
     if not all(len(point) == 3 for point in data_points):
@@ -473,9 +478,9 @@ def plot_3D_trajectory_with_avg_covariance(data_points, cov,
 
 def plot_covariance_ellipsoid(ax, pos, cov, n_std=1.0):
     """
-    Plot a 3D covariance ellipsoid in the provided Axes3D object
+    Plot a 3D covariance ellipsoid in the provided Axes3D object.
 
-    Parameters:
+    Args:
         ax (Axes3D): Axes on which to plot.
         pos (tuple[float, float, float]): Center position of the ellipsoid.
         cov (numpy.ndarray): Covariance matrix (3x3).
@@ -512,7 +517,7 @@ def plot_2D_trajectory(data, cov=None, true_pos=None, label="", x_label="", y_la
     """
     Plots the 2D trajectory of the estimated positions with an average covariance ellipse.
 
-    Parameters:
+    Args:
         data (list[tuple[float, float]]): List of estimated positions in the ENU frame.
         cov (list[numpy.ndarray]): List of the estimated covariance matrices.
         true_pos (tuple[float, float]): True position
@@ -561,7 +566,7 @@ def plot_covariance_ellipse(ax, cov_matrix, center=(0, 0), color='r'):
     """
     Plots a 2D covariance ellipse based on the covariance matrix.
 
-    Parameters:
+    Args:
         ax (matplotlib.axes.Axes): The axes to plot on.
         cov_matrix (numpy.ndarray): The 2x2 covariance matrix.
         center (tuple[float, float]): Center of the ellipse
@@ -587,9 +592,9 @@ def plot_dops(dop_ecef: CSVData, dop_enu: CSVData):
     Plots the DOP parameters in three plots:
         * geometry, position and horizontal DOPs
         * ECEF x, y, z and time DOPs
-        * East, North and UP DOPs
+        * East, North and UP DOPs.
 
-    Parameters:
+    Args:
         dop_ecef (CSVData): input CSVData object with the DOP ECEF dataframe
         dop_enu (CSVData): input CSVData object with the DOP ENU dataframe
     Returns:
@@ -620,9 +625,9 @@ def plot_dops(dop_ecef: CSVData, dop_enu: CSVData):
 
 def plot_skyplot(azel: CSVData):
     """
-    Plot the skyplot of the satellites in view
+    Plot the skyplot of the satellites in view.
 
-    Parameters:
+    Args:
         azel (CSVData): input CSVData object with the Satellite Azimuth/Elevation dataframe
     Returns:
         matplotlib.pyplot.Axes: The Axes object with the skyplot

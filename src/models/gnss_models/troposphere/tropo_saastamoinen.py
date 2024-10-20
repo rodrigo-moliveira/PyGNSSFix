@@ -1,5 +1,4 @@
-"""Module with Tropospheric Saastamoinen Model class
-"""
+""" Module with Tropospheric Saastamoinen Model class """
 import numpy as np
 from math import cos
 
@@ -54,7 +53,7 @@ class SaastamoinenTropo:
             lat (float) : user latitude (geodetic coordinate)   [rad]
             doy (float) : Day of the year (from 1 to 365)       [1 - 365]
 
-        Return:
+        Returns:
             float : tropospheric correction [m]
         """
 
@@ -105,7 +104,7 @@ class SaastamoinenTropo:
             T (float): temperature in degrees Kelvin
             hell (float): ellipsoidal height in m
 
-        Return:
+        Returns:
             float: zenith hydrostatic delay (zhd) in meter
         """
         # calculate denominator f

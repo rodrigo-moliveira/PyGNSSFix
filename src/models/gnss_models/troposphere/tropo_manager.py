@@ -1,3 +1,5 @@
+""" Troposphere Corrections Manager Module """
+
 import numpy as np
 
 from src.errors import ConfigError
@@ -9,7 +11,7 @@ from src.io.config.config import config_dict as config
 
 class TropoManager:
     """
-    Class with Management of a-priori Troposphere models
+    Class with Management of a-priori Troposphere models.
 
     Implemented Models:
         * Saastamoinen
@@ -103,8 +105,7 @@ class TropoManager:
         return zhd * map_hydro + zwd * map_wet, map_wet
 
     def _compute_map(self, ah, aw, mjd, lat, lon, h_ell, el):
-        """Compute hydrostatic and wet mapping functions
-        """
+        """ Compute hydrostatic and wet mapping functions """
         map_hydro = 0.0
         map_wet = 0.0
         zd = np.pi / 2.0 - el  # convert elevation to zenith angle
@@ -121,8 +122,7 @@ class TropoManager:
         return map_hydro, map_wet
 
     def _compute_model(self, lat, long, height, epoch):
-        """Compute hydrostatic and wet zenith delays from the a-priori models
-        """
+        """ Compute hydrostatic and wet zenith delays from the a-priori models """
         zhd = 0.0
         zwd = 0.0
         ah = 0.0

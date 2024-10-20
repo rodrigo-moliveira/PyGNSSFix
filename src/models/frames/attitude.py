@@ -1,10 +1,8 @@
-"""Useful attitude functions and conversions
-"""
+""" Module with useful attitude functions and conversions """
 
 import numpy as np
 
-from .frames import cartesian2geodetic, latlon2dcm_e_ned
-from src.utils.math_utils import vector2skew_symmetric, require_len_array, require_len_matrix
+from src.utils.math_utils import require_len_array, require_len_matrix
 
 
 def euler2dcm(euler):
@@ -18,9 +16,11 @@ def euler2dcm(euler):
     where (x,y,z) are (roll,pitch,yaw), s is short for sin and c is short for cos
 
     Args:
-        euler (np.ndarray or list): 3x1 Euler angles (roll, pitch, yaw), rad.
+        euler (numpy.ndarray or list): 3x1 Euler angles (roll, pitch, yaw), rad.
     Returns:
-        np.ndarray: 3x3 DCM coordinate transformation matrix from n to b
+        numpy.ndarray: 3x3 DCM coordinate transformation matrix from n to b
+    Raises:
+        AttributeError: an exception is raised if the input argument does not have the correct shape
     """
     require_len_array(euler)
 
@@ -47,10 +47,13 @@ def dcm2euler(dcm):
     Convert direction cosine matrix (DCM) to Euler angles
     The euler rotation sequence 3-2-1 is assumed
     Args:
-        dcm (np.ndarray or list): 3x3 coordinate transformation matrix from n to b
+        dcm (numpy.ndarray or list): 3x3 coordinate transformation matrix from n to b
     Returns:
-        np.ndarray: 3x1 Euler angles, rad.
+        numpy.ndarray: 3x1 Euler angles, rad.
+    Raises:
+        AttributeError: an exception is raised if the input argument does not have the correct shape
     """
+    require_len_matrix(dcm)
     yaw = np.arctan2(dcm[0, 1], dcm[0, 0])  # arctan2(cy*sz, cy*cz) <=> arctan2(sz,cz)
     pitch = np.arcsin(-dcm[0, 2])
     roll = np.arctan2(dcm[1, 2], dcm[2, 2])
@@ -58,8 +61,9 @@ def dcm2euler(dcm):
     return np.array([roll, pitch, yaw])
 
 
+"""
 def exp_att2euler(pos, exp_att):
-    """
+    
     Convert exponential attitude to Euler Angles.
 
     More information about the exponential attitude conversions in:
@@ -72,11 +76,13 @@ def exp_att2euler(pos, exp_att):
     This function should just convert attitude from representation to the other, and not the frame.
 
     Args:
-         pos(np.ndarray): 3x1 position vector associated with the current attitude state
-         exp_att(np.ndarray): 3x1 attitude in exponential angle notation
+         pos(numpy.ndarray): 3x1 position vector associated with the current attitude state
+         exp_att(numpy.ndarray): 3x1 attitude in exponential angle notation
     Returns:
-        np.ndarray: 3x1 Euler angles, rad.
-    """
+        numpy.ndarray: 3x1 Euler angles, rad.
+    Raises:
+        AttributeError: an exception is raised if the input arguments do not have the correct shape
+    
     require_len_array(exp_att)
     require_len_array(pos)
 
@@ -92,10 +98,11 @@ def exp_att2euler(pos, exp_att):
 
     # from dcm to euler
     return dcm2euler(dcm_n_b)
+"""
 
-
+"""
 def euler2exp_att(pos, euler):
-    """
+    
     Convert Euler angles to exponential attitude
 
     More information about the exponential attitude conversions in:
@@ -104,11 +111,13 @@ def euler2exp_att(pos, euler):
     NOTE: The same applies to this function
 
     Args:
-         pos(np.ndarray): 3x1 position vector associated with the current attitude state
-         euler(np.ndarray): 3x1 Euler angles vector
+         pos(numpy.ndarray): 3x1 position vector associated with the current attitude state
+         euler(numpy.ndarray): 3x1 Euler angles vector
     Returns:
-        np.ndarray: 3x1 exponential attitude vector
-    """
+        numpy.ndarray: 3x1 exponential attitude vector
+    Raises:
+        AttributeError: an exception is raised if the input arguments do not have the correct shape
+    
     require_len_array(euler)
     require_len_array(pos)
 
@@ -129,9 +138,22 @@ def euler2exp_att(pos, euler):
     exp3 = logRR[1, 0]
 
     return np.array([exp1, exp2, exp3])
+"""
 
 
+"""
 def euler2quat(pos, euler):
+    
+    Convert Euler angles to quaternion
+
+    Args:
+         pos(numpy.ndarray): 3x1 position vector associated with the current attitude state
+         euler(numpy.ndarray): 3x1 Euler angles vector
+    Returns:
+        numpy.ndarray: 3x1 exponential attitude vector
+    Raises:
+        AttributeError: an exception is raised if the input arguments do not have the correct shape
+    
     require_len_array(euler)
     require_len_array(pos)
 
@@ -141,16 +163,21 @@ def euler2quat(pos, euler):
     dcm_e_b = dcm_n_b @ dcm_e_n
 
     return dcm2quat(dcm_e_b)
+"""
 
 
 def quat_normalize(q):
     """
-    Normalize a quaternion, scalar part is always non-negative
+    Normalize a quaternion, scalar part is always non-negative.
+
     Args:
-        q(np.ndarray): input quaternion to be normalized
+        q(numpy.ndarray): input quaternion to be normalized
     Returns:
-        (np.ndarray): normalized quaternion, scalar part is always non-negative
+        (numpy.ndarray): normalized quaternion, scalar part is always non-negative
+    Raises:
+        AttributeError: an exception is raised if the input argument does not have the correct shape
     """
+    require_len_array(q, length=4)
     if q[0] < 0:
         q = -q
     q_norm = np.sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3])
@@ -162,15 +189,17 @@ def dcm2quat(c):
     """
     Convert direction cosine matrix to quaternion
     Args:
-        c(np.ndarray): direction cosine matrix
+        c(numpy.ndarray): direction cosine matrix
     Returns:
-        np.ndarray: quaternion q, scalar first
+        numpy.ndarray: quaternion q, scalar first
+    Raises:
+        AttributeError: an exception is raised if the input argument does not have the correct shape
     """
     require_len_matrix(c, 3, 3)
 
     tr = c[0, 0] + c[1, 1] + c[2, 2]
     tmp = np.array([0.0, 0.0, 0.0, 0.0])
-    q = np.array([0.0, 0.0, 0.0, 0.0])
+    # q = np.array([0.0, 0.0, 0.0, 0.0])
     if tr > 0.0:
         tmp[0] = 0.5 * np.sqrt(1.0 + tr)
         tmp[1] = 0.25 / tmp[0] * (c[1, 2] - c[2, 1])

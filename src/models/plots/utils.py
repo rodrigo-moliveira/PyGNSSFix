@@ -1,7 +1,33 @@
+""" Utility module for interfacing with the matplotlib plot functions. """
 import matplotlib.pyplot as plt
 
 
 def plot_1D(x, y, **kwargs):
+    """
+    Plots a 1D Time series, where `x` is the time axis and `y` is the data axis.
+
+    Args:
+        x(numpy.ndarray or list): array-like vector with the time points
+        y(numpy.ndarray or list): array-like vector with the 1D data points
+        kwargs: configuration dict with the following available properties:
+            ax(matplotlib.pyplot.Axes or None): Axes instance to draw the plot. If None, creates a new one.
+            scatter(bool): if True, uses the `scatter` function, otherwise uses the `plot` function
+            markersize(float): `markersize` property of `matplotlib`
+            marker(str): `marker` property of `matplotlib`
+            color(str): `color` property of `matplotlib`
+            linewidth(float): `linewidth` property of `matplotlib`
+            linestyle(str) `linestyle` property of `matplotlib`
+            set_legend(bool): if True, the legend is drawn
+            tight_layout(bool): if True, the `tight_layout` property is enabled
+            equal(bool): if True, the axes proportions are set to equal
+            label(str): label (description) of this data series
+            x_label(str): label of the x-axis
+            y_label(str): label of the y-axis
+            y_scale(str): scale of the y axis
+            title(str): title name
+
+    For more information about the configuration properties in `kwargs`, consult the `matplotlib` documentation.
+    """
     # try to fetch axis to insert the plot. If no ax is provided, create a new one
     ax = kwargs.get("ax", None)
     if ax is None:
@@ -34,11 +60,27 @@ def plot_1D(x, y, **kwargs):
     return ax
 
 
-def grid():
-    plt.grid(True)
-
-
 def loglog(x, y, **kwargs):
+    """
+    Plots a logarithmic graph, where `x` is the time axis and `y` is the data axis.
+
+    Args:
+        x(numpy.ndarray or list): array-like vector with the time points
+        y(numpy.ndarray or list): array-like vector with the 1D data points
+        kwargs: configuration dict with the following available properties:
+            ax(matplotlib.pyplot.Axes or None): Axes instance to draw the plot. If None, creates a new one.
+            markersize(float): `markersize` property of `matplotlib`
+            marker(str): `marker` property of `matplotlib`
+            linewidth(float): `linewidth` property of `matplotlib`
+            set_legend(bool): if True, the legend is drawn
+            tight_layout(bool): if True, the `tight_layout` property is enabled
+            label(str): label (description) of this data series
+            x_label(str): label of the x-axis
+            y_label(str): label of the y-axis
+            title(str): title name
+
+    For more information about the configuration properties in `kwargs`, consult the `matplotlib` documentation.
+    """
     # try to fetch axis to insert the plot. If no ax is provided, create a new one
     ax = kwargs.get("ax", None)
     if ax is None:
@@ -62,13 +104,5 @@ def loglog(x, y, **kwargs):
 
 
 def show_all():
+    """ Show all plots in cache. Calls function `matplotlib.pyplot.show` """
     plt.show()
-
-# Check to delete
-# def format_time_for_plot(time_in):
-#    time_out = []
-#    for t in time_in["Epoch_timetag"]:
-#        args = t.split()
-#        epoch = Epoch.strptime(args[0], format=Epoch.ISO_FORMAT, scale=args[1])
-#        time_out.append(epoch)
-#    return time_out

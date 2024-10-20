@@ -1,3 +1,5 @@
+""" Ionosphere Corrections Manager Module """
+
 from src.io.config import EnumIonoModel, config_dict as config
 from src.errors import ConfigError
 from .iono_klobuchar import IonoKlobuchar
@@ -10,7 +12,8 @@ from src.common_log import get_logger, MODEL_LOG
 
 class IonoManager:
     """
-    Class with Management of a-priori Ionosphere models
+    Class with Management of a-priori Ionosphere models.
+
     Implemented models:
         * Klobuchar (recommended for GPS satellites)
         * NTCM-G (recommended for GAL satellites)
@@ -24,6 +27,8 @@ class IonoManager:
         Constructor of the Iono Manager
         Args:
             constellation(str): input constellation to associate to this IonoManager object
+        Raises:
+            ConfigError: an exception is raised if the user-configured model is not known.
         """
         iono_model_enum = EnumIonoModel.init_model(config.get("model", constellation, "ionosphere"))
 
@@ -38,7 +43,8 @@ class IonoManager:
 
     def compute_iono_delay(self, epoch, iono_corrections, sat, user_lat, user_long, sv_el, sv_az, freq):
         """
-        Compute iono delay in meters for the corresponding a-priori model selected
+        Compute iono delay in meters for the corresponding a-priori model selected.
+
         Args:
             epoch(src.data_types.date.Epoch): required epoch to compute the iono delay
             iono_corrections(dict or None): dictionary with iono corrections read from RINEX NAV header

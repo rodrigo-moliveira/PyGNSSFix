@@ -1,3 +1,6 @@
+"""
+Deprecated
+
 import numpy as np
 import allantools as at
 import matplotlib.pyplot as plt
@@ -5,7 +8,7 @@ import matplotlib.pyplot as plt
 # TODO: clean all this up with https://chatgpt.com/c/ce29b0ea-20a7-42e5-a84b-27e08274bd92
 #    see also here https://allantools.readthedocs.io/en/latest/functions.html
 
-"""
+
 Compute the Allan deviation for a given time series.
 
 The Allan deviation is a measure of frequency stability in time series data.
@@ -39,19 +42,14 @@ Procedure:
 5. The Allan deviation is the square root of the Allan variance:
    `allan_dev = np.sqrt(allan_var)`
 
-Example:
---------
->>> x_series = [0.1, 0.2, 0.15, 0.22, 0.18, 0.25]
->>> tau = 1.0  # Assuming the time interval between measurements is 1 second
->>> allan_dev = allan_deviation(x_series, tau)
->>> print(allan_dev)
+
 
 Notes:
 ------
 - The input time series `x_series` should be evenly spaced in time.
 - The averaging time interval `tau` should be a multiple of the sampling interval.
 - This function assumes that `tau` is constant across the time series.
-"""
+
 def allan_deviation(x_series, tau):
     N = len(x_series)
     if N < 3:
@@ -209,4 +207,4 @@ plt.ylabel('Allan Deviation')
 plt.title('Allan Deviation of GNSS Clock Estimates')
 plt.grid(True)
 plt.legend()
-plt.show()
+plt.show()"""
