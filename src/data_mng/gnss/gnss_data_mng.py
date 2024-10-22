@@ -118,6 +118,8 @@ class GnssDataManager(Container):
 
         Args:
             trace_dir(str): path to write trace files
+        Raises:
+            IOError: an exception is raised if the trace directory is not created successfully
         """
         log = get_logger(IO_LOG)
 

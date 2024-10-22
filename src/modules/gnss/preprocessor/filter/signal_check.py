@@ -13,7 +13,7 @@ class SignalCheckFilter(Filter):
         to weak signals, based on the Carrier-to-Noise ratio (C/N0). This filter removes all observations whose C/N0
         (signal observable) is below the user-defined threshold.
 
-        Parameters:
+        Args:
             observation_data(src.data_mng.gnss.ObservationData): input observation data set (required for the
                 validation logic - read only)
             snr_threshold(float): threshold for the C/N0 noise

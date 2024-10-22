@@ -1,4 +1,4 @@
-"""Smoother Module with the implementation of the Hatch Filter"""
+""" Module with the implementation of the Smoother Hatch Filter Functor """
 
 from datetime import timedelta
 
@@ -12,7 +12,7 @@ from src.errors import TimeSeriesError
 
 class SmoothFunctor(Functor):
     """
-    The SmoothFunctor class implements the Hatch filter, which smooths pseudorange observables using time differences
+    The `SmoothFunctor` class implements the Hatch filter, which smooths pseudorange observables using time differences
     of carrier-phase observables, thus reducing raw pseudorange noise.
 
     The smooth pseudorange observation is computed for epoch t_i as:
@@ -34,9 +34,10 @@ class SmoothFunctor(Functor):
     """
 
     def __init__(self, time_constant: float, obs_rate: float):
-        """Constructor of the SmoothFunctor algorithm
+        """
+        Constructor of the SmoothFunctor algorithm
 
-        Parameters:
+        Args:
             time_constant(float): user-defined time constant for the Hatch Filter, in seconds
             obs_rate(float): data rate of the observation data (period of observations), in seconds
         """
@@ -55,7 +56,7 @@ class SmoothFunctor(Functor):
                     return obs
         return None
 
-    def get_alfa(self, t, t_prev, t_0):
+    def _get_alfa(self, t, t_prev, t_0):
         delta_initial = (t - t_0).total_seconds()
         delta = (t - t_prev).total_seconds()
 
@@ -82,14 +83,14 @@ class SmoothFunctor(Functor):
                 carrier = self._get_carrier(raw_obs, pseudorange.datatype.freq_number)  # L(t_i)
 
                 # compute smooth observable
-                smooth_obs = self.smooth_function(obs_data_in, sat, epoch, epoch_prev, pseudorange, carrier)
+                smooth_obs = self._smooth_function(obs_data_in, sat, epoch, epoch_prev, pseudorange, carrier)
 
                 # append it to output list
                 v_obs_out.append(smooth_obs)
 
         return v_obs_out
 
-    def smooth_function(self, obs_data_in, sat, epoch, epoch_prev, pseudorange, carrier):
+    def _smooth_function(self, obs_data_in, sat, epoch, epoch_prev, pseudorange, carrier):
 
         # get SPR datatype (C1 + L1 = SPR1, C2 + L2 = SPR2, C12 + L12 = SPR12, ...)
         smooth_type = DataType.get_smooth_datatype(pseudorange.datatype)
@@ -99,7 +100,7 @@ class SmoothFunctor(Functor):
             carrier_prev = obs_data_in.get_observable_at_epoch(sat, epoch_prev, carrier.datatype)  # L(t_{i-1})
 
             # get alfa weight
-            alfa = self.get_alfa(epoch, epoch_prev, obs_data_in.get_first_arc_epoch(sat, epoch, self.rate))
+            alfa = self._get_alfa(epoch, epoch_prev, obs_data_in.get_first_arc_epoch(sat, epoch, self.rate))
 
             # smooth computation
             carrier_diff = carrier.value - carrier_prev.value

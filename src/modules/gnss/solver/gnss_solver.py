@@ -1,3 +1,5 @@
+""" Module with the GNSS PNT Solver Algorithm """
+
 import numpy as np
 
 from src.data_mng.gnss.state_space import GnssStateSpace
@@ -15,7 +17,7 @@ from src.models.gnss_models import TropoManager, IonoManager
 
 class GnssSolver:
     """
-    GnssSolver class
+    GnssSolver class.
     Implements GNSS-based estimation of the receiver Position, Velocity Time (PVT) states.
 
     The module is able to process currently GPS and GAL constellations in both single-frequency and dual-frequency
@@ -27,7 +29,7 @@ class GnssSolver:
             observations)
 
     The state vector (estimated parameters) is dependent on the chosen user configuration and simulation setup. The
-    available parameters for estimation are:
+    available parameters for estimation are (for more information see :py:class:`GnssStateSpace`):
         * Receiver position [3x1]: this state is mandatory and always estimated
         * Receiver clock bias [1]: this state is mandatory and always estimated
         * Inter system bias (ISB) [1] : this state is enabled for dual-constellation scenarios
@@ -38,13 +40,16 @@ class GnssSolver:
             requires Doppler measurements
         * Clock drift [1xN_C]: the clock drift state is a by-product of the velocity estimation process, where N_C is
             the number of available constellations.
+
+    Attributes:
+         solution(list[GnssStateSpace]): a list with the solved PNT states for each epoch
     """
 
     def __init__(self, obs_data_for_pos, obs_data_for_vel, nav_data, sat_orbits, sat_clocks):
         """
         Constructor of the GnssSolver class
 
-        Parameters:
+        Args:
             obs_data_for_pos(src.data_mng.gnss.ObservationData): observation data for the position estimation process
                 (may contain raw, smooth or iono-free pseudorange observations)
             obs_data_for_vel(src.data_mng.gnss.ObservationData): observation data for the velocity estimation process
@@ -70,10 +75,14 @@ class GnssSolver:
         self.solution = list()
 
     def _set_solver_metadata(self, config):
-        """ Set up the metadata dict with the scenario setup (user configurations)
+        """
+        Set up the metadata dict with the scenario setup (user configurations)
 
-        Parameters:
+        Args:
             config(src.io.config.config.Config): user configurations
+        Raises:
+            ConfigError: an exception is raised if there are problems/inconsistencies with the user configuration
+
         """
         # Fetching user options
         MAX_ITER = config.get("solver", "n_iterations")  # maximum number of iterations
@@ -155,7 +164,7 @@ class GnssSolver:
         }
 
     def solve(self) -> None:
-        """ Launch GNSSSolver solver algorithm (main function) """
+        """ Launch GNSS Solver algorithm (main function) """
         # available epochs
         epochs = self.obs_data_for_pos.get_epochs()
 
@@ -197,7 +206,7 @@ class GnssSolver:
     def _init_state(self, epoch, sat_list):
         """ Initialize state vector for this epoch
 
-        Parameters:
+        Args:
             epoch(src.data_types.date.Epoch): epoch to initialize the state vector
             sat_list(list[src.data_types.gnss.Satellite]) : list of available satellites
         Returns:
@@ -221,7 +230,7 @@ class GnssSolver:
         """
         Sub function to launch the position estimation procedure
 
-        Parameters:
+        Args:
             epoch(src.data_types.date.Epoch): epoch to process
             obs_data (src.data_mng.gnss.observation_data.EpochData) : instance of `EpochData` (GNSS observable database
                 for a single epoch)
@@ -369,7 +378,7 @@ class GnssSolver:
         """
         Sub function to launch the velocity estimation procedure
 
-        Parameters:
+        Args:
             epoch(src.data_types.date.Epoch): epoch to process
             state(GnssStateSpace) : state vector to process
 

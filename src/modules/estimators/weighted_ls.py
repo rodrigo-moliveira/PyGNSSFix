@@ -1,9 +1,11 @@
+""" Module with the implementation of the Weighted Least-Squares solver """
+
 import numpy as np
 
 
 class WeightedLeastSquares:
     """
-    Solve Weighted Least Squares (WLS) equation of the linear system y = G @ x, where
+    Solve the Weighted Least-Squares (WLS) equation of the linear system y = G @ x, where
         * y - observation vector
         * x - state vector
         * G - state matrix (relates state vector with the observation vector)
@@ -23,7 +25,8 @@ class WeightedLeastSquares:
 
     def __init__(self, y: np.ndarray, G: np.ndarray, W: np.ndarray = None):
         """
-        Constructor of the WeightedLeastSquares object
+        Constructor of the WeightedLeastSquares object.
+
         Args:
             y (numpy.ndarray) : the observation vector (mx1)
             G (numpy.ndarray) : the state matrix (mxn)
@@ -70,7 +73,13 @@ class WeightedLeastSquares:
         self._S = None  # S = (G.T @ W @ G)^-1
 
     def solve(self):
-        """Solves the Weighted Least Squares problem"""
+        """
+        Solves the Weighted Least Squares normal equation.
+
+        Raises:
+            LinAlgError: this function calls the `numpy.linalg.inv`.
+                This exception is raised if the matrix inversion fails.
+        """
         self._S = np.linalg.inv(self._G.T @ self._W @ self._G)
         self._x = self._S @ self._G.T @ self._W @ self._y
 

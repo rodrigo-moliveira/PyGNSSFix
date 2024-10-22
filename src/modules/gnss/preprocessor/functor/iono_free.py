@@ -1,4 +1,4 @@
-"""Ionospheric Free Computation Module"""
+""" Module with the implementation of the Ionospheric Free Functor """
 
 from src.io.config import config_dict
 from src.common_log import MODEL_LOG, get_logger
@@ -9,18 +9,19 @@ from src.data_types.gnss.observation import Observation
 
 class IonoFreeFunctor(Functor):
     """
-    The `IonoFreeFunctor` computes 1st order ionospheric free observations
+    The `IonoFreeFunctor` computes 1st order ionospheric free observations.
 
     The pseudorange and carrier phase iono free combinations are computed with the following equations:
 
         PR12 = (f1^2 * PR1 - f2^2 * PR2) / (f1^2 - f2^2)
         CP12 = (f1^2 * CP1 - f2^2 * CP2) / (f1^2 - f2^2)
+
     where PRi and CPi are the pseudorange and carrier phase observables for frequency fi.
 
     More information can be found in:
     https://gssc.esa.int/navipedia/index.php/Ionosphere-free_Combination_for_Dual_Frequency_Receivers
     """
-    def __init__(self, constellation, base_freq, second_freq):
+    def __init__(self, constellation: str, base_freq: DataType, second_freq: DataType):
         super().__init__()
         self.constellation = constellation
         self.base_freq = base_freq
@@ -33,9 +34,10 @@ class IonoFreeFunctor(Functor):
         self.cp1 = None
         self.cp2 = None
         self.cp_if = None
-        self.compute_iono_std(constellation)
+        self._compute_iono_std(constellation)
 
-    def compute_iono_std(self, constellation):
+    def _compute_iono_std(self, constellation):
+        """ Definition of auxiliary data """
         std_dict = config_dict.get_obs_std()[constellation]
         datatypes = list(std_dict.keys())
 
@@ -70,7 +72,8 @@ class IonoFreeFunctor(Functor):
                                  f"Mismatch between observation std list {std_dict} and base and second frequencies "
                                  f"{self.base_freq} and {self.second_freq}")
 
-    def get_iono_free_observations(self, v_obs_in):
+    def _get_iono_free_observations(self, v_obs_in) -> list[DataType]:
+        """ Gets the Iono Free DataType """
         # get code and carrier for first frequency (C1, L1)
         C1 = C2 = L1 = L2 = None
 
@@ -86,7 +89,8 @@ class IonoFreeFunctor(Functor):
 
         return C1, C2, L1, L2
 
-    def compute_iono_free(self, obs1: Observation, obs2: Observation):
+    def _compute_iono_free(self, obs1: Observation, obs2: Observation) -> float:
+        """ Computes the iono free combination (value) """
         iono_free = self.gama1 * obs1.value - self.gama2 * obs2.value
         return iono_free
 
@@ -94,17 +98,17 @@ class IonoFreeFunctor(Functor):
         v_obs_in = obs_data_in.get_observables_at_epoch(epoch, sat)
         v_obs_out = []
 
-        C1, C2, L1, L2 = self.get_iono_free_observations(v_obs_in)
+        C1, C2, L1, L2 = self._get_iono_free_observations(v_obs_in)
 
         # get iono free code
         if C1 is not None and C2 is not None:
             # get iono-free value
-            iono_free = self.compute_iono_free(C1, C2)
+            iono_free = self._compute_iono_free(C1, C2)
             v_obs_out.append(Observation(self.pr_if, iono_free))
 
         if L1 is not None and L2 is not None:
             # get iono-free value
-            iono_free = self.compute_iono_free(L1, L2)
+            iono_free = self._compute_iono_free(L1, L2)
             v_obs_out.append(Observation(self.cp_if, iono_free))
 
         return v_obs_out

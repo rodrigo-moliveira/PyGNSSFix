@@ -6,12 +6,12 @@ class TypeConsistencyFilter(Filter):
 
     def __init__(self, types, trace_path):
         """
-        Constructor for the Type Consistency Filter
+        Constructor for the Type Consistency Filter.
         The `TypeConsistencyFilter` cleans the Observation dataset by removing all epoch data for a given satellite
         that does not have all required observation types. The required observation types are provided as input to the
         filter
 
-        Parameters:
+        Args:
             types(dict): Dictionary with constellation string as keys and list of all mandatory observation types as
                 values
             trace_path(str or None): path to the trace file

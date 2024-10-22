@@ -1,4 +1,5 @@
-""" Functor Mapper (Transformer) Module """
+""" Module with the implementation of the Functor Mapper (Transformer) """
+
 
 from src.data_mng.gnss.observation_data import ObservationData
 from . import Functor

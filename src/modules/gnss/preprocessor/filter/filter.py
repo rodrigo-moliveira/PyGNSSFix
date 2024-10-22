@@ -1,4 +1,5 @@
-""" Base class for Filter Module """
+""" Module with the base Filter Class """
+
 from src.data_types.gnss.observation import Observation
 from src.data_types.gnss.satellite import Satellite
 from src.data_types.date import Epoch
@@ -6,8 +7,11 @@ from src.data_types.date import Epoch
 
 class Filter:
     """
-    Base class for the Filter instances
-    Filter classes inherited from this must implement the `is_applicable` method
+    Base class for the Filters.
+
+    Filter classes inherited from this must implement the following methods:
+        * ``is_applicable``
+        * ``write_header``
     """
     def __init__(self):
         self.fd = None
@@ -17,15 +21,19 @@ class Filter:
         pass
 
     def close_file(self):
-        """ Close the trace file """
+        """ Close the trace file. """
         if self.fd is not None:
             self.fd.close()
 
     def is_applicable(self, sat: Satellite, epoch: Epoch, observation: Observation, **kwargs):
-        """ return True to remove this `observation`, return False to keep it """
+        """
+        Returns:
+            bool: return True to remove this `observation`, return False to keep it
+        """
         return True
 
     def apply(self, sat: Satellite, epoch: Epoch, observation: Observation, v_removable: list):
-        """ if the observation triggers the filter (according to the implementation of the `apply` method of
-        each filter), the `observation` is appended to the `v_removable` list (to be removed)"""
+        """
+        If the observation triggers the filter, it is appended to the `v_removable` list (to be removed).
+        """
         v_removable.append(observation)

@@ -6,6 +6,27 @@ class SatFilterHealthURA(Filter):
 
     def __init__(self, navigation_data, gps_ura_check, gps_ura_val, gps_health,
                  gal_sisa_check, gal_sisa_val, gal_health, log, trace_path):
+        """
+        Constructor for the Satellite Health and URA Filter.
+        The `SatFilterHealthURA` cleans the Observation dataset by observation data of faulty satellites. The following
+        checks are performed:
+            * GPS URA Check: removes the GPS satellite if broadcast URA (User Range Accuracy) value is below the
+                defined threshold
+            * GAL SISA Check: removes the GAL satellite if broadcast SISA (Signal in Space Accuracy) value is below the
+                defined threshold
+            * Health Status: removes the satellite if the broadcast health status flag is faulty
+
+        Args:
+            navigation_data():
+            gps_ura_check(bool): if True, the GPS URA check is performed
+            gps_ura_val(float): threshold for the GPS URA
+            gps_health(bool): if True, the GPS health status is evaluated
+            gal_sisa_check(bool): if True, the GAL SISA check is performed
+            gal_sisa_val(float): threshold for the GAL SISA
+            gal_health(bool): if True, the GAL health status is evaluated
+            log(logging.Logger): logger instance
+            trace_path(str): path to the trace file
+        """
         super().__init__()
         self.navigation_data = navigation_data
         self.gps_ura_check = gps_ura_check
@@ -31,11 +52,11 @@ class SatFilterHealthURA(Filter):
         try:
             # get closest nav message for this satellite
             nav_message = self.navigation_data.get_closest_message(sat, epoch)
-        except:
+        except Exception as e:
             # no nav message available for this satellite
             if sat not in self.warned:
-                self.log.warn(f"Unable to perform preprocessing filter URA/SISA and Health Check for satellite"
-                              f" {sat} due to lack of navigation data at epoch {epoch}")
+                self.log.warning(f"Unable to perform preprocessing filter URA/SISA and Health Check for satellite"
+                                 f" {sat} due to lack of navigation data at epoch {epoch}. Exception : {e}")
                 self.warned.append(sat)
             return False
 

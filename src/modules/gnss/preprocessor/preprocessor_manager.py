@@ -1,3 +1,5 @@
+""" Module with the GNSS PNT Preprocessor Algorithm """
+
 import os
 
 from src.common_log import get_logger, PREPROCESSOR_LOG
@@ -11,8 +13,8 @@ from .functor import *
 
 class PreprocessorManager:
     """
-    PreprocessorManager class: performs the preprocessing operations to the GNSS measurements
-    to prepare them for the GNSS Solver
+    PreprocessorManager class.
+    This class performs the preprocessing operations to the GNSS measurements to prepare them for the GNSS Solver.
 
     The operations involved are:
         * Filtering: clean and delete the observation dataset according to some checks:
@@ -32,9 +34,11 @@ class PreprocessorManager:
         """
         Constructor of the PreprocessorManager instance
 
-        Parameters:
+        Args:
             trace_path(str): path to store the Preprocessor trace files
             data_manager(src.data_mng.gnss.gnss_data_mng.GnssDataManager): GNSS data manager instance
+        Raises:
+            IOError: an exception is raised if the trace directory is not created successfully
         """
         self.log = get_logger(PREPROCESSOR_LOG)
         self.data_manager = data_manager
@@ -52,7 +56,7 @@ class PreprocessorManager:
 
     def compute(self):
         """
-        Launch the Preprocessor algorithm
+        Launch the Preprocessor algorithm (main function).
 
         Raises:
             PreprocessorError: if an error is detected during the Preprocessor algorithm, an error is raised.
@@ -137,8 +141,7 @@ class PreprocessorManager:
         self.log.info("End of module Preprocessor")
 
     def consistency_filter(self, observation_data):
-        """ Perform Consistency Filter
-        """
+        """ Perform Consistency Filter """
         self.log.info("Applying consistency filter to remove unnecessary datatypes and data-less satellites")
         required_datatypes = {}
 

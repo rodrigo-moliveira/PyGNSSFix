@@ -6,12 +6,13 @@ class RateDowngradeFilter(Filter):
 
     def __init__(self, rate_out: float, first_epoch, trace_path):
         """
-        Constructor for the Rate Downgrade Filter
+        Constructor for the Rate Downgrade Filter.
+
         The `RateDowngradeFilter` is designed to reduce the sampling rate of a dataset by selectively removing data
         points according to a user-defined rate. This filter allows users to down-sample their data by specifying a
         new rate that is a multiple of the original sampling rate.
 
-        Parameters:
+        Args:
             rate_out(float): desired output rate in seconds
             first_epoch(src.data_types.date.Epoch): epoch of first observation
             trace_path(str or None): path to the trace file

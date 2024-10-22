@@ -7,16 +7,20 @@ class FilterMapper:
     """
     Manages the execution of the filter algorithms and effectively removes the flagged data from the
     ObservationData instance.
+
+    Attributes:
+        filter(Filter): Filter to be applied
+        report(str): after the Filter is applied, a small report is written for logging purposes.
     """
 
-    def __init__(self, filter: Filter):
+    def __init__(self, filter_instance: Filter):
         """
-        Constructor of the FilterMapper
+        Constructor of the FilterMapper.
 
-        Parameters:
-            filter(Filter): instance of the `Filter` class
+        Args:
+            filter_instance(Filter): instance of the `Filter` class
         """
-        self.filter = filter
+        self.filter = filter_instance
         self.report = str()
 
     def apply(self, obs_data: ObservationData):
@@ -25,7 +29,7 @@ class FilterMapper:
         Iterates over all epochs, satellites and observables and calls the `filter.is_applicable` and `filter.apply`
         methods (must be implemented by the inherited Filter class)
 
-        Parameters:
+        Args:
             obs_data(ObservationData): input observation dataset to be filtered (data is effectively removed from the
                 input dataset)
         """
