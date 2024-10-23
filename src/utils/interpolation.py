@@ -2,20 +2,18 @@ from scipy.interpolate import interp1d
 from src.utils.deprecated import deprecated
 import numpy as np
 
-# TODO: review all docstrings and add newton divided method into the configuration
 
-# @deprecated("use function :py:function:`src.utils.interpolation.linear_interpolation` instead")
 def linear_interpolation_scipy(x, x_vals, y_vals):
     """
-    Perform linear interpolation using scipy's interp1d function.
+    Perform linear interpolation using scipy's ``interp1d`` function.
 
-    Parameters:
-        x (float or array-like): The x-value(s) at which to estimate y.
-        x_vals (array-like): Array of known x-values.
-        y_vals (array-like): Array of corresponding y-values for x_vals.
+    Args:
+        x (float or numpy.ndarray): The x-value(s) at which to estimate y.
+        x_vals (numpy.ndarray): Array of known x-values.
+        y_vals (numpy.ndarray): Array of corresponding y-values for x_vals.
 
     Returns:
-        float or array-like: The estimated y-value(s) at x using linear interpolation.
+        float or numpy.ndarray: The estimated y-value(s) at x using linear interpolation.
     """
     # Create a linear interpolation function
     interp_func = interp1d(x_vals, y_vals, kind='linear', fill_value='extrapolate')
@@ -26,11 +24,12 @@ def linear_interpolation_scipy(x, x_vals, y_vals):
     return y
 
 
+@deprecated("Use function :py:func:`src.utils.interpolation.linear_interpolation_scipy` instead.")
 def linear_interpolation(x, x0, y0, x1, y1):
     """
     Perform linear interpolation to estimate y-value at given x.
 
-    Parameters:
+    Args:
         x (float): The x-value at which to estimate y.
         x0 (float): x-value of the first known point.
         y0 (float): y-value of the first known point corresponding to x0.
@@ -54,13 +53,16 @@ def lagrange_interpolation(x_values, y_values, degree):
     """
     Perform Lagrange interpolation of specified degree.
 
-    Parameters:
-        x_values (list or array-like): List of x-values (data points).
-        y_values (list or array-like): List of corresponding y-values.
+    Args:
+        x_values (list or numpy.ndarray): List of x-values (data points).
+        y_values (list or numpy.ndarray): List of corresponding y-values.
         degree (int): Degree of the Lagrange interpolation polynomial.
 
     Returns:
         function: A function representing the Lagrange interpolation polynomial.
+
+    Raises:
+        ValueError: an exception is raised if the number of data points is less than the provided degree
     """
     # Ensure the number of data points matches the degree + 1
     if len(x_values) != degree + 1 or len(y_values) != degree + 1:
@@ -82,15 +84,18 @@ def lagrange_interpolation(x_values, y_values, degree):
 def lagrange_interpolation_derivative(x_values, y_values, degree):
     """
     Computes the derivative of the Lagrange polynomial function of the specified degree.
-    For example, it is used to compute velocity vectors using position data points
+    For example, it is used to compute velocity vectors using position data points.
 
-    Parameters:
-        x_values (list or array-like): List of x-values (data points).
-        y_values (list or array-like): List of corresponding y-values.
+    Args:
+        x_values (list or numpy.ndarray): List of x-values (data points).
+        y_values (list or numpy.ndarray): List of corresponding y-values.
         degree (int): Degree of the Lagrange interpolation polynomial.
 
     Returns:
         function: A function representing the derivative of the Lagrange interpolation polynomial.
+
+    Raises:
+        ValueError: an exception is raised if the number of data points is less than the provided degree
     """
     # Ensure the number of data points matches the degree + 1
     if len(x_values) != degree + 1 or len(y_values) != degree + 1:
@@ -114,18 +119,18 @@ def lagrange_interpolation_derivative(x_values, y_values, degree):
     return lagrange_poly
 
 
-# I had some trouble setting up the derivative of the lagrange interpolation, this function also seems to work,
-# but it is untested
-@deprecated("use function :py:function:`src.utils.interpolation.lagrange_interpolation_derivative` instead")
-def lagrange_interpolation_derivative_alternative(x_values, y_values, degree):
+@deprecated("use function :py:func:`src.utils.interpolation.lagrange_interpolation_derivative` instead. "
+            "This function is untested.")
+def lagrange_interpolation_derivative_alternative(x_values, y_values):
     """
     Computes the derivative of the Lagrange polynomial function of the specified degree.
     For example, it is used to compute velocity vectors using position data points
 
-    Parameters:
-        x_values (list or array-like): List of x-values (data points).
-        y_values (list or array-like): List of corresponding y-values.
-        degree (int): Degree of the Lagrange interpolation polynomial.
+    Note: this function is untested.
+
+    Args:
+        x_values (list or numpy.ndarray): List of x-values (data points).
+        y_values (list or numpy.ndarray): List of corresponding y-values.
 
     Returns:
         function: A function representing the derivative of the Lagrange interpolation polynomial.
@@ -156,13 +161,16 @@ def newton_divided_differences(x_values, y_values, degree):
     """
     Perform Newton's Divided Differences interpolation for vector-valued functions.
 
-    Parameters:
+    Args:
         x_values (numpy.ndarray): Vector of x-values (data points).
         y_values (numpy.ndarray): Matrix of corresponding y-values, where each row is a vector [y0, y1, ..., yn].
         degree (int): Desired degree of the Newton interpolation polynomial.
 
     Returns:
         function: A function representing the Newton interpolation polynomial.
+
+    Raises:
+        ValueError: an exception is raised if there are problems/inconsistencies with the input arguments and degree
     """
     # Ensure x_values is a column vector
     x_values = np.atleast_2d(x_values).T if x_values.ndim == 1 else x_values
@@ -199,14 +207,14 @@ def newton_divided_differences(x_values, y_values, degree):
 
     def newton_poly_func(x):
         result = np.zeros(num_dimensions)
-        for dim in range(num_dimensions):
-            term = divided_diffs[0, 0, dim]
-            for j in range(1, n):
-                term_j = divided_diffs[0, j, dim]
-                for k in range(j):
+        for _dim in range(num_dimensions):
+            term = divided_diffs[0, 0, _dim]
+            for _j in range(1, n):
+                term_j = divided_diffs[0, _j, _dim]
+                for k in range(_j):
                     term_j *= (x - x_values[k])
                 term += term_j
-            result[dim] = term
+            result[_dim] = term
         return result
 
     return newton_poly_func
@@ -216,9 +224,9 @@ def newton_divided_differences(x_values, y_values, degree):
 if __name__ == "__main__":
     x_values_ = np.array([0, 1, 2, 3]).reshape(-1, 1)
     y_values_ = np.array([[1, 2], [2, 3], [3, 4], [4, 5]])
-    degree = 2
+    degree_test = 2
 
-    newton_poly = newton_divided_differences(x_values_, y_values_, degree)
+    newton_poly = newton_divided_differences(x_values_, y_values_, degree_test)
     x_test = np.array([1.5])
     y_test = newton_poly(x_test)
     print(y_test)

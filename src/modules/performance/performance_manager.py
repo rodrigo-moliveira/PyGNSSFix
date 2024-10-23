@@ -1,4 +1,5 @@
 """ Module with the Performance Manager class definition """
+
 import os
 import numpy as np
 import pandas as pd
@@ -27,7 +28,7 @@ class PerformanceManager:
         * Plotting data
 
     See Also:
-        `algs/post_processing_gnss.py`: To execute this class, run this script.
+        `algs/post_processing_gnss.py`: This script executes the PerformanceManager algorithm.
     """
 
     def __init__(self, data_manager, log):
@@ -37,7 +38,7 @@ class PerformanceManager:
         Args:
             data_manager(src.data_mng.csv.csv_data_mng.GnssRunStorageManager): Data Manager (GnssRunStorageManager)
                 with all the information about the GNSS to process
-            log():
+            log(logging.Logger): instance of the Logger
 
         """
         self.data_manager = data_manager
@@ -63,7 +64,7 @@ class PerformanceManager:
         }
 
     def process(self, output_dir):
-        """ Main function of the performance manager """
+        """ Main function of the performance manager. """
 
         # create post-processing folder, if not yet created
         post_proc_dir = output_dir / 'post_proc'
@@ -102,12 +103,12 @@ class PerformanceManager:
         self.log.info("Performance Manager finished execution.")
 
     def show_plots(self):
-        """ Method to show all the plots"""
+        """ Method to show all the plots. """
         if config_dict.get("performance_evaluation", "plot_configs", "show_plots"):
             show_all()
 
     def _process_errors(self, post_proc_dir):
-        """ Computes the estimation error and RMS statistics for position and velocity in ECEF and local ENU frames """
+        """ Computes the estimation error and RMS statistics for position and velocity in ECEF and local ENU frames. """
         # fetch estimated data
         position = self.data_manager.get_data("position")
         velocity = self.data_manager.get_data("velocity")
@@ -140,7 +141,7 @@ class PerformanceManager:
         self._write_outputs(post_proc_dir, rms_pos_ecef, rms_pos_enu, rms_vel_ecef, rms_vel_enu)
 
     def _write_outputs(self, output_dir, rms_pos_ecef, rms_pos_enu, rms_vel_ecef, rms_vel_enu):
-        """ Saves the error statistics to output files  """
+        """ Saves the error statistics to output files. """
         self.log.info("Saving computed errors to files...")
 
         time = self.data_manager.get_data("position").to_time_array()
@@ -192,12 +193,13 @@ class PerformanceManager:
         f_rms_stats.close()
 
     def _residual_analysis(self, output_dir):
-        """ Performs residual analysis. Two statistical tests are performed to the GNSS post-fit residuals:
+        """
+        Performs residual analysis. Two statistical tests are performed to the GNSS post-fit residuals:
             * Chi Squared Test: Check if the residuals are consistent with white noise (mean of zero and uncorrelated).
             * Shapiro Test: Check if the residuals follow a normal distribution.
 
         The post-fit residuals of both pseudorange and pseudorange rate observations are evaluated, if available.
-        The tests are performed for each pair of available satellites and datatypes
+        The tests are performed for each pair of available satellites and datatypes.
         """
         residuals_file = open(output_dir / "ResidualsStatistics.txt", "w")
 
@@ -255,7 +257,7 @@ class PerformanceManager:
         residuals_file.close()
 
     def _plot(self, plot_dir):
-
+        """ Plot (main function). """
         if config_dict.get("performance_evaluation", "plot_configs", "plot_observations"):
             self.log.info("Plotting observations and additional information (satellite availability and skyplot...")
             self._plot_obs(plot_dir)
@@ -293,7 +295,7 @@ class PerformanceManager:
             self._plot_planimetric(plot_dir)
 
     def _plot_obs(self, plot_dir):
-        """ Plot the GNSS observables """
+        """ Plot the GNSS observables. """
         try:
             observations = self.data_manager.get_data("obs")
             if observations.is_empty():
@@ -310,7 +312,7 @@ class PerformanceManager:
             self.log.error(f"Unexpected error when performing plot_obs function: {e}")
 
     def _plot_errors(self, plot_dir):
-        """ Plot the estimation errors """
+        """ Plot the estimation errors. """
         try:
             time = self.data_manager.get_data("time")
             sow_array = time.data.iloc[:, 1].values
@@ -335,7 +337,7 @@ class PerformanceManager:
             self.log.error(f"Unexpected error when performing plot_errors function: {e}")
 
     def _plot_residuals(self, plot_dir):
-        """ Plot the GNSS prefit and postfit residuals of the estimation process """
+        """ Plot the GNSS prefit and postfit residuals of the estimation process. """
         ax1 = ax2 = ax3 = ax4 = None
         try:
             ax1 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("pr_rate_prefit_residuals"), "m/s")
@@ -387,7 +389,7 @@ class PerformanceManager:
             self.log.error(f"Unexpected error when performing plot_clock_bias function: {e}")
 
     def _plot_clock_rate(self, plot_dir):
-        """ Plot estimated clock bias rate """
+        """ Plot estimated clock bias rate. """
         try:
             clock_rate = self.data_manager.get_data("clock_bias_rate")
             if clock_rate.is_empty():
@@ -402,7 +404,7 @@ class PerformanceManager:
             self.log.error(f"Unexpected error when performing plot_clock_rate function: {e}")
 
     def _plot_iono(self, plot_dir):
-        """ Plot Iono estimated states for all available satellites """
+        """ Plot Iono estimated states for all available satellites. """
         try:
             iono = self.data_manager.get_data("iono")
             if iono.is_empty():
@@ -418,7 +420,7 @@ class PerformanceManager:
             self.log.error(f"Unexpected error when performing plot_iono function: {e}")
 
     def _plot_tropo(self, plot_dir):
-        """ Plot the estimated troposphere wet delay """
+        """ Plot the estimated troposphere wet delay. """
         try:
             tropo = self.data_manager.get_data("tropo_wet")
             if tropo.is_empty():
@@ -433,7 +435,7 @@ class PerformanceManager:
             self.log.error(f"Unexpected error when performing plot_tropo function: {e}")
 
     def _plot_sat_availability(self, plot_dir):
-        """ Plot satellite availability """
+        """ Plot satellite availability. """
         try:
             prefit_residuals = self.data_manager.get_data("pr_prefit_residuals")
             position = self.data_manager.get_data("position")
@@ -452,7 +454,7 @@ class PerformanceManager:
             self.log.error(f"Unexpected error when performing plot_sat_availability function: {e}")
 
     def _plot_3D_traj(self, plot_dir):
-        """ plot the 3D estimated trajectory and covariance """
+        """ plot the 3D estimated trajectory and covariance. """
         try:
             position_df = self.data_manager.get_data("position")
             if position_df.is_empty():
@@ -471,7 +473,7 @@ class PerformanceManager:
             self.log.error(f"Unexpected error when performing plot_3D_traj function: {e}")
 
     def _plot_3D_errors(self, plot_dir):
-        """ Plot the absolute 3D trajectory and covariance, as well as the 3D errors in ENU and ECEF frames """
+        """ Plot the absolute 3D trajectory and covariance, as well as the 3D errors in ENU and ECEF frames. """
         try:
             ax1 = plot_gnss.plot_3D_trajectory_with_avg_covariance(self.pos_error["error_enu"],
                                                                    self.pos_error["cov_enu"],
@@ -491,7 +493,7 @@ class PerformanceManager:
             self.log.error(f"Unexpected error when performing plot_3D_errors function: {e}")
 
     def _plot_2D_errors(self, plot_dir):
-        """ Plot the 2D errors in the ENU frame """
+        """ Plot the 2D errors in the ENU frame. """
         try:
             ax = plot_gnss.plot_2D_trajectory(self.pos_error["error_enu"], self.pos_error["cov_enu"], true_pos=[0, 0],
                                               x_label="East [m]", y_label="North [m]",
@@ -501,7 +503,7 @@ class PerformanceManager:
             self.log.error(f"Unexpected error when performing plot_2D_errors function: {e}")
 
     def _plot_latlon(self, plot_dir):
-        """ Plot the Latitude-Longitude in a 2D figure"""
+        """ Plot the Latitude-Longitude in a 2D figure. """
         try:
             position_df = self.data_manager.get_data("position")
             if position_df.is_empty():
@@ -527,7 +529,7 @@ class PerformanceManager:
             self.log.error(f"Unexpected error when performing plot_latlon function: {e}")
 
     def _plot_dops(self, plot_dir):
-        """ Plot the DOP figures """
+        """ Plot the DOP figures. """
         try:
             dop_ecef = self.data_manager.get_data("dop_ecef")
             dop_enu = self.data_manager.get_data("dop_local")
@@ -544,7 +546,7 @@ class PerformanceManager:
             self.log.error(f"Unexpected error when performing plot_dops function: {e}")
 
     def _skyplot(self, plot_dir):
-        """ Plot the skyplot of the satellites in view """
+        """ Plot the skyplot of the satellites in view. """
         try:
             satellite_azel = self.data_manager.get_data("satellite_azel")
             if satellite_azel.is_empty():
@@ -559,6 +561,7 @@ class PerformanceManager:
             self.log.error(f"Unexpected error when performing skyplot function: {e}")
 
     def _plot_planimetric(self, plot_dir):
+        """ Plot the planimetric data files. """
         try:
             position_df = self.data_manager.get_data("position")
             if position_df.is_empty():
@@ -586,6 +589,7 @@ class PerformanceManager:
             self.log.error(f"Unexpected error when performing plot_planimetric function: {e}")
 
     def _save_figure(self, plot_dir, ax):
+        """ Saves the figure to a file. """
         if config_dict.get("performance_evaluation", "plot_configs", "save_plots") and ax is not None:
             plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
             plot_path = plot_dir / plot_name
