@@ -1,11 +1,10 @@
 """
-Deprecated
+Deprecated (to be deleted)
 
 import numpy as np
 import allantools as at
 import matplotlib.pyplot as plt
 
-# TODO: clean all this up with https://chatgpt.com/c/ce29b0ea-20a7-42e5-a84b-27e08274bd92
 #    see also here https://allantools.readthedocs.io/en/latest/functions.html
 
 

@@ -169,12 +169,12 @@ class PreprocessorManager:
         self.log.info(f"Type Consistency Filter Report: {mapper.report}")
 
         # Saving Consistent data to file
-        # if self.write_trace:
-        #    self.log.debug(
-        #       "Writing Type Consistent Observation Data to trace file {}".format("TypeConsistentObservationData.txt"))
-        #    f = open(self.trace_path + "/TypeConsistentObservationData.txt", "w")
-        #    f.write(str(observation_data))
-        #    f.close()
+        if self.write_trace:
+            self.log.debug(
+                "Writing Type Consistent Observation Data to trace file {}".format("TypeConsistentObservationData.txt"))
+            f = open(self.trace_path + "/TypeConsistentObservationData.txt", "w")
+            f.write(str(observation_data))
+            f.close()
 
     def snr_filter(self, observation_data):
         """ Perform SNR Filter """

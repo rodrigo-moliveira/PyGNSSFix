@@ -1,0 +1,150 @@
+{
+   "_comment": "This is the JSON configuration file to run the GNSS positioning algorithm. ",
+
+   "log": {
+      "_comment": "Configuration of the Log File (Possible values: DEBUG, INFO, WARN, ERROR, FATAL).",
+      "minimum_level": "DEBUG"
+   },
+
+   "inputs": {
+      "trace_files": true,
+
+      "_comment1": "Input data files",
+      "obs_files": ["datasets/gnss/BRUX/BRUX00BEL_S_20190140615_15M_01S_MO.rnx"],
+      "nav_files": ["datasets/gnss/BRUX/BRDC00IGS_R_20190140000_01D_MN.rnx"],
+      "clk_files": ["datasets/gnss/BRUX/COD0R03FIN_20190140000_01D_30S_CLK_short.CLK"],
+      "sp3_files": ["datasets/gnss/BRUX/COD0R03FIN_20190140000_01D_05M_ORB.SP3"],
+
+      "_comment2": "Select 'true' to use CLK and SP3 products or 'false' to use navigation ephemerides",
+      "use_precise_products": false,
+
+      "leap_file": "geo_time_data/tai-utc.dat",
+      "finals_file": "geo_time_data/finals1980.all",
+      "tropo_file": "geo_time_data/gpt3_5.grd",
+
+      "_comment3": "snr threshold to discard RINEX observables (compare with snr control digit). [1-4]: bad, [5:8]: good, 9: excellent",
+      "snr_control": 1,
+
+      "arc": {
+         "_comment1": "Select first and last epochs in estimation arc in format YYYY-MM-DD hh:mm:ss",
+         "_comment2": "Select false to deactivate fields",
+         "first_epoch": "2019-01-14 06:15:00",
+         "last_epoch": "2019-01-14 06:29:00"
+      },
+
+      "_comment4": "Select the input data rate (in seconds). The rate must be consistent with the RINEX OBS rate. Select false to disable.",
+      "rate": 1
+   },
+
+   "preprocessor": {
+      "trace_files": true,
+
+      "_comment4": "Signal strength (SNR) filter. Select value of SNR (dBHz) threshold. Select false to turn off",
+      "snr_filter": 30,
+
+      "satellite_status": {
+         "_comment": "whether or not to check the SV Accuracy and SV health fields of the navigation message",
+         "GPS": {
+            "URA": true,
+            "max_URA": 6144.0,
+            "health": true
+         },
+         "GAL": {
+            "SISA": true,
+            "max_SISA": 6.0,
+            "health": true
+         }
+      },
+
+      "compute_smooth": false,
+      "smooth_time_constant_secs": 300
+   },
+
+   "model": {
+      "constellations": ["GPS", "GAL"],
+      "mode": "SPS",
+      "_comment": "available modes are SPS, SPS_IF",
+
+      "estimate_velocity": true,
+      "_comment1": "Use Doppler measurements to estimate velocity",
+
+      "estimate_ggto": true,
+      "_comment2": "Select `true` to estimate GGTO or `false` to use the broadcast GGTO",
+
+      "troposphere": {
+         "_comment1": "Select Tropospheric model. Available models are 'NONE', 'Saastamoinen', 'GPT3'",
+         "model": "Saastamoinen",
+
+         "_comment2": "Select Tropospheric map function for model GPT3. Available maps are 'Saastamoinen', 'GMF', 'VMF1', 'VMF3'",
+         "map": "Saastamoinen",
+
+         "_comment3": "Select `true` to estimate tropospheric wet delay or `false` to disable tropo estimation",
+         "estimate_tropo_wet": true
+      },
+
+      "GPS": {
+         "observations": ["1C", "2W"],
+
+         "_comment1": "in `pr_obs_std` define the observation noise for the selected pseudorange observations (consistent with the signals defined in `observations`), in meters",
+         "pr_obs_std": [1.1, 0.8],
+
+         "_comment2": "in `doppler_obs_std` define the observation noise for the selected doppler observations (consistent with the signals defined in `observations`), in Hertz",
+         "doppler_obs_std": [1.7, 1.0],
+
+         "elevation_mask": true,
+
+         "_comment3": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G' ",
+         "ionosphere": "Klobuchar"
+      },
+
+      "GAL": {
+         "observations": ["1C", "5Q"],
+
+         "_comment1": "in `pr_obs_std` define the observation noise for the selected pseudorange observations (consistent with the signals defined in `observations`), in meters",
+         "pr_obs_std": [1.1, 0.8],
+
+         "_comment2": "in `doppler_obs_std` define the observation noise for the selected doppler observations (consistent with the signals defined in `observations`), in Hertz",
+         "doppler_obs_std": [1.1, 1.0],
+
+         "elevation_mask": true,
+
+         "_comment3": "select between INAV or FNAV navigation message",
+         "nav_type": "FNAV",
+
+         "_comment4": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G' ",
+         "ionosphere": "NTCM-G"
+      }
+   },
+
+   "solver": {
+      "trace_files": true,
+
+      "_comment1": "Select Algorithm. Available is 'WSL' - Weighted Least Squares",
+      "algorithm": "WSL",
+
+      "_comment2": "maximum number of iterations in iterative procedure",
+      "n_iterations": 10,
+
+      "_comment3": "stop condition to end iterated least squares. Process ends when (RMS(i-1) - RMS(i)) / RMS(i-1) <= stop_criteria",
+      "stop_criteria": 0.0002,
+
+      "_comment6": "Select algorithm to compute the transmission time: 0 - geometric, 1 - pseudorange, 2 - NAPEOS",
+      "transmission_time_alg": 0,
+
+      "_comment34": "Enable / disable relativistic corrections: 0 - disable, 1 - enable",
+      "relativistic_corrections": 1,
+
+      "_comment5": "Elevation filter. Select the value of minimum elevation angle to consider, in degree. Select false to turn off",
+      "elevation_filter": 10,
+
+      "_comment7": "Initial position (m), velocity (m/s) and clock (s)",
+      "initial_pos_std": [0, 0, 0, 1, 1, 1],
+      "initial_vel_std": [0, 0, 0, 1, 1, 1],
+      "initial_clock_std": [0, 1]
+   },
+
+   "output": {
+      "_comment": "select output folder (absolute path) to store the run. Set 'default' to store in default path runs/",
+      "output_path": "default"
+   }
+}

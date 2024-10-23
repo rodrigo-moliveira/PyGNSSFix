@@ -87,9 +87,10 @@ class RinexNavReader:
                 # only save GPGA (or GGTO)
                 if "GPGA" in line:
                     a0 = utils.to_float(line[5:22])
-                    a1 = utils.to_float(line[22:40])
+                    a1 = utils.to_float(line[22:39])
                     T_ref = int(line[39:46])
                     week_ref = int(line[46:53])
+
                     self.nav.header.time_correction["GGTO"] = [a0, a1, T_ref, week_ref]
 
             elif "END OF HEADER" in line:

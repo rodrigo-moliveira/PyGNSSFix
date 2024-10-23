@@ -166,6 +166,7 @@ class TimeSeries(OrderedDict):
             self.overwriting = True
             self.update(new_dct)
             self.overwriting = _cache_overwriting
+            self._epochs = epochs
             self._sorted = True
 
     def __repr__(self):

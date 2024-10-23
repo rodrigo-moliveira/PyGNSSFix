@@ -10,10 +10,10 @@
       "trace_files": true,
 
       "_comment1": "Input data files",
-      "obs_files": ["datasets/gnss/BRUX/BRUX00BEL_S_20190140615_15M_01S_MO.rnx"],
-      "nav_files": ["datasets/gnss/BRUX/BRDC00IGS_R_20190140000_01D_MN.rnx"],
-      "clk_files": ["datasets/gnss/BRUX/COD0R03FIN_20190140000_01D_30S_CLK_short.CLK"],
-      "sp3_files": ["datasets/gnss/BRUX/COD0R03FIN_20190140000_01D_05M_ORB.SP3"],
+      "obs_files": ["datasets/gnss/JFNG/JFNG00CHN_R_20190450600_15M_01S_MO.rnx"],
+      "nav_files": ["datasets/gnss/JFNG/BRDC00IGS_R_20190450000_01D_MN.rnx"],
+      "clk_files": ["datasets/gnss/JFNG/COD0MGXFIN_20190450000_01D_30S_CLK.clk"],
+      "sp3_files": ["datasets/gnss/JFNG/COD0MGXFIN_20190450000_01D_05M_ORB.sp3"],
 
       "_comment2": "Select 'true' to use CLK and SP3 products or 'false' to use navigation ephemerides",
       "use_precise_products": false,
@@ -28,8 +28,8 @@
       "arc": {
          "_comment1": "Select first and last epochs in estimation arc in format YYYY-MM-DD hh:mm:ss",
          "_comment2": "Select false to deactivate fields",
-         "first_epoch": "2019-01-14 06:15:00",
-         "last_epoch": "2019-01-14 06:20:00"
+         "first_epoch": "2019-02-14 06:00:00",
+         "last_epoch": "2019-02-14 06:14:59"
       },
 
       "_comment4": "Select the input data rate (in seconds). The rate must be consistent with the RINEX OBS rate. Select false to disable.",
@@ -98,7 +98,7 @@
       },
 
       "GAL": {
-         "observations": ["1C", "5Q"],
+         "observations": ["1X", "5X"],
 
          "_comment1": "in `pr_obs_std` define the observation noise for the selected pseudorange observations (consistent with the signals defined in `observations`), in meters",
          "pr_obs_std": [1.1, 0.8],

@@ -6,7 +6,7 @@
 
   "performance_evaluation": {
     "_comment0": "Select run folder (or 'last')",
-    "run_folder": "2024-10-23T17H08M44S_ZIM",
+    "run_folder": "2024-10-23T17H12M10S_JFNG",
 
     "run_error_computation": true,
     "run_residual_analysis": true,
@@ -48,9 +48,9 @@
       "_comment1":"select static or dynamic reference trajectory (coordinates with respect to ECEF frame [meters])",
       "static": true,
       "true_static_position": [
-        4331300.1600,
-        567537.0810,
-        4633133.5100
+        -2279828.8292,
+        5004706.5483,
+        3219777.4684
       ],
       "traj_file": ""
     }

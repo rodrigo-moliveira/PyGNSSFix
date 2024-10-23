@@ -4,16 +4,16 @@ tasks release 1.0:
         [X] adicionar o plot planimetrico
         [X] Clean up dos scripts sat_orbits e sat_clocks
 
-    [ ] fix all documentation docstrings
-        [ ] to either Args or Arguments... Same for return or returns...
+    [X] fix all documentation docstrings
+        [X] to either Args or Arguments... Same for return or returns...
             - see https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html
-        [ ] limpar o código
+        [X] limpar o código
 
-    [ ] Cleanup all repository.
-    [ ] fazer uma "campanha de validação". Fazer setup da config dos datasets. comparar precise vs nav products. Single freq / Single const vs Dual freq / Dual Const...
+    [X] Cleanup all repository.
+    [X] fazer uma "campanha de validação". Fazer setup da config dos datasets. comparar precise vs nav products. Single freq / Single const vs Dual freq / Dual Const...
         e brincar com as configurações para fazer fine tuning ao algo. Criar cenários, etc.
         Add dynamic scenario
-    [ ] Merge to develop and start new branch feature/AddingModePR-PPP
+    [X] Merge to develop and start new branch feature/AddingModePR-PPP
 
 
 # Release 1.1 (PR-PPP Mode)
