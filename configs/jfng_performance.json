@@ -1,0 +1,58 @@
+{
+  "log": {
+      "_comment": "Configuration of the Log File (Possible values: DEBUG, INFO, WARN, ERROR, FATAL).",
+      "minimum_level": "DEBUG"
+   },
+
+  "performance_evaluation": {
+    "_comment0": "Select run folder (or 'last')",
+    "run_folder": "2024-10-23T17H12M10S_JFNG",
+
+    "run_error_computation": true,
+    "run_residual_analysis": true,
+    "run_plot_manager": true,
+
+    "residual_configs": {
+      "chi_squared_test":
+      {
+        "_comment0": "Select number of estimated states involved in the position estimation. For example, if position(3), clock(1), troposphere(1) and ionosphere(1) are the active states, it is 6",
+        "pr_estimated_params": 6,
+
+        "_comment1": "Select number of estimated states involved in the velocity estimation. For example, if velocity(3) and clock drift(1) are the active states, it is 4",
+        "pr_rate_estimated_params": 4,
+
+        "significance_level": 0.05
+      },
+
+      "shapiro_test":
+      {
+        "significance_level": 0.05
+      }
+    },
+
+    "plot_configs":
+    {
+      "show_plots": false,
+      "save_plots": true,
+
+      "plot_observations": true,
+      "plot_estimation_errors": true,
+      "plot_estimated_states": true,
+      "plot_dops": true,
+      "plot_residuals": true,
+      "plot_trajectories": true,
+      "plot_planimetric": true
+    },
+
+    "error_configs": {
+      "_comment1":"select static or dynamic reference trajectory (coordinates with respect to ECEF frame [meters])",
+      "static": true,
+      "true_static_position": [
+        -2279828.8292,
+        5004706.5483,
+        3219777.4684
+      ],
+      "traj_file": ""
+    }
+  }
+}

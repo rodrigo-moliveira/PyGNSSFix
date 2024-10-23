@@ -1,16 +1,19 @@
-"""This module helps to find the shortest path between two element in a
-hierarchy or in a graph.
+""" Node Module
+This module helps to find the shortest path between two elements in a hierarchy or in a graph.
 
-This module is imported from
-https://github.com/galactics/beyond/blob/master/beyond/utils/node.py
-(all credits to galactics)
+This module is imported and adapted from the `Beyond Python Package <https://pypi.org/project/beyond/>`__.
+
+See the original implementation `here <https://github.com/galactics/beyond/blob/master/beyond/utils/node.py>`__.
+
+All credits to Jules David, the owner of Beyond library.
 """
 
 from collections import OrderedDict
 
 
 class Route:
-    """Class used by :py:class:`Node` to describe where to find
+    """
+    Class used by :py:class:`Node` to describe where to find
     another node.
     """
 
@@ -23,34 +26,14 @@ class Route:
 
 
 class Node:
-    """Class representing a node in a graph, relations may be circular.
+    """
+    Class representing a node in a graph, relations may be circular.
 
-    .. code-block:: python
-
-        A = Node('A')
-        B = Node('B')
-        C = Node('C')
-        D = Node('D')
-        E = Node('E')
-        F = Node('F')
-
-        A + B + C + D + E + F + A
-        F + C
-
-        #   A
-        #  / \\
-        # B   F
-        # | / |
-        # C   E
-        # \\ /
-        #   D
-
-        A.path('E')
-        # [A, F, E]
-        A.steps('E')
-        # [(A, F), (F, E)]
-        E.path('B')
-        # [E, F, A, B] or [E, D, C, B]
+    Attributes:
+        name(str): Name of the node
+        neighbors(OrderedDict): List of all direct neighbors in the graph.
+            OrderedDict is only used as OrderedSet, so only the keys of the dict matter
+        routes(dict): Route mapping. What direction to follow in order to reach a particular target
     """
 
     def __init__(self, name):
@@ -59,18 +42,10 @@ class Node:
             name (str): Name of the node. Will be used for graph searching
         """
         self.name = name
-        """Name of the node
-        """
 
         self.neighbors = OrderedDict()
-        """List of all direct neighbors in the graph.
-        OrderedDict is only used as OrderedSet, so only the keys of the dict matter
-        """
 
         self.routes = {}
-        """Route mapping. What direction to follow in order to reach a
-        particular target
-        """
 
     def __add__(self, other):
         self.neighbors[other] = None
@@ -120,12 +95,15 @@ class Node:
                 node._update(already_updated)
 
     def path(self, goal):
-        """Get the shortest way between two nodes of the graph
+        """
+        Get the shortest way between two nodes of the graph.
 
         Args:
             goal (str): Name of the targeted node
-        Return:
-            list of Node
+        Returns:
+            list[Node]: a list of the Nodes of the path
+        Raises:
+            ValueError: an exception is thrown if the goal node is unknown
         """
 
         if isinstance(goal, Node):
@@ -147,12 +125,13 @@ class Node:
         return path
 
     def steps(self, goal):
-        """Get the list of individual relations leading to the targeted node
+        """
+        Get the list of individual relations leading to the targeted node.
 
         Args:
             goal (str): Name of the targeted node
         Return:
-            list of tuple of Node
+            list[Node]: a list of the Nodes of the path
         """
 
         path = self.path(goal)

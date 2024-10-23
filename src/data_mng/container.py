@@ -1,11 +1,16 @@
+""" Module that implements the Container base class """
+__all__ = ["Container"]
+
+
 class Container:
     """
-    Class Container
-    Base class for container classes, which are useful for storing data, for example, epoch-wise data
+    Container Class.
+    Base class for container classes, which are useful for storing data with fixed slots,
+    for example, epoch-wise data
 
-    Data is stored in the member variable __dict__
-    The subclasses of this Container must update the __slots__ member with the list of the data keys to store
-
+    Data is stored in the member variable `__dict__`
+    The subclasses of this Container must update the `__slots__` member with the list of the
+    data keys to store
     """
 
     def __init__(self):
@@ -42,4 +47,3 @@ class Container:
             _allAttrs += atr + ", "
         _allAttrs = _allAttrs[0:-2]
         return f'{type(self).__name__}({_allAttrs})'
-

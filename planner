@@ -1,41 +1,65 @@
-tasks for preliminary version:
-    [X] testar o Iono free SPS: ter a certeza de que o tgd é 0 e o DI é 0.
-    [X] Implementar o Dual Frequency SPS GPS
-    [ ] re-adicionar o filtro de elevation no gnss_solver
-    [ ] escrever um traceback dos filtros do preprocessor
-    [ ] limpar o código / solve all TODOs
+tasks release 1.0:
+    [X] melhorar o modulo de post processing:
+        [X] clean everything up (pain)
+        [X] adicionar o plot planimetrico
+        [X] Clean up dos scripts sat_orbits e sat_clocks
 
-adicionar GAL SPS
-    [ ] ler dados de navegacao/observacao de gal
-    [ ] implementar o GAL SPS (com ISB estimation)
+    [X] fix all documentation docstrings
+        [X] to either Args or Arguments... Same for return or returns...
+            - see https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html
+        [X] limpar o código
 
-ISTO TERMINA A VERSAO PRELIMINAR
---- ### ---
+    [X] Cleanup all repository.
+    [X] fazer uma "campanha de validação". Fazer setup da config dos datasets. comparar precise vs nav products. Single freq / Single const vs Dual freq / Dual Const...
+        e brincar com as configurações para fazer fine tuning ao algo. Criar cenários, etc.
+        Add dynamic scenario
+    [X] Merge to develop and start new branch feature/AddingModePR-PPP
 
-post-processing tasks:
-    [ ] plot Iono states
-    [ ] compute mean and std of pre/postfit residuals -> mean should be zero. STD should be sigma_URE (user range error). This should be computed for each satellite
-    [ ] plot residuals
-    [ ] plot position covariance (3D plot, 2D surfaces, etc...)
-    [ ] plot 3d sigma of estimation error
-    [ ] compute allan variance of clock bias
 
-caminhar para PPPP:
+# Release 1.1 (PR-PPP Mode)
+    [ ] criar um check que verifique os ficheiros e configurações obrigatórias para cada modelo (SPS, SPS_IF, PPPP...)
+        [ ] por exemplo, por agora o ficheiro nav é sempre obrigatório, mas isso tem de mudar depois..
+        [ ] ver o que acontece quando configuro 3 observações. Deve dar um erro!! Este SW apenas dá para 1 ou 2
     [ ] criar um config field com o modo (SPS ou PPPP)
-    [ ] Adicionar Leitura e Modelo de Clocks, Sp3, IONEX (criar um PPPP)
+    [ ] Adicionar Leitura e Modelo de IONEX (criar um PPPP)
     [ ] substituir alguns modelos do SPS pelos respetivos do PPPP
-    [ ] ler sat DCBs e criar uma classe que substitua o modelo atual
-
-finalizar o GNSS user positioning com:
+    [ ] adicionar um DCB Manager
+        [ ] read DCB files
+        [ ] understand different kind of DCB corrections (read papers)
+        [ ] develop code accordingly for each DCB type
+        [ ] ler sat DCBs e criar uma classe que substitua o modelo atual
+    [ ] Adicionar OSB Manager
+    [ ] Adicionar differential SPS/PPPP. D-GNSS para PR only
     [ ] Adicionar Kalman filter com user dynamics
-    [ ] process doppler measurements to estimate velocity
+    [ ] Update Readme
+    [ ] solve all TODOs
 
 
+# Release 1.2 PPP e PPP-AR
+    [ ] float carrier processing
+    [ ] outras correçoes: PCVs...
+    [ ] cycle slip detection
+    [ ] PPP e PPP-AR com OSBs
+
+
+nice to have, but not for now
+    [ ] fazer cleanup ao theory notes
+    [ ] no output, permitir escolher qual a timetag de output (RX Time, GPST, GST, UTC...)
+    [ ] add trace file with tropo, iono, clock delays, ggto, etc... that form the observable
+    [ ] add shapiro correction (Eq. 19.14 of handbook)
+    [ ] improve computation of weight matrix W, taking inspiration from https://gnss-sdr.org/docs/sp-blocks/pvt/#precise-point-positioning
+    [ ] Criar script plot_observations from input rinex file
+            - no futuro poderá ficar um script de observation analysis (compute code-carrier divergence por exemplo)
+
+
+# Relase 1.3 (INS - IMU Emulator - Loosely Coupled)
+    [ ] implement unit convertion when reading from csv file
 loosely coupled:
     [ ] attitude basics
     [ ] sensor emulator
     [ ] INS
     [ ] loosely coupled
+    [ ] quando chegar à parte do INS / atitude etc... ver o projeto HNF (hybrid navigation function) da navika
+        https://confluence.elecnor-deimos.com/display/GNCCC/%5BNaviKA%5D+Hybrid+Navigation+for+Launchers+and+Re-entry+Vehicles?src=contextnavpagetreemode
 
 ...
-    [ ] adicionar processamento de carrier phase - PPP

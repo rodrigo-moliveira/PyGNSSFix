@@ -1,19 +1,29 @@
+""" GNSS Observation Module """
 from .data_type import DataType
 
 
 class Observation:
     """
-    Class Observation
-    Stores a single observation
-    Attributes
-        ----------
-        datatype : DataType
-            The DataType (observation type) of this observation
-        value : float or int
-            The numeric value for this observation
+    Class Observation to store GNSS observables
+    The Observation objects contain a :py:class:`DataType` and the corresponding value
+
+    Attributes:
+        datatype (DataType): The DataType of this GNSS observation
+        value (float): The numeric value for this observation
+        std (float): The noise standard deviation for this observation. Default std is 0
     """
 
-    def __init__(self, datatype: DataType, value: float):
+    def __init__(self, datatype: DataType, value: float, std: float = 0.0):
+        """
+        Constructor of `Observation` objects
+
+        Args:
+            datatype (DataType): The DataType of this GNSS observation
+            value (float): The numeric value for this observation
+            std (float): The noise standard deviation for this observation. Default std is 0
+        Raises:
+            AttributeError: an exception is raised if one of the input arguments if not of the specified type
+        """
         if isinstance(datatype, DataType):
             self.datatype = datatype
         else:
@@ -24,27 +34,33 @@ class Observation:
         else:
             raise AttributeError(f'Second argument of Observation constructor should be of type float, {type(value)}'
                                  f' was provided instead')
+        if isinstance(std, float) or isinstance(std, int):
+            self.std = float(std)
+        else:
+            raise AttributeError(f'Third argument of Observation constructor should be of type float, {type(std)}'
+                                 f' was provided instead')
 
     def __eq__(self, other):
         if not isinstance(other, Observation):
             raise ValueError(f"Cannot compare DataType object")
-        return self.datatype == other.datatype and self.value == other.value
+        return self.datatype == other.datatype and self.value == other.value and self.std == other.std
 
     def __repr__(self):
-        return "Observation({} : {})".format(self.value, repr(self.datatype))
+        return "Observation({} : {} (std={}))".format(self.value, repr(self.datatype), self.std)
 
     # Algebraic methods to allow an Observation object to be treated as a float
     def __add__(self, other):
-        # operator self + other
+        """ operator self + other """
+        # keep the noise std
         if isinstance(other, float) or isinstance(other, int):
-            return Observation(self.datatype, self.value + other)
+            return Observation(self.datatype, self.value + other, self.std)
         elif isinstance(other, Observation):
-            return Observation(self.datatype, self.value + other.value)
+            return Observation(self.datatype, self.value + other.value, self.std)
         else:
             raise TypeError(f"unsupported operand type(s) for +: '{type(self)}' and '{type(other)}'")
 
     def __iadd__(self, other):
-        # operator self += other
+        """ operator self += other """
         if isinstance(other, float) or isinstance(other, int):
             self.value += other
         elif isinstance(other, Observation):
@@ -54,16 +70,16 @@ class Observation:
         return self
 
     def __sub__(self, other):
-        # operator self - other
+        """ operator self - other """
         if isinstance(other, float) or isinstance(other, int):
-            return Observation(self.datatype, self.value - other)
+            return Observation(self.datatype, self.value - other, self.std)
         elif isinstance(other, Observation):
-            return Observation(self.datatype, self.value - other.value)
+            return Observation(self.datatype, self.value - other.value, self.std)
         else:
             raise TypeError(f"unsupported operand type(s) for -: '{type(self)}' and '{type(other)}'")
 
     def __isub__(self, other):
-        # operator self -= other
+        """ operator self -= other """
         if isinstance(other, float) or isinstance(other, int):
             self.value -= other
         elif isinstance(other, Observation):
@@ -73,7 +89,7 @@ class Observation:
         return self
 
     def __lt__(self, other):
-        # operator self < other
+        """ operator self < other """
         if isinstance(other, float) or isinstance(other, int):
             return self.value < other
         elif isinstance(other, Observation):
@@ -82,7 +98,7 @@ class Observation:
             raise TypeError(f"unsupported operand type(s) for <: '{type(self)}' and '{type(other)}'")
 
     def __le__(self, other):
-        # operator self <= other
+        """ operator self <= other """
         if isinstance(other, float) or isinstance(other, int):
             return self.value <= other
         elif isinstance(other, Observation):
@@ -91,7 +107,7 @@ class Observation:
             raise TypeError(f"unsupported operand type(s) for <=: '{type(self)}' and '{type(other)}'")
 
     def __gt__(self, other):
-        # operator self > other
+        """ operator self > other """
         if isinstance(other, float) or isinstance(other, int):
             return self.value > other
         elif isinstance(other, Observation):
@@ -100,7 +116,7 @@ class Observation:
             raise TypeError(f"unsupported operand type(s) for >: '{type(self)}' and '{type(other)}'")
 
     def __ge__(self, other):
-        # operator self >= other
+        """ operator self >= other """
         if isinstance(other, float) or isinstance(other, int):
             return self.value >= other
         elif isinstance(other, Observation):
@@ -108,8 +124,17 @@ class Observation:
         else:
             raise TypeError(f"unsupported operand type(s) for >=: '{type(self)}' and '{type(other)}'")
 
-    def __float__(self):
+    def __float__(self) -> float:
+        """ convert the observation value to float """
         return self.value
 
     def copy(self):
-        return Observation(self.datatype, float(self.value))
+        """
+        Returns:
+            Observation: returns a deep copy of this object
+        """
+        return Observation(self.datatype, float(self.value), float(self.std))
+
+    def set_std(self, new_std: float):
+        """ Update the `std` value for this Observation object """
+        self.std = new_std

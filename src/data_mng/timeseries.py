@@ -1,5 +1,10 @@
+""" Module that implements the TimeSeries class """
+
 from collections import OrderedDict
+
 from src.errors import TimeSeriesError
+
+__all__ = ["TimeSeries"]
 
 
 class TimeSeries(OrderedDict):
@@ -10,7 +15,7 @@ class TimeSeries(OrderedDict):
     a feature to sort it by keys is introduced. This is suitable for time series, where keys represent time instants
     (epochs).
 
-    The keys can either be :class:`src.data_types.date.date.Epoch` or floats
+    The keys can either be :class:`src.data_types.date.Epoch` or :class:`float`
     """
 
     def __init__(self, overwriting=False):
@@ -18,7 +23,7 @@ class TimeSeries(OrderedDict):
         Construct a Timeseries
 
         Args:
-            overwriting (bool): if True, then data is overwritten when using function :func:`set_data`.
+            overwriting (bool): if True, then data is overwritten when using function :func:`TimeSeries.set_data`.
             that has already been set
         """
         super().__init__()
@@ -27,16 +32,21 @@ class TimeSeries(OrderedDict):
         self.overwriting = overwriting
 
     # methods to set data
-    def set_data(self, epoch, epoch_data, logger=None):
+    def set_data(self, epoch, epoch_data):
+        """
+        Sets the `epoch_data` for the provided `epoch` in the TimeSeries frame.
 
-        # if not self.overwriting and epoch not in self._epochs:
+        Args:
+            epoch(src.data_types.date.Epoch or float): the epoch to set the data
+            epoch_data(Any): the data to be saved
+
+        Raises:
+            TimeSeriesError: this exception is raised if the `overwriting` parameter is set to False and an attempt to
+                set data for a previously defined epoch is made.
+        """
         if not self.overwriting and epoch in self._epochs:
             # epoch is already defined, and we are in non-overwriting mode -> skip insertion
-            print("epoch is already defined, and we are in non-overwriting mode -> skip insertion")
-            if logger is not None:
-                # TODO: add logger message (warning)
-                pass
-            return
+            raise TimeSeriesError(f"Epoch {epoch} has already been defined. This timeseries is non-overwriting.")
 
         # add data to internal dict
         self._set_data(epoch, epoch_data)
@@ -50,26 +60,63 @@ class TimeSeries(OrderedDict):
     def __setitem__(self, key, value):
         self.set_data(key, value)
 
-    # method to remove data
     def remove_data(self, epoch):
+        """ Method to remove data for the provided epoch
+
+        Args:
+            epoch(src.data_types.date.Epoch or float): the epoch to remove the data
+
+        Raises:
+            TimeSeriesError: this exception is raised if the provided epoch has not been set in the TimeSeries.
+        """
 
         if epoch not in self.epochs:
-            raise KeyError(f"Key {epoch} not in TimeSeries")
+            raise TimeSeriesError(f"Key {epoch} not in TimeSeries")
 
         self.epochs.remove(epoch)
         return self.pop(epoch)
 
     # getters
     def get_all_epochs(self):
+        """
+        Returns:
+            list: returns a list with all epochs
+        """
         self._sort()
         return self.epochs
 
     def get_data_for_epoch(self, epoch):
+        """ Method to fetch the `epoch_data` for the provided `epoch`
+
+        Args:
+            epoch(src.data_types.date.Epoch or float): the epoch to fetch the data
+
+        Returns:
+            Any: `epoch_data` for the provided `epoch`
+
+        Raises:
+            TimeSeriesError: this exception is raised if the provided epoch has not been set in the TimeSeries.
+        """
         self._sort()
+
+        if epoch not in self.epochs:
+            raise TimeSeriesError(f"Key {epoch} not in TimeSeries")
+
         return self[epoch]
 
     def get_closest_epoch(self, epoch):
+        """ Returns the closest epoch in the TimeSeries with respect to the provided epoch (argument)
 
+        Args:
+            epoch(src.data_types.date.Epoch or float): the epoch to fetch the data
+
+        Returns:
+            Any: `epoch_data` for the closest epoch in the TimeSeries
+
+        Raises:
+            TimeSeriesError: this exception is raised if the TimeSeries is empty or if the provided epoch is
+                not inside the TimeSeries interval (before the first epoch or after the last one)
+        """
         self._sort()
 
         if len(self.epochs) == 0:
@@ -91,26 +138,16 @@ class TimeSeries(OrderedDict):
     @staticmethod
     def get_common_epochs(series1, series2):
         """
-        Method to align the two time series to a common time interval
-        returns a list with the common epochs for both series
+        Method to align the two time series to a common time interval.
+        Returns a list with the common epochs for both series.
 
-        Parameters:
-            ----------
-            series1 (TimeSeries):
-                time series 1
+        Args:
+            series1 (TimeSeries): time series 1
+            series2 (TimeSeries): time series 2
 
-            series2 (TimeSeries):
-                time series 2
-
-        Return:
+        Returns:
             list : A list with the common epochs
         """
-        # series1.sort()
-        # series2.sort()
-
-        # print(series1.epochs[0], series1.epochs[-1])
-        # print(series2.epochs[0], series2.epochs[-1])
-
         epochs = []
         for key in series1.epochs:
             if key in series2.epochs:
@@ -119,17 +156,17 @@ class TimeSeries(OrderedDict):
         return epochs
 
     # utility methods
-
     def _sort(self):
-        # this sort is not very efficient...
+        """ Sort method """
         if self.sorted is False:
             epochs = sorted(self.epochs)
-            self.epochs.clear()
-
             new_dct = OrderedDict((key, self[key]) for key in epochs)
             self.clear()
+            _cache_overwriting = self.overwriting
+            self.overwriting = True
             self.update(new_dct)
-
+            self.overwriting = _cache_overwriting
+            self._epochs = epochs
             self._sorted = True
 
     def __repr__(self):
@@ -141,6 +178,11 @@ class TimeSeries(OrderedDict):
         return my_str
 
     def copy(self):
+        """ Deep copy.
+
+        Returns:
+            TimeSeries: a deep copy of this TimeSeries object.
+        """
         self._sort()
         # clone this TimeSeries
         _copy = TimeSeries()
@@ -148,7 +190,7 @@ class TimeSeries(OrderedDict):
         # clone data to new object
         for epoch, value in self.items():
 
-            # try to create a clone of the value object (if possible)
+            # try to create a clone (deep copy) of the value object (if possible)
             if hasattr(value, "copy"):
                 _copy.set_data(epoch, value.copy())
             else:
@@ -157,10 +199,14 @@ class TimeSeries(OrderedDict):
         return _copy
 
     def has_epoch(self, epoch):
-        if epoch in self.epochs:
-            return True
-        else:
-            return False
+        """
+        Args:
+            epoch(src.data_types.date.Epoch or float): the epoch to query
+
+        Returns:
+            bool: True if the epoch has been set and False otherwise
+        """
+        return epoch in self.epochs
 
     # def get_sub(self, n):
     #    tmOut = []
@@ -188,3 +234,46 @@ class TimeSeries(OrderedDict):
 
     def is_empty(self):
         return len(self.get_all_epochs()) == 0
+
+    def get_n_items(self, epoch, order):
+        """
+        Applies binary search to return the `order` number of epochs before and after the provided `epoch`
+        This method is helpful to get the surrounding knots to perform interpolations
+
+        Args:
+            epoch (:class:`src.data_types.date.Epoch` or float): The epoch for which to find the surrounding knots.
+            order(int): order of the search, i.e., number of epochs before and after to be returned
+
+        Returns:
+            tuple: A tuple containing the knot epochs
+
+        Raises:
+            TimeSeriesError: If `epoch` is outside the range of data, a `TimeSeriesError` exception is raised.
+        """
+        self._sort()
+
+        keys = list(self.keys())
+
+        # Binary search to find the index where `epoch` would be inserted to maintain sorted order
+        low, high = 0, len(keys) - 1
+        while low <= high:
+            mid = (low + high) // 2
+            if keys[mid] < epoch:
+                low = mid + 1
+            else:
+                high = mid - 1
+
+        # `low` is now the index where `epoch` would be inserted
+        insert_index = low
+
+        # Find the start and end indexes for the sublist
+        start_index = max(0, insert_index - order)
+        end_index = min(len(keys), insert_index + order)
+
+        # Check if there are enough items before and after `epoch` to return `order` items each way
+        if end_index - start_index < 2 * order:
+            raise TimeSeriesError(
+                f"Not enough elements in the dataset around the specified epoch {epoch} to return the desired number of"
+                f" epochs before and after (selected order is {order}).")
+
+        return keys[start_index:insert_index] + keys[insert_index:end_index]

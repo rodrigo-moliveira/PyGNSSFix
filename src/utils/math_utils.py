@@ -1,12 +1,20 @@
+""" Module with useful mathematical functions to support the library """
+
+__all__ = ["rot1", "rot2", "rot3", "vector2skew_symmetric", "skew_symmetric2vector", "require_len_array",
+           "require_len_matrix"]
+
 import numpy as np
 from numpy import sin, cos
+from src.errors import ArraySizeError
 
 
 def rot1(theta):
     """
+    DCM of rotation of `theta` around first axis (Rotation 1).
+
     Args:
         theta (float): Angle in radians
-    Return:
+    Returns:
         numpy.ndarray : 3x3 rotation matrix of angle theta around the X-axis
     """
     return np.array(
@@ -20,9 +28,11 @@ def rot1(theta):
 
 def rot2(theta):
     """
+    DCM of rotation of `theta` around second axis (Rotation 2).
+
     Args:
         theta (float): Angle in radians
-    Return:
+    Returns:
         numpy.ndarray : 3x3 rotation matrix of angle theta around the Y-axis
     """
     return np.array(
@@ -36,9 +46,11 @@ def rot2(theta):
 
 def rot3(theta):
     """
+    DCM of rotation of `theta` around third axis (Rotation 3).
+
     Args:
         theta (float): Angle in radians
-    Return:
+    Returns:
         numpy.ndarray : 3x3 rotation matrix of angle theta around the Z-axis
     """
     return np.array(
@@ -52,15 +64,18 @@ def rot3(theta):
 
 def vector2skew_symmetric(a):
     """
-    Compute skew symmetric matrix of angular vector a
+    Compute skew symmetric matrix of angular vector a.
+
     Args:
-        a: (3,) array. Angular vector, in [rad]
+        a(numpy.ndarray): a (3,) array. Angular vector, in [rad]
     Returns:
-        skew: (3,3) Skew symmetric matrix
+        numpy.ndarray: Skew symmetric matrix, (3,3)
+    Raises:
+        AttributeError: an exception is raised if the input argument does not have requires shape (3,)
     """
 
     if a.size != 3:
-        raise TypeError(f"Vector {a} must have shape (3,). Instead, it has shape {a.shape}")
+        raise AttributeError(f"Vector {a} must have shape (3,). Instead, it has shape {a.shape}")
 
     skew = np.array([[0.0, -a[2], a[1]],
                      [a[2], 0.0, -a[0]],
@@ -72,13 +87,55 @@ def skew_symmetric2vector(skew):
     """
     Compute the angular vector associated to the provided skew symmetric matrix
     Args:
-        skew: (3,3) Skew symmetric matrix
+        skew(numpy.ndarray): Skew symmetric matrix, (3,3)
     Returns:
-        a: (3,) array. Angular vector, in [rad]
+        a(numpy.ndarray): a (3,) array. Angular vector, in [rad]
+    Raises:
+        AttributeError: an exception is raised if the input argument does not have requires shape (3,)
     """
 
     if skew.shape != (3, 3):
-        raise TypeError(f"Vector {skew} must have shape (3,3). Instead, it has shape {skew.shape}")
+        raise AttributeError(f"Vector {skew} must have shape (3,3). Instead, it has shape {skew.shape}")
 
     # note: we assume that the matrix is skew symmetric (skew^T = -skew)
     return np.array([-skew[1, 2], skew[0, 2], -skew[0, 1]])
+
+
+def require_len_array(arr: np.ndarray, length=3) -> None:
+    """
+    Checks the length of a numpy flat array.
+
+    Args:
+        arr(numpy.ndarray): input array to be checked
+        length(int): required length of the array. Default value is 3
+    Raises:
+        AttributeError: if the input array is not a numpy object, the exception is raised
+        ArraySizeError: if the input array does not have the correct length, the exception is raised
+    """
+    if not (type(arr) == np.ndarray):
+        raise AttributeError(f"Not a valid numpy array object (numpy.ndarray). It is of type {type(arr)}")
+
+    if len(arr) != length or arr.size != length:
+        raise ArraySizeError(f"Invalid shape of array {arr}: should be an array of size {length}")
+
+
+def require_len_matrix(arr: np.ndarray, nrows=3, ncols=3):
+    """
+    Checks the length of a numpy array (matrix).
+
+    Args:
+        arr(numpy.ndarray): input matrix to be checked
+        nrows(int): required number of rows. Default value is 3
+        ncols(int): required number of columns. Default value is 3
+    Raises:
+        AttributeError: if the input array is not a numpy object, the exception is raised
+        ArraySizeError: if the input array (matrix) does not have the correct shape, the exception is raised
+    """
+    if not (type(arr) == np.ndarray):
+        raise AttributeError(f"Not a valid numpy array object (numpy.ndarray). It is of type {type(arr)}")
+
+    rows, cols = arr.shape
+
+    if rows != nrows or cols != ncols:
+        raise ArraySizeError(f"Invalid shape of matrix {arr}: should be of dimension {nrows}x{ncols} but it is "
+                             f"a {rows}x{cols} matrix")

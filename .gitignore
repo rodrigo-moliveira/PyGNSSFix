@@ -1,5 +1,9 @@
 # PyCharm
 .idea/
 
+/build/
+make.bat
+Makefile
+/source/
 # output (algs) directory
 ./runs/*

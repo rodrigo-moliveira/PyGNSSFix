@@ -1,18 +1,30 @@
-from enum import Enum
+""" Definition of some useful python Enumeration objects """
 
+from enum import Enum
 from src.errors import EnumError
 
 
 class EnumSolver(Enum):
+    """ Enumeration for the type of solver (Least-Squares or Weighted Least-Squares) """
     LS = 0
     WLS = 1
 
     @classmethod
     def show_options(cls):
-        return f"[0 - LEAST SQUARES, 1 - WEIGHTED LEAST SQUARES]"
+        return f"[ LS, WSL ]"
+
+    @classmethod
+    def init_model(cls, model_str: str):
+        if model_str.lower() == "wsl":
+            return EnumSolver.WLS
+        elif model_str.lower() == "ls":
+            return EnumSolver.LS
+        else:
+            raise EnumError(f"Unsupported Solver Model {model_str}. Available options are {cls.show_options()}")
 
 
 class EnumPositioningMode(Enum):
+    """ Enumeration for the GNSS PNT algorithm (SPS, SPS_IF) """
     SPS = 0
     SPS_IF = 1
 
@@ -27,10 +39,11 @@ class EnumPositioningMode(Enum):
 
     @classmethod
     def show_options(cls):
-        return f"[0 - SPS, 1 - SPS (Iono-Free) ]"
+        return f"[SPS, SPS_IF ]"
 
 
 class EnumModel(Enum):
+    """ Enumeration for the selected GNSS Observation model (single frequency, dual frequency) """
     SINGLE_FREQ = 0
     DUAL_FREQ = 1
 
@@ -40,6 +53,7 @@ class EnumModel(Enum):
 
 
 class EnumOnOff(Enum):
+    """ Enumeration for the activation or deactivation of models (Disabled or Enabled) """
     DISABLED = 0
     ENABLED = 1
 
@@ -48,29 +62,82 @@ class EnumOnOff(Enum):
         return f"[0 - DISABLED, 1 - ENABLED]"
 
 
-class EnumIono(Enum):
+class EnumIonoModel(Enum):
+    """ Enumeration for the Ionosphere Model (Disabled, Klobuchar or NTCM-G) """
     DISABLED = 0
     KLOBUCHAR = 1
-    NEQUICK = 2
+    NTCMG = 2
 
     @classmethod
     def show_options(cls):
-        return f"[0 - DISABLED, 1 - Klobuchar (for GPS), 2 - NeQuick (for GAL)]"
+        return f"[ NONE, Klobuchar, NTCM-G]"
+
+    @classmethod
+    def init_model(cls, model_str: str):
+        if model_str.lower() == "none":
+            return EnumIonoModel.DISABLED
+        elif model_str.lower() == "klobuchar":
+            return EnumIonoModel.KLOBUCHAR
+        elif model_str.lower() == "ntcm-g" or model_str.lower() == "ntcmg":
+            return EnumIonoModel.NTCMG
+        else:
+            raise EnumError(f"Unsupported Ionospheric Model {model_str}. Available options are {cls.show_options()}")
 
 
-class EnumTropo(Enum):
+class EnumTropoModel(Enum):
+    """ Enumeration for the Troposphere Model (Disabled, Saastamoinen, GPT3) """
     DISABLED = 0
     SAASTAMOINEM = 1
+    GPT3 = 2
+
+    @classmethod
+    def init_model(cls, model_str: str):
+        if model_str.lower() == "none":
+            return EnumTropoModel.DISABLED
+        elif model_str.lower() == "saastamoinen":
+            return EnumTropoModel.SAASTAMOINEM
+        elif model_str.lower() == "gpt3":
+            return EnumTropoModel.GPT3
+        else:
+            raise EnumError(f"Unsupported Tropospheric Model {model_str}. Available options are {cls.show_options()}")
 
     @classmethod
     def show_options(cls):
-        return f"[0 - DISABLED, 1 - SAASTAMOINEM MODEL]"
+        return f"[ NONE, Saastamoinen, GPT3]"
+
+
+class EnumTropoMap(Enum):
+    """ Enumeration for the Troposphere Map function (Saastamoinen, GMF, VMF1, VMF3) """
+    SAASTAMOINEM = 0
+    GMF = 1
+    VMF1 = 2
+    VMF3 = 3
+
+    @classmethod
+    def init_model(cls, model_str: str):
+        if model_str.lower() == "saastamoinen":
+            return EnumTropoMap.SAASTAMOINEM
+        elif model_str.lower() == "gmf":
+            return EnumTropoMap.GMF
+        elif model_str.lower() == "vmf1":
+            return EnumTropoMap.VMF1
+        elif model_str.lower() == "vmf3":
+            return EnumTropoMap.VMF3
+        else:
+            raise EnumError(f"Unsupported Tropospheric Map Function {model_str}. "
+                            f"Available options are {cls.show_options()}")
+
+    @classmethod
+    def show_options(cls):
+        return f"[ Saastamoinen, GMF, VMF1, VMF3]"
 
 
 class EnumTransmissionTime(Enum):
+    """ Enumeration for the Computation of Transmission Time model (Geometric, Pseudorange, NAPEOS) """
     GEOMETRIC = 0
     PSEUDORANGE = 1
+    NAPEOS = 2
 
     @classmethod
     def show_options(cls):
-        return f"[0 - GEOMETRIC, 1 - PSEUDORANGE]"
+        return f"[0 - GEOMETRIC, 1 - PSEUDORANGE, 2 - NAPEOS]"

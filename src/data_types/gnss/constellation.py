@@ -1,39 +1,40 @@
+""" Constellation Module """
 from .service_utils import AvailableConstellations, ConstellationToCodeMap
-from ...errors import UnknownConstellationError
+from src.errors import ConfigError
 
 __all__ = ["Constellation", "get_constellation"]
 
 
 class Constellation(str):
     """
-    Class Constellation, inherits from string
-    Represents a constellation system (GPS or GAL)
+    Class Constellation, inherits from :py:class:`str`.
+
+    Represents a constellation system (GPS, GAL, GLO, BDS)
     This class is a subclass of str with special utility methods
     """
 
-    def __new__(cls, content):
-
+    def __new__(cls, content: str):
         if content.upper() in AvailableConstellations:
             return super(Constellation, cls).__new__(cls, content.upper())
         else:
             raise ValueError("Unknown Satellite System {}. Possible systems are GPS or GAL".format(content.upper()))
 
     def __repr__(self):
-        """A repr is useful for debugging"""
+        """ A repr useful for debugging """
         return f'{type(self).__name__}({super().__repr__()})'
 
     def __getattribute__(self, name):
-        if name in dir(str):  # only handle str methods here
 
-            def method(self, *args, **kwargs):
+        if name in dir(str):  # only handle str methods here
+            def method(self_, *args, **kwargs):
                 value = getattr(super(), name)(*args, **kwargs)
                 # not every string method returns a str:
                 if isinstance(value, str):
-                    return type(self)(value)
+                    return type(self_)(value)
                 elif isinstance(value, list):
-                    return [type(self)(i) for i in value]
+                    return [type(self_)(i) for i in value]
                 elif isinstance(value, tuple):
-                    return tuple(type(self)(i) for i in value)
+                    return tuple(type(self_)(i) for i in value)
                 else:  # dict, bool, or int
                     return value
 
@@ -41,19 +42,22 @@ class Constellation(str):
         else:  # delegate to parent
             return super().__getattribute__(name)
 
-    def is_gps(self):
+    def is_gps(self) -> bool:
+        """ Returns True if this constellation is GPS """
         return self == "GPS"
 
-    def is_gal(self):
+    def is_gal(self) -> bool:
+        """ Returns True if this constellation is GAL """
         return self == "GAL"
 
-    def get_system(self):
+    def get_system(self) -> str:
+        """ Returns the string name of this constellation """
         return type(self)(self)
 
     def get_system_short(self):
         """
-        Return:
-            str : "G" for sensors, "E" for galileo "U" for unkown
+        Returns:
+            str : "G" for sensors, "E" for galileo "U" for unknown
         """
         return ConstellationToCodeMap.get(self, "UNKNOWN")
 
@@ -70,8 +74,10 @@ def get_constellation(system: str):
 
     Args:
         system (str) : short name for the constellation
-    Return:
-        SatelliteSystem : the corresponding system object
+    Returns:
+        Constellation : the corresponding system object
+    Raises:
+        ConfigError: an exception is raised if the provided system is not known
     """
     if system.upper() == "GPS" or system.upper() == "G":
         return _GPS
@@ -82,6 +88,6 @@ def get_constellation(system: str):
     elif system.upper() == "BDS" or system.upper() == "B":
         return _BDS
     else:
-        raise UnknownConstellationError(
+        raise ConfigError(
             "No Satellite System matched the descriptor {}.".format(system)
         )

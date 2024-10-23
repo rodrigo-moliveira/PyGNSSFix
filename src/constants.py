@@ -1,9 +1,12 @@
+""" Definition of some useful constants. """
+
+import numpy as np
 # PI
-PI = 3.1415926535898
+PI = 3.141592653589793
 
 # RAD - DEG Conversions
-DEG2RAD = 0.01745329251994
-RAD2DEG = 57.2957795130823
+DEG2RAD = PI / 180
+RAD2DEG = 180 / PI
 
 # GNSS Frequencies (Hz)
 # GPS Frequencies
@@ -28,10 +31,13 @@ DAYS_PER_WEEK = 7
 AVERAGE_DAYS_IN_YEAR = 365.25
 SECONDS_IN_HOUR = 3600
 
-# Orbital Mechanics and Earth constants (WGS84 values)
-MU = 3.986005E14  # [m^3/sec^2]
+# Orbital Mechanics and Earth constants
+MU_WGS84 = 3.986005E14  # [m^3/sec^2] (WGS84 value, for GPS)
+MU_GTRF = 3.986004418e14  # (GTRF value, for GAL)
 EARTH_ROTATION = 7.292115E-5  # [rad/sec]
 SPEED_OF_LIGHT = 299792458  # [m/s]
+EARTH_ANGULAR_RATE = np.array([0.0, 0.0, EARTH_ROTATION])
+
 
 EARTH_FLATNESS = 1 / 298.257223563
 EARTH_ECCENTRICITY_SQ = 2 * EARTH_FLATNESS - EARTH_FLATNESS * EARTH_FLATNESS
@@ -39,27 +45,3 @@ EARTH_SEMI_MAJOR_AXIS = 6378137.0  # [m]  Equatorial radius Re
 EARTH_J2 = 1.08262668355315130e-3  # J2 harmonic
 EARTH_MASS = 5.97237e24  # [kg]
 EARTH_G0 = 9.80665  # [m/s^2] standard value cf. https://www.convertunits.com/from/g-unit/to/m/s%5E2
-
-# Output file names
-AZEL = "satellite_azel.txt"
-DOP_ECEF = "DOP_ECEF.txt"
-DOP_LOCAL = "DOP_ENU.txt"
-PRE_RESIDUALS = "prefit_residuals.txt"
-POST_RESIDUALS = "postfit_residuals.txt"
-POSITION = "position.txt"
-CLOCK = "clock_bias.txt"
-TIME = "time.txt"
-IONO = "iono.txt"
-OUTPUT_FILENAME_MAP = {
-    "satellite_azel": AZEL,
-    "dop_ecef": DOP_ECEF,
-    "dop_local": DOP_LOCAL,
-    "prefit_residuals": PRE_RESIDUALS,
-    "postfit_residuals": POST_RESIDUALS,
-    "position": POSITION,
-    "clock_bias": CLOCK,
-    "epoch": TIME,
-    "iono": IONO,
-    "isb": None,
-    "velocity": None
-}

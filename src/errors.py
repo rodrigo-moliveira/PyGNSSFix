@@ -1,181 +1,97 @@
-"""Common errors declarations
-"""
-MODULE = "PyGNSSFix"
+""" Common errors declarations of the library """
+MODULE = "GNSSNavPy"
 
 
-class PyGNSSFixError(Exception):
-    """Generic error"""
-    __module__ = MODULE
-
-    # def __init__(self, message):
-    #    # Call the base class constructor with the parameters it needs
-    #    message = "Generic Error -> " + message
-    #    super().__init__(message)
+class MetaErrorClass(type):
+    def __new__(mcs, name, bases, dct):
+        dct['__module__'] = MODULE
+        return super().__new__(mcs, name, bases, dct)
 
 
-class UnknownScaleError(PyGNSSFixError):
-    """Unknown timescale selected by user"""
-    __module__ = MODULE
+class GNSSNavPyError(Exception, metaclass=MetaErrorClass):
+    """ Generic error. """
 
+
+class TimeScaleError(GNSSNavPyError):
+    """ Timescale configuration error. """
     def __init__(self, message):
-        # Call the base class constructor with the parameters it needs
-        message = "UnknownScaleError Error -> " + message
+        message = "TimeScaleError Error -> " + message
         super().__init__(message)
 
 
-class DateError(PyGNSSFixError):
-    """Error when converting between timescales (no connection defined)"""
-    __module__ = MODULE
-
+class EpochError(GNSSNavPyError):
+    """ Error when dealing with Epoch objects. """
     def __init__(self, message):
-        # Call the base class constructor with the parameters it needs
-        message = "Date Error -> " + message
+        message = "Epoch Error -> " + message
         super().__init__(message)
 
 
-class ConfigError(PyGNSSFixError):
-    """Error when parsing the json configuration file"""
-    __module__ = MODULE
-
+class ConfigError(GNSSNavPyError):
+    """ Error when parsing the json configuration file. """
     def __init__(self, message):
-        # Call the base class constructor with the parameters it needs
         message = "Configuration Error -> " + message
         super().__init__(message)
 
 
-class ConfigTypeError(PyGNSSFixError):
-    """Error when parsing the json configuration file"""
-    __module__ = MODULE
-
+class EopError(GNSSNavPyError):
+    """ Earth Orientation Parameters error (lack of data). """
     def __init__(self, message):
-        # Call the base class constructor with the parameters it needs
-        message = "Configuration Type Error -> " + message
-        super().__init__(message)
-
-
-class UnknownConstellationError(PyGNSSFixError):
-    """Unknown constellation defined by user"""
-    __module__ = MODULE
-
-    def __init__(self, message):
-        # Call the base class constructor with the parameters it needs
-        message = "Unknown Constellation Error -> " + message
-        super().__init__(message)
-
-
-class EopError(PyGNSSFixError):
-    """Earth Orientation Parameters error (lack of data)"""
-    __module__ = MODULE
-
-    def __init__(self, message):
-        # Call the base class constructor with the parameters it needs
         message = "EOP Error -> " + message
         super().__init__(message)
 
 
-class DataTypeError(PyGNSSFixError):
-    """Unknown GNSS data type """
-    __module__ = MODULE
-
+class SignalError(GNSSNavPyError):
+    """ Unknown GNSS data signal type. """
     def __init__(self, message):
-        # Call the base class constructor with the parameters it needs
-        message = "GNSS Data Type Error -> " + message
+        message = "GNSS Data Type Signal Error -> " + message
         super().__init__(message)
 
 
-class TimeSeriesError(PyGNSSFixError):
-    """Error in time series class"""
-    __module__ = MODULE
-
+class TimeSeriesError(GNSSNavPyError):
+    """ Error in time series class. """
     def __init__(self, message):
-        # Call the base class constructor with the parameters it needs
         message = "Time Series Error -> " + message
         super().__init__(message)
 
 
-class FileError(PyGNSSFixError):
-    """Error reading input file"""
-    __module__ = MODULE
-
+class FileError(GNSSNavPyError):
+    """ Error in IO management. """
     def __init__(self, message):
-        # Call the base class constructor with the parameters it needs
         message = "File Error -> " + message
         super().__init__(message)
 
 
-class UnknownConversionError(PyGNSSFixError):
-    """Error in time series class"""
-    __module__ = MODULE
-
+class ArraySizeError(GNSSNavPyError):
+    """ Array has wrong size/shape. """
     def __init__(self, message):
-        # Call the base class constructor with the parameters it needs
-        message = "Unknown Conversions Error -> " + message
-        super().__init__(message)
-
-
-class NonExistentObservable(PyGNSSFixError):
-    """Observable not found"""
-    __module__ = MODULE
-
-    def __init__(self, message):
-        # Call the base class constructor with the parameters it needs
-        message = "Non Existent Observable Error -> " + message
-        super().__init__(message)
-
-
-class DuplicateObservable(PyGNSSFixError):
-    """Observable not found"""
-    __module__ = MODULE
-
-    def __init__(self, message):
-        # Call the base class constructor with the parameters it needs
-        message = "Duplicate Observable Error -> " + message
-        super().__init__(message)
-
-
-class EmptyObservationData(PyGNSSFixError):
-    """Observation Data is empty"""
-    __module__ = MODULE
-
-    def __init__(self, message):
-        # Call the base class constructor with the parameters it needs
-        message = "Empty Observation Data Error -> " + message
-        super().__init__(message)
-
-
-class ArraySizeError(PyGNSSFixError):
-    """Array has wrong size/shape"""
-    __module__ = MODULE
-
-    def __init__(self, message):
-        # Call the base class constructor with the parameters it needs
         message = "Array Size Error -> " + message
         super().__init__(message)
 
 
-class PreprocessorError(PyGNSSFixError):
-    __module__ = MODULE
-
+class PreprocessorError(GNSSNavPyError):
+    """ Error in Preprocessor Execution. """
     def __init__(self, message):
         # Call the base class constructor with the parameters it needs
         message = "Preprocessor Error -> " + message
         super().__init__(message)
 
 
-class PVTComputationFail(PyGNSSFixError):
-    """Error in PVT Computation"""
-    __module__ = MODULE
-
+class EphemerideError(GNSSNavPyError):
+    """ Error in computation of ephemerides. """
     def __init__(self, message):
-        # Call the base class constructor with the parameters it needs
+        message = "Ephemeride Error -> " + message
+        super().__init__(message)
+
+
+class SolverError(GNSSNavPyError):
+    """ Error in the PVT Computation of the Solver. """
+    def __init__(self, message):
         message = "Error in PVT Computation -> " + message
         super().__init__(message)
 
 
-class EnumError(PyGNSSFixError):
-    __module__ = MODULE
-
+class EnumError(GNSSNavPyError):
+    """ Enumeration Error. """
     def __init__(self, message):
-        # Call the base class constructor with the parameters it needs
-        message = "Enum Error -> " + message
+        message = "Enumeration Error -> " + message
         super().__init__(message)

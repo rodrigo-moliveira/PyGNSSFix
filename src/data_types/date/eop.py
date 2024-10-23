@@ -1,28 +1,41 @@
-"""Retrieve and interpolate data for Earth Orientation and timescales conversions
+""" Earth Orientation Parameters (EOP) Module
+Retrieve and interpolate data for Earth Orientation and timescales conversions
+
+This module is imported and adapted from the `Beyond Python Package <https://pypi.org/project/beyond/>`__.
+
+See the original implementation `here <https://github.com/galactics/beyond/tree/master/beyond/dates/>`__.
+
+All credits to Jules David, the owner of Beyond library.
 """
 
 from pathlib import Path
 from inspect import isclass
 
-from ...errors import EopError, ConfigError
+from src.errors import EopError, ConfigError, FileError
+from src.common_log import get_logger, MODEL_LOG
 
-__all__ = ["register", "EopDb", "TaiUtc", "Finals", "Finals2000A"]
+__all__ = ["register", "EopDb", "Eop"]
 
 
 class TaiUtc:
-    """File listing all leap seconds throughout history
+    """ File listing all leap seconds throughout history
 
-    This file could be retrieved `here <http://maia.usno.navy.mil/ser7/tai-utc.dat>`
+    This file can be retrieved `here <http://maia.usno.navy.mil/ser7/tai-utc.dat>`__,
+        but this server seems discontinued.
     """
 
-    def __init__(self, path, encoding="ascii"):
+    def __init__(self, path: str):
 
         self.path = Path(path)
         self.data = []
 
-        with self.path.open(encoding=encoding) as fhandler:
-            lines = fhandler.read().splitlines()
+        try:
+            f_handler = open(self.path, 'r')
+        except OSError:
+            raise FileError(f"Could not open/read file: {self.path}", )
 
+        with f_handler:
+            lines = f_handler.read().splitlines()
         for line in lines:
             if not line:
                 continue
@@ -38,12 +51,12 @@ class TaiUtc:
                 return value
 
     def get_last_next(self, date):
-        """Provide the last and next leap-second events relative to a date
+        """ Provide the last and next leap-second events relative to a date
 
         Args:
             date (float): Date in MJD
-        Return:
-            tuple:
+        Returns:
+            tuple: tuple with past and future leap-seconds, as (mjd_past, leap_second_past),(mjd_next, leap_second_next)
         """
         past, future = (None, None), (None, None)
 
@@ -56,8 +69,28 @@ class TaiUtc:
         return past, future
 
 
+class GGTO:
+    def __init__(self):
+        self.time_correction = dict()
+
+    def set_time_correction(self, time_correction):
+        """
+        Saves the time correction data internally.
+
+        The `time_correction` argument is a dict with the following structure
+            (available in :py:class:`src.data_mng.gnss.navigation_data.NavigationHeader`):
+
+            time_correction["GGTO"] = list(A0, A1, SoW_REF, Week_nmb_REF)
+
+        Args:
+            time_correction (dict): dict with GGTO info (as described above).
+
+        """
+        self.time_correction = time_correction
+
+
 class Finals2000A:
-    """History of Earth orientation correction for IAU2000 model
+    """ History of Earth orientation correction for IAU2000 model
 
     Three files are available `here <https://datacenter.iers.org/eop.php>`__ for this model:
 
@@ -70,13 +103,18 @@ class Finals2000A:
 
     deltas = ("dx", "dy")
 
-    def __init__(self, path, encoding="ascii"):
+    def __init__(self, path):
 
         self.path = Path(path)
         d1, d2 = self.deltas
 
-        with self.path.open(encoding=encoding) as fp:
-            lines = fp.read().splitlines()
+        try:
+            f_handler = open(self.path, 'r')
+        except OSError:
+            raise FileError(f"Could not open/read file: {self.path}", )
+
+        with f_handler:
+            lines = f_handler.read().splitlines()
 
         self.data = {}
         for line in lines:
@@ -124,7 +162,7 @@ class Finals2000A:
 
 
 class Finals(Finals2000A):
-    """History of Earth orientation correction for IAU1980 model
+    """ History of Earth orientation correction for IAU1980 model
 
     Three files are available `here <https://datacenter.iers.org/eop.php>`__ for this model:
 
@@ -139,7 +177,20 @@ class Finals(Finals2000A):
 
 
 class Eop:
-    """Earth Orientation Parameters"""
+    """ Earth Orientation Parameters
+
+    Attributes:
+        x(float): polar motion X angle [arcsec]
+        y(float): polar motion Y angle [arcsec]
+        dx(float): polar motion X angle error [arcsec]
+        dy(float): polar motion Y angle error [arcsec]
+        deps(float): Epsilon angle for nutation model [milliarcsec]
+        dpsi(float): Psi angle for nutation model [milliarcsec]
+        lod(float): Length of day [milliseconds]
+        ut1_utc(float): UT1-UTC offset [seconds]
+        tai_utc(float): TAI-UTC offset [seconds]
+        ggto(dict): dict with GGTO corrections from nav message. See :py:meth:`GGTO.set_time_correction`
+    """
 
     def __init__(self, **kwargs):
         self.x = kwargs.get("x", 0)
@@ -151,19 +202,18 @@ class Eop:
         self.lod = kwargs.get("lod", 0)
         self.ut1_utc = kwargs.get("ut1_utc", 0)
         self.tai_utc = kwargs.get("tai_utc", 0)
+        self.ggto = kwargs.get("ggto", {})
 
     def __repr__(self):
         return "{name}(x={x}, y={y}, dx={dx}, dy={dy}, deps={deps}, dpsi={dpsi}, lod={lod}, ut1_utc={ut1_utc}, " \
-               "tai_utc={tai_utc})".format(name=self.__class__.__name__, **self.__dict__)
+               "tai_utc={tai_utc}, ggto={ggto})".format(name=self.__class__.__name__, **self.__dict__)
 
 
 class EopDb:
-    """Class handling the different EOP databases available, in a simple abstraction layer.
+    """ Class handling the different EOP databases available, in a simple abstraction layer.
 
     By defining a simple parameter in the config dict, this class will handle the instantiation
     of the database and queries in a transparent manner.
-
-    see :ref:`dbname <eop-dbname>` and :ref:`missing policy <eop-missing-policy>` configurations.
     """
 
     _dbs = {}
@@ -179,12 +229,11 @@ class EopDb:
 
     @classmethod
     def db(cls, dbname=DEFAULT_DBNAME):
-        """Retrieve the database
+        """ Retrieve the database
 
         Args:
-            dbname: Specify the name of the database to retrieve. If set to `None`, take the name
-                from the configuration (see :ref:`configuration <eop-dbname>`)
-        Return:
+            dbname: Specify the name of the database to retrieve.
+        Returns:
             object
         """
 
@@ -203,43 +252,43 @@ class EopDb:
                 cls._dbs[dbname] = e
 
         if isinstance(cls._dbs[dbname], Exception):
-            raise EopError("Problem at database instantiation") from cls._dbs[dbname]
+            raise cls._dbs[dbname]
 
         return cls._dbs[dbname]
 
     @classmethod
     def get(cls, mjd: float, dbname: str = DEFAULT_DBNAME) -> Eop:
-        """Retrieve Earth Orientation Parameters and timescales differences
-        for a given date
+        """ Retrieve Earth Orientation Parameters and timescales differences for a given date
 
         Args:
             mjd: Date expressed as Modified Julian Date
             dbname: Name of the database to use
-        Return:
-            Eop: Interpolated data for this particular MJD
+        Returns:
+            Eop: data for this particular MJD
         """
         try:
             value = cls.db(dbname)[mjd]
-        except (EopError, KeyError) as e:
-            if isinstance(e, KeyError):
-                msg = f"Missing EOP data for mjd = '{e}'"
-            else:
-                msg = str(e)
+        except KeyError as e:
+            msg = f"Missing EOP data for mjd = '{e}'"
             if cls.policy() == cls.WARN:
-                pass
-                # TODO log.warning(msg)
+                log = get_logger(MODEL_LOG)
+                log.warning(msg)
             elif cls.policy() == cls.ERROR:
-                raise
+                raise e
 
             value = Eop(
-                x=0, y=0, dx=0, dy=0, deps=0, dpsi=0, lod=0, ut1_utc=0, tai_utc=0
+                x=0, y=0, dx=0, dy=0, deps=0, dpsi=0, lod=0, ut1_utc=0, tai_utc=0, ggto={}
             )
 
         return value
 
     @classmethod
+    def set_time_correction(cls, time_correction: dict, dbname: str = DEFAULT_DBNAME):
+        cls.db(dbname).set_time_correction(time_correction)
+
+    @classmethod
     def policy(cls):
-        pol = cls.MIS_DEFAULT  # TODO add policy to config config.get("eop", "missing_policy", fallback=cls.MIS_DEFAULT)
+        pol = cls.MIS_DEFAULT
         if pol not in (cls.PASS, cls.WARN, cls.ERROR):
             raise ConfigError("Unknown config value for 'eop.missing_policy'")
 
@@ -247,20 +296,21 @@ class EopDb:
 
     @classmethod
     def register(cls, klass, name=DEFAULT_DBNAME):
-        """Register an Eop Database
+        """ Register an Eop Database
 
         The only requirement of this database is that it should have ``__getitem__``
         method accepting MJD as float.
         """
         if name in cls._dbs:
             msg = f"'{name}' is already registered for an Eop database. Skipping"
-            # TODO: raise warning
+            log = get_logger(MODEL_LOG)
+            log.warning(msg)
         else:
             cls._dbs[name] = klass
 
 
 def register(name=EopDb.DEFAULT_DBNAME):
-    """Decorator for registering an Eop Database
+    """ Decorator for registering an Eop Database
 
     Example:
 
@@ -311,32 +361,18 @@ def register(name=EopDb.DEFAULT_DBNAME):
 
 @register
 class SimpleEopDatabase:
-    """Simple implementation of database
+    """ Simple implementation of database
 
     Uses ``tai-utc.dat``, ``finals.all`` and ``finals2000A.all`` files directly
     without caching nor interpolation.
-
-    In order to use these files, you have to provide the directory containing them as a config
-    variable. Optionally, you can provide the type of data you want to extract from finals files
-    ('all', 'data' or 'daily').
-
-    .. code-block:: python
-
-        from beyond.config import config
-        config.update({
-            'eop': {
-                'folder': "/path/to/eop/data/",
-                'type': "all"
-            }
-        })
     """
 
     def __init__(self):
         from src import WORKSPACE_PATH
         from src.io.config import config_dict
 
-        leap_file = config_dict.get("inputs", "leap_file")
-        finals_file = config_dict.get("inputs", "finals_file")
+        leap_file = config_dict.get("inputs", "leap_file", fallback="geo_time_data/tai-utc.dat")
+        finals_file = config_dict.get("inputs", "finals_file", fallback="geo_time_data/finals1980.all")
 
         # Data reading
         f = Finals(WORKSPACE_PATH / f"{finals_file}")
@@ -350,12 +386,17 @@ class SimpleEopDatabase:
             # self._finals[date].update(f2[date])
 
         self._tai_utc = t.data.copy()
+        self._ggto = GGTO()
 
     def __getitem__(self, mjd):
         data = self.finals(mjd)
         data["tai_utc"] = self.tai_utc(mjd)
+        data["ggto"] = self._ggto.time_correction
 
         return Eop(**data)
+
+    def set_time_correction(self, time_correction: dict):
+        self._ggto.set_time_correction(time_correction)
 
     def finals(self, mjd: float):
         return self._finals[int(mjd)].copy()

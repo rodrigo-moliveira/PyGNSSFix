@@ -1,0 +1,141 @@
+{
+  "type": "object",
+  "properties": {
+    "log": {
+      "type": "object",
+      "properties": {
+        "minimum_level": {"type": "string", "enum": ["DEBUG", "INFO", "WARN", "ERROR", "FATAL"]}
+      },
+      "required": ["minimum_level"]
+    },
+    "inputs": {
+      "type": "object",
+      "properties": {
+        "trace_files": {"type": "boolean"},
+        "obs_files": {"type": "array", "items": {"type": "string"}},
+        "nav_files": {"type": "array", "items": {"type": "string"}},
+        "clk_files": {"type": "array", "items": {"type": "string"}},
+        "sp3_files": {"type": "array", "items": {"type": "string"}},
+        "use_precise_products": {"type": "boolean"},
+        "leap_file": {"type": "string"},
+        "finals_file": {"type": "string"},
+        "snr_control": {"type": "integer", "minimum": 1, "maximum": 9},
+        "arc": {
+          "type": "object",
+          "properties": {
+            "first_epoch": {"type": "string"},
+            "last_epoch": {"type": "string"}
+          },
+          "required": ["first_epoch", "last_epoch"]
+        },
+        "rate": {"type": "integer", "minimum": 1}
+      },
+      "required": ["trace_files", "obs_files", "nav_files", "clk_files", "sp3_files", "use_precise_products","leap_file", "finals_file",
+      "snr_control", "arc", "rate"]
+    },
+    "model": {
+      "type": "object",
+      "properties": {
+        "constellations": {"type": "array", "items": {"type": "string", "enum": ["GPS", "GAL"]}},
+        "mode": {"type": "string", "enum": ["SPS", "SPS_IF"]},
+        "estimate_velocity": {"type": "boolean"},
+
+        "estimate_ggto": {"type": "boolean"},
+
+        "troposphere": {
+          "type": "object",
+          "properties": {
+            "model": {"type": "string", "enum": ["NONE", "Saastamoinen", "GPT3"]},
+            "map": {"type": "string", "enum": ["Saastamoinen", "GMF", "VMF1", "VMF3"]},
+            "estimate_tropo_wet": {"type": "boolean"}
+          },
+          "required": ["model", "map", "estimate_tropo_wet"]
+        },
+
+        "GPS": {
+          "type": "object",
+          "properties": {
+            "observations": {"type": "array", "items": {"type": "string"}},
+            "pr_obs_std": {"type": "array", "items": {"type": "number"}},
+            "doppler_obs_std": {"type": "array", "items": {"type": "number"}},
+            "elevation_mask": {"type": "boolean"},
+            "ionosphere": {"type": "string", "enum": ["NONE", "Klobuchar", "NTCM-G"]}
+          },
+          "required": ["observations", "pr_obs_std", "doppler_obs_std", "elevation_mask", "ionosphere"]
+        },
+        "GAL": {
+          "type": "object",
+          "properties": {
+            "observations": {"type": "array", "items": {"type": "string"}},
+            "pr_obs_std": {"type": "array", "items": {"type": "number"}},
+            "doppler_obs_std": {"type": "array", "items": {"type": "number"}},
+            "elevation_mask": {"type": "boolean"},
+            "ionosphere": {"type": "string", "enum": ["NONE", "Klobuchar", "NTCM-G"]},
+            "nav_type": {"type": "string", "enum": ["INAV", "FNAV"]}
+          },
+          "required": ["observations", "pr_obs_std", "doppler_obs_std", "elevation_mask", "ionosphere", "nav_type"]
+        }
+      },
+      "required": ["constellations", "mode", "estimate_velocity", "estimate_ggto","GPS", "GAL"]
+    },
+    "preprocessor": {
+      "type": "object",
+      "properties": {
+        "trace_files": {"type": "boolean"},
+        "snr_filter": {"type": "number"},
+        "satellite_status": {
+          "type": "object",
+          "properties": {
+            "GPS": {
+              "type": "object",
+              "properties": {
+                "URA": {"type": "boolean"},
+                "max_URA": {"type": "number"},
+                "health": {"type": "boolean"}
+              },
+              "required": ["URA", "max_URA", "health"]
+            },
+            "GAL": {
+              "type": "object",
+              "properties": {
+                "SISA": {"type": "boolean"},
+                "max_SISA": {"type": "number"},
+                "health": {"type": "boolean"}
+              },
+              "required": ["SISA", "max_SISA", "health"]
+            }
+          },
+          "required": ["GPS", "GAL"]
+        },
+        "compute_smooth": {"type": "boolean"},
+        "smooth_time_constant_secs": {"type": "integer", "minimum": 1}
+      },
+      "required": ["trace_files", "snr_filter", "satellite_status", "compute_smooth", "smooth_time_constant_secs"]
+    },
+    "solver": {
+      "type": "object",
+      "properties": {
+        "trace_files": {"type": "boolean"},
+        "algorithm": {"type": "string", "enum": ["WSL"]},
+        "n_iteration": {"type": "integer", "minimum": 1},
+        "stop_criteria": {"type": "number"},
+        "transmission_time_alg": {"type": "integer", "minimum": 0, "maximum": 2},
+        "relativistic_corrections": {"type": "integer", "minimum": 0, "maximum": 1},
+        "elevation_filter": {"type": "number"},
+        "initial_pos_std": {"type": "array", "items": {"type": "number"}},
+        "initial_vel_std": {"type": "array", "items": {"type": "number"}},
+        "initial_clock_std": {"type": "array", "items": {"type": "number"}}
+      },
+      "required": ["trace_files","algorithm", "n_iterations", "stop_criteria", "transmission_time_alg", "relativistic_corrections",
+      "elevation_filter", "initial_pos_std", "initial_vel_std", "initial_clock_std"]
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "output_path": {"type": "string"}
+      },
+      "required": ["output_path"]
+    }
+  },
+  "required": ["log", "inputs", "model", "preprocessor", "solver", "output"]
+}
