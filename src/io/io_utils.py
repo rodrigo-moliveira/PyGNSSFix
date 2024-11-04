@@ -37,8 +37,7 @@ def create_output_dir(data_dir=None):
     Raises:
         IOError: if the creation of the output directory fails, an IOError exception is raised
     """
-    # check data dir
-    # data_dir is not specified, automatically create one
+    # if data_dir is not specified, automatically create one
     if data_dir is None or data_dir == '' or data_dir == "default":
         data_dir = str(RUNS_PATH)
         if data_dir[-1] != '//':

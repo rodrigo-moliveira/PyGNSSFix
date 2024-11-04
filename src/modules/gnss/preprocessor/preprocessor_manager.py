@@ -5,7 +5,7 @@ import os
 from src.common_log import get_logger, PREPROCESSOR_LOG
 from src.data_types.gnss import data_type_from_rinex
 from src.data_types.gnss.service_utils import get_freq_from_service
-from src.io.config import config_dict, EnumPositioningMode
+from src.io.config import config_dict, EnumAlgorithmPNT
 from src.errors import PreprocessorError
 from .filter import *
 from .functor import *
@@ -90,7 +90,7 @@ class PreprocessorManager:
 
         # check to compute or not iono free dataset from raw observables
         model = config_dict.get("model", "mode")
-        compute_iono_free = (model == EnumPositioningMode.SPS_IF)
+        compute_iono_free = (model == EnumAlgorithmPNT.SPS_IF)
         if compute_iono_free:
             iono_free_data = self.data_manager.get_data("iono_free_obs_data")
             for constellation in self.services.keys():

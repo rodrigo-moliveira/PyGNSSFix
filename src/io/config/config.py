@@ -9,7 +9,7 @@ from jsonschema import validate, ValidationError
 from src import PROJECT_PATH
 from src.data_types.gnss import data_type_from_rinex
 from src.errors import ConfigError
-from .enums import EnumPositioningMode
+from .enums import EnumAlgorithmPNT, EnumObservationModel
 from src.common_log import get_logger, IO_LOG
 
 __all__ = ["config_dict"]
@@ -26,6 +26,9 @@ class Config(dict):
             * "post_processing": post-processing / performance evaluation algorithm
 
         The :py:mod:`jsonschema` module is used for validating the xml files.
+
+    Attributes:
+        alg(str): selected algorithm for this configuration. Available algorithms are `gnss` and `post_processing`.
 
     Once the handler is initialized it can be imported everywhere and used as a global variable.
         The initialization and usage of the handler is examplified in the following example below:
@@ -64,11 +67,23 @@ class Config(dict):
         # validate config file
         self._validate(initial_dict, alg)
 
-        self.update(initial_dict)  # Update the dictionary with the values from initial_dict
+        # Update the dictionary with the values from initial_dict
+        self.update(initial_dict)
 
+    def init_model(self):
         # model initializations
-        if alg.lower() == "gnss":
-            self["model"]["mode"] = EnumPositioningMode.init_model(self["model"]["mode"])
+        if self.alg.lower() == "gnss":
+            self["gnss_alg"] = EnumAlgorithmPNT.init_model(self["model"]["algorithm"])
+            self["obs_model"] = EnumObservationModel.init_model(self["model"]["obs_model"])
+            service_dict = self.get_services()
+
+            if self["obs_model"] == EnumObservationModel.COMBINED:
+                for constellation, services in service_dict.items():
+                    if len(services) != 2:
+                        raise ConfigError(f"Iono-free combined model was selected but the "
+                                          f"number of observations for constellation {constellation} is not 2 "
+                                          f"({services}). Please revise the configurations.")
+            # TODO: add more model validations
 
     def _validate(self, initial_dict, alg):
         # Read the schema from the file

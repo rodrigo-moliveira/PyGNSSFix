@@ -1,21 +1,3 @@
-tasks release 1.0:
-    [X] melhorar o modulo de post processing:
-        [X] clean everything up (pain)
-        [X] adicionar o plot planimetrico
-        [X] Clean up dos scripts sat_orbits e sat_clocks
-
-    [X] fix all documentation docstrings
-        [X] to either Args or Arguments... Same for return or returns...
-            - see https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html
-        [X] limpar o código
-
-    [X] Cleanup all repository.
-    [X] fazer uma "campanha de validação". Fazer setup da config dos datasets. comparar precise vs nav products. Single freq / Single const vs Dual freq / Dual Const...
-        e brincar com as configurações para fazer fine tuning ao algo. Criar cenários, etc.
-        Add dynamic scenario
-    [X] Merge to develop and start new branch feature/AddingModePR-PPP
-
-
 # Release 1.1 (PR-PPP Mode)
     [ ] criar um check que verifique os ficheiros e configurações obrigatórias para cada modelo (SPS, SPS_IF, PPPP...)
         [ ] por exemplo, por agora o ficheiro nav é sempre obrigatório, mas isso tem de mudar depois..

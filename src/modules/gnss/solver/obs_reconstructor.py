@@ -4,7 +4,7 @@ import numpy as np
 import src.data_mng.gnss.geometry
 from src.data_types.gnss.data_type import DataType, get_data_type
 from src.io.config import config_dict
-from src.io.config.enums import EnumOnOff, EnumModel
+from src.io.config.enums import EnumOnOff, EnumObservationModel
 from src.models.frames import cartesian2geodetic
 from src.models.gnss_models.navigation import nav_sat_clock_correction
 from src import constants
@@ -153,7 +153,7 @@ class PseudorangeReconstructor(ObservationReconstructor):
 
         # iono estimated correction dI
         dI = 0.0
-        if self._metadata["MODEL"][sat.sat_system] == EnumModel.DUAL_FREQ:
+        if self._metadata["MODEL"][sat.sat_system] == EnumObservationModel.DUAL_FREQ:
             try:
                 factor = (self._metadata["CODES"][sat.sat_system][0].freq.freq_value /
                           datatype.freq.freq_value) ** 2

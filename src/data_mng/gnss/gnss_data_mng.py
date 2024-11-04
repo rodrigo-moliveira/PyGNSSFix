@@ -3,7 +3,7 @@
 import os
 
 from src.io.states import OUTPUT_FILENAME_MAP, get_file_header, export_to_file
-from src.io.config import config_dict, EnumPositioningMode
+from src.io.config import config_dict, EnumAlgorithmPNT
 from src.io.rinex_parser import RinexNavReader, RinexObsReader
 from src.data_mng import Container
 from src.common_log import IO_LOG, get_logger
@@ -98,7 +98,7 @@ class GnssDataManager(Container):
         model = config_dict.get("model", "mode")
         if config_dict.get("preprocessor", "compute_smooth"):
             return self.smooth_obs_data
-        elif model == EnumPositioningMode.SPS_IF:
+        elif model == EnumAlgorithmPNT.SPS_IF:
             return self.iono_free_obs_data
         else:
             return self.obs_data

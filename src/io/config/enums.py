@@ -23,33 +23,47 @@ class EnumSolver(Enum):
             raise EnumError(f"Unsupported Solver Model {model_str}. Available options are {cls.show_options()}")
 
 
-class EnumPositioningMode(Enum):
-    """ Enumeration for the GNSS PNT algorithm (SPS, SPS_IF) """
+class EnumAlgorithmPNT(Enum):
+    """ Enumeration for the GNSS PNT algorithm (SPS, PR_PPP) """
     SPS = 0
-    SPS_IF = 1
+    PR_PPP = 1
 
     @classmethod
     def init_model(cls, model_str: str):
         if model_str.lower() == "sps":
-            return EnumPositioningMode.SPS
-        elif model_str.lower() == "sps_if":
-            return EnumPositioningMode.SPS_IF
+            return EnumAlgorithmPNT.SPS
+        elif model_str.lower() == "pr-ppp":
+            return EnumAlgorithmPNT.PR_PPP
         else:
-            raise EnumError(f"Unsupported model {model_str}. Available options are 'SPS', 'SPS_IF'")
+            raise EnumError(f"Unsupported algorithm {model_str}. Available options are 'SPS', 'PR-PPP'")
 
     @classmethod
     def show_options(cls):
-        return f"[SPS, SPS_IF ]"
+        return f"[SPS, PR-PPP ]"
 
 
-class EnumModel(Enum):
-    """ Enumeration for the selected GNSS Observation model (single frequency, dual frequency) """
-    SINGLE_FREQ = 0
-    DUAL_FREQ = 1
+class EnumObservationModel(Enum):
+    """
+    Enumeration for the selected GNSS Observation model. Available models are:
+        * uncombined model (single or dual frequency)
+        * combined (iono-free combination)
+    """
+    UNCOMBINED = 0
+    COMBINED = 1
+
+    @classmethod
+    def init_model(cls, model_str: str):
+        if model_str.lower() == "uncombined":
+            return EnumObservationModel.UNCOMBINED
+        elif model_str.lower() == "combined":
+            return EnumObservationModel.COMBINED
+        else:
+            raise EnumError(f"Unsupported observation model {model_str}. Available options are 'uncombined', "
+                            f"'combined'")
 
     @classmethod
     def show_options(cls):
-        return f"[0 - SINGLE FREQUENCY MODEL, 1 - DUAL FREQUENCY MODEL]"
+        return f"[0 - Uncombined Model (Single or Dual Frequency), 1 - Combined (Iono-Free Combination)]"
 
 
 class EnumOnOff(Enum):

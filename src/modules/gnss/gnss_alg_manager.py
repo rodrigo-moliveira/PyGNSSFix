@@ -3,15 +3,14 @@
 import traceback
 import numpy as np
 
-from src.io.config import config_dict, EnumPositioningMode
+from src.io.config import config_dict, EnumAlgorithmPNT
 from src.models.frames import cartesian2geodetic, latlon2dcm_e_enu
 from src.errors import ConfigError
-from src.common_log import MAIN_LOG, get_logger, set_logs
+from src.common_log import MAIN_LOG, get_logger
 
 from .solver.gnss_solver import GnssSolver
 from .preprocessor import PreprocessorManager
 from ...data_mng.gnss.gnss_data_mng import GnssDataManager
-from ...io.io_utils import create_output_dir
 
 
 class GnssAlgorithmManager:
@@ -32,18 +31,11 @@ class GnssAlgorithmManager:
             main_log(logging.Logger): logger instance
     """
 
-    def __init__(self):
-        # create output folder
-        data_dir = config_dict.get("output", "output_path")
-
-        self.data_dir = create_output_dir(data_dir)
-
-        # initialize logger objects
-        set_logs(config_dict.get("log", "minimum_level"), f"{self.data_dir}\\log.txt")
-
+    def __init__(self, data_dir):
         # create data members
         self.data_manager = GnssDataManager()
         self.main_log = None
+        self.data_dir = data_dir
 
     def run(self):
         """ Main function that executes the GNSS Algorithm """
@@ -51,7 +43,7 @@ class GnssAlgorithmManager:
         self.main_log.info("Starting GNSS Algorithm Manager")
         model = config_dict.get('model', 'mode')
 
-        if model not in (EnumPositioningMode.SPS, EnumPositioningMode.SPS_IF):
+        if model not in (EnumAlgorithmPNT.SPS, EnumAlgorithmPNT.SPS_IF):
             raise ConfigError(f"Selected Model {model} not valid. Available options are "
                               f"SPS, SPS_IF")
         self.main_log.info(f"Running GNSS algorithm {model}")
