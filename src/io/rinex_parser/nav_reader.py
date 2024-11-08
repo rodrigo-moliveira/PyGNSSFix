@@ -30,9 +30,9 @@ class RinexNavReader:
         self.nav = nav
         self.gal_nav_type = gal_nav_type
 
-        f_handler = open(f"{WORKSPACE_PATH}/{file}", "r")
         self.log = get_logger(IO_LOG)
         self.log.info(f"Reading navigation file {WORKSPACE_PATH}/{file}...")
+        f_handler = open(f"{WORKSPACE_PATH}/{file}", "r")
 
         # read header
         self._read_header(f_handler)

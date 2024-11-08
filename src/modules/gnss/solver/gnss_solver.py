@@ -97,7 +97,7 @@ class GnssSolver:
         ELEVATION_FILTER = config.get("solver", "elevation_filter")
         VELOCITY_EST = config.get("model", "estimate_velocity")
         TROPO = TropoManager()
-        _model = config_dict.get("model", "mode")
+        obs_model = config_dict.get("obs_model")
 
         IONO = {}
         MODEL = {}
@@ -112,25 +112,25 @@ class GnssSolver:
             doppler_types = self.obs_data_for_vel.get_doppler_types(const)
 
             # check if the model is single frequency or dual frequency
-            if len(code_types) == 2 and (_model != EnumPositioningMode.SPS_IF):
+            if len(code_types) == 2 and (obs_model == EnumObservationModel.UNCOMBINED):
                 # Dual-Frequency Uncombined Model
                 self.log.info(f"Selected model for {const} is Dual-Frequency Uncombined with observations {code_types}")
-                MODEL[const] = EnumModel.DUAL_FREQ
+                MODEL[const] = EnumFrequencyModel.DUAL_FREQ
                 CODES[const] = [code_types[0], code_types[1]]  # setting main and second code type
-            elif len(code_types) == 1 and _model == EnumPositioningMode.SPS_IF:
+            elif len(code_types) == 1 and obs_model == EnumObservationModel.COMBINED:
                 # Iono-Free Model
                 self.log.info(f"Selected model for {const} is Iono-Free with code observations {code_types}")
                 iono_code = code_types[0]
                 if not DataType.is_iono_free_code(iono_code) and not DataType.is_iono_free_smooth_code(iono_code):
                     raise ConfigError(f"Iono-Free Model is selected for constellation {const} but no iono-free code "
                                       f"observations are available. Available code observations: {code_types}")
-                MODEL[const] = EnumModel.SINGLE_FREQ  # we process as single frequency
+                MODEL[const] = EnumFrequencyModel.SINGLE_FREQ  # Iono-free is treated as single frequency in the LS
                 CODES[const] = [iono_code]
                 IONO[const].iono_model = EnumIonoModel.DISABLED  # disable Iono model in Iono-Free scenarios
             elif len(code_types) == 1:
                 # Single Frequency Model
                 self.log.info(f"Selected model for {const} is Single Frequency with code types {code_types[0]}")
-                MODEL[const] = EnumModel.SINGLE_FREQ
+                MODEL[const] = EnumFrequencyModel.SINGLE_FREQ
                 CODES[const] = [code_types[0]]
             else:
                 raise ConfigError(f"Unable to initialize GNSS Solver Model for constellation {const}. Check configs.")

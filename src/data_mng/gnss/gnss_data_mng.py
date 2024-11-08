@@ -3,7 +3,7 @@
 import os
 
 from src.io.states import OUTPUT_FILENAME_MAP, get_file_header, export_to_file
-from src.io.config import config_dict, EnumAlgorithmPNT
+from src.io.config import config_dict, EnumObservationModel, EnumAlgorithmPNT
 from src.io.rinex_parser import RinexNavReader, RinexObsReader
 from src.data_mng import Container
 from src.common_log import IO_LOG, get_logger
@@ -32,13 +32,13 @@ class GnssDataManager(Container):
 
     """
     __slots__ = [
-        "nav_data",             # Input
-        "obs_data",             # Input
-        "sat_clocks",           # Input
-        "sat_orbits",           # Input
-        "smooth_obs_data",      # Internal data
-        "iono_free_obs_data",   # Internal data
-        "nav_solution"          # Output
+        "nav_data",  # Input
+        "obs_data",  # Input
+        "sat_clocks",  # Input
+        "sat_orbits",  # Input
+        "smooth_obs_data",  # Internal data
+        "iono_free_obs_data",  # Internal data
+        "nav_solution"  # Output
     ]
 
     def __init__(self):
@@ -95,10 +95,10 @@ class GnssDataManager(Container):
         Returns:
             ObservationData: returns the observation data for the PVT processing, depending on user configuration
         """
-        model = config_dict.get("model", "mode")
+        obs_model = config_dict.get('obs_model')
         if config_dict.get("preprocessor", "compute_smooth"):
             return self.smooth_obs_data
-        elif model == EnumAlgorithmPNT.SPS_IF:
+        elif obs_model == EnumObservationModel.COMBINED:
             return self.iono_free_obs_data
         else:
             return self.obs_data
@@ -110,48 +110,68 @@ class GnssDataManager(Container):
         """
         return self.obs_data
 
-    def read_inputs(self, trace_dir):
+    def read_inputs(self, gnss_alg: EnumAlgorithmPNT, trace_dir):
         """
         Function to read the input data. The data files are read from the user configurations
         according to the chosen algorithm.
-        There are mandatory inputs for each model (SPS, PPP).
+        There are mandatory inputs for each GNSS Algorithm (SPS, PR-PPP).
 
         Args:
+            gnss_alg(EnumAlgorithmPNT): GNSS Algorithm Enumeration
             trace_dir(str): path to write trace files
         Raises:
             IOError: an exception is raised if the trace directory is not created successfully
         """
         log = get_logger(IO_LOG)
 
-        # read navigation data
-        nav_files = config_dict.get("inputs", "nav_files")
-        obs_files = config_dict.get("inputs", "obs_files")
-        clock_files = config_dict.get("inputs", "clk_files")
-        sp3_files = config_dict.get("inputs", "sp3_files")
-        use_precise_products = config_dict.get("inputs", "use_precise_products")
-        gal_nav_type = config_dict.get("model", "GAL", "nav_type")
+        # Load specific inputs for each PNT Algorithm
+        if gnss_alg == EnumAlgorithmPNT.SPS:
+            log.info("In SPS Mode, GNSS orbits and clocks are provided from broadcast ephemerides (RINEX NAV).")
 
-        log.info("Launching RinexObsReader")
+            nav_files = config_dict.get("inputs", "nav_files")
+            gal_nav_type = config_dict.get("model", "GAL", "nav_type")
+            GnssDataManager.check_input_list("inputs.nav_files", nav_files)
+            log.info(f'Galileo messages selected by user are {gal_nav_type}.')
+            log.info('Launching RinexNavReader.')
+
+            for file in nav_files:
+                RinexNavReader(file, self.get_data("nav_data"), gal_nav_type)
+
+            log.info("Launching SatelliteClocks constructor (clocks from broadcast ephemerides).")
+            self.sat_clocks.init(self.get_data("nav_data"), None, False)
+
+            log.info("Launching SatelliteOrbits constructor (orbits from broadcast ephemerides).")
+            self.sat_orbits.init(self.get_data("nav_data"), None, False)
+
+        elif gnss_alg == EnumAlgorithmPNT.PR_PPP:
+            log.info("In PR-PPP Mode, GNSS orbits and clocks are provided from precise products (SP3 and CLK files).")
+
+            clock_files = config_dict.get("inputs", "clk_files")
+            sp3_files = config_dict.get("inputs", "sp3_files")
+            GnssDataManager.check_input_list("inputs.clk_files", clock_files)
+            GnssDataManager.check_input_list("inputs.sp3_files", sp3_files)
+
+            log.info("Launching SatelliteClocks constructor (clocks from broadcast ephemerides).")
+            self.sat_clocks.init(self.get_data("nav_data"), clock_files, True)
+
+            log.info("Launching SatelliteOrbits constructor (orbits from broadcast ephemerides).")
+            self.sat_orbits.init(self.get_data("nav_data"), sp3_files, True)
+
+        else:
+            raise IOError(f"Unknown Model {gnss_alg}")
+
+        # read observation data
+        obs_files = config_dict.get("inputs", "obs_files")
+        GnssDataManager.check_input_list("inputs.obs_files", obs_files)
+        log.info("Launching RinexObsReader.")
+
         for file in obs_files:
             RinexObsReader(file, self.get_data("obs_data"))
 
-        log.info(f"Using precise orbit/clock products: {use_precise_products}")
-
-        log.info(f'Galileo messages selected by user are {gal_nav_type}')
-        log.info('Launching RinexNavReader.')
-        for file in nav_files:
-            RinexNavReader(file, self.get_data("nav_data"), gal_nav_type)
-
-        log.info("Launching SatelliteClocks constructor")
-        self.sat_clocks.init(self.get_data("nav_data"), clock_files, use_precise_products)
-
-        log.info("Launching SatelliteOrbits constructor")
-        self.sat_orbits.init(self.get_data("nav_data"), sp3_files, use_precise_products)
-
         if config_dict.get("inputs", "trace_files"):
-            self._trace_files(trace_dir, use_precise_products)
+            self._trace_files(trace_dir, gnss_alg)
 
-    def _trace_files(self, trace_dir, use_precise_products):
+    def _trace_files(self, trace_dir, gnss_alg: EnumAlgorithmPNT):
 
         inputs_dir = f"{trace_dir}\\inputs"
         try:
@@ -161,9 +181,10 @@ class GnssDataManager(Container):
         # trace data files
         with open(f"{inputs_dir}\\RawObservationData.txt", "w") as file:
             file.write(str(self.get_data("obs_data")))
-        with open(f"{inputs_dir}\\RawNavigationData.txt", "w") as file:
-            file.write(str(self.get_data("nav_data")))
-        if use_precise_products:
+        if gnss_alg == EnumAlgorithmPNT.SPS:
+            with open(f"{inputs_dir}\\RawNavigationData.txt", "w") as file:
+                file.write(str(self.get_data("nav_data")))
+        elif gnss_alg == EnumAlgorithmPNT.PR_PPP:
             with open(f"{inputs_dir}\\PreciseClocks.txt", "w") as file:
                 file.write(str(self.get_data("sat_clocks")))
             with open(f"{inputs_dir}\\PreciseOrbits.txt", "w") as file:
@@ -214,3 +235,10 @@ class GnssDataManager(Container):
         # close all files
         for ext in file_list.keys():
             file_list[ext].close()
+
+    @staticmethod
+    def check_input_list(folder_name: str, input_list: list):
+        if len(input_list) == 0:
+            raise IOError(f"Mandatory input files {folder_name} not provided. Please check the configurations.")
+        if len(input_list) == 1 and not input_list[0]:
+            raise IOError(f"Mandatory input files {folder_name} not provided. Please check the configurations.")

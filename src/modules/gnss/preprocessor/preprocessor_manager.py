@@ -5,7 +5,7 @@ import os
 from src.common_log import get_logger, PREPROCESSOR_LOG
 from src.data_types.gnss import data_type_from_rinex
 from src.data_types.gnss.service_utils import get_freq_from_service
-from src.io.config import config_dict, EnumAlgorithmPNT
+from src.io.config import config_dict, EnumObservationModel
 from src.errors import PreprocessorError
 from .filter import *
 from .functor import *
@@ -89,9 +89,8 @@ class PreprocessorManager:
             raise PreprocessorError(f"PreprocessorManager -> Error performing Downgrade Rate filter: {e}")
 
         # check to compute or not iono free dataset from raw observables
-        model = config_dict.get("model", "mode")
-        compute_iono_free = (model == EnumAlgorithmPNT.SPS_IF)
-        if compute_iono_free:
+        model = config_dict.get("obs_model")
+        if model == EnumObservationModel.COMBINED:
             iono_free_data = self.data_manager.get_data("iono_free_obs_data")
             for constellation in self.services.keys():
                 obs_list = config_dict.get("model", constellation, "observations")
@@ -124,7 +123,8 @@ class PreprocessorManager:
         compute_smooth = config_dict.get("preprocessor", "compute_smooth")
         if compute_smooth:
             try:
-                data = self.data_manager.get_data("iono_free_obs_data") if compute_iono_free else obs_data
+                data = self.data_manager.get_data("iono_free_obs_data") if model == EnumObservationModel.COMBINED \
+                    else obs_data
                 self.smooth(data)
             except Exception as e:
                 raise PreprocessorError(f"Error computing Smooth Observation Data: {e}")

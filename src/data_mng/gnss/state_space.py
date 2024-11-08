@@ -3,7 +3,7 @@
 import numpy as np
 
 from src.data_mng import Container
-from src.io.config import EnumObservationModel, config_dict
+from src.io.config import config_dict, EnumFrequencyModel
 from src.models.gnss_models import compute_ggto
 
 
@@ -121,7 +121,7 @@ class GnssStateSpace(Container):
         self.cov_iono = dict()
         if metadata is not None and sat_list is not None:
             for constellation in metadata["CONSTELLATIONS"]:
-                if metadata["MODEL"][constellation] == EnumObservationModel.DUAL_FREQ:
+                if metadata["MODEL"][constellation] == EnumFrequencyModel.DUAL_FREQ:
                     # initialize iono vector for the available satellites of this constellation
                     for sat in sat_list:
                         if sat.sat_system == constellation:

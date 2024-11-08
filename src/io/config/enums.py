@@ -76,8 +76,27 @@ class EnumOnOff(Enum):
         return f"[0 - DISABLED, 1 - ENABLED]"
 
 
+class EnumFrequencyModel(Enum):
+    """ Enumeration for the Frequency Model to be implemented in the estimation process (single or dual frequency) """
+    SINGLE_FREQ = 0
+    DUAL_FREQ = 1
+
+    @classmethod
+    def show_options(cls):
+        return f"[ SINGLE_FREQ, DUAL_FREQ]"
+
+    @classmethod
+    def init_model(cls, model_str: str):
+        if model_str.lower() == "single":
+            return EnumFrequencyModel.SINGLE_FREQ
+        elif model_str.lower() == "dual":
+            return EnumFrequencyModel.DUAL_FREQ
+        else:
+            raise EnumError(f"Unsupported Frequency Model {model_str}. Available options are {cls.show_options()}")
+
+
 class EnumIonoModel(Enum):
-    """ Enumeration for the Ionosphere Model (Disabled, Klobuchar or NTCM-G) """
+    """ Enumeration for the Ionosphere A-priori Model (Disabled, Klobuchar or NTCM-G) """
     DISABLED = 0
     KLOBUCHAR = 1
     NTCMG = 2
@@ -99,7 +118,7 @@ class EnumIonoModel(Enum):
 
 
 class EnumTropoModel(Enum):
-    """ Enumeration for the Troposphere Model (Disabled, Saastamoinen, GPT3) """
+    """ Enumeration for the Troposphere A-priori Model (Disabled, Saastamoinen, GPT3) """
     DISABLED = 0
     SAASTAMOINEM = 1
     GPT3 = 2

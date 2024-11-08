@@ -4,7 +4,7 @@ import numpy as np
 from src import constants
 from src.constants import SPEED_OF_LIGHT
 from src.errors import SolverError
-from src.io.config.enums import EnumObservationModel
+from src.io.config.enums import EnumFrequencyModel
 from src.modules.estimators.weighted_ls import WeightedLeastSquares
 
 
@@ -289,7 +289,7 @@ class LSQ_Engine_Position(LSQ_Engine):
             n_sats = len(self.sat_list[const])
 
             # add iono states
-            if self._metadata["MODEL"][const] == EnumObservationModel.DUAL_FREQ:
+            if self._metadata["MODEL"][const] == EnumFrequencyModel.DUAL_FREQ:
                 n_states += n_sats
                 n_observables += 2 * n_sats
             else:
@@ -337,7 +337,7 @@ class LSQ_Engine_Position(LSQ_Engine):
                     if estimate_tropo:
                         map_wet = reconstructor._system_geometry.get("tropo_map_wet", sat)
                         self.design_mat[obs_offset + iSat, 4] = map_wet
-                    if self._metadata["MODEL"][const] == EnumObservationModel.DUAL_FREQ:
+                    if self._metadata["MODEL"][const] == EnumFrequencyModel.DUAL_FREQ:
                         factor = (self.datatypes[const][0].freq.freq_value / datatype.freq.freq_value) ** 2
                         self.design_mat[obs_offset + iSat, 4 + tropo_offset + iono_offset + iSat] = 1.0 * factor  # iono
                     if iConst > 0:
@@ -350,7 +350,7 @@ class LSQ_Engine_Position(LSQ_Engine):
                         1 / (std ** 2)
 
                 obs_offset += n_sats
-            if self._metadata["MODEL"][const] == EnumObservationModel.DUAL_FREQ:
+            if self._metadata["MODEL"][const] == EnumFrequencyModel.DUAL_FREQ:
                 iono_offset += n_sats
 
     def _update_state(self, state, dX, cov):
@@ -363,7 +363,7 @@ class LSQ_Engine_Position(LSQ_Engine):
         # if iono is estimated
         iono_offset = 0
         for const in self.constellations:
-            if self._metadata["MODEL"][const] == EnumObservationModel.DUAL_FREQ:
+            if self._metadata["MODEL"][const] == EnumFrequencyModel.DUAL_FREQ:
                 for iSat, sat in enumerate(self.sat_list[const]):
                     state.iono[sat] += float(dX[iono_offset + iSat + 4 + tropo_offset])
                     state.cov_iono[sat] = cov[

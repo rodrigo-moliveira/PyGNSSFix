@@ -41,19 +41,19 @@ class GnssAlgorithmManager:
         """ Main function that executes the GNSS Algorithm """
         self.main_log = get_logger(MAIN_LOG)
         self.main_log.info("Starting GNSS Algorithm Manager")
-        model = config_dict.get('model', 'mode')
+        gnss_alg = config_dict.get('gnss_alg')
 
-        if model not in (EnumAlgorithmPNT.SPS, EnumAlgorithmPNT.SPS_IF):
-            raise ConfigError(f"Selected Model {model} not valid. Available options are "
+        if gnss_alg not in (EnumAlgorithmPNT.SPS, EnumAlgorithmPNT.PR_PPP):
+            raise ConfigError(f"Selected Model {gnss_alg} not valid. Available options are "
                               f"SPS, SPS_IF")
-        self.main_log.info(f"Running GNSS algorithm {model}")
+        self.main_log.info(f"Running GNSS algorithm {gnss_alg}")
 
         config_dict.get_obs_std()
 
         # Input Reader Module
         try:
             self.main_log.info(f"Starting Input Reader Module...")
-            self.data_manager.read_inputs(f"{self.data_dir}\\trace")
+            self.data_manager.read_inputs(gnss_alg, f"{self.data_dir}\\trace")
         except Exception as e:
             self.main_log.error(f"Stopping execution of program due to error in execution of Input Reader Module: {e}")
             print(traceback.format_exc())
@@ -79,7 +79,7 @@ class GnssAlgorithmManager:
             print(traceback.format_exc())
             exit(-1)
 
-        self.main_log.info(f"Successfully executed GNSS algorithm {model}")
+        self.main_log.info(f"Successfully executed GNSS algorithm {gnss_alg}")
 
     def _compute_dop(self):
         """ Internal function for the computation of the DOPs """
