@@ -174,3 +174,19 @@ class EnumTransmissionTime(Enum):
     @classmethod
     def show_options(cls):
         return f"[0 - GEOMETRIC, 1 - PSEUDORANGE, 2 - NAPEOS]"
+
+
+class EnumSatelliteBias(Enum):
+    """
+    Enumeration for the selected Satellite Bias type. The available types are:
+        * broadcast code biases (BGD for GAL and TGD for GPS)
+        * precise DCBs (differential code bias)
+        * precise OSBs (observation specific bias)
+    """
+    BROADCAST = 0
+    DCB = 1
+    OSB = 2
+
+    @classmethod
+    def show_options(cls):
+        return f"[0 - BGD/TGD, 1 - DCB, 2 - OSB]"

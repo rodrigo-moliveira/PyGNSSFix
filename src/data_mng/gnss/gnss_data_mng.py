@@ -3,7 +3,7 @@
 import os
 
 from src.io.states import OUTPUT_FILENAME_MAP, get_file_header, export_to_file
-from src.io.config import config_dict, EnumObservationModel, EnumAlgorithmPNT
+from src.io.config import config_dict, EnumObservationModel, EnumAlgorithmPNT, EnumSatelliteBias
 from src.io.rinex_parser import RinexNavReader, RinexObsReader
 from src.data_mng import Container
 from src.common_log import IO_LOG, get_logger
@@ -11,6 +11,7 @@ from .navigation_data import NavigationData
 from .observation_data import ObservationData
 from .sat_clock_data import SatelliteClocks
 from .sat_orbit_data import SatelliteOrbits
+from .bias_manager import BiasManager
 
 __all__ = ["GnssDataManager"]
 
@@ -25,6 +26,7 @@ class GnssDataManager(Container):
         obs_data(ObservationData): raw observation data from RINEX OBS
         sat_clocks(SatelliteClocks): manager of satellite clocks (precise or navigation clocks)
         sat_orbits(SatelliteOrbits): manager of satellite orbits (precise or navigation orbits)
+        sat_bias(BiasManager): manager of satellite code and phase biases (precise or navigation bias)
         smooth_obs_data(ObservationData): processed smooth observation data
         iono_free_obs_data(ObservationData): processed iono-free observation data
         nav_solution(list): navigation solution, list of :py:class:`src.data_mng.gnss.state_space.GnssStateSpace`
@@ -32,13 +34,14 @@ class GnssDataManager(Container):
 
     """
     __slots__ = [
-        "nav_data",  # Input
-        "obs_data",  # Input
-        "sat_clocks",  # Input
-        "sat_orbits",  # Input
-        "smooth_obs_data",  # Internal data
+        "nav_data",            # Input
+        "obs_data",            # Input
+        "sat_clocks",          # Input
+        "sat_orbits",          # Input
+        "sat_bias",            # Input
+        "smooth_obs_data",     # Internal data
         "iono_free_obs_data",  # Internal data
-        "nav_solution"  # Output
+        "nav_solution"         # Output
     ]
 
     def __init__(self):
@@ -49,6 +52,7 @@ class GnssDataManager(Container):
         self.obs_data = ObservationData()  # Input Observation Data
         self.smooth_obs_data = ObservationData()  # Smooth Observation Data
         self.sat_clocks = SatelliteClocks()  # Satellite clocks manager (precise or navigation clocks)
+        self.sat_bias = BiasManager()  # Satellite Code and Phase Bias Manager
         self.sat_orbits = SatelliteOrbits()  # Satellite orbits manager (precise or navigation orbits)
         self.iono_free_obs_data = ObservationData()  # Iono Free Observation Data
         self.nav_solution = None  # Navigation solution
@@ -143,19 +147,35 @@ class GnssDataManager(Container):
             log.info("Launching SatelliteOrbits constructor (orbits from broadcast ephemerides).")
             self.sat_orbits.init(self.get_data("nav_data"), None, False)
 
+            log.info("Launching Satellite Code and Phase Bias Manager (from broadcast ephemerides).")
+            self.sat_bias.init(self.get_data("nav_data"), None, EnumSatelliteBias.BROADCAST)
+
         elif gnss_alg == EnumAlgorithmPNT.PR_PPP:
             log.info("In PR-PPP Mode, GNSS orbits and clocks are provided from precise products (SP3 and CLK files).")
 
             clock_files = config_dict.get("inputs", "clk_files")
             sp3_files = config_dict.get("inputs", "sp3_files")
+            dcb_files = config_dict.get("inputs", "dcb_files")
+            osb_files = config_dict.get("inputs", "osb_files")
             GnssDataManager.check_input_list("inputs.clk_files", clock_files)
             GnssDataManager.check_input_list("inputs.sp3_files", sp3_files)
 
-            log.info("Launching SatelliteClocks constructor (clocks from broadcast ephemerides).")
+            log.info("Launching SatelliteClocks constructor (clocks from precise products).")
             self.sat_clocks.init(self.get_data("nav_data"), clock_files, True)
 
-            log.info("Launching SatelliteOrbits constructor (orbits from broadcast ephemerides).")
+            log.info("Launching SatelliteOrbits constructor (orbits from precise products).")
             self.sat_orbits.init(self.get_data("nav_data"), sp3_files, True)
+
+            bias_type_str = config_dict.get("inputs", "bias_type")
+            log.info(f"Launching Satellite Code and Phase Bias Manager with bias {bias_type_str}.")
+            if bias_type_str.upper() == "DCB":
+                GnssDataManager.check_input_list("inputs.dcb_files", dcb_files)
+                self.sat_bias.init(None, dcb_files, EnumSatelliteBias.DCB)
+            elif bias_type_str.upper == "OSB":
+                GnssDataManager.check_input_list("inputs.dcb_files", osb_files)
+                self.sat_bias.init(None, osb_files, EnumSatelliteBias.OSB)
+            else:
+                raise IOError(f"Unknown bias type in inputs.bias_type ({bias_type_str})")
 
         else:
             raise IOError(f"Unknown Model {gnss_alg}")

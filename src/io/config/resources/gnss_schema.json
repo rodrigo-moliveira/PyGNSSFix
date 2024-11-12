@@ -16,6 +16,10 @@
         "nav_files": {"type": "array", "items": {"type": "string"}},
         "clk_files": {"type": "array", "items": {"type": "string"}},
         "sp3_files": {"type": "array", "items": {"type": "string"}},
+
+        "bias_type": {"type": "string", "enum": ["DCB", "OSB"]},
+        "dcb_files": {"type": "array", "items": {"type": "string"}},
+        "osb_files": {"type": "array", "items": {"type": "string"}},
         "use_precise_products": {"type": "boolean"},
         "leap_file": {"type": "string"},
         "finals_file": {"type": "string"},
@@ -30,7 +34,8 @@
         },
         "rate": {"type": "integer", "minimum": 1}
       },
-      "required": ["trace_files", "obs_files", "nav_files", "clk_files", "sp3_files", "use_precise_products","leap_file", "finals_file",
+      "required": ["trace_files", "obs_files", "nav_files", "clk_files", "sp3_files", "osb_files", "dcb_files", "bias_type",
+        "use_precise_products","leap_file", "finals_file",
       "snr_control", "arc", "rate"]
     },
     "model": {
