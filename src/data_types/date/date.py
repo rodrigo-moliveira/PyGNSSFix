@@ -482,6 +482,33 @@ class Epoch:
             self._cache["doy"] = self.datetime.timetuple().tm_yday
         return self._cache["doy"]
 
+    @property
+    def year(self) -> int:
+        """ Computes the calendar year """
+        if "year" not in self._cache.keys():
+            self._cache["year"] = self.datetime.timetuple().tm_year
+        return self._cache["year"]
+
+    @classmethod
+    def from_year_and_doy(cls, year, doy, secs, scale=DEFAULT_SCALE):
+        """ Creates an Epoch instance from the provided time in year, day of year and seconds of day.
+
+        Args:
+            year(int): calendar year
+            doy(int): day of year
+            secs(int): seconds in day
+            scale(str): the scale associated with the provided time
+        Returns:
+            Epoch: the Epoch instance created
+        """
+        # Create a datetime object for January 1st of the given year
+        start_of_year = datetime(year, 1, 1)
+
+        # Calculate the exact datetime by adding the days and seconds
+        result_datetime = start_of_year + timedelta(days=doy - 1, seconds=secs)
+
+        return Epoch(result_datetime, scale=scale)
+
     @staticmethod
     def merge_time_arrays(array1, array2):
         return sorted(list(set(array1) & set(array2)))

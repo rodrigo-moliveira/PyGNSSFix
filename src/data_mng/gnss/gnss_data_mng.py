@@ -147,7 +147,7 @@ class GnssDataManager(Container):
             log.info("Launching SatelliteOrbits constructor (orbits from broadcast ephemerides).")
             self.sat_orbits.init(self.get_data("nav_data"), None, False)
 
-            log.info("Launching Satellite Code and Phase Bias Manager (from broadcast ephemerides).")
+            log.info("Launching Satellite Code Bias Manager with BGD/TGD data from broadcast ephemerides.")
             self.sat_bias.init(self.get_data("nav_data"), None, EnumSatelliteBias.BROADCAST)
 
         elif gnss_alg == EnumAlgorithmPNT.PR_PPP:
@@ -171,7 +171,7 @@ class GnssDataManager(Container):
             if bias_type_str.upper() == "DCB":
                 GnssDataManager.check_input_list("inputs.dcb_files", dcb_files)
                 self.sat_bias.init(None, dcb_files, EnumSatelliteBias.DCB)
-            elif bias_type_str.upper == "OSB":
+            elif bias_type_str.upper() == "OSB":
                 GnssDataManager.check_input_list("inputs.dcb_files", osb_files)
                 self.sat_bias.init(None, osb_files, EnumSatelliteBias.OSB)
             else:
@@ -192,7 +192,6 @@ class GnssDataManager(Container):
             self._trace_files(trace_dir, gnss_alg)
 
     def _trace_files(self, trace_dir, gnss_alg: EnumAlgorithmPNT):
-
         inputs_dir = f"{trace_dir}\\inputs"
         try:
             os.makedirs(inputs_dir)
@@ -209,6 +208,8 @@ class GnssDataManager(Container):
                 file.write(str(self.get_data("sat_clocks")))
             with open(f"{inputs_dir}\\PreciseOrbits.txt", "w") as file:
                 file.write(str(self.get_data("sat_orbits")))
+            with open(f"{inputs_dir}\\PreciseBiasProducts.txt", "w") as file:
+                file.write(str(self.get_data("sat_bias")))
 
     def save_data(self, directory):
         """ Saves the navigation solution (contained in the `nav_solution` attribute) to the output file """
