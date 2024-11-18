@@ -121,8 +121,6 @@ class BiasManager:
             log.info("Launching Satellite Code and Phase Bias Reader")
             for file in bias_files:
                 SinexBiasReader(file, self, self.bias_enum)
-        else:
-            log.info("Satellite biases are fetched from the broadcast ephemerides.")
 
     def __str__(self):
         """ Print the bias data to a string, for debug purposes """
@@ -193,3 +191,8 @@ class BiasManager:
         Raises an exception if the provided satellite does not have valid data
         """
         return self.nav_data.get_closest_message(sat, epoch)
+
+    def correct_sat_clock(self):
+        pass
+        # dependendo da configuracao (broadcast, DCB ou OSB), adicionar ao sat clock um valor de bias para apliccar
+        # a correcao

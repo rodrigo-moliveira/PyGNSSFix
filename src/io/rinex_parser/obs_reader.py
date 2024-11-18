@@ -129,7 +129,7 @@ class RinexObsReader:
                         for this_obsCode in data[2:]:
                             if len(this_obsCode) == 3:
                                 this_service = this_obsCode[1:]
-                                if this_service in services:
+                                if this_service in services["user_service"]:
                                     this_type = this_obsCode[0]
                                     if this_type in RINEX_OBS_TYPES_TO_READ:
                                         _map[this_obsCode] = data[2:].index(this_obsCode)
@@ -142,7 +142,7 @@ class RinexObsReader:
         for constellation, services in self._services.items():
             if constellation in self._map:
                 services_read = set([x[1:] for x in self._map[constellation]])
-                for service in services:
+                for service in services["user_service"]:
                     if service not in services_read:
                         raise ConfigError(f"User-selected service "
                                           f"'{service}' {constellation} does not exist in provided Observation File")

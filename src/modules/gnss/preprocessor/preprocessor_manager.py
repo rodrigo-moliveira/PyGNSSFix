@@ -150,7 +150,7 @@ class PreprocessorManager:
 
         for constellation, services in self.services.items():
             required_datatypes[constellation] = []
-            for service in services:
+            for service in services["user_service"]:
                 pr = data_type_from_rinex(f"C{service}", constellation)
                 required_datatypes[constellation].append(pr)
                 if keep_carrier:
@@ -232,7 +232,7 @@ class PreprocessorManager:
 
     def iono_free(self, raw_data, data_out, constellation):
         """ Compute IonoFree data """
-        services = self.services[constellation]
+        services = self.services[constellation]["user_service"]
         if len(services) != 2:
             raise AttributeError(f"Problem getting base and second frequencies in Iono Free Computation for "
                                  f"constellation {constellation}, observations provided are {services}. "

@@ -320,7 +320,7 @@ def get_bgd_correction(datatype, nav_message):
     Args:
         datatype(src.data_types.gnss.data_type.DataType)
         nav_message (src.data_mng.gnss.navigation_data.NavigationPoint): instance of `NavigationPoint` used
-            to fetch to BGDs/TGD
+            to fetch the BGDs/TGDs
     Returns:
         float: the appropriate TGD/BGD correction for the provided datatype
     """

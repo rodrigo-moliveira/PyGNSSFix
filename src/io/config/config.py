@@ -83,7 +83,7 @@ class Config(dict):
                         raise ConfigError(f"Iono-free combined model was selected but the "
                                           f"number of observations for constellation {constellation} is not 2 "
                                           f"({services}). Please revise the configurations.")
-            # TODO: add more model validations
+
 
     def _validate(self, initial_dict, alg):
         # Read the schema from the file
@@ -183,8 +183,11 @@ class Config(dict):
             constellations = self.get("model", "constellations")
             for constellation in constellations:
                 const_upper = constellation.upper()
+                services[const_upper] = dict()
                 if const_upper == "GPS" or const_upper == "GAL":
-                    services[const_upper] = self.get("model", const_upper, "observations")
+                    services[const_upper]["user_service"] = self.get("model", const_upper, "observations")
+                    services[const_upper]["clock_product_service"] = self.get("model", const_upper,
+                                                                              "clock_product_service")
             self.set("services", services)
         return self["services"]
 
@@ -209,15 +212,16 @@ class Config(dict):
 
             for constellation, services in service_dict.items():
                 obs_dict[constellation] = {}
+                user_service = services["user_service"]
 
                 for obs_std_list, datatype_char in zip(("pr_obs_std", "doppler_obs_std"), ("C", "D")):
                     std_list = self.get("model", constellation, obs_std_list)
-                    if len(std_list) < len(services):
-                        raise ConfigError(f"Inconsistency between number of signals for {constellation}: {services} and"
+                    if len(std_list) < len(user_service):
+                        raise ConfigError(f"Inconsistency between number of signals for {constellation}: {user_service} and"
                                           f" the correspondent observation noise in field {std_list}. "
                                           f"Please fix the configuration.")
 
-                    for index, service in enumerate(services):
+                    for index, service in enumerate(user_service):
                         datatype = data_type_from_rinex(f"{datatype_char}{service}", constellation)
                         obs_dict[constellation][datatype] = std_list[index]
                         log.info(f"Setting observation noise std for datatype {datatype} and constellation "

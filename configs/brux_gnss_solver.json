@@ -68,7 +68,7 @@
       "constellations": ["GPS", "GAL"],
 
       "_comment": "Select the GNSS PNT algorithm. The available algorithms are SPS, PR-PPP",
-      "algorithm": "PR-PPP",
+      "algorithm": "SPS",
 
       "_comment1": "Select the observation model. The available models are combined, uncombined. The combined model requires 2 observations.",
       "obs_model": "uncombined",
@@ -93,6 +93,8 @@
       "GPS": {
          "observations": ["1C", "2W"],
 
+         "clock_product_service": ["1W", "2W"],
+
          "_comment1": "in `pr_obs_std` define the observation noise for the selected pseudorange observations (consistent with the signals defined in `observations`), in meters",
          "pr_obs_std": [1.1, 0.8],
 
@@ -107,6 +109,8 @@
 
       "GAL": {
          "observations": ["1C", "5Q"],
+
+         "clock_product_service": ["1C", "5Q"],
 
          "_comment1": "in `pr_obs_std` define the observation noise for the selected pseudorange observations (consistent with the signals defined in `observations`), in meters",
          "pr_obs_std": [1.1, 0.8],

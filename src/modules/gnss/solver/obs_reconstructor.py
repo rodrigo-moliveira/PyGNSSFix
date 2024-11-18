@@ -142,6 +142,7 @@ class PseudorangeReconstructor(ObservationReconstructor):
 
         # correct satellite clock for BGDs. NOTE: this needs to change (add a DCB manager)
         # DCB data can either come from a precise file or from the nav message
+        # TODO: create DCB manager
         nav_message = sat_clocks.get_nav_message(sat, epoch)
         dt_sat = nav_sat_clock_correction(dt_sat, datatype, nav_message)
 
