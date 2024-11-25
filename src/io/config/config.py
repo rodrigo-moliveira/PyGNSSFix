@@ -84,7 +84,6 @@ class Config(dict):
                                           f"number of observations for constellation {constellation} is not 2 "
                                           f"({services}). Please revise the configurations.")
 
-
     def _validate(self, initial_dict, alg):
         # Read the schema from the file
         if alg.lower() == "gnss":
@@ -217,8 +216,8 @@ class Config(dict):
                 for obs_std_list, datatype_char in zip(("pr_obs_std", "doppler_obs_std"), ("C", "D")):
                     std_list = self.get("model", constellation, obs_std_list)
                     if len(std_list) < len(user_service):
-                        raise ConfigError(f"Inconsistency between number of signals for {constellation}: {user_service} and"
-                                          f" the correspondent observation noise in field {std_list}. "
+                        raise ConfigError(f"Inconsistency between number of signals for {constellation}: {user_service}"
+                                          f" and the correspondent observation noise in field {std_list}. "
                                           f"Please fix the configuration.")
 
                     for index, service in enumerate(user_service):

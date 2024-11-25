@@ -198,6 +198,12 @@ class PreprocessorManager:
 
     def sv_ura_health_filter(self, observation_data):
         """ Perform Satellite Health Check (GPS URA and GAL SISA test) """
+        nav_data = self.data_manager.get_data("nav_data")
+        if nav_data.is_empty():
+            self.log.info("Not performing Satellite Health Check (GPS URA and GAL SISA test) because no navigation data"
+                          " is available.")
+            return
+
         gps_ura_check = config_dict.get("preprocessor", "satellite_status", "GPS", "URA")
         gps_ura_val = config_dict.get("preprocessor", "satellite_status", "GPS", "max_URA")
         gps_health = config_dict.get("preprocessor", "satellite_status", "GPS", "health")
@@ -212,7 +218,6 @@ class PreprocessorManager:
                       f"GAL SISA filter = {gal_sisa_check} SISA threshold = {gal_sisa_val}m, health status check is "
                       f"{gal_health}")
 
-        nav_data = self.data_manager.get_data("nav_data")
         ura_filter = SatFilterHealthURA(nav_data, gps_ura_check, gps_ura_val, gps_health,
                                         gal_sisa_check, gal_sisa_val, gal_health, self.log, self.trace_path)
         mapper = FilterMapper(ura_filter)
