@@ -160,6 +160,12 @@ class GnssDataManager(Container):
             GnssDataManager.check_input_list("inputs.clk_files", clock_files)
             GnssDataManager.check_input_list("inputs.sp3_files", sp3_files)
 
+            # TODO: check wheter or not to actually read NAV Files
+            nav_files = config_dict.get("inputs", "nav_files")
+            gal_nav_type = config_dict.get("model", "GAL", "nav_type")
+            for file in nav_files:
+                RinexNavReader(file, self.get_data("nav_data"), gal_nav_type)
+
             log.info("Launching SatelliteClocks constructor (clocks from precise products).")
             self.sat_clocks.init(self.get_data("nav_data"), clock_files, True)
 
@@ -170,10 +176,10 @@ class GnssDataManager(Container):
             log.info(f"Launching Satellite Code and Phase Bias Manager with bias {bias_type_str}.")
             if bias_type_str.upper() == "DCB":
                 GnssDataManager.check_input_list("inputs.dcb_files", dcb_files)
-                self.sat_bias.init(None, dcb_files, EnumSatelliteBias.DCB)
+                self.sat_bias.init(self.get_data("nav_data"), dcb_files, EnumSatelliteBias.DCB)
             elif bias_type_str.upper() == "OSB":
                 GnssDataManager.check_input_list("inputs.dcb_files", osb_files)
-                self.sat_bias.init(None, osb_files, EnumSatelliteBias.OSB)
+                self.sat_bias.init(self.get_data("nav_data"), osb_files, EnumSatelliteBias.OSB)
             else:
                 raise IOError(f"Unknown bias type in inputs.bias_type ({bias_type_str})")
 

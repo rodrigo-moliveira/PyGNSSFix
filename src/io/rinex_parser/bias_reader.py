@@ -165,11 +165,11 @@ class SinexBiasReader:
                 if sat.sat_system not in self._active_constellations:
                     # ignore this satellite/constellation due to user configuration choice
                     continue
-                obs_list = None
+                service_list = None
                 if bias_type == "DSB":
-                    obs_list = (tokens[3], tokens[4])
+                    service_list = (tokens[3], tokens[4])
                 elif bias_type == "OSB":
-                    obs_list = (tokens[3],)
+                    service_list = (tokens[3],)
 
                 epoch_start = self.get_epoch(line[35:49])
                 epoch_end = self.get_epoch(line[50:64])
@@ -179,7 +179,7 @@ class SinexBiasReader:
                     value = utils.to_float(line[70:91])
 
                     # add this bias to the `bias_manager`
-                    self.bias_manager.add_bias(epoch_start, epoch_end, bias_type, sat, obs_list, value, units)
+                    self.bias_manager.add_bias(epoch_start, epoch_end, bias_type, sat, service_list, value, units)
 
             except Exception as e:
                 self.log.warning(f"Unable to process line: {line} due to error: {e}")

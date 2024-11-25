@@ -1,12 +1,12 @@
 """ Module with Pseudorange and Range Rate Observation Reconstructor Classes """
 import numpy as np
+import os
 
 import src.data_mng.gnss.geometry
 from src.data_types.gnss.data_type import DataType, get_data_type
 from src.io.config import config_dict
 from src.io.config.enums import EnumOnOff, EnumFrequencyModel
 from src.models.frames import cartesian2geodetic
-from src.models.gnss_models.navigation import nav_sat_clock_correction
 from src import constants
 
 
@@ -15,7 +15,7 @@ class ObservationReconstructor:
     Base class for the Observation Reconstruction classes.
     """
     def __init__(self, system_geometry: src.data_mng.gnss.geometry.SystemGeometry, metadata: dict,
-                 state: src.data_mng.gnss.state_space.GnssStateSpace):
+                 state: src.data_mng.gnss.state_space.GnssStateSpace, trace_dir):
         """
         Constructor of the `ObservationReconstructor` instances.
 
@@ -29,6 +29,7 @@ class ObservationReconstructor:
         self._metadata = metadata
         self._state = state
         self._system_geometry = system_geometry
+        self._trace_dir = trace_dir
 
     def compute(self, sat, epoch, datatype):
         """
@@ -109,15 +110,29 @@ class PseudorangeReconstructor(ObservationReconstructor):
     """
 
     def __init__(self, system_geometry: src.data_mng.gnss.geometry.SystemGeometry, metadata: dict,
-                 state: src.data_mng.gnss.state_space.GnssStateSpace):
+                 state: src.data_mng.gnss.state_space.GnssStateSpace, sat_bias, trace_dir, iteration):
         """
         Constructor of the `PseudorangeReconstructor` instances.
+        TODO: update docstrings
         """
-        super().__init__(system_geometry, metadata, state)
+        super().__init__(system_geometry, metadata, state, trace_dir)
+        self.sat_bias = sat_bias
+
+        trace_file = f"{trace_dir}\\PseudorangeReconstructionIter_{iteration}.txt"
+        if os.path.isfile(trace_file):
+            self._trace_handler = open(trace_file, mode='a')
+        else:
+            self._trace_handler = open(trace_file, mode='w')
+            self._trace_handler.write(f"epoch,sat,datatype,bias\n")  # header
+
+    def __del__(self):
+        self._trace_handler.close()
 
     def compute(self, sat, epoch, datatype):
         """
         Compute the pseudorange observation for the provided satellite, epoch and datatype.
+        TODO:
+            add each contribution to a trace file
         """
         iono = 0.0
         az = self._system_geometry.get("az", sat)  # satellite azimuth from receiver
@@ -142,9 +157,12 @@ class PseudorangeReconstructor(ObservationReconstructor):
 
         # correct satellite clock for BGDs. NOTE: this needs to change (add a DCB manager)
         # DCB data can either come from a precise file or from the nav message
-        # TODO: create DCB manager
-        nav_message = sat_clocks.get_nav_message(sat, epoch)
-        dt_sat = nav_sat_clock_correction(dt_sat, datatype, nav_message)
+        # TODO: update this comment section
+        # nav_message = sat_clocks.get_nav_message(sat, epoch)
+        # dt_sat = nav_sat_clock_correction(dt_sat, datatype, nav_message)
+        bias = -self.sat_bias.bias_correction(epoch, sat, datatype)
+        bias_nav = self.sat_bias._bias_correction_broadcast(epoch, sat, datatype)
+        print("bias = ", bias, bias_nav)
 
         # ionosphere (a-priori correction)
         iono_corrections = sat_clocks.nav_data.header.iono_corrections if sat_clocks.nav_data is not None else None
@@ -168,7 +186,8 @@ class PseudorangeReconstructor(ObservationReconstructor):
         self._system_geometry.set("tropo_map_wet", map_wet, sat)
 
         # finally, construct obs
-        obs = true_range + dt_rec - dt_sat * constants.SPEED_OF_LIGHT + iono + tropo + dI
+        obs = true_range + dt_rec - (dt_sat - bias) * constants.SPEED_OF_LIGHT + iono + tropo + dI
+        self._trace_handler.write(f"{epoch},{sat},{datatype},{bias}\n")
         return obs
 
 
@@ -202,11 +221,11 @@ class RangeRateReconstructor(ObservationReconstructor):
     """
 
     def __init__(self, system_geometry: src.data_mng.gnss.geometry.SystemGeometry, metadata: dict,
-                 state: src.data_mng.gnss.state_space.GnssStateSpace):
+                 state: src.data_mng.gnss.state_space.GnssStateSpace, trace_dir):
         """
         Constructor of the `RangeRateReconstructor` instances.
         """
-        super().__init__(system_geometry, metadata, state)
+        super().__init__(system_geometry, metadata, state, trace_dir)
 
     def compute(self, sat, epoch, datatype):
         """

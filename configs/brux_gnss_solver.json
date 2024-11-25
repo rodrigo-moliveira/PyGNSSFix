@@ -16,7 +16,7 @@
       "sp3_files": ["datasets/gnss/BRUX/COD0R03FIN_20190140000_01D_05M_ORB.SP3"],
 
       "bias_type": "DCB",
-      "dcb_files": ["datasets/gnss/BRUX/DLR0MGXFIN_20190010000_03L_01D_DCB.BSX"],
+      "dcb_files": ["datasets/gnss/BRUX/DLR0MGXFIN_20190010000_03L_01D_DCB_short.BSX"],
       "osb_files": ["datasets/gnss/BRUX/COD0R03FIN_20190140000_01D_01D_OSB.BIA"],
 
       "_comment2": "Select 'true' to use CLK and SP3 products or 'false' to use navigation ephemerides",
@@ -65,10 +65,10 @@
    },
 
    "model": {
-      "constellations": ["GPS", "GAL"],
+      "constellations": ["GAL"],
 
       "_comment": "Select the GNSS PNT algorithm. The available algorithms are SPS, PR-PPP",
-      "algorithm": "SPS",
+      "algorithm": "PR-PPP",
 
       "_comment1": "Select the observation model. The available models are combined, uncombined. The combined model requires 2 observations.",
       "obs_model": "uncombined",
@@ -110,7 +110,7 @@
       "GAL": {
          "observations": ["1C", "5Q"],
 
-         "clock_product_service": ["1C", "5Q"],
+         "clock_product_service": ["1C", "7Q"],
 
          "_comment1": "in `pr_obs_std` define the observation noise for the selected pseudorange observations (consistent with the signals defined in `observations`), in meters",
          "pr_obs_std": [1.1, 0.8],
@@ -121,10 +121,10 @@
          "elevation_mask": true,
 
          "_comment3": "select between INAV or FNAV navigation message",
-         "nav_type": "FNAV",
+         "nav_type": "INAV",
 
          "_comment4": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G' ",
-         "ionosphere": "NTCM-G"
+         "ionosphere": "NONE"
       }
    },
 

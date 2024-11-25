@@ -1,5 +1,5 @@
 """ Module with the GNSS PNT Solver Algorithm """
-
+import os
 import numpy as np
 
 from src.data_mng.gnss.state_space import GnssStateSpace
@@ -45,11 +45,14 @@ class GnssSolver:
          solution(list[GnssStateSpace]): a list with the solved PNT states for each epoch
     """
 
-    def __init__(self, obs_data_for_pos, obs_data_for_vel, nav_data, sat_orbits, sat_clocks):
+    def __init__(self, data_manager, trace_dir):
         """
         Constructor of the GnssSolver class
-
+        TODO: update this up...
         Args:
+            data_manager
+
+        Attributes:
             obs_data_for_pos(src.data_mng.gnss.ObservationData): observation data for the position estimation process
                 (may contain raw, smooth or iono-free pseudorange observations)
             obs_data_for_vel(src.data_mng.gnss.ObservationData): observation data for the velocity estimation process
@@ -58,12 +61,19 @@ class GnssSolver:
             sat_orbits(src.data_mng.gnss.sat_orbit_data.SatelliteOrbits): `SatelliteOrbits` object with orbit data
             sat_clocks(src.data_mng.gnss.sat_clock_data.SatelliteClocks): `SatelliteClocks` object with clock data
         """
-        self.obs_data_for_pos = obs_data_for_pos
-        self.obs_data_for_vel = obs_data_for_vel
-        self.nav_data = nav_data
-        self.sat_orbits = sat_orbits
-        self.sat_clocks = sat_clocks
-        self.write_trace = config_dict.get("solver", "trace_files")
+        self.obs_data_for_pos = data_manager.get_clean_obs_data()
+        self.obs_data_for_vel = data_manager.get_raw_obs_data()
+        self.nav_data = data_manager.get_data("nav_data")
+        self.sat_orbits = data_manager.get_data("sat_orbits")
+        self.sat_clocks = data_manager.get_data("sat_clocks")
+        self.sat_bias = data_manager.get_data("sat_bias")
+        self.write_trace = config_dict.get("solver", "trace_files")  # TODO: use this flag..
+        self.trace_dir = f"{trace_dir}\\solver"
+
+        try:
+            os.makedirs(self.trace_dir)
+        except:
+            raise IOError(f"Cannot create dir: {self.trace_dir}")
 
         self.log = get_logger(GNSS_ALG_LOG)
         self.log.info("Starting module GNSS Positioning Solver...")
@@ -249,7 +259,6 @@ class GnssSolver:
         # build system geometry for this epoch
         system_geometry = SystemGeometry(obs_data, self.sat_clocks, self.sat_orbits)
 
-        self.log.info(f"Processing epoch {str(epoch)}")
         self.log.debug(f"Available Satellites: {system_geometry.get_satellites()}")
 
         # Iterated Least-Squares algorithm
@@ -260,7 +269,7 @@ class GnssSolver:
             # solve the Least Squares
             try:
                 prefit_residuals, postfit_residuals, dop_matrix, rms = \
-                    self._iterate_pos(system_geometry, obs_data, state, epoch)
+                    self._iterate_pos(str(iteration), system_geometry, obs_data, state, epoch)
             except SolverError as e:
                 self.log.warning(f"Least Squares failed for {str(epoch)} on iteration {iteration}."
                                  f"Reason: {e}")
@@ -290,7 +299,7 @@ class GnssSolver:
             # solve the Least Squares
             try:
                 prefit_residuals, postfit_residuals, dop_matrix, rms = \
-                    self._iterate_pos(system_geometry, obs_data, state, epoch)
+                    self._iterate_pos("final", system_geometry, obs_data, state, epoch)
             except SolverError as e:
                 self.log.warning(f"Least Squares failed for {str(epoch)} on additional iteration "
                                  f"(after elevation filter). Reason: {e}")
@@ -305,14 +314,14 @@ class GnssSolver:
 
         return True
 
-    def _iterate_pos(self, system_geometry, obs_data, state, epoch):
+    def _iterate_pos(self, iteration, system_geometry, obs_data, state, epoch):
         """ Low-level function to solve a single iteration of the position estimation iterative process """
         self._check_model_availability(system_geometry, epoch)
 
         satellite_list = system_geometry.get_satellites()
         state.update_sat_list(satellite_list)
 
-        reconstructor = PseudorangeReconstructor(system_geometry, self._metadata, state)
+        reconstructor = PseudorangeReconstructor(system_geometry, self._metadata, state, self.sat_bias, self.trace_dir, iteration)
 
         # build LSQ Engine matrices for all satellites
         lsq_engine = LSQ_Engine_Position(satellite_list, self._metadata, epoch, obs_data, reconstructor)
@@ -366,7 +375,7 @@ class GnssSolver:
 
         reconstructor = RangeRateReconstructor(system_geometry,
                                                self._metadata,
-                                               state)
+                                               state, self.trace_dir)
 
         # build LSQ Engine matrices for all satellites
         lsq_engine = LSQ_Engine_Velocity(satellite_list, self._metadata, epoch, obs_data, reconstructor)

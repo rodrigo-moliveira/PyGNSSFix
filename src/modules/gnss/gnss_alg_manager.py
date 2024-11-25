@@ -124,9 +124,6 @@ class GnssAlgorithmManager:
 
     def _compute(self, data_manager, trace_path):
         """ Internal function for the computation of the PNT solver task """
-        # get the input raw obs data
-        nav_data = data_manager.get_data("nav_data")
-
         # perform pre-processing here
         self.main_log.info(f"Starting Preprocessor Module")
         preprocessor = PreprocessorManager(trace_path, data_manager)
@@ -134,8 +131,7 @@ class GnssAlgorithmManager:
 
         # run estimation algorithm
         self.main_log.info(f"Running estimation algorithm...")
-        solver = GnssSolver(data_manager.get_clean_obs_data(), data_manager.get_raw_obs_data(), nav_data,
-                            data_manager.sat_orbits, data_manager.sat_clocks)
+        solver = GnssSolver(data_manager, trace_path)
         solver.solve()
 
         data_manager.add_data("nav_solution", solver.solution)
