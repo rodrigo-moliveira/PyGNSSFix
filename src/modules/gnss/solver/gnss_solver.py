@@ -42,24 +42,29 @@ class GnssSolver:
             the number of available constellations.
 
     Attributes:
-         solution(list[GnssStateSpace]): a list with the solved PNT states for each epoch
+        obs_data_for_pos(src.data_mng.gnss.ObservationData): observation data for the position estimation
+            process (may contain raw, smooth or iono-free pseudorange observations).
+        obs_data_for_vel(src.data_mng.gnss.ObservationData): observation data for the velocity estimation
+            process (contains Doppler measurements).
+        nav_data(src.data_mng.gnss.NavigationData): navigation data object containing RINEX NAV ephemerides.
+        sat_orbits(src.data_mng.gnss.sat_orbit_data.SatelliteOrbits): `SatelliteOrbits` object with orbit data.
+        sat_clocks(src.data_mng.gnss.sat_clock_data.SatelliteClocks): `SatelliteClocks` object with clock data.
+        sat_bias(src.data_mng.gnss.bias_manager.BiasManager): `BiasManager` object that manages code and phase
+            satellite biases.
+        write_trace(bool): control flag to enable trace files for output
+        trace_dir(str): path to store the trace files
+        log(logging.Logger): logger instance
+        solution(list[GnssStateSpace]): a list with the solved PNT states for each epoch (output)
     """
 
     def __init__(self, data_manager, trace_dir):
         """
-        Constructor of the GnssSolver class
-        TODO: update this up...
-        Args:
-            data_manager
+        Constructor of the GnssSolver class.
 
-        Attributes:
-            obs_data_for_pos(src.data_mng.gnss.ObservationData): observation data for the position estimation process
-                (may contain raw, smooth or iono-free pseudorange observations)
-            obs_data_for_vel(src.data_mng.gnss.ObservationData): observation data for the velocity estimation process
-                (contains Doppler measurements)
-            nav_data(src.data_mng.gnss.NavigationData): navigation data object containing RINEX NAV ephemerides
-            sat_orbits(src.data_mng.gnss.sat_orbit_data.SatelliteOrbits): `SatelliteOrbits` object with orbit data
-            sat_clocks(src.data_mng.gnss.sat_clock_data.SatelliteClocks): `SatelliteClocks` object with clock data
+        Args:
+            data_manager(src.data_mng.gnss.gnss_data_mng.GnssDataManager): data manager with all necessary data for
+                the GNSS run
+            trace_dir(str): path to store the trace files
         """
         self.obs_data_for_pos = data_manager.get_clean_obs_data()
         self.obs_data_for_vel = data_manager.get_raw_obs_data()
@@ -67,13 +72,15 @@ class GnssSolver:
         self.sat_orbits = data_manager.get_data("sat_orbits")
         self.sat_clocks = data_manager.get_data("sat_clocks")
         self.sat_bias = data_manager.get_data("sat_bias")
-        self.write_trace = config_dict.get("solver", "trace_files")  # TODO: use this flag..
-        self.trace_dir = f"{trace_dir}\\solver"
-
-        try:
-            os.makedirs(self.trace_dir)
-        except:
-            raise IOError(f"Cannot create dir: {self.trace_dir}")
+        self.write_trace = config_dict.get("solver", "trace_files")
+        if self.write_trace:
+            self.trace_dir = f"{trace_dir}\\solver"
+            try:
+                os.makedirs(self.trace_dir)
+            except:
+                raise IOError(f"Cannot create dir: {self.trace_dir}")
+        else:
+            self.trace_dir = None
 
         self.log = get_logger(GNSS_ALG_LOG)
         self.log.info("Starting module GNSS Positioning Solver...")
@@ -321,7 +328,11 @@ class GnssSolver:
         satellite_list = system_geometry.get_satellites()
         state.update_sat_list(satellite_list)
 
-        reconstructor = PseudorangeReconstructor(system_geometry, self._metadata, state, self.sat_bias, self.trace_dir, iteration)
+        if self.trace_dir is not None:
+            trace_file = f"{self.trace_dir}\\PseudorangeReconstructionIter_{iteration}.txt"
+        else:
+            trace_file = None
+        reconstructor = PseudorangeReconstructor(system_geometry, self._metadata, state, self.sat_bias, trace_file)
 
         # build LSQ Engine matrices for all satellites
         lsq_engine = LSQ_Engine_Position(satellite_list, self._metadata, epoch, obs_data, reconstructor)
@@ -375,7 +386,7 @@ class GnssSolver:
 
         reconstructor = RangeRateReconstructor(system_geometry,
                                                self._metadata,
-                                               state, self.trace_dir)
+                                               state, None)
 
         # build LSQ Engine matrices for all satellites
         lsq_engine = LSQ_Engine_Velocity(satellite_list, self._metadata, epoch, obs_data, reconstructor)

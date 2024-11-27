@@ -11,7 +11,6 @@ from src.data_mng import Container
 from src.io.rinex_parser import SinexBiasReader
 from src.common_log import IO_LOG, get_logger
 from src.io.config import EnumSatelliteBias, config_dict
-from src import constants
 
 __all__ = ["BiasManager", "BiasEntry"]
 

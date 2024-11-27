@@ -10,6 +10,8 @@ from ...data_mng.gnss.navigation_data import NavigationPointGPS, NavigationPoint
 from src import WORKSPACE_PATH
 from src.common_log import IO_LOG, get_logger
 
+_warning_cache = set()
+
 
 class RinexNavReader:
     """
@@ -206,7 +208,12 @@ class RinexNavReader:
                 TransmissionTime = utils.to_float(line[4:23])
                 setattr(navMessage, "TransmissionTime", TransmissionTime)
 
-                self.nav.set_data(toc, satellite, navMessage)
+                try:
+                    self.nav.set_data(toc, satellite, navMessage)
+                except Exception as e:
+                    if satellite not in _warning_cache:
+                        _warning_cache.add(satellite)
+                        self.log.warning(f"Error setting satellite {satellite} ephemeride for epoch {toc}: {e}")
 
             if line[0] == "E":
                 # new GAL navigation epoch inputs
@@ -307,4 +314,6 @@ class RinexNavReader:
                         self.nav.set_data(toc, satellite, navMessage)
                     # else: nav message is skipped
                 except Exception as e:
-                    self.log.warning(f"Error reading satellite {satellite} ephemeride for epoch {toc}: {e}")
+                    if satellite not in _warning_cache:
+                        _warning_cache.add(satellite)
+                        self.log.warning(f"Error setting satellite {satellite} ephemeride for epoch {toc}: {e}")

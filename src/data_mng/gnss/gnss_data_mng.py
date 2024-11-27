@@ -160,7 +160,7 @@ class GnssDataManager(Container):
             GnssDataManager.check_input_list("inputs.clk_files", clock_files)
             GnssDataManager.check_input_list("inputs.sp3_files", sp3_files)
 
-            # TODO: check wheter or not to actually read NAV Files
+            # TODO: this is temporary! NAV files will not be needed in final PR-PPP version
             nav_files = config_dict.get("inputs", "nav_files")
             gal_nav_type = config_dict.get("model", "GAL", "nav_type")
             for file in nav_files:
