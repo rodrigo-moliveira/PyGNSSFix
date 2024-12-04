@@ -8,6 +8,7 @@ from src.io.config import config_dict
 from src.io.config.enums import EnumOnOff, EnumFrequencyModel
 from src.models.frames import cartesian2geodetic
 from src import constants
+from src.data_mng.gnss.bias_manager import BiasManager
 
 
 class ObservationReconstructor:
@@ -33,6 +34,7 @@ class ObservationReconstructor:
         self._state = state
         self._system_geometry = system_geometry
         self._trace_handler = None
+        self._write_trace = False
 
         if trace_file is not None:
             self._write_trace = True
@@ -41,8 +43,6 @@ class ObservationReconstructor:
             else:
                 self._trace_handler = open(trace_file, mode='w')
                 self._trace_handler.write(f"{self.__trace_header__}\n")  # header
-        else:
-            self._write_trace = False
 
     def __del__(self):
         """ Destructor of the`ObservationReconstructor` instances. """
@@ -178,12 +178,10 @@ class PseudorangeReconstructor(ObservationReconstructor):
         if self._metadata["REL_CORRECTION"] == EnumOnOff.ENABLED:
             dt_sat += self._system_geometry.get("dt_rel_correction", sat)
 
-        # correct satellite clock for BGDs. NOTE: this needs to change (add a DCB manager)
+        # correct satellite clock for (code or phase) hardware biases
         # DCB data can either come from a precise file or from the nav message
-        # TODO: update this comment section
-        # nav_message = sat_clocks.get_nav_message(sat, epoch)
-        # dt_sat = nav_sat_clock_correction(dt_sat, datatype, nav_message)
-        bias = -self.sat_bias.bias_correction(epoch, sat, datatype)
+        # TODO: to delete bias_nav.
+        bias = self.sat_bias.bias_correction(epoch, sat, datatype)
         bias_nav = self.sat_bias._bias_correction_broadcast(epoch, sat, datatype)
         print("bias = ", bias, bias_nav)
 
@@ -210,9 +208,10 @@ class PseudorangeReconstructor(ObservationReconstructor):
 
         # finally, construct obs
         obs = true_range + dt_rec - (dt_sat - bias) * constants.SPEED_OF_LIGHT + iono + tropo + dI
-        self._trace_handler.write(f"{epoch},{sat},{datatype},{obs},{true_range},{dt_rec},"
-                                  f"{dt_sat*constants.SPEED_OF_LIGHT},{bias*constants.SPEED_OF_LIGHT},"
-                                  f"{iono},{tropo},{dI}\n")
+        if self._write_trace:
+            self._trace_handler.write(f"{epoch},{sat},{datatype},{obs},{true_range},{dt_rec},"
+                                      f"{dt_sat*constants.SPEED_OF_LIGHT},{bias*constants.SPEED_OF_LIGHT},"
+                                      f"{iono},{tropo},{dI}\n")
         return obs
 
 
@@ -244,6 +243,7 @@ class RangeRateReconstructor(ObservationReconstructor):
     The details for the range rate model above may be found in [1]. See Chapter 21.2.1 and Equations (21.28), (21.29)
 
     """
+    __trace_header__ = "epoch,sat,datatype,observation,sat_range_rate,satellite_clock_drift"
 
     def __init__(self, system_geometry: src.data_mng.gnss.geometry.SystemGeometry, metadata: dict,
                  state: src.data_mng.gnss.state_space.GnssStateSpace, trace_dir):
@@ -285,4 +285,9 @@ class RangeRateReconstructor(ObservationReconstructor):
         los_cor = -1 * los / (1 + np.dot(v_sat, los) / constants.SPEED_OF_LIGHT)
 
         pr_rate = np.dot(v_sat, los_cor) + constants.SPEED_OF_LIGHT * (-clock_rate_sat - rel_clock_rate_sat)
+
+        if self._write_trace:
+            self._trace_handler.write(f"{epoch},{sat},{datatype},{pr_rate},{np.dot(v_sat, los_cor)},"
+                                      f"{constants.SPEED_OF_LIGHT * (-clock_rate_sat - rel_clock_rate_sat)}\n")
+
         return float(pr_rate)

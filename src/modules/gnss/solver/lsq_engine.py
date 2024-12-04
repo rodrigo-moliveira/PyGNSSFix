@@ -358,7 +358,7 @@ class LSQ_Engine_Position(LSQ_Engine):
         tropo_offset = 1 if estimate_tropo else 0
 
         state.position += dX[0:3]
-        state.clock_bias += dX[3] / constants.SPEED_OF_LIGHT  # receiver clock in seconds
+        state.clock_bias += (dX[3] / constants.SPEED_OF_LIGHT)  # receiver clock in seconds
 
         # if iono is estimated
         iono_offset = 0

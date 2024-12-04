@@ -3,6 +3,7 @@
         [X] por exemplo, por agora o ficheiro nav é sempre obrigatório, mas isso tem de mudar depois..
         [X] ver o que acontece quando configuro 3 observações. Deve dar um erro!! Este SW apenas dá para 1 ou 2
     [X] criar um config field com o modo (SPS ou PPPP)
+    [ ] add constraints (initial P) to parameters in normal equations
     [ ] Adicionar Leitura e Modelo de IONEX (criar um PPPP)
     [ ] substituir alguns modelos do SPS pelos respetivos do PPPP
     [ ] adicionar um DCB Manager
@@ -15,6 +16,8 @@
     [ ] Adicionar Kalman filter com user dynamics
     [ ] Update Readme
     [ ] solve all TODOs
+    [ ] tornar explicita a impossibilidade de correr vários datatypes para a mesma freq (diferentes atributos)
+        por exemplo processar C1C e C1W.
 
 
 # Release 1.2 PPP e PPP-AR

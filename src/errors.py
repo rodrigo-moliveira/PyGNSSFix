@@ -90,6 +90,13 @@ class SolverError(GNSSNavPyError):
         super().__init__(message)
 
 
+class ReconstructionError(GNSSNavPyError):
+    """ Error in the reconstruction of observables. """
+    def __init__(self, message):
+        message = "Error in ObservationReconstructor Computation -> " + message
+        super().__init__(message)
+
+
 class EnumError(GNSSNavPyError):
     """ Enumeration Error. """
     def __init__(self, message):

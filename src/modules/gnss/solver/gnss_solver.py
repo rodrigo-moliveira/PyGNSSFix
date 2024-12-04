@@ -384,9 +384,13 @@ class GnssSolver:
         """ Low-level function to solve a single iteration of the velocity estimation process """
         satellite_list = system_geometry.get_satellites()
 
+        if self.trace_dir is not None:
+            trace_file = f"{self.trace_dir}\\RangeRateReconstructor.txt"
+        else:
+            trace_file = None
         reconstructor = RangeRateReconstructor(system_geometry,
                                                self._metadata,
-                                               state, None)
+                                               state, trace_file)
 
         # build LSQ Engine matrices for all satellites
         lsq_engine = LSQ_Engine_Velocity(satellite_list, self._metadata, epoch, obs_data, reconstructor)

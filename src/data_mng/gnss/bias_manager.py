@@ -8,6 +8,7 @@ from collections import OrderedDict
 from src.data_types.date import Epoch
 from src.data_types.gnss import Satellite, DataType, data_type_from_rinex, get_data_type
 from src.data_mng import Container
+from src.errors import ReconstructionError
 from src.io.rinex_parser import SinexBiasReader
 from src.common_log import IO_LOG, get_logger
 from src.io.config import EnumSatelliteBias, config_dict
@@ -18,7 +19,6 @@ from src.models.gnss_models import get_bgd_correction
 
 E1 = get_data_type("E1", "GAL")
 
-_warning_cache = set()
 
 class BiasEntry(Container):
     """
@@ -30,7 +30,9 @@ class BiasEntry(Container):
         epoch_end(Epoch): End time for the bias estimate.
         bias_type(str): Bias type identifier. Available types are DSB or OSB.
         sat(Satellite): Satellite for the bias estimate
-        service_list(tuple[str,str]): Observables used for estimating the biases.
+        service_list(tuple[str,str]): services used for estimating the biases.
+            The OBS2 field remains blank in case of absolute (OSB) estimates.
+        datatype_list(tuple[DataType,DataType]): Observables used for estimating the biases.
             The OBS2 field remains blank in case of absolute (OSB) estimates.
         value(float): Estimated (offset) value of the bias parameter.
         units(str): Bias estimates are given in the specified unit. Unit has to be `ns` (nanoseconds) for code
@@ -82,7 +84,6 @@ class BiasEntry(Container):
             self.datatype_list.append(data_type_from_rinex(service, sat.sat_system))
 
 
-
 class BiasManager:
     """
     Satellite Code and Phase Biases Manager class.
@@ -100,8 +101,11 @@ class BiasManager:
             defined as:
                 * keys -> :py:class:`Satellite` instances.
                 * values -> :py:class:`list` list of :py:class:`BiasEntry` objects for this satellite.
+        osb_data(OrderedDict): ... to be filled
         nav_data(src.data_mng.gnss.navigation_data.NavigationData): attribute that stores the broadcast navigation data
         bias_enum(EnumSatelliteBias): Enumeration that selects which type of bias is configured by the user
+        log(logging.Logger): logger instance
+        _cache(dict): internal cache to store intermediate data, to optimize consecutive calls
     """
 
     def __init__(self):
@@ -110,7 +114,8 @@ class BiasManager:
         self.osb_data = OrderedDict()  # internal dict to store OSB data
         self.nav_data = None  # contains the broadcast navigation data
         self.bias_enum = None  # enumeration with the bias type configured by the user
-
+        self.log = get_logger(IO_LOG)
+        self._cache = {"warnings": set(), "dcb_if": dict(), "final_bias_for_datatype": dict()}
 
     def init(self, nav_data, bias_files, bias_enum: EnumSatelliteBias):
         """
@@ -126,9 +131,8 @@ class BiasManager:
         self.nav_data = nav_data
         self.bias_enum = bias_enum
 
-        log = get_logger(IO_LOG)
         if self.bias_enum in (EnumSatelliteBias.DCB, EnumSatelliteBias.OSB):
-            log.info("Launching Satellite Code and Phase Bias Reader")
+            self.log.info(f"Launching Satellite Code and Phase Bias Reader: mode {self.bias_enum}")
             for file in bias_files:
                 SinexBiasReader(file, self, self.bias_enum)
 
@@ -203,86 +207,132 @@ class BiasManager:
         return self.nav_data.get_closest_message(sat, epoch)
 
     def bias_correction(self, epoch, sat, datatype):
+        """
+        Main function to fetch the satellite hardware code/phase bias correction for the provided satellite, datatype
+        and epoch
+
+        Args:
+            epoch(Epoch): epoch to fetch the bias correction
+            sat(Satellite): satellite to fetch the bias correction
+            datatype(DataType): datatype of the PR/CP observation to be reconstructed
+
+        Returns:
+             float: returns the computed bias correction in seconds, to be applied in the PR/CP
+                observation reconstruction.
+        """
         bias = 0
         if self.bias_enum == EnumSatelliteBias.BROADCAST:
+            # no cache here -> always use the closest navigation message
             bias = self._bias_correction_broadcast(epoch, sat, datatype)
         elif self.bias_enum == EnumSatelliteBias.DCB:
-            bias = self._bias_correction_dcb(epoch, sat, datatype)
+            if (sat, datatype) not in self._cache["final_bias_for_datatype"]:
+                _bias = -self._bias_correction_dcb(sat, datatype)
+                self._cache["final_bias_for_datatype"][(sat, datatype)] = _bias
+                self.log.info(f"Satellite Hardware Bias for {sat} and {datatype}: {_bias} seconds.")
+            bias = self._cache["final_bias_for_datatype"][(sat, datatype)]
         elif self.bias_enum == EnumSatelliteBias.OSB:
             pass
         return bias
 
     def _bias_correction_broadcast(self, epoch, sat, datatype):
+        """ Get the satellite hardware code bias correction for the provided satellite and datatype
+        (broadcast BGDs/TGDs). """
         nav_message = self.get_nav_message(sat, epoch)
         return get_bgd_correction(datatype, nav_message)
 
-    def _bias_correction_dcb(self, epoch, sat:Satellite, datatype:DataType):
-        print("getting DCB for", epoch, sat, datatype)
+    def _bias_correction_dcb(self, sat: Satellite, datatype: DataType):
+        """ Get the satellite hardware code bias correction for the provided satellite and datatype
+        (precise DCB products). """
         if sat not in self.dcb_data:
-            if sat not in _warning_cache:
-                print("warning: no DCB data available for satellite", sat)  # Add as log message.
-                _warning_cache.add(sat)
+            if sat not in self._cache["warnings"]:
+                self.log.warning(f"No DCB data available for satellite {sat}. Setting satellite bias to 0.")
+                self._cache["warnings"].add(sat)
+            return 0.0
 
         dcb_list = self.dcb_data[sat]
-        #for dcb in dcb_list:
-        #    print(repr(dcb))
-        constellation = sat.sat_system
-        user_service = config_dict.get_services()[constellation]['user_service']
-        ionofree_service = config_dict.get_services()[constellation]['clock_product_service']
-        # print("services", config_dict.get_services()[constellation])
 
-        # NOTA: isto pode ser feito previamente, na construção do BiasManager.
-        for dcb in dcb_list:
-            if BiasManager.check_list(dcb.service_list, ionofree_service):
-                if_dcb = dcb
-                break
-        else:
-            print(f"ERROR: could not find DCB for the iono-free combination {ionofree_service}")
-            exit()
-        #print("dcb entry for iono free combination", ionofree_service, " is ", repr(if_dcb))
+        constellation = sat.sat_system
+        ionofree_service = config_dict.get_services()[constellation]['clock_product_service']
+
+        base_if_obs = ionofree_service[0]
+
+        if sat not in self._cache["dcb_if"]:
+            dcb_if = self._find_dcb_in_list(ionofree_service, dcb_list)
+            if dcb_if is not None:
+                self._cache["dcb_if"][sat] = dcb_if
+            else:
+                self.log.warning(f"Could not find DCB data for satellite {sat} and "
+                                 f"iono-free combination {ionofree_service}. Setting satellite bias to 0.")
+                self._cache["warnings"].add(sat)
+                return 0.0
+
+        dcb_if = self._cache["dcb_if"][sat]
 
         # find the user service associated with the provided datatype
-        for service in user_service:
-            if str(datatype.freq_number) == service[0]:
-                print("-> datatype", datatype, "is associated to matched service", service)
-                break
-        else:
-            print("ERROR: the provided datatype does not match any user service (should never happen...)")
-            exit(-1)
-        #print("ionofree_service", ionofree_service)
-        if service in ionofree_service:
-            print("user service is part of iono-free combination! Only 1 DCB is required")
-            # fetch required DCB
-            # print(f"Fix {datatype} of service {service} with DCB {repr(if_dcb)}")
-            return BiasManager.get_dcb_for_service(if_dcb, service)
-        else:
-            print("user service is NOT part of iono-free combination. DCB convertion is required")
-            for dcb in dcb_list:
-                if BiasManager.check_list(dcb.service_list, user_service):
-                    user_dcb = dcb
-                    break
-            else:
-                print(f"ERROR: could not find DCB for the iono-free combination {ionofree_service}")
-                exit()
+        service = self._get_service_for_datatype(datatype, constellation)
 
-            bias = BiasManager.correct_service(if_dcb, user_dcb)
-            return bias + BiasManager.get_dcb_for_service(user_dcb, service)
-        #base_freq =
-        return 0
+        if service in ionofree_service:
+            self.log.info(f"User service {service} (datatype {datatype} for {sat}) is part of iono-free combination "
+                          f"{ionofree_service}. Only the iono-free DCB is required.")
+            # fetch required bias for this service
+            out_bias = BiasManager._get_code_bias_for_service_dcb(dcb_if, service)
+        else:
+            correction_service = [base_if_obs, service]
+            self.log.info(f"User service {service} (datatype {datatype} for {sat}) is not part of iono-free "
+                          f"combination {ionofree_service}. Bias convertion is required from {ionofree_service} to "
+                          f"{correction_service}.")
+
+            correction_dcb = self._find_dcb_in_list(correction_service, dcb_list)
+            if correction_dcb is None:
+                self.log.warning(f"Could not find DCB data for satellite {sat} and "
+                                 f"service {correction_service}. Setting satellite bias to 0.0.")
+                self._cache["warnings"].add(sat)
+                return 0.0
+
+            correction_bias = BiasManager._correct_if_clock_for_dcb(dcb_if, correction_dcb)
+            out_bias = correction_bias + BiasManager._get_code_bias_for_service_dcb(correction_dcb, service)
+
+        return out_bias
+
+    def _find_dcb_in_list(self, service_to_find, dcb_list):
+        """ Find BiasEntry instance from the provided dcb_list that matches the required service. """
+        for dcb in dcb_list:
+            if self._check_service_lists(dcb.service_list, service_to_find):
+                return dcb
+        return None
 
     @staticmethod
-    def check_list(service_list, ionofree_service):
-        # returns True if the two observation lists match (also in code attribute)
-        if len(service_list) != 2 or len(ionofree_service) != 2:
-            raise "error"
-        for service in ionofree_service:
-            if f"C{service}" not in service_list:
+    def _get_service_for_datatype(datatype, constellation):
+        """ Finds the service (RINEX notation) that matches the provided datatype and constellation. """
+        # TODO: Esta funcao vai portar-se mal com atributos diferentes...
+        user_services = config_dict.get_services()[constellation]['user_service']
+        for service in user_services:
+            if str(datatype.freq_number) == service[0]:
+                found_service = service
+                break
+        else:
+            # This exception should never happen...
+            raise ReconstructionError(
+                f"The provided datatype {datatype} does not match any user service: {user_services}. ")
+
+        return found_service
+
+    @staticmethod
+    def _check_service_lists(service_dcb, service_to_find):
+        """ Returns True if the two observation lists match (also in code attribute). """
+        if len(service_dcb) != 2 or len(service_to_find) != 2:
+            raise ReconstructionError(f"DCB service {service_dcb} and service to find {service_to_find}"
+                                      f" must have length 2.")
+        for service in service_to_find:
+            if f"C{service}" not in service_dcb:
                 return False
         return True
 
     @staticmethod
-    def correct_service(if_dcb, user_dcb):
-        print(f"correcting bias. IF dcb = {repr(if_dcb)}. User dcb = {repr(user_dcb)}")
+    def _correct_if_clock_for_dcb(if_dcb, user_dcb):
+        """ Obtains the bias correction to convert the iono-free the satellite clock to the user service using the
+        provided user_dcb. """
+        print(f"[PRINT]: correcting bias. IF dcb = {repr(if_dcb)}. User dcb = {repr(user_dcb)}")
         if_datatypes = if_dcb.datatype_list
         user_datatypes = user_dcb.datatype_list
         mu_base = (E1.freq_value / if_datatypes[0].freq.freq_value) ** 2  # this is always 1.
@@ -290,18 +340,20 @@ class BiasManager:
 
         mu_user = (E1.freq_value / user_datatypes[1].freq.freq_value) ** 2
 
-        return mu_base / (mu_second - mu_base) * if_dcb.value * 1E-9 - mu_base / (mu_user - mu_base) * user_dcb.value * 1E-9
+        return mu_base / (mu_second - mu_base) * if_dcb.value * 1E-9 - mu_base / (
+                    mu_user - mu_base) * user_dcb.value * 1E-9
 
     @staticmethod
-    def get_dcb_for_service(dcb, service):
+    def _get_code_bias_for_service_dcb(dcb, service):
+        """ Gets the code bias for the provided service from the available DCB. """
         # TODO: check signal (+/-)
         # If we reach here, the provided service **must** be one of the services of the dcb
-        print(f"Fix datatype of service {service} with DCB {repr(dcb)}")
+        print(f"[PRINT]: Fix datatype of service {service} with DCB {repr(dcb)}")
         datatypes = dcb.datatype_list
         mu1 = (E1.freq_value / datatypes[0].freq.freq_value) ** 2  # this is always 1.
         mu2 = (E1.freq_value / datatypes[1].freq.freq_value) ** 2
-        id = dcb.service_list.index(f"C{service}")
-        if id == 0:
+        _id = dcb.service_list.index(f"C{service}")
+        if _id == 0:
             scale = mu1 / (mu2 - mu1)
         else:
             scale = mu2 / (mu2 - mu1)
