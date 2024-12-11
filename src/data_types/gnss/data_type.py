@@ -170,6 +170,17 @@ class DataType:
         return data_type in cAvailableIonoFreeSmoothCodes
 
     @staticmethod
+    def is_iono_free(data_type):
+        """
+        Args:
+            data_type(DataType):
+        Returns:
+            bool: True if `data_type` is iono-free (pseudorange or carrier)
+        """
+        return DataType.is_iono_free_code(data_type) or DataType.is_iono_free_carrier(data_type) \
+            or DataType.is_iono_free_smooth_code(data_type)
+
+    @staticmethod
     def is_smooth_code(data_type):
         """
         Args:
