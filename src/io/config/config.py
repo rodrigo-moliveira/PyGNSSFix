@@ -185,8 +185,8 @@ class Config(dict):
                 services[const_upper] = dict()
                 if const_upper == "GPS" or const_upper == "GAL":
                     services[const_upper]["user_service"] = self.get("model", const_upper, "observations")
-                    services[const_upper]["clock_product_service"] = self.get("model", const_upper,
-                                                                              "clock_product_service")
+                    clock_services = self.get("model", const_upper, "clock_product_service")
+                    services[const_upper]["clock_product_service"] = [f"C{clock_services[0]}", f"C{clock_services[1]}"]
             self.set("services", services)
         return self["services"]
 
