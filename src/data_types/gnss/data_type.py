@@ -145,7 +145,7 @@ class DataType:
         Args:
             data_type(DataType):
         Returns:
-            bool: True if `data_type` is a iono-free pseudorange observable
+            bool: True if `data_type` is an iono-free pseudorange observable
         """
         return data_type in cAvailableIonoFreeCodes
 
@@ -155,7 +155,7 @@ class DataType:
         Args:
             data_type(DataType):
         Returns:
-            bool: True if `data_type` is a iono-free carrier phase observable
+            bool: True if `data_type` is an iono-free carrier phase observable
         """
         return data_type in cAvailableIonoFreeCarrier
 
