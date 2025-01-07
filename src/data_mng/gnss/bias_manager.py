@@ -495,51 +495,24 @@ class BiasManager:
             self.log.warning(f"Attribute correction is only available for GPS satellites. Satellite {sat} is not GPS.")
             return False
 
-        for dcb in dcb_list:
-            base_service = dcb.service_list[0]
-            second_service = dcb.service_list[1]
-            if base_service[1] == ionofree_service[0][1] and second_service == ionofree_service[1]:
-                # change attribute of first frequency
-                fix_service = [ionofree_service[0], base_service]
-                self.log.debug(
-                    f"Changing attribute of first frequency in iono-free clock product from {ionofree_service} to "
-                    f"{dcb.service_list}.")
-                fix_first = True
-                break
-            elif second_service[1] == ionofree_service[1][1] and base_service == ionofree_service[0]:
-                # change attribute of second frequency
-                fix_service = [ionofree_service[1], second_service]
-                fix_first = False
-                self.log.debug(
-                    f"Changing attribute of second frequency in iono-free clock product from {ionofree_service} to "
-                    f"{dcb.service_list}.")
-                break
-        else:
-            self.log.warning(f"Could not find a DCB to fix the iono-free clock product {ionofree_service}.")
+        dcb_if = self._find_dcb_in_list(ionofree_service, dcb_list, ignore_attribute=True)
+        fix_atr = 0.0
+        if dcb_if is None:
+            self.log.warning(f"Could not find any DCB data for satellite {sat} and clock product combination "
+                             f"{ionofree_service} (ignoring attributes). Setting satellite bias to 0.")
             return False
+        if dcb_if.service_list[0] != ionofree_service[0]:
+            fix_atr = fix_atr + self._fix_service_attribute(dcb_list, ionofree_service, dcb_if.service_list, 0,
+                                                            sat.sat_system)
+        if dcb_if.service_list[1] != ionofree_service[1]:
+            fix_atr = fix_atr + self._fix_service_attribute(dcb_list, ionofree_service, dcb_if.service_list, 1,
+                                                            sat.sat_system)
 
-        dcb_atr_fix = self._find_dcb_in_list(fix_service, dcb_list)
-        if dcb_atr_fix is None:
-            self.log.warning(f"Could not find DCB data {fix_service} for satellite {sat}.")
-            return False
-
-        self._cache["dcb_if"][sat] = dcb
-        if_datatypes = dcb.datatype_list
-        mu_base = 1
-        mu_second = (if_datatypes[0].freq.freq_value / if_datatypes[1].freq.freq_value) ** 2
-
-        if dcb_atr_fix.service_list == fix_service:
-            signal = 1
-        else:
-            signal = -1
-        if fix_first:
-            fix_atr = signal * mu_second / (mu_second - mu_base) * dcb_atr_fix.value * 1E-9
-        else:
-            fix_atr = -signal * mu_base / (mu_second - mu_base) * dcb_atr_fix.value * 1E-9
         self.log.info(
-            f"Fixed iono free clock combination from {ionofree_service} to {dcb.service_list} using DCB "
-            f"{dcb_atr_fix.service_list}.")
+            f"Fixed iono free clock combination from {ionofree_service} to {dcb_if.service_list}.")
         self.log.debug(f"Attribute fix is {fix_atr} seconds.")
+
+        self._cache["dcb_if"][sat] = dcb_if
         self._cache["dcb_atr_fix"][sat] = fix_atr
         return True
 

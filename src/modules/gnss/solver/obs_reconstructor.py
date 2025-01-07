@@ -180,10 +180,7 @@ class PseudorangeReconstructor(ObservationReconstructor):
 
         # correct satellite clock for (code or phase) hardware biases
         # DCB data can either come from a precise file or from the nav message
-        # TODO: to delete bias_nav.
         bias = self.sat_bias.bias_correction(epoch, sat, datatype)
-        bias_nav = self.sat_bias._bias_correction_broadcast(epoch, sat, datatype)
-        print("bias = ", bias, bias_nav)
 
         # ionosphere (a-priori correction)
         iono_corrections = sat_clocks.nav_data.header.iono_corrections if sat_clocks.nav_data is not None else None

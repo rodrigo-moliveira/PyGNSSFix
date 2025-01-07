@@ -44,7 +44,7 @@
       "trace_files": true,
 
       "_comment4": "Signal strength (SNR) filter. Select value of SNR (dBHz) threshold. Select false to turn off",
-      "snr_filter": 30,
+      "snr_filter": 1,
 
       "satellite_status": {
          "_comment": "whether or not to check the SV Accuracy and SV health fields of the navigation message",
@@ -65,7 +65,7 @@
    },
 
    "model": {
-      "constellations": ["GAL"],
+      "constellations": ["GPS", "GAL"],
 
       "_comment": "Select the GNSS PNT algorithm. The available algorithms are SPS, PR-PPP",
       "algorithm": "PR-PPP",
@@ -87,7 +87,7 @@
          "map": "Saastamoinen",
 
          "_comment3": "Select `true` to estimate tropospheric wet delay or `false` to disable tropo estimation",
-         "estimate_tropo_wet": true
+         "estimate_tropo_wet": false
       },
 
       "GPS": {
@@ -96,7 +96,7 @@
          "clock_product_service": ["1W", "2W"],
 
          "_comment1": "in `pr_obs_std` define the observation noise for the selected pseudorange observations (consistent with the signals defined in `observations`), in meters",
-         "pr_obs_std": [1.1, 0.8],
+         "pr_obs_std": [1.0, 2.0],
 
          "_comment2": "in `doppler_obs_std` define the observation noise for the selected doppler observations (consistent with the signals defined in `observations`), in Hertz",
          "doppler_obs_std": [1.7, 1.0],
@@ -110,10 +110,10 @@
       "GAL": {
          "observations": ["1C", "5Q"],
 
-         "clock_product_service": ["1C", "7Q"],
+         "clock_product_service": ["1C", "5Q"],
 
          "_comment1": "in `pr_obs_std` define the observation noise for the selected pseudorange observations (consistent with the signals defined in `observations`), in meters",
-         "pr_obs_std": [1.1, 0.8],
+         "pr_obs_std": [1.0, 2.0],
 
          "_comment2": "in `doppler_obs_std` define the observation noise for the selected doppler observations (consistent with the signals defined in `observations`), in Hertz",
          "doppler_obs_std": [1.1, 1.0],
@@ -121,10 +121,10 @@
          "elevation_mask": true,
 
          "_comment3": "select between INAV or FNAV navigation message",
-         "nav_type": "INAV",
+         "nav_type": "FNAV",
 
          "_comment4": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G' ",
-         "ionosphere": "NONE"
+         "ionosphere": "NTCM-G"
       }
    },
 
@@ -138,7 +138,7 @@
       "n_iterations": 10,
 
       "_comment3": "stop condition to end iterated least squares. Process ends when (RMS(i-1) - RMS(i)) / RMS(i-1) <= stop_criteria",
-      "stop_criteria": 0.0002,
+      "stop_criteria": 0.0000002,
 
       "_comment6": "Select algorithm to compute the transmission time: 0 - geometric, 1 - pseudorange, 2 - NAPEOS",
       "transmission_time_alg": 0,
@@ -147,7 +147,7 @@
       "relativistic_corrections": 1,
 
       "_comment5": "Elevation filter. Select the value of minimum elevation angle to consider, in degree. Select false to turn off",
-      "elevation_filter": 10,
+      "elevation_filter": 2,
 
       "_comment7": "Initial position (m), velocity (m/s) and clock (s)",
       "initial_pos_std": [0, 0, 0, 1, 1, 1],
