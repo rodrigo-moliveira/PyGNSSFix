@@ -12,6 +12,7 @@ from .observation_data import ObservationData
 from .sat_clock_data import SatelliteClocks
 from .sat_orbit_data import SatelliteOrbits
 from .bias_manager import BiasManager
+from .global_iono_map import GlobalIonoMap
 
 __all__ = ["GnssDataManager"]
 
@@ -38,6 +39,7 @@ class GnssDataManager(Container):
         "obs_data",            # Input
         "sat_clocks",          # Input
         "sat_orbits",          # Input
+        "iono_gim",            # Input
         "sat_bias",            # Input
         "smooth_obs_data",     # Internal data
         "iono_free_obs_data",  # Internal data
@@ -52,6 +54,7 @@ class GnssDataManager(Container):
         self.obs_data = ObservationData()  # Input Observation Data
         self.smooth_obs_data = ObservationData()  # Smooth Observation Data
         self.sat_clocks = SatelliteClocks()  # Satellite clocks manager (precise or navigation clocks)
+        self.iono_gim = GlobalIonoMap()  # Global Ionospheric (VTEC) Map Manager
         self.sat_bias = BiasManager()  # Satellite Code and Phase Bias Manager
         self.sat_orbits = SatelliteOrbits()  # Satellite orbits manager (precise or navigation orbits)
         self.iono_free_obs_data = ObservationData()  # Iono Free Observation Data
@@ -157,8 +160,15 @@ class GnssDataManager(Container):
             sp3_files = config_dict.get("inputs", "sp3_files")
             dcb_files = config_dict.get("inputs", "dcb_files")
             osb_files = config_dict.get("inputs", "osb_files")
+            ionex_files = config_dict.get("inputs", "ionex_files")
+
             GnssDataManager.check_input_list("inputs.clk_files", clock_files)
             GnssDataManager.check_input_list("inputs.sp3_files", sp3_files)
+            GnssDataManager.check_input_list("inputs.ionex_files", ionex_files)
+
+            log.info("Launching GlobalIonoMap constructor (ionex products).")
+            # TODO: check if ionex is enabled. (we can also use klobuchar model for ppp)
+            self.iono_gim.init(ionex_files)
 
             # TODO: this is temporary! NAV files will not be needed in final PR-PPP version
             nav_files = config_dict.get("inputs", "nav_files")
@@ -196,6 +206,8 @@ class GnssDataManager(Container):
 
         if config_dict.get("inputs", "trace_files"):
             self._trace_files(trace_dir, gnss_alg)
+        print("writing trace files")
+        exit()
 
     def _trace_files(self, trace_dir, gnss_alg: EnumAlgorithmPNT):
         inputs_dir = f"{trace_dir}\\inputs"
@@ -216,6 +228,8 @@ class GnssDataManager(Container):
                 file.write(str(self.get_data("sat_orbits")))
             with open(f"{inputs_dir}\\PreciseBiasProducts.txt", "w") as file:
                 file.write(str(self.get_data("sat_bias")))
+            with open(f"{inputs_dir}\\GlobalIonoMap.txt", "w") as file:
+                file.write(str(self.get_data("iono_gim")))
 
     def save_data(self, directory):
         """ Saves the navigation solution (contained in the `nav_solution` attribute) to the output file """

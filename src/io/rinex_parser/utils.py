@@ -3,7 +3,8 @@
 RINEX_FILE_TYPES = {"M": "Meteorological Data",
                     "N": "Navigation Data",
                     "O": "Observation Data",
-                    "C": "Clock Data"}
+                    "C": "Clock Data",
+                    "I": "Ionospheric Data"}
 
 RINEX_SATELLITE_SYSTEM = {"G": "GPS",
                           "R": "GLO",

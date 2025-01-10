@@ -14,6 +14,7 @@
       "nav_files": ["datasets/gnss/BRUX/BRDC00IGS_R_20190140000_01D_MN.rnx"],
       "clk_files": ["datasets/gnss/BRUX/COD0R03FIN_20190140000_01D_30S_CLK_short.CLK"],
       "sp3_files": ["datasets/gnss/BRUX/COD0R03FIN_20190140000_01D_05M_ORB.SP3"],
+      "ionex_files": ["datasets/gnss/BRUX/codg0140.19i"],
 
       "bias_type": "DCB",
       "dcb_files": ["datasets/gnss/BRUX/DLR0MGXFIN_20190010000_03L_01D_DCB_short.BSX"],
