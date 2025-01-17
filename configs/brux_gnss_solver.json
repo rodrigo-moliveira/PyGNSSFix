@@ -80,7 +80,7 @@
       "estimate_ggto": true,
       "_comment3": "Select `true` to estimate GGTO or `false` to use the broadcast GGTO",
 
-      "estimate_diono": false,
+      "estimate_diono": true,
         "_comment4": "Select `true` to estimate residual ionospheric delay or `false` to disable it",
 
       "troposphere": {

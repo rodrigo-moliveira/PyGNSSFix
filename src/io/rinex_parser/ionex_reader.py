@@ -49,7 +49,7 @@ class IONEXReader:
                              f"is later than the last epoch in the IONEX file {gim.header.last_epoch}.")
 
         # read body
-        gim.init_data()
+        gim.initialize_arrays()
         self._read_data(f_handler, gim)
 
         f_handler.close()
@@ -153,7 +153,7 @@ class IONEXReader:
                 continue
 
             if "END OF TEC MAP" in line:
-                gim.add_data(epoch, tec_matrix)
+                gim.set_data(epoch, tec_matrix)
                 epoch = None
                 tec_matrix = None
 
