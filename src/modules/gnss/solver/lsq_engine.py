@@ -243,6 +243,8 @@ class LSQ_Engine_Position(LSQ_Engine):
 
     def __init__(self, satellite_list, metadata, epoch, obs_data, reconstructor):
         datatypes = metadata["CODES"]
+        self._estimate_tropo = False
+        self._estimate_diono = dict()
         super().__init__(datatypes, satellite_list, metadata, epoch, obs_data, reconstructor)
 
     def _initialize_matrices(self):
@@ -290,13 +292,20 @@ class LSQ_Engine_Position(LSQ_Engine):
 
             # add iono states
             if self._metadata["MODEL"][const] == EnumFrequencyModel.DUAL_FREQ:
-                n_states += n_sats
+                if self._metadata["IONO"][const].estimate_diono():
+                    self._estimate_diono[const] = True
+                    n_states += n_sats
+                else:
+                    self._estimate_diono[const] = False
                 n_observables += 2 * n_sats
             else:
                 n_observables += n_sats
 
         if self._metadata["TROPO"].estimate_tropo():
+            self._estimate_tropo = True
             n_states += 1
+        else:
+            self._estimate_tropo = False
 
         self.y_vec = np.zeros(n_observables)
         self.design_mat = np.zeros((n_observables, n_states))
@@ -319,8 +328,7 @@ class LSQ_Engine_Position(LSQ_Engine):
     def _build_lsq(self, epoch, obs_data, reconstructor):
         iono_offset = 0
         obs_offset = 0
-        estimate_tropo = self._metadata["TROPO"].estimate_tropo()
-        tropo_offset = 1 if estimate_tropo else 0
+        tropo_offset = 1 if self._estimate_tropo else 0
 
         for iConst, const in enumerate(self.constellations):
 
@@ -334,10 +342,10 @@ class LSQ_Engine_Position(LSQ_Engine):
                     self.y_vec[obs_offset + iSat] = residual
                     self.design_mat[obs_offset + iSat][0:3] = los  # position
                     self.design_mat[obs_offset + iSat, 3] = 1.0  # clock
-                    if estimate_tropo:
+                    if self._estimate_tropo:
                         map_wet = reconstructor._system_geometry.get("tropo_map_wet", sat)
                         self.design_mat[obs_offset + iSat, 4] = map_wet
-                    if self._metadata["MODEL"][const] == EnumFrequencyModel.DUAL_FREQ:
+                    if self._estimate_diono[const]:
                         factor = (self.datatypes[const][0].freq.freq_value / datatype.freq.freq_value) ** 2
                         self.design_mat[obs_offset + iSat, 4 + tropo_offset + iono_offset + iSat] = 1.0 * factor  # iono
                     if iConst > 0:
@@ -350,12 +358,11 @@ class LSQ_Engine_Position(LSQ_Engine):
                         1 / (std ** 2)
 
                 obs_offset += n_sats
-            if self._metadata["MODEL"][const] == EnumFrequencyModel.DUAL_FREQ:
+            if self._estimate_diono[const]:
                 iono_offset += n_sats
 
     def _update_state(self, state, dX, cov):
-        estimate_tropo = self._metadata["TROPO"].estimate_tropo()
-        tropo_offset = 1 if estimate_tropo else 0
+        tropo_offset = 1 if self._estimate_tropo else 0
 
         state.position += dX[0:3]
         state.clock_bias += (dX[3] / constants.SPEED_OF_LIGHT)  # receiver clock in seconds
@@ -363,7 +370,7 @@ class LSQ_Engine_Position(LSQ_Engine):
         # if iono is estimated
         iono_offset = 0
         for const in self.constellations:
-            if self._metadata["MODEL"][const] == EnumFrequencyModel.DUAL_FREQ:
+            if self._estimate_diono[const]:
                 for iSat, sat in enumerate(self.sat_list[const]):
                     state.iono[sat] += float(dX[iono_offset + iSat + 4 + tropo_offset])
                     state.cov_iono[sat] = cov[
@@ -376,7 +383,7 @@ class LSQ_Engine_Position(LSQ_Engine):
             state.cov_isb = float(cov[-1, -1]) / (constants.SPEED_OF_LIGHT ** 2)  # in seconds^2
 
         # tropo
-        if estimate_tropo:
+        if self._estimate_tropo:
             state.tropo_wet += dX[4]
             state.cov_tropo_wet = cov[4, 4]
 

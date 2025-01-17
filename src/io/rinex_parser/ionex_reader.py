@@ -115,11 +115,17 @@ class IONEXReader:
 
             elif "LAT1 / LAT2 / DLAT" in line:
                 tokens = line.split()
-                gim.header.lat = [utils.to_float(tokens[0]), utils.to_float(tokens[1]), utils.to_float(tokens[2])]
+                lat = [utils.to_float(tokens[0]), utils.to_float(tokens[1])]
+                lat_step = abs(utils.to_float(tokens[2]))
+                lat.sort()
+                gim.header.lat = [lat[0], lat[1], lat_step]
 
             elif "LON1 / LON2 / DLON" in line:
                 tokens = line.split()
-                gim.header.lon = [utils.to_float(tokens[0]), utils.to_float(tokens[1]), utils.to_float(tokens[2])]
+                lon = [utils.to_float(tokens[0]), utils.to_float(tokens[1])]
+                lon_step = abs(utils.to_float(tokens[2]))
+                lon.sort()
+                gim.header.lon = [lon[0], lon[1], lon_step]
 
             elif "EXPONENT" in line:
                 gim.header.exponent = int(line.split()[0])
@@ -191,8 +197,8 @@ class IONEXReader:
 
                         lon_idx = lon_idx[0]
 
-                        # update TEC Matrix entry
-                        tec_matrix[lat_idx, lon_idx] = utils.to_float(line[j*5:j*5+5])
+                        # update TEC Matrix entry (values are given in 10**exponent TEC units)
+                        tec_matrix[lat_idx, lon_idx] = utils.to_float(line[j*5:j*5+5]) * (10 ** gim.header.exponent)
                         this_lon = this_lon + dlon
 
     @classmethod

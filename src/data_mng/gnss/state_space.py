@@ -121,7 +121,8 @@ class GnssStateSpace(Container):
         self.cov_iono = dict()
         if metadata is not None and sat_list is not None:
             for constellation in metadata["CONSTELLATIONS"]:
-                if metadata["MODEL"][constellation] == EnumFrequencyModel.DUAL_FREQ:
+                if metadata["MODEL"][constellation] == EnumFrequencyModel.DUAL_FREQ and \
+                        metadata["IONO"][constellation].estimate_diono():
                     # initialize iono vector for the available satellites of this constellation
                     for sat in sat_list:
                         if sat.sat_system == constellation:

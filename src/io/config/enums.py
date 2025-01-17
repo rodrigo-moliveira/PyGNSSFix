@@ -96,14 +96,15 @@ class EnumFrequencyModel(Enum):
 
 
 class EnumIonoModel(Enum):
-    """ Enumeration for the Ionosphere A-priori Model (Disabled, Klobuchar or NTCM-G) """
+    """ Enumeration for the Ionosphere A-priori Model (Disabled, Klobuchar, NTCM-G or IONEX) """
     DISABLED = 0
     KLOBUCHAR = 1
     NTCMG = 2
+    IONEX = 3
 
     @classmethod
     def show_options(cls):
-        return f"[ NONE, Klobuchar, NTCM-G]"
+        return f"[ NONE, Klobuchar, NTCM-G, IONEX]"
 
     @classmethod
     def init_model(cls, model_str: str):
@@ -113,6 +114,8 @@ class EnumIonoModel(Enum):
             return EnumIonoModel.KLOBUCHAR
         elif model_str.lower() == "ntcm-g" or model_str.lower() == "ntcmg":
             return EnumIonoModel.NTCMG
+        elif model_str.lower() == "ionex":
+            return EnumIonoModel.IONEX
         else:
             raise EnumError(f"Unsupported Ionospheric Model {model_str}. Available options are {cls.show_options()}")
 

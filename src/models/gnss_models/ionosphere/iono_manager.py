@@ -1,9 +1,10 @@
 """ Ionosphere Corrections Manager Module """
 
-from src.io.config import EnumIonoModel, config_dict as config
+from src.io.config import EnumIonoModel, config_dict as config, EnumOnOff
 from src.errors import ConfigError
 from .iono_klobuchar import IonoKlobuchar
 from .iono_ntcmg import NTCMG
+from .iono_ionex import IonoIonex
 from src.common_log import get_logger, MODEL_LOG
 
 
@@ -17,29 +18,41 @@ class IonoManager:
     Implemented models:
         * Klobuchar (recommended for GPS satellites)
         * NTCM-G (recommended for GAL satellites)
+        * IONEX (ionospheric global maps containing VTEC values)
 
     Note that each constellation provider developed its own iono model, however the software allows
     to use any model desired (for example, we can run GPS with NTCM-G or GAL with Klobuchar without
     any problem).
     """
-    def __init__(self, constellation):
+    def __init__(self, constellation, gim_data):
         """
         Constructor of the Iono Manager
         Args:
             constellation(str): input constellation to associate to this IonoManager object
+            gim_data(src.data_mng.gnss.global_iono_map.GlobalIonoMap): Global Ionosphere Map data
         Raises:
             ConfigError: an exception is raised if the user-configured model is not known.
         """
         iono_model_enum = EnumIonoModel.init_model(config.get("model", constellation, "ionosphere"))
+        self._estimate_diono = EnumOnOff(config.get("model", "estimate_diono"))
 
         if iono_model_enum == EnumIonoModel.KLOBUCHAR:
             self.iono_model = IonoKlobuchar()
         elif iono_model_enum == EnumIonoModel.NTCMG:
             self.iono_model = NTCMG()
+        elif iono_model_enum == EnumIonoModel.IONEX:
+            self.iono_model = IonoIonex(gim_data)
         elif iono_model_enum == EnumIonoModel.DISABLED:
             self.iono_model = None
         else:
             raise ConfigError(f'Unknown iono model {iono_model_enum}')
+
+    def estimate_diono(self):
+        """
+        Returns:
+            bool: True if residual iono delay is estimated in the filter algorithm
+        """
+        return self._estimate_diono == EnumOnOff.ENABLED
 
     def compute_iono_delay(self, epoch, iono_corrections, sat, user_lat, user_long, sv_el, sv_az, freq):
         """
@@ -83,4 +96,12 @@ class IonoManager:
             except Exception as e:
                 log = get_logger(MODEL_LOG)
                 log.warning(f"Problem at computing iono a-priori model NTCM-G for {sat} at {epoch}: {e}")
+
+        elif isinstance(self.iono_model, IonoIonex):
+            ut1 = epoch.change_scale("UT1")
+            try:
+                iono = self.iono_model.compute(ut1, user_lat, user_long, sv_el, sv_az, freq)
+            except Exception as e:
+                log = get_logger(MODEL_LOG)
+                log.warning(f"Problem at computing iono a-priori model IONEX for {sat} at {epoch}: {e}")
         return iono

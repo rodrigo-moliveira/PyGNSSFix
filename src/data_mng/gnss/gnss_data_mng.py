@@ -137,7 +137,7 @@ class GnssDataManager(Container):
 
             nav_files = config_dict.get("inputs", "nav_files")
             gal_nav_type = config_dict.get("model", "GAL", "nav_type")
-            GnssDataManager.check_input_list("inputs.nav_files", nav_files)
+            GnssDataManager.check_input_list("inputs.nav_files", nav_files, log)
             log.info(f'Galileo messages selected by user are {gal_nav_type}.')
             log.info('Launching RinexNavReader.')
 
@@ -161,18 +161,19 @@ class GnssDataManager(Container):
             dcb_files = config_dict.get("inputs", "dcb_files")
             osb_files = config_dict.get("inputs", "osb_files")
             ionex_files = config_dict.get("inputs", "ionex_files")
-
-            GnssDataManager.check_input_list("inputs.clk_files", clock_files)
-            GnssDataManager.check_input_list("inputs.sp3_files", sp3_files)
-            GnssDataManager.check_input_list("inputs.ionex_files", ionex_files)
-
-            log.info("Launching GlobalIonoMap constructor (ionex products).")
-            # TODO: check if ionex is enabled. (we can also use klobuchar model for ppp)
-            self.iono_gim.init(ionex_files)
-
-            # TODO: this is temporary! NAV files will not be needed in final PR-PPP version
             nav_files = config_dict.get("inputs", "nav_files")
             gal_nav_type = config_dict.get("model", "GAL", "nav_type")
+
+            GnssDataManager.check_input_list("inputs.clk_files", clock_files, log)
+            GnssDataManager.check_input_list("inputs.sp3_files", sp3_files, log)
+
+            # not mandatory file checks
+            GnssDataManager.check_input_list("inputs.ionex_files", ionex_files, log, warning=True)
+            GnssDataManager.check_input_list("inputs.nav_files", nav_files, log, warning=True)
+
+            log.info("Launching GlobalIonoMap constructor (ionex products).")
+            self.iono_gim.init(ionex_files, trace_dir)
+
             for file in nav_files:
                 RinexNavReader(file, self.get_data("nav_data"), gal_nav_type)
 
@@ -185,10 +186,10 @@ class GnssDataManager(Container):
             bias_type_str = config_dict.get("inputs", "bias_type")
             log.info(f"Launching Satellite Code and Phase Bias Manager with bias {bias_type_str}.")
             if bias_type_str.upper() == "DCB":
-                GnssDataManager.check_input_list("inputs.dcb_files", dcb_files)
+                GnssDataManager.check_input_list("inputs.dcb_files", dcb_files, log)
                 self.sat_bias.init(self.get_data("nav_data"), dcb_files, EnumSatelliteBias.DCB)
             elif bias_type_str.upper() == "OSB":
-                GnssDataManager.check_input_list("inputs.dcb_files", osb_files)
+                GnssDataManager.check_input_list("inputs.dcb_files", osb_files, log)
                 self.sat_bias.init(self.get_data("nav_data"), osb_files, EnumSatelliteBias.OSB)
             else:
                 raise IOError(f"Unknown bias type in inputs.bias_type ({bias_type_str})")
@@ -198,7 +199,7 @@ class GnssDataManager(Container):
 
         # read observation data
         obs_files = config_dict.get("inputs", "obs_files")
-        GnssDataManager.check_input_list("inputs.obs_files", obs_files)
+        GnssDataManager.check_input_list("inputs.obs_files", obs_files, log)
         log.info("Launching RinexObsReader.")
 
         for file in obs_files:
@@ -206,8 +207,6 @@ class GnssDataManager(Container):
 
         if config_dict.get("inputs", "trace_files"):
             self._trace_files(trace_dir, gnss_alg)
-        print("writing trace files")
-        exit()
 
     def _trace_files(self, trace_dir, gnss_alg: EnumAlgorithmPNT):
         inputs_dir = f"{trace_dir}\\inputs"
@@ -278,8 +277,16 @@ class GnssDataManager(Container):
             file_list[ext].close()
 
     @staticmethod
-    def check_input_list(folder_name: str, input_list: list):
+    def check_input_list(folder_name: str, input_list: list, log, warning=False):
         if len(input_list) == 0:
-            raise IOError(f"Mandatory input files {folder_name} not provided. Please check the configurations.")
+            if warning:
+                log.warning(f"Optional input files {folder_name} not provided. "
+                            f"Please check if they are necessary for some of the selected models.")
+            else:
+                raise IOError(f"Mandatory input files {folder_name} not provided. Please check the configurations.")
         if len(input_list) == 1 and not input_list[0]:
-            raise IOError(f"Mandatory input files {folder_name} not provided. Please check the configurations.")
+            if warning:
+                log.warning(f"Optional input files {folder_name} not provided. "
+                            f"Please check if they are necessary for some of the selected models.")
+            else:
+                raise IOError(f"Mandatory input files {folder_name} not provided. Please check the configurations.")

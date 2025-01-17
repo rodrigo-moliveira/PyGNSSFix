@@ -80,6 +80,9 @@
       "estimate_ggto": true,
       "_comment3": "Select `true` to estimate GGTO or `false` to use the broadcast GGTO",
 
+      "estimate_diono": false,
+        "_comment4": "Select `true` to estimate residual ionospheric delay or `false` to disable it",
+
       "troposphere": {
          "_comment1": "Select Tropospheric model. Available models are 'NONE', 'Saastamoinen', 'GPT3'",
          "model": "Saastamoinen",
@@ -104,8 +107,8 @@
 
          "elevation_mask": true,
 
-         "_comment3": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G' ",
-         "ionosphere": "Klobuchar"
+         "_comment3": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G', 'IONEX' ",
+         "ionosphere": "IONEX"
       },
 
       "GAL": {
@@ -124,8 +127,8 @@
          "_comment3": "select between INAV or FNAV navigation message",
          "nav_type": "FNAV",
 
-         "_comment4": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G' ",
-         "ionosphere": "NTCM-G"
+         "_comment4": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G', 'IONEX' ",
+         "ionosphere": "IONEX"
       }
    },
 

@@ -86,7 +86,7 @@ class EphemerideError(GNSSNavPyError):
 class SolverError(GNSSNavPyError):
     """ Error in the PVT Computation of the Solver. """
     def __init__(self, message):
-        message = "Error in PVT Computation -> " + message
+        message = "Error in PVT Computation -> " + str(message)
         super().__init__(message)
 
 

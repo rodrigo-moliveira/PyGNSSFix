@@ -86,17 +86,19 @@ class GnssSolver:
         self.log.info("Starting module GNSS Positioning Solver...")
 
         # user configurations
-        self._set_solver_metadata(config_dict)
+        self._set_solver_metadata(config_dict, data_manager)
 
         # solution list
         self.solution = list()
 
-    def _set_solver_metadata(self, config):
+    def _set_solver_metadata(self, config, data_manager):
         """
         Set up the metadata dict with the scenario setup (user configurations)
 
         Args:
             config(src.io.config.config.Config): user configurations
+            data_manager(src.data_mng.gnss.gnss_data_mng.GnssDataManager): data manager with all necessary data for
+                the GNSS run
         Raises:
             ConfigError: an exception is raised if there are problems/inconsistencies with the user configuration
 
@@ -123,7 +125,7 @@ class GnssSolver:
 
         # Set up the user models for each active constellation
         for const in CONSTELLATIONS:
-            IONO[const] = IonoManager(const)
+            IONO[const] = IonoManager(const, data_manager.get_data("iono_gim"))
 
             code_types = self.obs_data_for_pos.get_code_types(const)
             doppler_types = self.obs_data_for_vel.get_doppler_types(const)

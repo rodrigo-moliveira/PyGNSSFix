@@ -6,7 +6,7 @@
 
   "performance_evaluation": {
     "_comment0": "Select run folder (or 'last')",
-    "run_folder": "2025-01-07T14H56M33S",
+    "run_folder": "2025-01-16T15H04M02S_no_DI",
 
     "run_error_computation": true,
     "run_residual_analysis": true,
