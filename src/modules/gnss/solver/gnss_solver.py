@@ -109,12 +109,27 @@ class GnssSolver:
         SOLVER_ALG = EnumSolver.init_model(config.get("solver", "algorithm"))
         TX_TIME_ALG = EnumTransmissionTime(config.get("solver", "transmission_time_alg"))
         REL_CORRECTION = EnumOnOff(config.get("solver", "relativistic_corrections"))  # 0 disable, 1 enable
-        INITIAL_POS = config.get("solver", "initial_pos_std")
-        INITIAL_VEL = config.get("solver", "initial_vel_std")
-        INITIAL_CLOCK_BIAS = config.get("solver", "initial_clock_std")
         CONSTELLATIONS = config.get("model", "constellations")
         ELEVATION_FILTER = config.get("solver", "elevation_filter")
         VELOCITY_EST = config.get("model", "estimate_velocity")
+
+        INITIAL_POS = config.get("solver", "initial_pos_std")
+        INITIAL_VEL = config.get("solver", "initial_vel_std")
+        INITIAL_CLOCK_BIAS = config.get("solver", "initial_clock_std")
+        INITIAL_ISB = config.get("solver", "initial_isb_std")
+        INITIAL_IONO = config.get("solver", "initial_iono_std")
+        INITIAL_TROPO = config.get("solver", "initial_tropo_std")
+        INITIAL_CLOCK_RATE = config.get("solver", "initial_clock_rate_std")
+        INITIAL_STATE = {
+            "pos": INITIAL_POS,
+            "vel": INITIAL_VEL,
+            "clock": INITIAL_CLOCK_BIAS,
+            "isb": INITIAL_ISB,
+            "iono": INITIAL_IONO,
+            "tropo": INITIAL_TROPO,
+            "clock_rate": INITIAL_CLOCK_RATE
+        }
+
         TROPO = TropoManager()
         obs_model = config_dict.get("obs_model")
 
@@ -175,9 +190,7 @@ class GnssSolver:
             "DOPPLER": DOPPLER,
             "REL_CORRECTION": REL_CORRECTION,
             "TX_TIME_ALG": TX_TIME_ALG,
-            "INITIAL_POS": INITIAL_POS,
-            "INITIAL_VEL": INITIAL_VEL,
-            "INITIAL_CLOCK_BIAS": INITIAL_CLOCK_BIAS,
+            "INITIAL_STATES": INITIAL_STATE,
             "ELEVATION_FILTER": ELEVATION_FILTER,
             "VELOCITY_EST": VELOCITY_EST
         }
@@ -233,9 +246,9 @@ class GnssSolver:
         """
         # initialize GNSS state (first epoch)
         if len(self.solution) == 0:
-            position = np.array(self._metadata["INITIAL_POS"][0:3], dtype=np.float64)
-            velocity = np.array(self._metadata["INITIAL_VEL"][0:3], dtype=np.float64)
-            clock = self._metadata["INITIAL_CLOCK_BIAS"][0]
+            position = np.array(self._metadata["INITIAL_STATES"]["pos"][0:3], dtype=np.float64)
+            velocity = np.array(self._metadata["INITIAL_STATES"]["vel"][0:3], dtype=np.float64)
+            clock = list(self._metadata["INITIAL_STATES"].get("clock"))[0]
             state = GnssStateSpace(self._metadata, position=position, velocity=velocity, clock_bias=clock,
                                    epoch=epoch, sat_list=sat_list)
         else:

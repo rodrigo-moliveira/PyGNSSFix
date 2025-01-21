@@ -83,6 +83,7 @@ class GnssStateSpace(Container):
         return state
 
     def _init_states(self, metadata, position, velocity, clock_bias, clock_bias_rate, sat_list):
+        # TODO: add here initial values for iono, tropo, etc...
         _states = ["position", "clock_bias"]  # mandatory states
 
         # position (with default to [0, 0, 0])
@@ -162,7 +163,7 @@ class GnssStateSpace(Container):
         """
         for sat in sat_list:
             if sat not in self.iono:
-                self.iono[sat] = 0.0  # add new satellite
+                self.iono[sat] = 0.0  # add new satellite  # TODO: add here initial value for iono
 
         _to_remove = []
         for sat in self.iono:
@@ -289,3 +290,10 @@ class GnssStateSpace(Container):
         if "pr_rate_postfit_residuals" in self._info:
             exportable_lst.append("pr_rate_postfit_residuals")
         return exportable_lst
+
+    def get_state_and_covariance(self):
+        """
+        Returns:
+            tuple: tuple with the state vector and the covariance matrix
+        """
+        pass
