@@ -128,6 +128,7 @@
       "properties": {
         "trace_files": {"type": "boolean"},
         "algorithm": {"type": "string", "enum": ["WSL"]},
+        "a_priori_constrain": {"type": "boolean"},
         "n_iteration": {"type": "integer", "minimum": 1},
         "stop_criteria": {"type": "number"},
         "transmission_time_alg": {"type": "integer", "minimum": 0, "maximum": 2},
@@ -137,7 +138,7 @@
         "initial_vel_std": {"type": "array", "items": {"type": "number"}},
         "initial_clock_std": {"type": "array", "items": {"type": "number"}}
       },
-      "required": ["trace_files","algorithm", "n_iterations", "stop_criteria", "transmission_time_alg", "relativistic_corrections",
+      "required": ["trace_files","algorithm", "a_priori_constrain", "n_iterations", "stop_criteria", "transmission_time_alg", "relativistic_corrections",
       "elevation_filter", "initial_pos_std", "initial_vel_std", "initial_clock_std"]
     },
     "output": {

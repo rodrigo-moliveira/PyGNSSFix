@@ -23,7 +23,8 @@ class WeightedLeastSquares:
     If an inconsistency in these shapes is detected, an AttributeError exception is raised
     """
 
-    def __init__(self, y: np.ndarray, G: np.ndarray, W: np.ndarray = None):
+    def __init__(self, y: np.ndarray, G: np.ndarray, W: np.ndarray = None, P0_inv: np.ndarray = None,
+                 X0: np.ndarray = None, X0_prev: np.ndarray = None):
         """
         Constructor of the WeightedLeastSquares object.
 
@@ -33,13 +34,25 @@ class WeightedLeastSquares:
             W (numpy.ndarray or None) : the weight matrix. If not provided, then the solution resorts to a
                 classical Least Squares, without weighting the observations (mxm)
 
+        TODO: add remaining parameters
+
         Raises:
             AttributeError : if the dimensions of the provided arrays do not match, or if the input vectors are not
                             numpy ndarray objects
         """
+        if X0 is None or X0_prev is None or P0_inv is None:
+            constrained = False
+        else:
+            constrained = True
+
         # Convert y to a 2D column vector if it is 1D
         if y.ndim == 1:
             y = y[:, np.newaxis]
+        if constrained:
+            if X0.ndim == 1:
+                X0 = X0[:, np.newaxis]
+            if X0_prev.ndim == 1:
+                X0_prev = X0_prev[:, np.newaxis]
 
         # Check the shapes of y and G
         my, m1 = y.shape
@@ -72,6 +85,16 @@ class WeightedLeastSquares:
         self._W = W
         self._S = None  # S = (G.T @ W @ G)^-1
 
+        # TODO: assert dimensions
+        if constrained:
+            self._P0_inv = P0_inv
+            self._X0 = X0
+            self._X0_prev = X0_prev
+        else:
+            self._P0_inv = np.zeros((self._n, self._n))
+            self._X0 = np.zeros((self._n, 1))
+            self._X0_prev = np.zeros((self._n, 1))
+
     def solve(self):
         """
         Solves the Weighted Least Squares normal equation.
@@ -80,8 +103,8 @@ class WeightedLeastSquares:
             LinAlgError: this function calls the `numpy.linalg.inv`.
                 This exception is raised if the matrix inversion fails.
         """
-        self._S = np.linalg.inv(self._G.T @ self._W @ self._G)
-        self._x = self._S @ self._G.T @ self._W @ self._y
+        self._S = np.linalg.inv(self._P0_inv + self._G.T @ self._W @ self._G)
+        self._x = self._S @ (self._G.T @ self._W @ self._y + self._P0_inv @ (self._X0 - self._X0_prev))
 
     def get_solution(self):
         """

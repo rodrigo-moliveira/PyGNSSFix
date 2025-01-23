@@ -1,6 +1,5 @@
 """ Module with the GNSS PNT Solver Algorithm """
 import os
-import numpy as np
 
 from src.data_mng.gnss.state_space import GnssStateSpace
 from src.data_types.gnss import DataType
@@ -113,6 +112,7 @@ class GnssSolver:
         ELEVATION_FILTER = config.get("solver", "elevation_filter")
         VELOCITY_EST = config.get("model", "estimate_velocity")
 
+        APRIORI_CONSTRAIN = EnumOnOff(config.get("solver", "a_priori_constrain"))
         INITIAL_POS = config.get("solver", "initial_pos_std")
         INITIAL_VEL = config.get("solver", "initial_vel_std")
         INITIAL_CLOCK_BIAS = config.get("solver", "initial_clock_std")
@@ -183,6 +183,7 @@ class GnssSolver:
             "MAX_ITER": MAX_ITER,
             "STOP_CRITERIA": STOP_CRITERIA,
             "SOLVER": SOLVER_ALG,
+            "APRIORI_CONSTRAIN": APRIORI_CONSTRAIN,
             "TROPO": TROPO,
             "IONO": IONO,
             "MODEL": MODEL,
@@ -205,10 +206,9 @@ class GnssSolver:
             self.log.info(f"processing epoch {epoch}...")
             # fetch observation data for this epoch
             obs_for_epoch = self.obs_data_for_pos.get_epoch_data(epoch)
-            sats_for_epoch = obs_for_epoch.get_satellites()
 
             # initialize solve-for variables (receiver position and bias) for the present epoch
-            state = self._init_state(epoch, sats_for_epoch)
+            state = self._init_state(epoch, obs_for_epoch.get_satellites())
 
             # call lower level of position estimation
             success = self._estimate_position(epoch, obs_for_epoch, state)
@@ -244,18 +244,17 @@ class GnssSolver:
         Returns:
             GnssStateSpace : initialized state vector
         """
+        # TODO: add configuration to initialize from the previous position or back to initial configuration
         # initialize GNSS state (first epoch)
         if len(self.solution) == 0:
-            position = np.array(self._metadata["INITIAL_STATES"]["pos"][0:3], dtype=np.float64)
-            velocity = np.array(self._metadata["INITIAL_STATES"]["vel"][0:3], dtype=np.float64)
-            clock = list(self._metadata["INITIAL_STATES"].get("clock"))[0]
-            state = GnssStateSpace(self._metadata, position=position, velocity=velocity, clock_bias=clock,
-                                   epoch=epoch, sat_list=sat_list)
+            state = GnssStateSpace(self._metadata, epoch, sat_list)
+            state.initial_state = state.clone()
         else:
             # initialize from previous state
             prev_state = self.solution[-1]
             state = prev_state.clone()  # deep copy
             state.epoch = epoch
+            state.initial_state = state.clone()
         return state
 
     def _estimate_position(self, epoch, obs_data, state):
@@ -276,12 +275,13 @@ class GnssSolver:
         iteration = 0
         rms = rms_prev = 1
         prefit_residuals = postfit_residuals = dop_matrix = None
-        apply_elevation_filter = False if self._metadata["ELEVATION_FILTER"] is False else True
+        apply_elevation_filter = False if self._metadata["ELEVATION_FILTER"] == -1 else True
+        sats_for_epoch = obs_data.get_satellites()
 
         # build system geometry for this epoch
         system_geometry = SystemGeometry(obs_data, self.sat_clocks, self.sat_orbits)
 
-        self.log.debug(f"Available Satellites: {system_geometry.get_satellites()}")
+        self.log.debug(f"Available Satellites: {sats_for_epoch}")
 
         # Iterated Least-Squares algorithm
         while iteration < self._metadata["MAX_ITER"]:

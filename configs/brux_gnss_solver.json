@@ -34,7 +34,7 @@
          "_comment1": "Select first and last epochs in estimation arc in format YYYY-MM-DD hh:mm:ss",
          "_comment2": "Select false to deactivate fields",
          "first_epoch": "2019-01-14 06:15:00",
-         "last_epoch": "2019-01-14 06:19:59"
+         "last_epoch": "2019-01-14 06:15:30"
       },
 
       "_comment4": "Select the input data rate (in seconds). The rate must be consistent with the RINEX OBS rate. Select false to disable.",
@@ -138,6 +138,8 @@
       "_comment1": "Select Algorithm. Available is 'WSL' - Weighted Least Squares",
       "algorithm": "WSL",
 
+      "a_priori_constrain": false,
+
       "_comment2": "maximum number of iterations in iterative procedure",
       "n_iterations": 10,
 
@@ -150,17 +152,17 @@
       "_comment34": "Enable / disable relativistic corrections: 0 - disable, 1 - enable",
       "relativistic_corrections": 1,
 
-      "_comment5": "Elevation filter. Select the value of minimum elevation angle to consider, in degree. Select false to turn off",
-      "elevation_filter": 2,
+      "_comment5": "Elevation filter. Select the value of minimum elevation angle to consider, in degree. Select -1 to turn off",
+      "elevation_filter": -1,
 
       "_comment7": "Initial states and expected standard deviations",
-      "initial_pos_std": [0, 0, 0, 1, 1, 1],
-      "initial_vel_std": [0, 0, 0, 1, 1, 1],
-      "initial_clock_std": [0, 1],
-      "initial_isb_std": [0, 1],
-      "initial_iono_std": [0, 1],
-      "initial_tropo_std": [0, 1],
-      "initial_clock_rate_std": [0, 1]
+      "initial_pos_std": [0.0, 0.0, 0.0, 1E6, 1E6, 1E6],
+      "initial_vel_std": [0.0, 0.0, 0.0, 1, 1, 1],
+      "initial_clock_std": [0.0, 10],
+      "initial_isb_std": [0.0, 1],
+      "initial_iono_std": [0.0, 20],
+      "initial_tropo_std": [0.0, 10],
+      "initial_clock_rate_std": [0.0, 1]
    },
 
    "output": {

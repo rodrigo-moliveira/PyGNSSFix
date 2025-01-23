@@ -4,7 +4,7 @@ import numpy as np
 from src import constants
 from src.constants import SPEED_OF_LIGHT
 from src.errors import SolverError
-from src.io.config.enums import EnumFrequencyModel
+from src.io.config.enums import EnumFrequencyModel, EnumOnOff
 from src.modules.estimators.weighted_ls import WeightedLeastSquares
 
 
@@ -97,6 +97,10 @@ class LSQ_Engine:
         """
         pass
 
+    def _build_init_state_cov(self, state):
+        # TODO add documentation
+        return None, None, None
+
     @staticmethod
     def compute_residual_los(sat, epoch, datatype, obs_data, reconstructor):
         """
@@ -136,7 +140,13 @@ class LSQ_Engine:
             SolverError: an exception is raised if the LS problem fails to be solved
         """
         try:
-            solver = WeightedLeastSquares(self.y_vec, self.design_mat, W=self.weight_mat)
+
+            if self._metadata["APRIORI_CONSTRAIN"] == EnumOnOff.ENABLED:
+                X0, X0_prev, P0_inv = self._build_init_state_cov(state)
+            else:
+                X0, X0_prev, P0_inv = None, None, None
+            solver = WeightedLeastSquares(self.y_vec, self.design_mat, W=self.weight_mat, P0_inv=P0_inv,
+                                          X0=X0, X0_prev=X0_prev)
             solver.solve()
             dop_matrix = np.linalg.inv(self.design_mat.T @ self.design_mat)
 
@@ -325,6 +335,52 @@ class LSQ_Engine_Position(LSQ_Engine):
 
         return prefit_residuals, line_sight
 
+    def _build_init_state_cov(self, state):
+        tropo_offset = 1 if self._estimate_tropo else 0
+
+        n_observables, n_states = np.shape(self.design_mat)
+
+        initial_state = state.initial_state
+        P0 = np.zeros((n_states, n_states))
+        X0 = np.zeros(n_states)
+        X0_prev = np.zeros(n_states)
+
+        # position
+        P0[0:3, 0:3] = initial_state.cov_position  # TODO: only keep diagonal elements?
+        X0[0:3] = initial_state.position
+        X0_prev[0:3] = state.position
+
+        # clock bias (currently in meters)
+        # TODO: fix units here
+        P0[3, 3] = initial_state.cov_clock_bias
+        X0[3] = initial_state.clock_bias * constants.SPEED_OF_LIGHT
+        X0_prev[3] = state.clock_bias * constants.SPEED_OF_LIGHT
+
+        # tropo
+        if self._estimate_tropo:
+            P0[4, 4] = initial_state.cov_tropo_wet
+            X0[4] = initial_state.tropo_wet
+            X0_prev[4] = state.tropo_wet
+
+        # iono
+        iono_offset = 0
+        for const in self.constellations:
+            if self._estimate_diono[const]:
+                for iSat, sat in enumerate(self.sat_list[const]):
+                    cov_iono = initial_state.cov_iono[sat]
+                    P0[4 + tropo_offset + iono_offset + iSat, 4 + tropo_offset + iono_offset + iSat] = cov_iono
+                    X0[4 + tropo_offset + iono_offset + iSat] = initial_state.iono[sat]
+                    X0_prev[4 + tropo_offset + iono_offset + iSat] = state.iono[sat]
+                iono_offset += len(self.sat_list[const])
+
+        # ISB
+        if len(self.constellations) > 1:
+            P0[-1, -1] = initial_state.cov_isb
+            X0[-1] = initial_state.isb * constants.SPEED_OF_LIGHT
+            X0_prev[-1] = state.isb * constants.SPEED_OF_LIGHT
+
+        return X0, X0_prev, np.linalg.inv(P0)
+
     def _build_lsq(self, epoch, obs_data, reconstructor):
         iono_offset = 0
         obs_offset = 0
@@ -340,14 +396,24 @@ class LSQ_Engine_Position(LSQ_Engine):
 
                     # filling the LS matrices
                     self.y_vec[obs_offset + iSat] = residual
-                    self.design_mat[obs_offset + iSat][0:3] = los  # position
-                    self.design_mat[obs_offset + iSat, 3] = 1.0  # clock
+
+                    # position
+                    self.design_mat[obs_offset + iSat][0:3] = los
+
+                    # clock
+                    self.design_mat[obs_offset + iSat, 3] = 1.0
+
+                    # tropo
                     if self._estimate_tropo:
                         map_wet = reconstructor._system_geometry.get("tropo_map_wet", sat)
                         self.design_mat[obs_offset + iSat, 4] = map_wet
+
+                    # iono
                     if self._estimate_diono[const]:
                         factor = (self.datatypes[const][0].freq.freq_value / datatype.freq.freq_value) ** 2
                         self.design_mat[obs_offset + iSat, 4 + tropo_offset + iono_offset + iSat] = 1.0 * factor  # iono
+
+                    # ISB
                     if iConst > 0:
                         self.design_mat[obs_offset + iSat, -1] = 1.0  # ISB
 
