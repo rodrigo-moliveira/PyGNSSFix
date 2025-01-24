@@ -178,8 +178,9 @@ class GnssStateSpace(Container):
         Args:
             sat_list(list[src.data_types.gnss.Satellite]) : list of available satellites
         """
-        #if self.initial_state is not None:
-        #    self.initial_state.update_sat_list(sat_list)
+        _states = self.get_additional_info("states")
+        if "iono" not in _states:
+            return
 
         for sat in sat_list:
             if sat not in self.iono:

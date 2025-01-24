@@ -190,12 +190,12 @@ class PseudorangeReconstructor(ObservationReconstructor):
 
         # iono estimated correction dI
         dI = 0.0
-        if self._metadata["MODEL"][sat.sat_system] == EnumFrequencyModel.DUAL_FREQ:
+        if self._metadata["IONO"][sat.sat_system].estimate_diono():
             try:
                 factor = (self._metadata["CODES"][sat.sat_system][0].freq.freq_value /
                           datatype.freq.freq_value) ** 2
                 dI = factor * self._state.iono[sat]
-            except KeyError:
+            except KeyError or TypeError:
                 pass
 
         # troposphere
