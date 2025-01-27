@@ -3,6 +3,7 @@
 import numpy as np
 
 from src.data_mng import Container
+from src import constants
 from src.io.config import config_dict, EnumFrequencyModel
 from src.models.gnss_models import compute_ggto
 
@@ -42,7 +43,18 @@ class GnssStateSpace(Container):
     __slots__ = __states__ + __covs__ + ["epoch", "_info", "initial_state"]
 
     def __init__(self, metadata=None, epoch=None, sat_list=None):
-        # TODO: add docstring
+        """
+        GnssStateSpace constructor.
+
+        Builds a GNSS state space object with the initial states and covariances defined in the `metadata` dict, defined
+        in :py:class:`src.modules.gnss_solver.gnss_solver.GnssSolver`.
+        If the metadata is not provided, all the state variables and covariances are initialized as None.
+
+        Args:
+            metadata(dict): dictionary with the metadata information on initial states and covariances
+            epoch(src.data_types.date.Epoch): Epoch object for this time instant
+            sat_list(list[src.data_types.gnss.Satellite]): list of available satellites (for iono initialization)
+        """
         super().__init__()
 
         # dict to store state information
@@ -63,6 +75,7 @@ class GnssStateSpace(Container):
 
     def clone(self):
         """ Returns a copy of this GnssStateSpace object. All state variables are deep-copied.
+
         Returns:
             GnssStateSpace : cloned GnssStateSpace instance
         """
@@ -109,15 +122,15 @@ class GnssStateSpace(Container):
     def _init_states(self, metadata, sat_list):
         _states = ["position", "clock_bias"]  # mandatory states
 
-        # TODO: pay attention to the units of the initial clock states.
+        # TODO: pay attention to the units of the initial clock states. INPUT UNITS ARE SECONDS
 
         # initialize position
         self.position = np.array(metadata["INITIAL_STATES"]["pos"][0:3], dtype=np.float64)
-        self.cov_position = np.diag(metadata["INITIAL_STATES"]["pos"][3:6])
+        self.cov_position = np.diag(np.array(metadata["INITIAL_STATES"]["pos"][3:6]))
 
-        # initialize clock bias
-        self.clock_bias = list(metadata["INITIAL_STATES"].get("clock"))[0]
-        self.cov_clock_bias = list(metadata["INITIAL_STATES"].get("clock"))[1]
+        # initialize clock bias (convert input units from seconds to meters)
+        self.clock_bias = list(metadata["INITIAL_STATES"].get("clock"))[0] * constants.SPEED_OF_LIGHT
+        self.cov_clock_bias = list(metadata["INITIAL_STATES"].get("clock"))[1] * constants.SPEED_OF_LIGHT**2
 
         # velocity and clock bias rates are additional states, that are estimated when set by the user
         self.velocity = None
@@ -133,8 +146,8 @@ class GnssStateSpace(Container):
             self.cov_clock_bias_rate = dict()
 
             for constellation in metadata["CONSTELLATIONS"]:
-                self.clock_bias_rate[constellation] = list(metadata["INITIAL_STATES"].get("clock_rate"))[0]
-                self.cov_clock_bias_rate[constellation] = list(metadata["INITIAL_STATES"].get("clock_rate"))[1]
+                self.clock_bias_rate[constellation] = list(metadata["INITIAL_STATES"].get("clock_rate"))[0] * constants.SPEED_OF_LIGHT
+                self.cov_clock_bias_rate[constellation] = list(metadata["INITIAL_STATES"].get("clock_rate"))[1] * constants.SPEED_OF_LIGHT**2
 
         # iono dict (if dual-frequency mode is selected)
         self.iono = dict()
@@ -153,8 +166,9 @@ class GnssStateSpace(Container):
         self.isb = None
         self.cov_isb = None
         if len(metadata["CONSTELLATIONS"]) > 1:
-            self.isb = list(metadata["INITIAL_STATES"].get("isb"))[0]
-            self.cov_isb = list(metadata["INITIAL_STATES"].get("isb"))[1]
+            # convert input units from seconds to meters
+            self.isb = list(metadata["INITIAL_STATES"].get("isb"))[0] * constants.SPEED_OF_LIGHT
+            self.cov_isb = list(metadata["INITIAL_STATES"].get("isb"))[1] * constants.SPEED_OF_LIGHT**2
             self.add_additional_info("clock_master", metadata["CONSTELLATIONS"][0])
             self.add_additional_info("clock_slave", metadata["CONSTELLATIONS"][1])
             _states.append("isb")
@@ -184,8 +198,11 @@ class GnssStateSpace(Container):
 
         for sat in sat_list:
             if sat not in self.iono:
-                self.iono[sat] = 0.0  # add new satellite  # TODO: add here initial value for iono
-                self.cov_iono[sat] = 0.0
+                self.iono[sat] = 0.0
+                self.cov_iono[sat] = 1.0
+                if self.initial_state is not None and sat in self.initial_state.iono:
+                    self.iono[sat] = self.initial_state.iono[sat]
+                    self.cov_iono[sat] = self.initial_state.cov_iono[sat]
 
         _to_remove = []
         for sat in self.iono:
@@ -225,6 +242,8 @@ class GnssStateSpace(Container):
                 `constellation` parameter
              time_correction(dict or None): dict with the GGTO data from the
                 :py:class:`src.data_mng.gnss.navigation_data.NavigationHeader` instance
+        Returns:
+            float: clock bias for the required constellation in meters
         """
         if "isb" in self.get_additional_info("states"):
             if constellation == self.get_additional_info("clock_master"):
@@ -270,7 +289,7 @@ class GnssStateSpace(Container):
         if estimate_ggto is False:
             week, sow = self.epoch.gnss_time
             # compute GGTO from broadcast message
-            ggto = compute_ggto(time_correction, week, sow)
+            ggto = compute_ggto(time_correction, week, sow) * constants.SPEED_OF_LIGHT
             if constellation == self.get_additional_info("clock_slave"):
                 if constellation == "GPS":
                     # in case the slave constellation is GPS, we need to fix the GGTO
@@ -313,11 +332,3 @@ class GnssStateSpace(Container):
         if "pr_rate_postfit_residuals" in self._info:
             exportable_lst.append("pr_rate_postfit_residuals")
         return exportable_lst
-
-    def get_state_and_covariance(self):
-        """
-        Returns:
-            tuple: tuple with the state vector and the covariance matrix
-        """
-        pass
-        # TODO: finish this method

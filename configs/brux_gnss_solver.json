@@ -74,7 +74,7 @@
       "_comment1": "Select the observation model. The available models are combined, uncombined. The combined model requires 2 observations.",
       "obs_model": "uncombined",
 
-      "estimate_velocity": false,
+      "estimate_velocity": true,
       "_comment2": "Use Doppler measurements to estimate velocity",
 
       "estimate_ggto": true,
@@ -156,13 +156,13 @@
       "elevation_filter": -1,
 
       "_comment7": "Initial states and expected standard deviations",
-      "initial_pos_std": [0.0, 0.0, 0.0, 1E6, 1E6, 1E6],
+      "initial_pos_std": [4027881.7539237835,306998.8177072656,4919499.599692411,1.1220253789579304,0.8458168956014995,1.8509878014591057],
       "initial_vel_std": [0.0, 0.0, 0.0, 1, 1, 1],
-      "initial_clock_std": [0.0, 10],
-      "initial_isb_std": [0.0, 1],
-      "initial_iono_std": [0.0, 20],
+      "initial_clock_std": [1.3923152945095002e-07,1.5692364321243285e-17],
+      "initial_isb_std": [-2.0163855665068414e-08,6.789479304700753e-18],
+      "initial_iono_std": [0.0, 10],
       "initial_tropo_std": [0.0, 10],
-      "initial_clock_rate_std": [0.0, 1]
+      "initial_clock_rate_std": [0.0, 1E-18]
    },
 
    "output": {

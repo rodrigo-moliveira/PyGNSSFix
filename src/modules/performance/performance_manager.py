@@ -111,7 +111,10 @@ class PerformanceManager:
         """ Computes the estimation error and RMS statistics for position and velocity in ECEF and local ENU frames. """
         # fetch estimated data
         position = self.data_manager.get_data("position")
-        velocity = self.data_manager.get_data("velocity")
+        try:
+            velocity = self.data_manager.get_data("velocity")
+        except:
+            velocity = None
 
         # compute Root Mean Square Error (RMSE) in ECEF and ENU frames
         self.log.info("Computing estimation error and root mean square error...")
@@ -124,18 +127,22 @@ class PerformanceManager:
                 self.pos_error["cov_enu"] = error.compute_error_static(position, self.true_pos, self.true_pos,
                                                                        local="ENU")
 
-            # compute velocity errors
-            self.vel_error["error_ecef"], self.vel_error["error_enu"], self.vel_error["cov_ecef"], \
-                self.vel_error["cov_enu"] = error.compute_error_static(velocity, self.true_vel, self.true_pos,
-                                                                       local="ENU")
+            if velocity is not None:
+                # compute velocity errors
+                self.vel_error["error_ecef"], self.vel_error["error_enu"], self.vel_error["cov_ecef"], \
+                    self.vel_error["cov_enu"] = error.compute_error_static(velocity, self.true_vel, self.true_pos,
+                                                                           local="ENU")
 
         else:
             raise NotImplementedError(f"Dynamic error computation not yet implemented...")
 
         rms_pos_ecef = error.compute_rms_error(self.pos_error["error_ecef"])
         rms_pos_enu = error.compute_rms_error(self.pos_error["error_enu"])
-        rms_vel_ecef = error.compute_rms_error(self.vel_error["error_ecef"])
-        rms_vel_enu = error.compute_rms_error(self.vel_error["error_enu"])
+        if velocity is not None:
+            rms_vel_ecef = error.compute_rms_error(self.vel_error["error_ecef"])
+            rms_vel_enu = error.compute_rms_error(self.vel_error["error_enu"])
+        else:
+            rms_vel_ecef = rms_vel_enu = {'x': 0, 'y': 0, 'z': 0}
 
         # save computed errors to files
         self._write_outputs(post_proc_dir, rms_pos_ecef, rms_pos_enu, rms_vel_ecef, rms_vel_enu)

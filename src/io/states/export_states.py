@@ -93,13 +93,14 @@ def export_to_file(state_variable, state):
                f"{cov_zz},{cov_xy},{cov_xz},{cov_yz}"
 
     if state_variable == "clock_bias":
-        return f"{state.clock_bias},{state.cov_clock_bias}"
+        return f"{state.clock_bias/constants.SPEED_OF_LIGHT},{state.cov_clock_bias/constants.SPEED_OF_LIGHT**2}"
 
     if state_variable == "clock_bias_rate":
         data = []
         for constellation, clock_rate in state.clock_bias_rate.items():
             try:
-                data.append(f"{constellation},{clock_rate},{state.cov_clock_bias_rate[constellation]}")
+                data.append(f"{constellation},{clock_rate/constants.SPEED_OF_LIGHT},"
+                            f"{state.cov_clock_bias_rate[constellation]/constants.SPEED_OF_LIGHT**2}")
             except KeyError:
                 pass
         return data
@@ -108,7 +109,7 @@ def export_to_file(state_variable, state):
         return f"{state.tropo_wet},{state.cov_tropo_wet}"
 
     if state_variable == "isb":
-        return f"{state.isb},{state.cov_isb}"
+        return f"{state.isb/constants.SPEED_OF_LIGHT},{state.cov_isb/constants.SPEED_OF_LIGHT**2}"
 
     if state_variable == "iono":
         cov = state.cov_iono

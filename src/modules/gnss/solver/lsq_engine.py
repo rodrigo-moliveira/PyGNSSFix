@@ -351,10 +351,9 @@ class LSQ_Engine_Position(LSQ_Engine):
         X0_prev[0:3] = state.position
 
         # clock bias (currently in meters)
-        # TODO: fix units here
         P0[3, 3] = initial_state.cov_clock_bias
-        X0[3] = initial_state.clock_bias * constants.SPEED_OF_LIGHT
-        X0_prev[3] = state.clock_bias * constants.SPEED_OF_LIGHT
+        X0[3] = initial_state.clock_bias
+        X0_prev[3] = state.clock_bias
 
         # tropo
         if self._estimate_tropo:
@@ -376,8 +375,8 @@ class LSQ_Engine_Position(LSQ_Engine):
         # ISB
         if len(self.constellations) > 1:
             P0[-1, -1] = initial_state.cov_isb
-            X0[-1] = initial_state.isb * constants.SPEED_OF_LIGHT
-            X0_prev[-1] = state.isb * constants.SPEED_OF_LIGHT
+            X0[-1] = initial_state.isb
+            X0_prev[-1] = state.isb
 
         return X0, X0_prev, np.linalg.inv(P0)
 
@@ -431,7 +430,7 @@ class LSQ_Engine_Position(LSQ_Engine):
         tropo_offset = 1 if self._estimate_tropo else 0
 
         state.position += dX[0:3]
-        state.clock_bias += (dX[3] / constants.SPEED_OF_LIGHT)  # receiver clock in seconds
+        state.clock_bias += dX[3]
 
         # if iono is estimated
         iono_offset = 0
@@ -445,8 +444,8 @@ class LSQ_Engine_Position(LSQ_Engine):
 
         # ISB
         if len(self.constellations) > 1:
-            state.isb += dX[-1] / constants.SPEED_OF_LIGHT  # ISB between master and slave constellations
-            state.cov_isb = float(cov[-1, -1]) / (constants.SPEED_OF_LIGHT ** 2)  # in seconds^2
+            state.isb += dX[-1]
+            state.cov_isb = float(cov[-1, -1])
 
         # tropo
         if self._estimate_tropo:
@@ -455,7 +454,7 @@ class LSQ_Engine_Position(LSQ_Engine):
 
         # unpack covariance matrices
         state.cov_position = np.array(cov[0:3, 0:3])
-        state.cov_clock_bias = float(cov[3, 3]) / (constants.SPEED_OF_LIGHT ** 2)  # in seconds^2
+        state.cov_clock_bias = float(cov[3, 3])
 
 
 class LSQ_Engine_Velocity(LSQ_Engine):
@@ -585,6 +584,6 @@ class LSQ_Engine_Velocity(LSQ_Engine):
         state.cov_velocity = cov[0:3, 0:3]  # in (m/s)^2
 
         for iConst, const in enumerate(self.constellations):
-            # receiver clock drift [dimensionless]
-            state.clock_bias_rate[const] = dX[iConst + 3] / constants.SPEED_OF_LIGHT
-            state.cov_clock_bias_rate[const] = float(cov[iConst + 3, iConst + 3]) / (constants.SPEED_OF_LIGHT ** 2)
+            # receiver clock drift [m/m]
+            state.clock_bias_rate[const] = dX[iConst + 3] #/ constants.SPEED_OF_LIGHT
+            state.cov_clock_bias_rate[const] = float(cov[iConst + 3, iConst + 3]) #/ (constants.SPEED_OF_LIGHT ** 2)
