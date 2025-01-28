@@ -138,6 +138,9 @@
       "_comment1": "Select Algorithm. Available is 'WSL' - Weighted Least Squares",
       "algorithm": "WSL",
 
+      "a_priori_constrain": true,
+      "feedforward_solution": false,
+
       "_comment2": "maximum number of iterations in iterative procedure",
       "n_iterations": 10,
 
@@ -150,13 +153,17 @@
       "_comment34": "Enable / disable relativistic corrections: 0 - disable, 1 - enable",
       "relativistic_corrections": 1,
 
-      "_comment5": "Elevation filter. Select the value of minimum elevation angle to consider, in degree. Select false to turn off",
-      "elevation_filter": 2,
+      "_comment5": "Elevation filter. Select the value of minimum elevation angle to consider, in degree. Select -1 to turn off",
+      "elevation_filter": -1,
 
-      "_comment7": "Initial position (m), velocity (m/s) and clock (s)",
-      "initial_pos_std": [0, 0, 0, 1, 1, 1],
-      "initial_vel_std": [0, 0, 0, 1, 1, 1],
-      "initial_clock_std": [0, 1]
+      "_comment7": "Initial states and expected covariances for the initial state vector.",
+      "initial_pos_cov": [4027881.7539237835,306998.8177072656,4919499.599692411,1.1220253789579304,0.8458168956014995,1.8509878014591057],
+      "initial_vel_cov": [-0.017844201417833716,-0.015539393893845954,-0.01952680734507298,10,10,10],
+      "initial_clock_cov": [1.3923152945095002e-07,1.5692364321243285e-17],
+      "initial_isb_cov": [-2.0163855665068414e-08,6.789479304700753e-18],
+      "initial_iono_cov": [0.0, 10],
+      "initial_tropo_cov": [0.0, 10],
+      "initial_clock_rate_cov": [0.0, 1E-1]
    },
 
    "output": {

@@ -84,7 +84,7 @@ class SatelliteGeometry(Container):
         """
         rec_pos = state.position
         time_correction = sat_clocks.nav_data.header.time_correction if sat_clocks.nav_data is not None else None
-        rec_bias = state.get_clock_bias(constellation, time_correction)
+        rec_bias = state.get_clock_bias(constellation, time_correction) / SPEED_OF_LIGHT  # receiver clock bias in [s]
 
         # get reception time in GNSS time system ( T_GNSS = T_receiver - t_(receiver_bias) )
         time_reception = epoch + timedelta(seconds=-rec_bias)

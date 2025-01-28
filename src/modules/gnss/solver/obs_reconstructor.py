@@ -168,7 +168,7 @@ class PseudorangeReconstructor(ObservationReconstructor):
         # user clock in meters (with proper ISB applied, if necessary)
         sat_clocks = self._system_geometry.sat_clocks
         time_correction = sat_clocks.nav_data.header.time_correction if sat_clocks.nav_data is not None else None
-        dt_rec = self._state.get_clock_bias(sat.sat_system, time_correction) * constants.SPEED_OF_LIGHT
+        dt_rec = self._state.get_clock_bias(sat.sat_system, time_correction)  # receiver clock bias in [m]
 
         # get satellite clock at time of transmission
         time_emission = self._system_geometry.get("time_emission", sat)
@@ -190,12 +190,12 @@ class PseudorangeReconstructor(ObservationReconstructor):
 
         # iono estimated correction dI
         dI = 0.0
-        if self._metadata["MODEL"][sat.sat_system] == EnumFrequencyModel.DUAL_FREQ:
+        if self._metadata["IONO"][sat.sat_system].estimate_diono():
             try:
                 factor = (self._metadata["CODES"][sat.sat_system][0].freq.freq_value /
                           datatype.freq.freq_value) ** 2
                 dI = factor * self._state.iono[sat]
-            except KeyError:
+            except KeyError or TypeError:
                 pass
 
         # troposphere

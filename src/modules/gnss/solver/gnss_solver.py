@@ -1,6 +1,5 @@
 """ Module with the GNSS PNT Solver Algorithm """
 import os
-import numpy as np
 
 from src.data_mng.gnss.state_space import GnssStateSpace
 from src.data_types.gnss import DataType
@@ -109,12 +108,29 @@ class GnssSolver:
         SOLVER_ALG = EnumSolver.init_model(config.get("solver", "algorithm"))
         TX_TIME_ALG = EnumTransmissionTime(config.get("solver", "transmission_time_alg"))
         REL_CORRECTION = EnumOnOff(config.get("solver", "relativistic_corrections"))  # 0 disable, 1 enable
-        INITIAL_POS = config.get("solver", "initial_pos_std")
-        INITIAL_VEL = config.get("solver", "initial_vel_std")
-        INITIAL_CLOCK_BIAS = config.get("solver", "initial_clock_std")
         CONSTELLATIONS = config.get("model", "constellations")
         ELEVATION_FILTER = config.get("solver", "elevation_filter")
         VELOCITY_EST = config.get("model", "estimate_velocity")
+
+        APRIORI_CONSTRAIN = EnumOnOff(config.get("solver", "a_priori_constrain"))
+        FEEDFORWARD = EnumOnOff(config.get("solver", "feedforward_solution"))
+        INITIAL_POS = config.get("solver", "initial_pos_cov")
+        INITIAL_VEL = config.get("solver", "initial_vel_cov")
+        INITIAL_CLOCK_BIAS = config.get("solver", "initial_clock_cov")
+        INITIAL_ISB = config.get("solver", "initial_isb_cov")
+        INITIAL_IONO = config.get("solver", "initial_iono_cov")
+        INITIAL_TROPO = config.get("solver", "initial_tropo_cov")
+        INITIAL_CLOCK_RATE = config.get("solver", "initial_clock_rate_cov")
+        INITIAL_STATE = {
+            "pos": INITIAL_POS,
+            "vel": INITIAL_VEL,
+            "clock": INITIAL_CLOCK_BIAS,
+            "isb": INITIAL_ISB,
+            "iono": INITIAL_IONO,
+            "tropo": INITIAL_TROPO,
+            "clock_rate": INITIAL_CLOCK_RATE
+        }
+
         TROPO = TropoManager()
         obs_model = config_dict.get("obs_model")
 
@@ -168,6 +184,8 @@ class GnssSolver:
             "MAX_ITER": MAX_ITER,
             "STOP_CRITERIA": STOP_CRITERIA,
             "SOLVER": SOLVER_ALG,
+            "APRIORI_CONSTRAIN": APRIORI_CONSTRAIN,
+            "FEEDFORWARD": FEEDFORWARD,
             "TROPO": TROPO,
             "IONO": IONO,
             "MODEL": MODEL,
@@ -175,9 +193,7 @@ class GnssSolver:
             "DOPPLER": DOPPLER,
             "REL_CORRECTION": REL_CORRECTION,
             "TX_TIME_ALG": TX_TIME_ALG,
-            "INITIAL_POS": INITIAL_POS,
-            "INITIAL_VEL": INITIAL_VEL,
-            "INITIAL_CLOCK_BIAS": INITIAL_CLOCK_BIAS,
+            "INITIAL_STATES": INITIAL_STATE,
             "ELEVATION_FILTER": ELEVATION_FILTER,
             "VELOCITY_EST": VELOCITY_EST
         }
@@ -192,10 +208,9 @@ class GnssSolver:
             self.log.info(f"processing epoch {epoch}...")
             # fetch observation data for this epoch
             obs_for_epoch = self.obs_data_for_pos.get_epoch_data(epoch)
-            sats_for_epoch = obs_for_epoch.get_satellites()
 
             # initialize solve-for variables (receiver position and bias) for the present epoch
-            state = self._init_state(epoch, sats_for_epoch)
+            state = self._init_state(epoch, obs_for_epoch.get_satellites())
 
             # call lower level of position estimation
             success = self._estimate_position(epoch, obs_for_epoch, state)
@@ -223,7 +238,7 @@ class GnssSolver:
         self.log.info("Successfully ending module GNSS Positioning Solver...")
 
     def _init_state(self, epoch, sat_list):
-        """ Initialize state vector for this epoch
+        """ Initialize state vector for this epoch.
 
         Args:
             epoch(src.data_types.date.Epoch): epoch to initialize the state vector
@@ -231,18 +246,17 @@ class GnssSolver:
         Returns:
             GnssStateSpace : initialized state vector
         """
-        # initialize GNSS state (first epoch)
-        if len(self.solution) == 0:
-            position = np.array(self._metadata["INITIAL_POS"][0:3], dtype=np.float64)
-            velocity = np.array(self._metadata["INITIAL_VEL"][0:3], dtype=np.float64)
-            clock = self._metadata["INITIAL_CLOCK_BIAS"][0]
-            state = GnssStateSpace(self._metadata, position=position, velocity=velocity, clock_bias=clock,
-                                   epoch=epoch, sat_list=sat_list)
+        # initialize GNSS state from user input configurations
+        feedforward = self._metadata["FEEDFORWARD"]
+        if len(self.solution) == 0 or feedforward == EnumOnOff.DISABLED:
+            state = GnssStateSpace(self._metadata, epoch, sat_list)
+            state.initial_state = state.clone()
         else:
             # initialize from previous state
             prev_state = self.solution[-1]
             state = prev_state.clone()  # deep copy
             state.epoch = epoch
+            state.initial_state = state.clone()
         return state
 
     def _estimate_position(self, epoch, obs_data, state):
@@ -263,12 +277,13 @@ class GnssSolver:
         iteration = 0
         rms = rms_prev = 1
         prefit_residuals = postfit_residuals = dop_matrix = None
-        apply_elevation_filter = False if self._metadata["ELEVATION_FILTER"] is False else True
+        apply_elevation_filter = False if self._metadata["ELEVATION_FILTER"] == -1 else True
+        sats_for_epoch = obs_data.get_satellites()
 
         # build system geometry for this epoch
         system_geometry = SystemGeometry(obs_data, self.sat_clocks, self.sat_orbits)
 
-        self.log.debug(f"Available Satellites: {system_geometry.get_satellites()}")
+        self.log.debug(f"Available Satellites: {sats_for_epoch}")
 
         # Iterated Least-Squares algorithm
         while iteration < self._metadata["MAX_ITER"]:
