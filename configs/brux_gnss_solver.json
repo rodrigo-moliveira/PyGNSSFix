@@ -139,6 +139,7 @@
       "algorithm": "WSL",
 
       "a_priori_constrain": true,
+      "feedforward_solution": false,
 
       "_comment2": "maximum number of iterations in iterative procedure",
       "n_iterations": 10,

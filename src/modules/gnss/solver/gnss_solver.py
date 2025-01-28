@@ -113,6 +113,7 @@ class GnssSolver:
         VELOCITY_EST = config.get("model", "estimate_velocity")
 
         APRIORI_CONSTRAIN = EnumOnOff(config.get("solver", "a_priori_constrain"))
+        FEEDFORWARD = EnumOnOff(config.get("solver", "feedforward_solution"))
         INITIAL_POS = config.get("solver", "initial_pos_cov")
         INITIAL_VEL = config.get("solver", "initial_vel_cov")
         INITIAL_CLOCK_BIAS = config.get("solver", "initial_clock_cov")
@@ -184,6 +185,7 @@ class GnssSolver:
             "STOP_CRITERIA": STOP_CRITERIA,
             "SOLVER": SOLVER_ALG,
             "APRIORI_CONSTRAIN": APRIORI_CONSTRAIN,
+            "FEEDFORWARD": FEEDFORWARD,
             "TROPO": TROPO,
             "IONO": IONO,
             "MODEL": MODEL,
@@ -236,7 +238,7 @@ class GnssSolver:
         self.log.info("Successfully ending module GNSS Positioning Solver...")
 
     def _init_state(self, epoch, sat_list):
-        """ Initialize state vector for this epoch
+        """ Initialize state vector for this epoch.
 
         Args:
             epoch(src.data_types.date.Epoch): epoch to initialize the state vector
@@ -244,9 +246,9 @@ class GnssSolver:
         Returns:
             GnssStateSpace : initialized state vector
         """
-        # TODO: add configuration to initialize from the previous position or back to initial configuration
-        # initialize GNSS state (first epoch)
-        if len(self.solution) == 0:
+        # initialize GNSS state from user input configurations
+        feedforward = self._metadata["FEEDFORWARD"]
+        if len(self.solution) == 0 or feedforward == EnumOnOff.DISABLED:
             state = GnssStateSpace(self._metadata, epoch, sat_list)
             state.initial_state = state.clone()
         else:

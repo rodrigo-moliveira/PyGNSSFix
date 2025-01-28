@@ -21,8 +21,11 @@ class LSQ_Engine:
         * x - state vector
         * G - state matrix (relates state vector with the observation vector)
 
-    Given the vector of observations y, the estimated state x^{hat} is given by (Normal Equation):
+    Given the vector of observations y, the unconstrained estimated state x^{hat} is given by (Normal Equation):
         x^{hat} = (G.T @ W @ G)^-1 @ G.T @ W @ y
+    Given the vector of observations y, the initial state vector x0, the initial covariance matrix P0_inv,
+    the constrained estimated state x^{hat} is given by:
+        x^{hat} = (P0_inv + G.T @ W @ G)^-1 @ (G.T @ W @ y + P0_inv @ x0)
     where W is the weight matrix.
 
     The `LSQ_Engine` class is responsible for filling the LSQ observation vector y and state matrices G and W.
@@ -98,7 +101,14 @@ class LSQ_Engine:
         pass
 
     def _build_init_state_cov(self, state):
-        # TODO add documentation
+        """ Builds the initial state vector and covariance matrix for the constrained WLS problem.
+
+        Args:
+            state(src.data_mng.gnss.state_space.GnssStateSpace): GNSS state vector object
+        Returns
+            tuple[numpy.ndarray, numpy.ndarray]: Tuple with the initial state vector and the inverse of the initial
+                                                covariance matrix
+        """
         return None, None
 
     @staticmethod
@@ -595,16 +605,14 @@ class LSQ_Engine_Velocity(LSQ_Engine):
         # initial_state = state.initial_state
         P0 = np.zeros((n_states, n_states))
         X0 = np.zeros(n_states)
-        X0_prev = np.zeros(n_states)
 
         # position
         for i in range(3):
             P0[i, i] = state.cov_velocity[i, i]
         X0[0:3] = state.velocity + np.cross(constants.EARTH_ANGULAR_RATE, state.position)
-        # X0_prev[0:3] = state.position
 
         for iConst, const in enumerate(self.constellations):
             # receiver clock drift [m/m]
             X0[3+iConst] = state.clock_bias_rate[const]
             P0[3 + iConst, 3 + iConst] = state.cov_clock_bias_rate[const]
-        return X0 - X0_prev, np.linalg.inv(P0)
+        return X0, np.linalg.inv(P0)
