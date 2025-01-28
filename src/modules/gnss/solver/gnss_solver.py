@@ -113,13 +113,13 @@ class GnssSolver:
         VELOCITY_EST = config.get("model", "estimate_velocity")
 
         APRIORI_CONSTRAIN = EnumOnOff(config.get("solver", "a_priori_constrain"))
-        INITIAL_POS = config.get("solver", "initial_pos_std")
-        INITIAL_VEL = config.get("solver", "initial_vel_std")
-        INITIAL_CLOCK_BIAS = config.get("solver", "initial_clock_std")
-        INITIAL_ISB = config.get("solver", "initial_isb_std")
-        INITIAL_IONO = config.get("solver", "initial_iono_std")
-        INITIAL_TROPO = config.get("solver", "initial_tropo_std")
-        INITIAL_CLOCK_RATE = config.get("solver", "initial_clock_rate_std")
+        INITIAL_POS = config.get("solver", "initial_pos_cov")
+        INITIAL_VEL = config.get("solver", "initial_vel_cov")
+        INITIAL_CLOCK_BIAS = config.get("solver", "initial_clock_cov")
+        INITIAL_ISB = config.get("solver", "initial_isb_cov")
+        INITIAL_IONO = config.get("solver", "initial_iono_cov")
+        INITIAL_TROPO = config.get("solver", "initial_tropo_cov")
+        INITIAL_CLOCK_RATE = config.get("solver", "initial_clock_rate_cov")
         INITIAL_STATE = {
             "pos": INITIAL_POS,
             "vel": INITIAL_VEL,

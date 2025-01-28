@@ -99,7 +99,7 @@ class LSQ_Engine:
 
     def _build_init_state_cov(self, state):
         # TODO add documentation
-        return None, None, None
+        return None, None
 
     @staticmethod
     def compute_residual_los(sat, epoch, datatype, obs_data, reconstructor):
@@ -142,11 +142,11 @@ class LSQ_Engine:
         try:
 
             if self._metadata["APRIORI_CONSTRAIN"] == EnumOnOff.ENABLED:
-                X0, X0_prev, P0_inv = self._build_init_state_cov(state)
+                X0, P0_inv = self._build_init_state_cov(state)
             else:
-                X0, X0_prev, P0_inv = None, None, None
+                X0, P0_inv = None, None
             solver = WeightedLeastSquares(self.y_vec, self.design_mat, W=self.weight_mat, P0_inv=P0_inv,
-                                          X0=X0, X0_prev=X0_prev)
+                                          X0=X0)
             solver.solve()
             dop_matrix = np.linalg.inv(self.design_mat.T @ self.design_mat)
 
@@ -346,11 +346,12 @@ class LSQ_Engine_Position(LSQ_Engine):
         X0_prev = np.zeros(n_states)
 
         # position
-        P0[0:3, 0:3] = initial_state.cov_position  # TODO: only keep diagonal elements?
+        for i in range(3):
+            P0[i, i] = initial_state.cov_position[i, i]
         X0[0:3] = initial_state.position
         X0_prev[0:3] = state.position
 
-        # clock bias (currently in meters)
+        # clock bias (in meters)
         P0[3, 3] = initial_state.cov_clock_bias
         X0[3] = initial_state.clock_bias
         X0_prev[3] = state.clock_bias
@@ -378,7 +379,7 @@ class LSQ_Engine_Position(LSQ_Engine):
             X0[-1] = initial_state.isb
             X0_prev[-1] = state.isb
 
-        return X0, X0_prev, np.linalg.inv(P0)
+        return X0 - X0_prev, np.linalg.inv(P0)
 
     def _build_lsq(self, epoch, obs_data, reconstructor):
         iono_offset = 0
@@ -585,5 +586,25 @@ class LSQ_Engine_Velocity(LSQ_Engine):
 
         for iConst, const in enumerate(self.constellations):
             # receiver clock drift [m/m]
-            state.clock_bias_rate[const] = dX[iConst + 3] #/ constants.SPEED_OF_LIGHT
-            state.cov_clock_bias_rate[const] = float(cov[iConst + 3, iConst + 3]) #/ (constants.SPEED_OF_LIGHT ** 2)
+            state.clock_bias_rate[const] = dX[iConst + 3]
+            state.cov_clock_bias_rate[const] = float(cov[iConst + 3, iConst + 3])
+
+    def _build_init_state_cov(self, state):
+        n_observables, n_states = np.shape(self.design_mat)
+
+        # initial_state = state.initial_state
+        P0 = np.zeros((n_states, n_states))
+        X0 = np.zeros(n_states)
+        X0_prev = np.zeros(n_states)
+
+        # position
+        for i in range(3):
+            P0[i, i] = state.cov_velocity[i, i]
+        X0[0:3] = state.velocity + np.cross(constants.EARTH_ANGULAR_RATE, state.position)
+        # X0_prev[0:3] = state.position
+
+        for iConst, const in enumerate(self.constellations):
+            # receiver clock drift [m/m]
+            X0[3+iConst] = state.clock_bias_rate[const]
+            P0[3 + iConst, 3 + iConst] = state.cov_clock_bias_rate[const]
+        return X0 - X0_prev, np.linalg.inv(P0)

@@ -23,12 +23,18 @@ class GnssStateSpace(Container):
         * isb (float): estimated inter system bias
         * clock_bias_rate (dict): dictionary with constellations as keys and clock bias rates as values
 
+    Additional parameters:
+        * epoch (Epoch): Epoch object for this time instant
+        * _info (dict): auxiliary information (see paragraph below)
+        * initial_state (GnssStateSpace): initial state space object with the initial states and covariances
+            for the iteration process of the GNSS solver
+
     Some auxiliary information is saved in the `_info` attribute dict, namely:
         * _info["states"] provides a list with all valid states to be estimated, depending on the configuration
         * _info["clock_master"] provides the master constellation, when the ISB state is active
         * _info["clock_slave"] provides the slave constellation, when the ISB state is active
 
-    Additionally, the GNSS solver will also save the following information in the _info dict:
+    Additionally, the GNSS solver will also save the following information in the `_info` dict parameter:
         * geometry
         * dop_ecef
         * dop_local
@@ -81,10 +87,15 @@ class GnssStateSpace(Container):
         """
         _states = self.get_additional_info("states")
         state = GnssStateSpace()
+        state.epoch = self.epoch
 
         # deep copy position
         state.position = np.copy(self.position)
         state.cov_position = np.copy(self.cov_position)
+
+        # deep copy velocity
+        state.velocity = np.copy(self.velocity)
+        state.cov_velocity = np.copy(self.cov_velocity)
 
         # deep copy clock bias
         state.clock_bias = self.clock_bias
@@ -120,9 +131,8 @@ class GnssStateSpace(Container):
         return state
 
     def _init_states(self, metadata, sat_list):
+        """ Initialize the state variables and covariances with the values provided in the metadata dict """
         _states = ["position", "clock_bias"]  # mandatory states
-
-        # TODO: pay attention to the units of the initial clock states. INPUT UNITS ARE SECONDS
 
         # initialize position
         self.position = np.array(metadata["INITIAL_STATES"]["pos"][0:3], dtype=np.float64)
@@ -130,7 +140,7 @@ class GnssStateSpace(Container):
 
         # initialize clock bias (convert input units from seconds to meters)
         self.clock_bias = list(metadata["INITIAL_STATES"].get("clock"))[0] * constants.SPEED_OF_LIGHT
-        self.cov_clock_bias = list(metadata["INITIAL_STATES"].get("clock"))[1] * constants.SPEED_OF_LIGHT**2
+        self.cov_clock_bias = list(metadata["INITIAL_STATES"].get("clock"))[1] * constants.SPEED_OF_LIGHT ** 2
 
         # velocity and clock bias rates are additional states, that are estimated when set by the user
         self.velocity = None
@@ -139,15 +149,16 @@ class GnssStateSpace(Container):
         self.cov_clock_bias_rate = None
         if metadata["VELOCITY_EST"]:
             _states += ["velocity", "clock_bias_rate"]
-
             self.velocity = np.array(metadata["INITIAL_STATES"]["vel"][0:3], dtype=np.float64)
             self.cov_velocity = np.diag(metadata["INITIAL_STATES"]["vel"][3:6])
             self.clock_bias_rate = dict()
             self.cov_clock_bias_rate = dict()
 
             for constellation in metadata["CONSTELLATIONS"]:
-                self.clock_bias_rate[constellation] = list(metadata["INITIAL_STATES"].get("clock_rate"))[0] * constants.SPEED_OF_LIGHT
-                self.cov_clock_bias_rate[constellation] = list(metadata["INITIAL_STATES"].get("clock_rate"))[1] * constants.SPEED_OF_LIGHT**2
+                self.clock_bias_rate[constellation] = list(metadata["INITIAL_STATES"].get("clock_rate"))[0] \
+                                                      * constants.SPEED_OF_LIGHT
+                self.cov_clock_bias_rate[constellation] = list(metadata["INITIAL_STATES"].get("clock_rate"))[1] \
+                                                          * constants.SPEED_OF_LIGHT ** 2
 
         # iono dict (if dual-frequency mode is selected)
         self.iono = dict()
@@ -168,7 +179,7 @@ class GnssStateSpace(Container):
         if len(metadata["CONSTELLATIONS"]) > 1:
             # convert input units from seconds to meters
             self.isb = list(metadata["INITIAL_STATES"].get("isb"))[0] * constants.SPEED_OF_LIGHT
-            self.cov_isb = list(metadata["INITIAL_STATES"].get("isb"))[1] * constants.SPEED_OF_LIGHT**2
+            self.cov_isb = list(metadata["INITIAL_STATES"].get("isb"))[1] * constants.SPEED_OF_LIGHT ** 2
             self.add_additional_info("clock_master", metadata["CONSTELLATIONS"][0])
             self.add_additional_info("clock_slave", metadata["CONSTELLATIONS"][1])
             _states.append("isb")
@@ -187,7 +198,7 @@ class GnssStateSpace(Container):
         self.add_additional_info("states", _states)
 
     def update_sat_list(self, sat_list):
-        """ Update the satellite list of the internal iono state with the one provided as argument
+        """ Update the satellite list of the internal iono state with the one provided as argument.
 
         Args:
             sat_list(list[src.data_types.gnss.Satellite]) : list of available satellites
@@ -278,6 +289,8 @@ class GnssStateSpace(Container):
                 `constellation` parameter
              time_correction(dict or None): dict with the GGTO data from the
                 :py:class:`src.data_mng.gnss.navigation_data.NavigationHeader` instance
+        Returns:
+            float: ISB (Inter-System bias) for the required constellation in meters
 
         Reference:
             [1] Springer Handbook of Global Navigation Satellite Systems, Peter J.G. Teunissen, Oliver Montenbruck,

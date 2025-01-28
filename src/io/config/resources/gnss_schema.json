@@ -134,12 +134,16 @@
         "transmission_time_alg": {"type": "integer", "minimum": 0, "maximum": 2},
         "relativistic_corrections": {"type": "integer", "minimum": 0, "maximum": 1},
         "elevation_filter": {"type": "number"},
-        "initial_pos_std": {"type": "array", "items": {"type": "number"}},
-        "initial_vel_std": {"type": "array", "items": {"type": "number"}},
-        "initial_clock_std": {"type": "array", "items": {"type": "number"}}
+        "initial_pos_cov": {"type": "array", "items": {"type": "number"}},
+        "initial_vel_cov": {"type": "array", "items": {"type": "number"}},
+        "initial_clock_cov": {"type": "array", "items": {"type": "number"}},
+        "initial_isb_cov": {"type": "array", "items": {"type": "number"}},
+        "initial_iono_cov": {"type": "array", "items": {"type": "number"}},
+        "initial_tropo_cov": {"type": "array", "items": {"type": "number"}},
+        "initial_clock_rate_cov": {"type": "array", "items": {"type": "number"}}
       },
       "required": ["trace_files","algorithm", "a_priori_constrain", "n_iterations", "stop_criteria", "transmission_time_alg", "relativistic_corrections",
-      "elevation_filter", "initial_pos_std", "initial_vel_std", "initial_clock_std"]
+      "elevation_filter", "initial_pos_cov", "initial_vel_cov", "initial_clock_cov", "initial_isb_cov", "initial_iono_cov", "initial_tropo_cov", "initial_clock_rate_cov"]
     },
     "output": {
       "type": "object",
