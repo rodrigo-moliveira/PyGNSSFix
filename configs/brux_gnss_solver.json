@@ -16,7 +16,7 @@
       "sp3_files": ["datasets/gnss/BRUX/COD0R03FIN_20190140000_01D_05M_ORB.SP3"],
       "ionex_files": ["datasets/gnss/BRUX/codg0140.19i"],
 
-      "bias_type": "DCB",
+      "bias_type": "OSB",
       "dcb_files": ["datasets/gnss/BRUX/DLR0MGXFIN_20190010000_03L_01D_DCB_short.BSX"],
       "osb_files": ["datasets/gnss/BRUX/COD0R03FIN_20190140000_01D_01D_OSB.BIA"],
 
@@ -80,7 +80,7 @@
       "estimate_ggto": true,
       "_comment3": "Select `true` to estimate GGTO or `false` to use the broadcast GGTO",
 
-      "estimate_diono": true,
+      "estimate_diono": false,
         "_comment4": "Select `true` to estimate residual ionospheric delay or `false` to disable it",
 
       "troposphere": {
@@ -138,8 +138,8 @@
       "_comment1": "Select Algorithm. Available is 'WSL' - Weighted Least Squares",
       "algorithm": "WSL",
 
-      "a_priori_constrain": true,
-      "feedforward_solution": false,
+      "a_priori_constrain": false,
+      "feedforward_solution": true,
 
       "_comment2": "maximum number of iterations in iterative procedure",
       "n_iterations": 10,

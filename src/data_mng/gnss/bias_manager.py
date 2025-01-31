@@ -235,7 +235,7 @@ class BiasManager:
                 self.log.info(f"Satellite Hardware Bias for {sat} and {datatype}: {_bias} seconds.")
             bias = self._cache["final_bias_for_datatype"][(sat, datatype)]
         elif self.bias_enum == EnumSatelliteBias.OSB:
-            pass
+            bias = self._bias_correction_osb(sat, datatype)
         return bias
 
     def _bias_correction_broadcast(self, epoch: Epoch, sat: Satellite, datatype: DataType) -> float:
@@ -575,3 +575,25 @@ class BiasManager:
         else:
             scale = mu2 / (mu2 - mu1)
         return scale * dcb.value * 1E-9
+
+    def _bias_correction_osb(self, sat, datatype):
+        bias = 0.0
+        found = False
+        user_service = self._get_service_for_datatype(datatype, sat.sat_system)
+        for osb in self.osb_data[sat]:
+            osb_datatype = osb.datatype_list[0]
+            osb_service = osb.service_list[0]
+            if datatype == osb_datatype:
+                if user_service == osb_service:
+                    bias = osb.value * 1E-9
+                    print(f"\t\tFetched bias OSB {bias} for {sat} and {datatype}.")
+                    found = True
+                    break
+
+        if not found:
+            print(f"\t\t[WARNING] Could not find OSB data for satellite {sat} and service {user_service}. "
+                             f"Setting satellite bias to 0.")
+
+        return bias
+
+    # TODO: for combined osb, use equation (12a) of http://ftp.aiub.unibe.ch/bcwg/format/draft/sinex_bias_100_feb07.pdf

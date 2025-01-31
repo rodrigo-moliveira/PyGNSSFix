@@ -112,6 +112,11 @@ class RinexClockReader:
             tokens = line.split()
             if len(tokens) != 0 and tokens[0] == "AS":
                 try:
+                    # get constellation
+                    const = tokens[1][0]
+                    if utils.RINEX_SATELLITE_SYSTEM[const] not in self._active_constellations:
+                        continue
+
                     # process new satellite clock
                     sat = get_satellite(tokens[1])
 

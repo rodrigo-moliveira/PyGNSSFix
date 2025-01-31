@@ -85,7 +85,7 @@ def get_constellation(system: str):
         return _GAL
     elif system.upper() == "GLO" or system.upper() == "R":
         return _GLO
-    elif system.upper() == "BDS" or system.upper() == "B":
+    elif system.upper() == "BDS" or system.upper() == "C":
         return _BDS
     else:
         raise ConfigError(
