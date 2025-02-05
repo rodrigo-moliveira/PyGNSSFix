@@ -69,10 +69,10 @@
       "constellations": ["GPS", "GAL"],
 
       "_comment": "Select the GNSS PNT algorithm. The available algorithms are SPS, PR-PPP",
-      "algorithm": "SPS",
+      "algorithm": "PR-PPP",
 
       "_comment1": "Select the observation model. The available models are combined, uncombined. The combined model requires 2 observations.",
-      "obs_model": "uncombined",
+      "obs_model": "combined",
 
       "estimate_velocity": true,
       "_comment2": "Use Doppler measurements to estimate velocity",
@@ -108,7 +108,7 @@
          "elevation_mask": true,
 
          "_comment3": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G', 'IONEX' ",
-         "ionosphere": "Klobuchar"
+         "ionosphere": "IONEX"
       },
 
       "GAL": {
@@ -128,7 +128,7 @@
          "nav_type": "FNAV",
 
          "_comment4": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G', 'IONEX' ",
-         "ionosphere": "NTCM-G"
+         "ionosphere": "IONEX"
       }
    },
 

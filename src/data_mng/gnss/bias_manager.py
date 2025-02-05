@@ -235,7 +235,11 @@ class BiasManager:
                 self.log.info(f"Satellite Hardware Bias for {sat} and {datatype}: {_bias} seconds.")
             bias = self._cache["final_bias_for_datatype"][(sat, datatype)]
         elif self.bias_enum == EnumSatelliteBias.OSB:
-            bias = self._bias_correction_osb(sat, datatype)
+            if (sat, datatype) not in self._cache["final_bias_for_datatype"]:
+                _bias = self._bias_correction_osb(sat, datatype)
+                self._cache["final_bias_for_datatype"][(sat, datatype)] = _bias
+                self.log.info(f"Satellite Hardware Bias for {sat} and {datatype}: {_bias} seconds.")
+            bias = self._cache["final_bias_for_datatype"][(sat, datatype)]
         return bias
 
     def _bias_correction_broadcast(self, epoch: Epoch, sat: Satellite, datatype: DataType) -> float:
@@ -577,23 +581,82 @@ class BiasManager:
         return scale * dcb.value * 1E-9
 
     def _bias_correction_osb(self, sat, datatype):
+        """ Get the satellite hardware code bias correction for the provided satellite and datatype using the
+        OSB products. Handles both combined (iono-free) and uncombined services.
+
+        Typically, the OSB products provided by CODE do not contain all services. They contain:
+            * GPS: corrections for L1 and L2
+            * GAL: corrections for E1 and E5
+        So this method is only appropriate for these datatypes.
+        """
+        if sat not in self.osb_data:
+            self.log.warning(f"No OSB data available for satellite {sat}. Setting satellite bias to 0.")
+            return 0.0
+
+        if not DataType.is_iono_free(datatype):
+            return self._bias_correction_osb_uncombined(sat, datatype)
+        else:
+            return self._bias_correction_osb_combined(sat)
+
+    def _bias_correction_osb_uncombined(self, sat, datatype):
+        """ Get the satellite hardware bias correction for the provided satellite and uncombined datatype. """
         bias = 0.0
         found = False
         user_service = self._get_service_for_datatype(datatype, sat.sat_system)
+
         for osb in self.osb_data[sat]:
             osb_datatype = osb.datatype_list[0]
             osb_service = osb.service_list[0]
             if datatype == osb_datatype:
                 if user_service == osb_service:
                     bias = osb.value * 1E-9
-                    print(f"\t\tFetched bias OSB {bias} for {sat} and {datatype}.")
+                    self.log.info(f"Fetched bias OSB {bias} [s] for {sat} and {datatype}.")
                     found = True
                     break
 
         if not found:
-            print(f"\t\t[WARNING] Could not find OSB data for satellite {sat} and service {user_service}. "
-                             f"Setting satellite bias to 0.")
+            self.log.warning(f"Could not find OSB data for satellite {sat} and service {user_service}. "
+                             f"Setting satellite bias correction to 0.")
 
         return bias
 
-    # TODO: for combined osb, use equation (12a) of http://ftp.aiub.unibe.ch/bcwg/format/draft/sinex_bias_100_feb07.pdf
+    def _bias_correction_osb_combined(self, sat):
+        """ Get the satellite hardware bias correction for the provided satellite and combined datatype. """
+        user_services = [f"C{service}" for service in config_dict.get_services()[sat.sat_system]['user_service']]
+
+        if len(user_services) != 2:
+            raise ReconstructionError(f"Error finding bias correction for satellite {sat}: User service "
+                                      f"{user_services} must have 2 observations.")
+        service1 = user_services[0]
+        service2 = user_services[1]
+
+        bias1 = bias2 = f1 = f2 = bias_if = 0.0
+        found1 = found2 = False
+
+        # find the bias for the user services
+        for osb in self.osb_data[sat]:
+            osb_service = osb.service_list[0]
+            osb_datatype = osb.datatype_list[0]
+
+            # matched service 1
+            if service1 == osb_service:
+                bias1 = osb.value * 1E-9
+                f1 = osb_datatype.freq.freq_value
+                found1 = True
+
+            # matched service 2
+            elif service2 == osb_service:
+                bias2 = osb.value * 1E-9
+                f2 = osb_datatype.freq.freq_value
+                found2 = True
+
+        # compute the combined iono-free bias
+        if found1 and found2:
+            gama1 = f1 * f1 / (f1 * f1 - f2 * f2)
+            gama2 = f2 * f2 / (f1 * f1 - f2 * f2)
+            bias_if = gama1 * bias1 - gama2 * bias2
+        else:
+            self.log.warning(f"Could not find OSB data for satellite {sat} and services {user_services}. "
+                             f"Setting satellite bias correction to 0.")
+
+        return bias_if

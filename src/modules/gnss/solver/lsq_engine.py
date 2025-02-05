@@ -264,7 +264,7 @@ class LSQ_Engine_Position(LSQ_Engine):
     def __init__(self, satellite_list, metadata, epoch, obs_data, reconstructor):
         datatypes = metadata["CODES"]
         self._estimate_tropo = False
-        self._estimate_diono = dict()
+        self._estimate_diono = dict().fromkeys(["GPS", "GAL"], False)
         super().__init__(datatypes, satellite_list, metadata, epoch, obs_data, reconstructor)
 
     def _initialize_matrices(self):
