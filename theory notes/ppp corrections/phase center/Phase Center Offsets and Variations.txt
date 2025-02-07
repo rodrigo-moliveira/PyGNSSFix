@@ -1,0 +1,115 @@
+# RINEX FILES DEFINITIONS:
+
+The GNSS measurements are referred to the so-called antenna phase centre
+(satellite and receiver). The position of the antenna phase centre is not
+necessarily the geometric centre of the antenna. Indeed, it is not constant,
+but depends on the direction of the incoming radio signal.
+
+The phase centre is defined as the apparent source of radiation. If the
+source were ideal it would have a spherical equiphase contour, but the real
+case is slightly different, because the equiphase contour is irregular and
+each segment has its own apparent radiation origin.
+Moreover, the phase centre of an antenna not only is angle dependent
+(elevation and azimuth), but also depends on the signal frequency.
+A simple model is to assume that the phase centres differ only on the vertical
+axis of the antenna
+
+We distinguish between:
+    * The marker, i.e. the geodetic reference monument, on which an antenna is mounted directly with
+        forced centering or on a tripod
+        The geocentric approximate marker position is reported in APPROX POSITION XYZ header record.
+
+    * The antenna reference point (ARP), i.e., a well-defined point on the antenna, e.g., the
+        center of the bottom surface of the preamplifier. The antenna height is measured from the
+        marker to the ARP and reported in the ANTENNA: DELTA H/E/N header record.
+        Small horizontal eccentricities of the ARP w/r to the marker can be reported in the same
+        record.
+
+    * The average phase center: A frequency-dependent and minimum elevation-angle
+        dependent position of the average phase center above the antenna reference point. Its
+        position is important to know in mixed-antenna networks. It can be given in an absolute
+        sense or relative to a reference antenna using the optional header record: ANTENNA:
+        PHASECENTER. For fixed stations the components are in north/east/up direction, on
+        vehicles the position is reported in the body-fixed system X,Y,Z. For more precise
+        applications an elevation-dependent or elevation and azimuth-dependent phase center
+        variation (PCV) model for the antenna (referring to the agreed-upon ARP) should be
+        used. For special applications it might be useful to generate RINEX files with these
+        corrections already applied. This can be reported by special header records SYS /
+        PCVS APPLIED pointing to the file containing the PCV correction models.
+
+
+# Receiver Antenna Phase Center and Antenna Reference Point
+
+The measurements are referred to the Antenna Phase Centre (APC) position.
+As this location is frequency dependent, a point tied to the base
+of the antenna is used as a more suitable reference. This point is called
+the Antenna Reference Point (ARP). As mentioned above, manufacturers
+provide technical information on the APC position relative to the ARP.
+On the other hand, as also already mentioned, relative and absolute APC
+corrections have been compiled by IGS and are provided in the PCV and
+ANTEX files respectively for several antenna models.
+Finally, in geodetic positioning, the receiver coordinates are referred to
+a Monument Marker (MM) or an external Benchmark (BM).
+
+In the IGS SINEX files, the computed coordinates for the MM are given
+in the block ‘SOLUTION/ESTIMATE’, in ECEF coordinates, for each processed
+station. The position of the ARP relative to the MM, or the site
+eccentricity vector, is given in the block ‘SITE/ECCENTRICITY’ in UNE
+(Up, North, East) coordinates. Finally, the APC offsets for the different
+frequencies and the antenna calibration model (e.g. ANTEX file) are given
+in the ‘SITE/GPS PHASE CENTER’ block of data.
+
+Let r_M be the position of the MM in an ECEF reference frame. Let
+delta(ARP) be the offset vector defining the ARP position relative to the MM,
+and delta(APC) the offset vector defining the APC position relative to the ARP.
+
+Thus the receiver’s APC position r, in an ECEF reference frame, is given
+by:
+    r = r_M + delta(ARP) + delta(APC)
+	
+	r -> position of APC
+	r_M -> position of marker
+	delta(ARP) -> delta of ARP with respect to r_M
+	delta(APC) -> delta of APC with respect to ARP
+	
+	
+What to read from OBS Files:
+	Receiver Antenna:
+		APPROX POSITION XYZ   -> Geocentric approximate marker position, that is, r_M
+		ANTENNA: DELTA H/E/N  -> Antenna height and eccentricity of ARP wrt marker, that is, delta(ARP)
+		ANTENNA: DELTA X/Y/Z  -> for moving vehicles, Position of antenna reference point for antenna 
+									on vehicle (m): XYZ vector in body-fixed 
+									coord. system (NOT FOR NOW)
+
+What to read from SINEX SOL Files:
+	Receiver Antenna:
+		SOLUTION/ESTIMATE: computed ECEF coordinates for the marker, r_M
+		SITE/ECCENTRICITY: this is the same as ANTENNA: DELTA H/E/N of RINEX OBS
+		SITE/GPS PHASE CENTER: phase center offset for each GPS frequency, delta (APC):
+			List of GPS phase center offsets for the antennas described in the Site 
+			Antenna block. The offset is given from the Antenna Reference Point (ARP) to 
+			the L1 and L2 phase centers respectively. 
+		SITE/GAL PHASE CENTER: phase center offset for each GAL frequency, delta (APC):
+			List of Galileo phase center offsets for the antennas described in the Site 
+			Antenna block. The offset is given from the Antenna Reference Point (ARP) to 
+			the appropriate phase centers. Three lines per antenna are required: 
+				- line 1: frequencies L1 and L5 
+				- line 2: frequencies L6 and L7 
+				- line 3: frequency L8 
+	
+
+From ANTEX:
+
+mean phase
+center position   = ARP (antenna reference point) position +
+                    phase center offset vector (given in a topocentric
+                    left-handed system: north, east and up component)
+
+observed distance = geometric distance to the mean phase center +
+                    phase center variations (zenith, azimuth) +
+                    other corrections
+(Here the azimuth counts clockwise from the North toward the East.)
+
+that is, we need to update the PR observation with phase center variation?
+
+What to read from ANTEX FILES:
