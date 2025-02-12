@@ -1,30 +1,39 @@
 # Release 1.1 (PR-PPP Mode)
-    [X] criar um check que verifique os ficheiros e configurações obrigatórias para cada modelo (SPS, SPS_IF, PPPP...)
-        [X] por exemplo, por agora o ficheiro nav é sempre obrigatório, mas isso tem de mudar depois..
-        [X] ver o que acontece quando configuro 3 observações. Deve dar um erro!! Este SW apenas dá para 1 ou 2
-    [X] criar um config field com o modo (SPS ou PPPP)
-    [ ] add constraints (initial P) to parameters in normal equations
-    [ ] Adicionar Leitura e Modelo de IONEX (criar um PPPP)
-    [ ] substituir alguns modelos do SPS pelos respetivos do PPPP
-    [ ] adicionar um DCB Manager
-        [X] read DCB files
-        [X] understand different kind of DCB corrections (read papers)
-        [ ] develop code accordingly for each DCB type
-        [ ] ler sat DCBs e criar uma classe que substitua o modelo atual
-    [X] Adicionar OSB Manager
-    [ ] Adicionar differential SPS/PPPP. D-GNSS para PR only
+    tasks for 2025:
+    [ ] phase center corrections
+        [X] read delta(ARP) from RINEX OBS FILE
+        [ ] read antenna model from RINEX OBS FILE or from user configuration
+        [ ] update marker position from SINEX SOL (or leave as is). This is manual
+        [ ] apply delta ARP correction to the observations
+            in principle, this is just to update the station position in the observation reconstruction
+        [ ] read ANTEX file and apply station phase center corrections for each frequency
+            Data to load and apply:
+                [ ] phase center offset (function of frequency)
+                [ ] phase center variation (function of zenith and azimuth)
+        [ ] load sun ephemerides from somewhere
+        [ ] apply satellite phase center corrections
+
+        -> ver o que é feito com os PCOs no rktlib
+
+
+    [ ] BUGS and nice-to-haves:
+        [ ] post_processing script not running well when velocity is not estimated
+        [ ] tornar explicita a impossibilidade de correr vários datatypes para a mesma freq (diferentes atributos)
+            por exemplo processar C1C e C1W.
+        [ ] adicionar um check para verificar se em combined, a primeira frequency é a base frequency
+
     [ ] Adicionar Kalman filter com user dynamics
+    [ ] Adicionar differential SPS/PPPP. D-GNSS para PR only
+
     [ ] Update Readme
     [ ] solve all TODOs
-    [ ] tornar explicita a impossibilidade de correr vários datatypes para a mesma freq (diferentes atributos)
-        por exemplo processar C1C e C1W.
-
 
 # Release 1.2 PPP e PPP-AR
     [ ] float carrier processing
-    [ ] outras correçoes: PCVs. Ler ficheiros de ANTEX...
     [ ] cycle slip detection
+        [ ] compute MW observations
     [ ] PPP e PPP-AR com OSBs
+    [ ] phase windup correction (only applicable to carrier observations)
 
 
 nice to have, but not for now

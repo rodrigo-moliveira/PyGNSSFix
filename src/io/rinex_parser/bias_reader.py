@@ -93,22 +93,23 @@ class SinexBiasReader:
 
         if sinex != "%=BIA":
             raise FileError("The provided bias SINEX file {} is not valid. Missing identifier {} in the "
-                            "first line".format(file, "%=BIA"))
+                            "first line".format(file.name, "%=BIA"))
 
         if version != 1.0:
             raise FileError("The provided bias SINEX file {} is not valid. "
                             "Only bias SINEX files of version 1.00 are currently supported. A file with version {} "
-                            "was provided instead.".format(file, version))
+                            "was provided instead.".format(file.name, version))
 
         if self._bias_mode not in ("A", "R"):
             raise FileError("The provided bias SINEX file {} is not valid. "
                             "Unknown bias mode {}. Available modes are absolute (A) or relative (R).".
-                            format(file, self._bias_mode))
+                            format(file.name, self._bias_mode))
 
         if (self._bias_mode == "A" and bias_enum != EnumSatelliteBias.OSB) or \
                 (self._bias_mode == "R" and bias_enum != EnumSatelliteBias.DCB):
             raise FileError("The provided bias SINEX file {} is not valid. "
-                            "The file bias mode {} does not match the user choice {}.".format(file, self._bias_mode,
+                            "The file bias mode {} does not match the user choice {}.".format(file.name,
+                                                                                              self._bias_mode,
                                                                                               bias_enum))
 
         while line:

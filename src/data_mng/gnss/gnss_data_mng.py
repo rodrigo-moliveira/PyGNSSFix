@@ -4,11 +4,12 @@ import os
 
 from src.io.states import OUTPUT_FILENAME_MAP, get_file_header, export_to_file
 from src.io.config import config_dict, EnumObservationModel, EnumAlgorithmPNT, EnumSatelliteBias
-from src.io.rinex_parser import RinexNavReader, RinexObsReader
+from src.io.rinex_parser import RinexNavReader, RinexObsReader, AntexReader
 from src.data_mng import Container
 from src.common_log import IO_LOG, get_logger
 from .navigation_data import NavigationData
 from .observation_data import ObservationData
+from .phase_center_data import PhaseCenterData
 from .sat_clock_data import SatelliteClocks
 from .sat_orbit_data import SatelliteOrbits
 from .bias_manager import BiasManager
@@ -40,6 +41,7 @@ class GnssDataManager(Container):
         "sat_clocks",          # Input
         "sat_orbits",          # Input
         "iono_gim",            # Input
+        "phase_center",        # Input
         "sat_bias",            # Input
         "smooth_obs_data",     # Internal data
         "iono_free_obs_data",  # Internal data
@@ -55,6 +57,7 @@ class GnssDataManager(Container):
         self.smooth_obs_data = ObservationData()  # Smooth Observation Data
         self.sat_clocks = SatelliteClocks()  # Satellite clocks manager (precise or navigation clocks)
         self.iono_gim = GlobalIonoMap()  # Global Ionospheric (VTEC) Map Manager
+        self.phase_center = PhaseCenterData()  # Phase Center Data Manager
         self.sat_bias = BiasManager()  # Satellite Code and Phase Bias Manager
         self.sat_orbits = SatelliteOrbits()  # Satellite orbits manager (precise or navigation orbits)
         self.iono_free_obs_data = ObservationData()  # Iono Free Observation Data
@@ -131,6 +134,14 @@ class GnssDataManager(Container):
         """
         log = get_logger(IO_LOG)
 
+        # read observation data
+        obs_files = config_dict.get("inputs", "obs_files")
+        GnssDataManager.check_input_list("inputs.obs_files", obs_files, log)
+        log.info("Launching RinexObsReader.")
+
+        for file in obs_files:
+            RinexObsReader(file, self.get_data("obs_data"), self.get_data("phase_center"))
+
         # Load specific inputs for each PNT Algorithm
         if gnss_alg == EnumAlgorithmPNT.SPS:
             log.info("In SPS Mode, GNSS orbits and clocks are provided from broadcast ephemerides (RINEX NAV).")
@@ -161,6 +172,7 @@ class GnssDataManager(Container):
             dcb_files = config_dict.get("inputs", "dcb_files")
             osb_files = config_dict.get("inputs", "osb_files")
             ionex_files = config_dict.get("inputs", "ionex_files")
+            antex_files = config_dict.get("inputs", "antex_files")
             nav_files = config_dict.get("inputs", "nav_files")
             gal_nav_type = config_dict.get("model", "GAL", "nav_type")
 
@@ -169,10 +181,15 @@ class GnssDataManager(Container):
 
             # not mandatory file checks
             GnssDataManager.check_input_list("inputs.ionex_files", ionex_files, log, warning=True)
+            GnssDataManager.check_input_list("inputs.antex_files", antex_files, log, warning=True)
             GnssDataManager.check_input_list("inputs.nav_files", nav_files, log, warning=True)
 
             log.info("Launching GlobalIonoMap constructor (ionex products).")
             self.iono_gim.init(ionex_files, trace_dir)
+
+            log.info("Reading Antenna Exchange Files.")
+            for file in antex_files:
+                AntexReader(file, self.get_data("phase_center"))
 
             for file in nav_files:
                 RinexNavReader(file, self.get_data("nav_data"), gal_nav_type)
@@ -196,14 +213,6 @@ class GnssDataManager(Container):
 
         else:
             raise IOError(f"Unknown Model {gnss_alg}")
-
-        # read observation data
-        obs_files = config_dict.get("inputs", "obs_files")
-        GnssDataManager.check_input_list("inputs.obs_files", obs_files, log)
-        log.info("Launching RinexObsReader.")
-
-        for file in obs_files:
-            RinexObsReader(file, self.get_data("obs_data"))
 
         if config_dict.get("inputs", "trace_files"):
             self._trace_files(trace_dir, gnss_alg)

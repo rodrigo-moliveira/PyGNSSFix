@@ -17,6 +17,7 @@
         "clk_files": {"type": "array", "items": {"type": "string"}},
         "sp3_files": {"type": "array", "items": {"type": "string"}},
         "ionex_files": {"type": "array", "items": {"type": "string"}},
+        "antex_files": {"type": "array", "items": {"type": "string"}},
 
         "bias_type": {"type": "string", "enum": ["DCB", "OSB"]},
         "dcb_files": {"type": "array", "items": {"type": "string"}},
@@ -35,7 +36,7 @@
         },
         "rate": {"type": "integer", "minimum": 1}
       },
-      "required": ["trace_files", "obs_files", "nav_files", "clk_files", "sp3_files", "ionex_files" ,"osb_files", "dcb_files", "bias_type",
+      "required": ["trace_files", "obs_files", "nav_files", "clk_files", "sp3_files", "ionex_files" , "antex_files", "osb_files", "dcb_files", "bias_type",
         "use_precise_products","leap_file", "finals_file",
       "snr_control", "arc", "rate"]
     },

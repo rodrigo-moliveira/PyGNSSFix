@@ -354,11 +354,11 @@ E1 = DataType(data_type="E1", description="Frequency E1 (GAL)", freq_value=const
 E5a = DataType(data_type="E5a", description="Frequency E5a (GAL)", freq_value=constants.GAL_E5A_FREQ,
                constellation="GAL")
 E5b = DataType(data_type="E5b", description="Frequency E5b (GAL)", freq_value=constants.GAL_E5B_FREQ,
-               constellation="GPS")
+               constellation="GAL")
 E5ALTBOC = DataType(data_type="E5AltBOC", description="Frequency E5AltBOC (GAL)",
                     freq_value=constants.GAL_E5ALTBOC_FREQ, constellation="GAL")
 E6 = DataType(data_type="E6", description="Frequency E6 (GAL)", freq_value=constants.GAL_E6_FREQ,
-              constellation="GPS")
+              constellation="GAL")
 
 ###################
 # Raw Observables #
