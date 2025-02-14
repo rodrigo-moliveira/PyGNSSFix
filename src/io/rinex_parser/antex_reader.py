@@ -2,16 +2,17 @@ import numpy as np
 
 from src import WORKSPACE_PATH
 from src.common_log import IO_LOG, get_logger
-from src.data_mng.gnss.phase_center_data import PhaseCenterData
+from src.data_mng.gnss.phase_center_mng import PhaseCenterManager
 from src.data_types.date import Epoch
-from src.data_types.gnss import get_data_type, data_type_from_rinex
+from src.data_types.gnss import get_data_type, data_type_from_rinex, Antenna, PhaseCenter
 from src.errors import FileError
 from src.io.config import config_dict
 from src.io.rinex_parser.utils import RINEX_SATELLITE_SYSTEM
 
+# TODO: add documentation
 
 class AntexReader:
-    def __init__(self, file, phase_center: PhaseCenterData):
+    def __init__(self, file, phase_center: PhaseCenterManager):
         self.file = file
         self.phase_center = phase_center
         self._active_constellations = config_dict.get("model", "constellations", fallback=["GPS", "GAL"])
@@ -26,8 +27,9 @@ class AntexReader:
 
         self.log = get_logger(IO_LOG)
         self.log.info(f"Reading Antex file {WORKSPACE_PATH}/{file}...")
-        self.log.info(f"Receiver Antenna selected: {self.phase_center.receiver_antenna_type}")
-        self.log.info(f"Active satellite constellations: {self._active_constellations}")
+        self.log.debug(f"Receiver Antenna selected: {self.phase_center.get_receiver_antenna().ant_type}")
+        self.log.debug(f"Active satellite constellations: {self._active_constellations}")
+        self.log.debug(f"User services selected: {self._user_services}")
 
         # read header
         self._read_header(f_handler)
@@ -63,66 +65,61 @@ class AntexReader:
 
             elif "END OF HEADER" in line:
                 break
+
     def _read_data(self, f_handler):
+        receiver_antenna = self.phase_center.get_receiver_antenna()
         line = " "
         while line:
             if "START OF ANTENNA" in line:
                 line = f_handler.readline()
                 antenna_type = line[0:20]
-                if antenna_type == self.phase_center.receiver_antenna_type:
+                if antenna_type == receiver_antenna.ant_type:
                     # matched antenna to process
-                    print("reading antenna", antenna_type)
-                    antenna = self._read_antenna(f_handler, antenna_type)
+                    self.log.info(f"Reading receiver antenna {antenna_type}")
+                    self._read_antenna(f_handler, receiver_antenna)
+                # TODO add here GNSS satellite antennas
             line = f_handler.readline()
 
-    def _read_antenna(self, f_handler, antenna_type):
-        # TODO: add control flag for success of reading receiver antenna
-        antenna = {'type': antenna_type}
-        antenna['phase_data'] = dict()
-
+    def _read_antenna(self, f_handler, antenna):
         f_handler.readline()  # METH / BY / # / DATE
         line = f_handler.readline()  # DAZI
-        antenna['d_az'] = float(line.split()[0])
+        d_az = float(line.split()[0])  # d_az may be zero
+        if d_az > 0:
+            n_az = int(360 // d_az) + 1
+            azimuth_vec = np.linspace(0, 360, n_az)
+        else:
+            azimuth_vec = np.array([])
+        antenna.azimuth_vec = azimuth_vec
+
         line = f_handler.readline()  # ZEN1 / ZEN2 / DZEN
         tokens = line.split()[0:3]
-        antenna['d_zenith'] = [float(x) for x in tokens]
-
-        n_zenith = int((antenna['d_zenith'][1] - antenna['d_zenith'][0]) // antenna['d_zenith'][2]) + 1
-        antenna['zenith_vec'] = np.linspace(antenna['d_zenith'][0], antenna['d_zenith'][1], n_zenith)
-
-        if antenna['d_az'] > 0:
-            n_az = int(360 // antenna['d_az']) + 1
-            antenna['azimuth_vec'] = np.linspace(0, 360, n_az)
-        else:
-            antenna['azimuth_vec'] = np.array([])
-
+        d_zenith = [float(x) for x in tokens]
+        n_zenith = int((d_zenith[1] - d_zenith[0]) // d_zenith[2]) + 1
+        antenna.zenith_vec = np.linspace(d_zenith[0], d_zenith[1], n_zenith)
 
         while line:
             line = f_handler.readline()
             if "START OF FREQUENCY" in line:
                 freq_name = line.split()[0]
                 freq_datatype = self.datatype_from_freq(freq_name)
-                print(freq_name, freq_datatype)
+
                 if freq_datatype is not None:
                     for service in self._user_services[freq_datatype.constellation]:
                         if service.freq == freq_datatype:
                             # read this frequency data
-                            print("reading frequency", freq_name)
-                            freq_data = self._read_frequency(f_handler, antenna['azimuth_vec'], antenna['zenith_vec'])
-                            antenna['phase_data'][freq_datatype] = freq_data
+                            self.log.debug(f"Reading Frequency {freq_name} for service {service}")
+                            phase_center = self._read_frequency(f_handler, antenna)
+                            antenna.set_freq_data(freq_datatype, phase_center)
 
             elif "END OF ANTENNA" in line:
                 break
-        return antenna
 
-    def _read_frequency(self, f_handler, azimuth_vec, zenith_vec):
+    def _read_frequency(self, f_handler, antenna):
         line = " "
-        freq = dict()
-        freq['pcv'] = dict()
+        phase_center = PhaseCenter()
 
-        n_az = len(azimuth_vec)
-        n_zenith = len(zenith_vec)
-        # TODO: consider moving this to the antenna level function
+        n_az = len(antenna.azimuth_vec)
+        n_zenith = len(antenna.zenith_vec)
         if n_az > 0:
             pcv_matrix = np.zeros((n_az, n_zenith))
         else:
@@ -131,29 +128,28 @@ class AntexReader:
         while line:
             line = f_handler.readline()
             if "END OF FREQUENCY" in line:
-                freq['pcv']['AZI'] = pcv_matrix
+                phase_center.pcv_azi = pcv_matrix
                 break
 
             elif "NORTH / EAST / UP" in line:
                 tokens = line.split()[0:3]
-                freq['pco'] = [float(x) for x in tokens]
+                phase_center.pco = [float(x) for x in tokens]
 
             else:
                 tokens = line.split()
                 this_pcv = [float(x) for x in tokens[1:]]
                 if tokens[0] == 'NOAZI':
-                    freq['pcv']['NOAZI'] = this_pcv
+                    phase_center.pcv_noazi = this_pcv
                 else:
                     this_az = float(tokens[0])
-                    az_idx = np.where(azimuth_vec == this_az)[0]
+                    az_idx = np.where(antenna.azimuth_vec == this_az)[0]
                     if len(az_idx) != 1:
-                        print("ERROR")
-                        #self.log.warning(f"Latitude {lat} not found in the latitude array. Ignoring this TEC map.")
-                        #continue
+                        self.log.warning(f"Error reading azimuth {this_az} for antenna {antenna.ant_type}. Skipping...")
+                        continue
                     az_idx = az_idx[0]
                     pcv_matrix[az_idx, :] = this_pcv
 
-        return freq
+        return phase_center
 
     def datatype_from_freq(self, freq):
         constellation = RINEX_SATELLITE_SYSTEM.get(freq[0], "UNKNOWN")

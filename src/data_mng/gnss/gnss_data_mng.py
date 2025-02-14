@@ -9,7 +9,7 @@ from src.data_mng import Container
 from src.common_log import IO_LOG, get_logger
 from .navigation_data import NavigationData
 from .observation_data import ObservationData
-from .phase_center_data import PhaseCenterData
+from .phase_center_mng import PhaseCenterManager
 from .sat_clock_data import SatelliteClocks
 from .sat_orbit_data import SatelliteOrbits
 from .bias_manager import BiasManager
@@ -28,6 +28,8 @@ class GnssDataManager(Container):
         obs_data(ObservationData): raw observation data from RINEX OBS
         sat_clocks(SatelliteClocks): manager of satellite clocks (precise or navigation clocks)
         sat_orbits(SatelliteOrbits): manager of satellite orbits (precise or navigation orbits)
+        iono_gim(GlobalIonoMap): manager of global ionospheric maps (VTEC)
+        phase_center(PhaseCenterManager): manager of phase center data
         sat_bias(BiasManager): manager of satellite code and phase biases (precise or navigation bias)
         smooth_obs_data(ObservationData): processed smooth observation data
         iono_free_obs_data(ObservationData): processed iono-free observation data
@@ -57,7 +59,7 @@ class GnssDataManager(Container):
         self.smooth_obs_data = ObservationData()  # Smooth Observation Data
         self.sat_clocks = SatelliteClocks()  # Satellite clocks manager (precise or navigation clocks)
         self.iono_gim = GlobalIonoMap()  # Global Ionospheric (VTEC) Map Manager
-        self.phase_center = PhaseCenterData()  # Phase Center Data Manager
+        self.phase_center = PhaseCenterManager()  # Phase Center Data Manager
         self.sat_bias = BiasManager()  # Satellite Code and Phase Bias Manager
         self.sat_orbits = SatelliteOrbits()  # Satellite orbits manager (precise or navigation orbits)
         self.iono_free_obs_data = ObservationData()  # Iono Free Observation Data

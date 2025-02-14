@@ -7,7 +7,7 @@ from math import floor
 from src.data_types.date import Epoch
 from src.data_types.gnss import get_satellite, data_type_from_rinex, DataType, get_constellation, service_utils
 from src.data_mng.gnss.observation_data import ObservationData
-from src.data_mng.gnss.phase_center_data import PhaseCenterData
+from src.data_mng.gnss.phase_center_mng import PhaseCenterManager
 from src.errors import ConfigError, FileError
 from src.constants import SPEED_OF_LIGHT
 from src import WORKSPACE_PATH
@@ -22,7 +22,7 @@ class RinexObsReader:
     Parser of Rinex Observation files
     """
 
-    def __init__(self, file: str, obs: ObservationData, phase_center: PhaseCenterData):
+    def __init__(self, file: str, obs: ObservationData, phase_center: PhaseCenterManager):
         """
         Reads the provided observation file and stores its content in the `ObservationData` instance.
 
@@ -30,8 +30,8 @@ class RinexObsReader:
             file(str): path to the input RINEX Observation file to load
             obs(ObservationData): the `ObservationData` object to store the observation information extracted from
                 the file
-            phase_center(PhaseCenterData): the `PhaseCenterData` object to store the phase center information extracted
-                from the file header
+            phase_center(PhaseCenterManager): the `PhaseCenterManager` object to store the phase center information
+                extracted from the file header
         """
         first_epoch = config_dict.get("inputs", "arc", "first_epoch")
         last_epoch = config_dict.get("inputs", "arc", "last_epoch")
@@ -103,13 +103,15 @@ class RinexObsReader:
             elif "ANT # / TYPE" in line:
                 serial_no = int(line[0:20])
                 antenna_type = line[20:40]
-                self._phase_center.receiver_antenna_type = antenna_type
-                self._phase_center.receiver_antenna_serial_no = serial_no
+                antenna = self._phase_center.get_receiver_antenna()
+                antenna.ant_type = antenna_type
+                antenna.serial_no = serial_no
 
             elif "ANTENNA: DELTA H/E/N" in line:
                 tokens = line.split()[0:3]
                 arp_offset_vec = [to_float(x) for x in tokens]
-                self._phase_center.receiver_arp_offset = arp_offset_vec
+                antenna = self._phase_center.get_receiver_antenna()
+                antenna.arp_offset = arp_offset_vec
 
             elif "TIME OF FIRST OBS" in line:
                 data = line[:RINEX_OBS_END_OF_DATA_HEADER]
