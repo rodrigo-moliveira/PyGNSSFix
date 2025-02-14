@@ -30,6 +30,11 @@ RINEX_OBS_TYPES_UNITS = {
     "S": "dB-Hz"  # default units of SNR
 }
 
+GPS_ANTENNAS = ["BLOCK I", "BLOCK II", "BLOCK IIA", "BLOCK IIR-A", "BLOCK IIR-B", "BLOCK IIR-M", "BLOCK IIF",
+                "BLOCK IIIA"]
+
+GAL_ANTENNAS = ["GALILEO-0A", "GALILEO-0B", "GALILEO-1", "GALILEO-2"]
+
 
 def to_float(nmb: str) -> float:
     """

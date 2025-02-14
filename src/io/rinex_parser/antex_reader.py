@@ -1,15 +1,19 @@
 import numpy as np
+from math import floor
 
 from src import WORKSPACE_PATH
 from src.common_log import IO_LOG, get_logger
 from src.data_mng.gnss.phase_center_mng import PhaseCenterManager
 from src.data_types.date import Epoch
-from src.data_types.gnss import get_data_type, data_type_from_rinex, Antenna, PhaseCenter
+from src.data_types.gnss import get_data_type, data_type_from_rinex, SatelliteAntenna, PhaseCenter
+from src.data_types.gnss import get_satellite
 from src.errors import FileError
 from src.io.config import config_dict
-from src.io.rinex_parser.utils import RINEX_SATELLITE_SYSTEM
+from src.io.rinex_parser.utils import RINEX_SATELLITE_SYSTEM, GPS_ANTENNAS, GAL_ANTENNAS
+
 
 # TODO: add documentation
+
 
 class AntexReader:
     def __init__(self, file, phase_center: PhaseCenterManager):
@@ -19,9 +23,9 @@ class AntexReader:
         self._user_services = dict()
         for constellation in self._active_constellations:
             service_list = [f"C{service}" for service in config_dict.get_services()[constellation]['user_service']]
-            self._user_services[constellation] = [data_type_from_rinex(service, constellation) for service in service_list]
-        first_epoch = config_dict.get("inputs", "arc", "first_epoch")
-        self._epoch = Epoch.strptime(first_epoch, scale=str("GPS"))
+            self._user_services[constellation] = [data_type_from_rinex(service, constellation) for service in
+                                                  service_list]
+        self._epoch = Epoch.strptime(config_dict.get("inputs", "arc", "first_epoch"), scale=str("GPS"))
 
         f_handler = open(f"{WORKSPACE_PATH}/{file}", "r")
 
@@ -38,8 +42,6 @@ class AntexReader:
         self._read_data(f_handler)
 
         f_handler.close()
-        print("finished file.")
-        exit()
 
     def _read_header(self, f_handler):
         line = f_handler.readline()
@@ -75,9 +77,17 @@ class AntexReader:
                 antenna_type = line[0:20]
                 if antenna_type == receiver_antenna.ant_type:
                     # matched antenna to process
-                    self.log.info(f"Reading receiver antenna {antenna_type}")
+                    self.log.debug(f"Storing receiver antenna {antenna_type}")
                     self._read_antenna(f_handler, receiver_antenna)
-                # TODO add here GNSS satellite antennas
+                if antenna_type.strip() in GPS_ANTENNAS + GAL_ANTENNAS:
+                    sat_str = line[20:23]
+                    sat = get_satellite(sat_str)
+
+                    sat_antenna = SatelliteAntenna(sat)
+                    sat_antenna.ant_type = antenna_type
+                    if self._read_antenna(f_handler, sat_antenna):
+                        self.log.debug(f"Storing {sat.sat_system} satellite antenna {antenna_type} for sat {sat_str}")
+                        self.phase_center.add_satellite_antenna(sat, sat_antenna)
             line = f_handler.readline()
 
     def _read_antenna(self, f_handler, antenna):
@@ -107,12 +117,24 @@ class AntexReader:
                     for service in self._user_services[freq_datatype.constellation]:
                         if service.freq == freq_datatype:
                             # read this frequency data
-                            self.log.debug(f"Reading Frequency {freq_name} for service {service}")
                             phase_center = self._read_frequency(f_handler, antenna)
                             antenna.set_freq_data(freq_datatype, phase_center)
 
+            if "VALID FROM" in line:
+                first_epoch = self.get_epoch(line)
+                if first_epoch > self._epoch:
+                    # ignore this antenna due to out of date
+                    return False
+
+            elif "VALID UNTIL" in line:
+                last_epoch = self.get_epoch(line)
+                if last_epoch < self._epoch:
+                    # ignore this antenna due to out of date
+                    return False
+
             elif "END OF ANTENNA" in line:
                 break
+        return True
 
     def _read_frequency(self, f_handler, antenna):
         line = " "
@@ -174,3 +196,14 @@ class AntexReader:
                 elif freq_no == "06":
                     return get_data_type("E6", constellation)
         return None
+
+    @staticmethod
+    def get_epoch(line):
+        tokens = line.split()
+        year = int(tokens[0])
+        month = int(tokens[1])
+        day = int(tokens[2])
+        hour = int(tokens[3])
+        minute = int(tokens[4])
+        second = floor(float(tokens[5]))
+        return Epoch(year, month, day, hour, minute, second, scale=str("GPS"))
