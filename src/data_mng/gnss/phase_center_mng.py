@@ -40,3 +40,11 @@ class PhaseCenterManager:
     def get_receiver_antenna(self):
         """ Get the receiver antenna for the manager. """
         return self._receiver_antenna
+
+    def __str__(self):
+        """ String representation of the Phase Center Manager. """
+        myStr = f"Phase Center Offsets and Variations:\n"
+        myStr += f"\n-------------Receiver Antenna-------------\n{str(self._receiver_antenna)}"
+        for sat, ant in self._satellite_antennas.items():
+            myStr += f"-------------Antenna for {sat}-------------\n{str(ant)}"
+        return myStr

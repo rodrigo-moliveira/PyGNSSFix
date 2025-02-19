@@ -240,6 +240,8 @@ class GnssDataManager(Container):
                 file.write(str(self.get_data("sat_bias")))
             with open(f"{inputs_dir}\\GlobalIonoMap.txt", "w") as file:
                 file.write(str(self.get_data("iono_gim")))
+            with open(f"{inputs_dir}\\PhaseCenterVariations.txt", "w") as file:
+                file.write(str(self.get_data("phase_center")))
 
     def save_data(self, directory):
         """ Saves the navigation solution (contained in the `nav_solution` attribute) to the output file """

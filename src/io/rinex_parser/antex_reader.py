@@ -50,7 +50,6 @@ class AntexReader:
         self._read_data(f_handler)
 
         f_handler.close()
-        exit()
 
     @staticmethod
     def _read_header(f_handler):
