@@ -1,3 +1,7 @@
+""" Parser of ANTEX: The Antenna Exchange Format (version 1.4)
+The official documentation of these files may be found in https://files.igs.org/pub/data/format/antex14.txt
+"""
+
 import numpy as np
 from math import floor
 
@@ -12,14 +16,18 @@ from src.io.config import config_dict
 from src.io.rinex_parser.utils import RINEX_SATELLITE_SYSTEM, GPS_ANTENNAS, GAL_ANTENNAS
 
 
-# TODO: add documentation
-
-
 class AntexReader:
+    """
+    Reads the provided antex file and stores its content in the `PhaseCenterManager` instance provided.
+
+    Args:
+        file(str): path to the input RINEX Navigation file to load
+        phase_center(PhaseCenterManager): instance of the `PhaseCenterManager` to store the data read from the file
+    """
+
     def __init__(self, file, phase_center: PhaseCenterManager):
-        self.file = file
         self.phase_center = phase_center
-        self._active_constellations = config_dict.get("model", "constellations", fallback=["GPS", "GAL"])
+        self._active_constellations = config_dict.get("model", "constellations")
         self._user_services = dict()
         for constellation in self._active_constellations:
             service_list = [f"C{service}" for service in config_dict.get_services()[constellation]['user_service']]
@@ -42,8 +50,18 @@ class AntexReader:
         self._read_data(f_handler)
 
         f_handler.close()
+        exit()
 
-    def _read_header(self, f_handler):
+    @staticmethod
+    def _read_header(f_handler):
+        """
+        Method to read header data
+
+        Header lines to look for (others are ignored):
+            - ANTEX VERSION / SYST: check if the file is a valid Antex file
+            - PCV TYPE / REFANT: check if the file contains Absolute PCV's
+            - END OF HEADER
+        """
         line = f_handler.readline()
         version = float(line[5:10])
 
@@ -69,17 +87,23 @@ class AntexReader:
                 break
 
     def _read_data(self, f_handler):
+        """
+        Reads the data from the Antex file (PCVs and PCOs for each GNSS satellite and receiver antenna).
+        """
         receiver_antenna = self.phase_center.get_receiver_antenna()
         line = " "
         while line:
             if "START OF ANTENNA" in line:
                 line = f_handler.readline()
                 antenna_type = line[0:20]
+
+                # Process Receiver Antenna
                 if antenna_type == receiver_antenna.ant_type:
-                    # matched antenna to process
-                    self.log.debug(f"Storing receiver antenna {antenna_type}")
-                    self._read_antenna(f_handler, receiver_antenna)
-                if antenna_type.strip() in GPS_ANTENNAS + GAL_ANTENNAS:
+                    if self._read_antenna(f_handler, receiver_antenna):
+                        self.log.debug(f"Storing receiver antenna {antenna_type}")
+
+                # Process Satellite Antenna
+                elif antenna_type.strip() in GPS_ANTENNAS + GAL_ANTENNAS:
                     sat_str = line[20:23]
                     sat = get_satellite(sat_str)
 
@@ -91,7 +115,14 @@ class AntexReader:
             line = f_handler.readline()
 
     def _read_antenna(self, f_handler, antenna):
+        """ Reads the data for a given antenna from the Antex file.
+
+        Returns:
+            bool: True if the antenna is within the valid epoch range, False otherwise
+        """
         f_handler.readline()  # METH / BY / # / DATE
+
+        # Process azimuth angle vector
         line = f_handler.readline()  # DAZI
         d_az = float(line.split()[0])  # d_az may be zero
         if d_az > 0:
@@ -101,6 +132,7 @@ class AntexReader:
             azimuth_vec = np.array([])
         antenna.azimuth_vec = azimuth_vec
 
+        # Process zenith angle vector
         line = f_handler.readline()  # ZEN1 / ZEN2 / DZEN
         tokens = line.split()[0:3]
         d_zenith = [float(x) for x in tokens]
@@ -119,17 +151,18 @@ class AntexReader:
                             # read this frequency data
                             phase_center = self._read_frequency(f_handler, antenna)
                             antenna.set_freq_data(freq_datatype, phase_center)
+                            break
 
             if "VALID FROM" in line:
                 first_epoch = self.get_epoch(line)
                 if first_epoch > self._epoch:
-                    # ignore this antenna due to out of date
+                    # ignore this antenna entry due to out of date
                     return False
 
             elif "VALID UNTIL" in line:
                 last_epoch = self.get_epoch(line)
                 if last_epoch < self._epoch:
-                    # ignore this antenna due to out of date
+                    # ignore this antenna entry due to out of date
                     return False
 
             elif "END OF ANTENNA" in line:
@@ -137,11 +170,18 @@ class AntexReader:
         return True
 
     def _read_frequency(self, f_handler, antenna):
+        """ Reads the data for a given frequency from the Antex file.
+
+        Returns:
+            PhaseCenter: instance of the PhaseCenter class containing the PCV and PCO data read from the file
+        """
         line = " "
         phase_center = PhaseCenter()
 
         n_az = len(antenna.azimuth_vec)
         n_zenith = len(antenna.zenith_vec)
+
+        # create the PCV matrix if azimuth dependent
         if n_az > 0:
             pcv_matrix = np.zeros((n_az, n_zenith))
         else:
@@ -154,10 +194,12 @@ class AntexReader:
                 break
 
             elif "NORTH / EAST / UP" in line:
+                # Store PCO values
                 tokens = line.split()[0:3]
                 phase_center.pco = [float(x) for x in tokens]
 
             else:
+                # Store PCV values
                 tokens = line.split()
                 this_pcv = [float(x) for x in tokens[1:]]
                 if tokens[0] == 'NOAZI':
@@ -174,6 +216,14 @@ class AntexReader:
         return phase_center
 
     def datatype_from_freq(self, freq):
+        """ Returns the corresponding data type for a given frequency.
+
+        Args:
+            freq(str): the frequency string to look for in the Antex file. See the official documentation for details.
+                in the naming convention of the frequencies.
+        Returns:
+            DataType: the corresponding data type for the provided frequency, or None if the frequency is not supported.
+        """
         constellation = RINEX_SATELLITE_SYSTEM.get(freq[0], "UNKNOWN")
         if constellation in self._active_constellations:
             freq_no = freq[1:]
@@ -199,6 +249,13 @@ class AntexReader:
 
     @staticmethod
     def get_epoch(line):
+        """ Returns the Epoch object corresponding to the provided line.
+
+        Args:
+            line(str): the line to parse the epoch from
+        Returns:
+            Epoch: the corresponding Epoch object
+        """
         tokens = line.split()
         year = int(tokens[0])
         month = int(tokens[1])
