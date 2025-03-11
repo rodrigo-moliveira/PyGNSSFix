@@ -71,6 +71,7 @@ class GnssSolver:
         self.sat_orbits = data_manager.get_data("sat_orbits")
         self.sat_clocks = data_manager.get_data("sat_clocks")
         self.sat_bias = data_manager.get_data("sat_bias")
+        self.phase_center = data_manager.get_data("phase_center")
         self.write_trace = config_dict.get("solver", "trace_files")
         if self.write_trace:
             self.trace_dir = f"{trace_dir}\\solver"
@@ -281,7 +282,7 @@ class GnssSolver:
         sats_for_epoch = obs_data.get_satellites()
 
         # build system geometry for this epoch
-        system_geometry = SystemGeometry(obs_data, self.sat_clocks, self.sat_orbits)
+        system_geometry = SystemGeometry(obs_data, self.sat_clocks, self.sat_orbits, self.phase_center)
 
         self.log.debug(f"Available Satellites: {sats_for_epoch}")
 

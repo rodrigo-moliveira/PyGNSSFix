@@ -62,6 +62,25 @@
           "required": ["model", "map", "estimate_tropo_wet"]
         },
 
+        "phase_center_corrections": {
+          "type": "object",
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "receiver": {
+              "type": "object",
+              "properties": {
+                "ARP_enabled": {"type": "boolean"},
+                "PCO_enabled": {"type": "boolean"},
+                "PCV_enabled": {"type": "boolean"},
+                "ARP_offset": {"type": ["array", "null"], "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
+                "PCV_model": {"type": "integer", "minimum": 0, "maximum": 1}
+              },
+              "required": ["ARP_enabled", "PCO_enabled", "PCV_enabled", "ARP_offset", "PCV_model"]
+            }
+          },
+          "required": ["enabled", "receiver"]
+        },
+
         "GPS": {
           "type": "object",
           "properties": {
@@ -88,7 +107,7 @@
           "required": ["observations", "clock_product_service", "pr_obs_std", "doppler_obs_std", "elevation_mask", "ionosphere", "nav_type"]
         }
       },
-      "required": ["constellations", "algorithm", "obs_model", "estimate_velocity", "estimate_ggto", "estimate_diono", "GPS", "GAL"]
+      "required": ["constellations", "algorithm", "obs_model", "estimate_velocity", "estimate_ggto", "estimate_diono", "phase_center_corrections", "GPS", "GAL"]
     },
     "preprocessor": {
       "type": "object",

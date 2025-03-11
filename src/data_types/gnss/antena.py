@@ -3,6 +3,8 @@ import numpy
 
 from src.data_types.gnss.data_type import DataType
 from src.data_types.gnss.satellite import Satellite
+from src.constants import PI
+from src.utils.interpolation import linear_interpolation_scipy
 
 
 class PhaseCenter:
@@ -30,11 +32,16 @@ class Antenna:
         self.zenith_vec = None
         self.azimuth_vec = None
         self.freq_data = {}
+        self.pco_enabled = False
+        self.pcv_enabled = False
+        self.pcv_model = None
 
     def __str__(self):
         """ String representation of the Antenna. """
         with numpy.printoptions(threshold=numpy.inf, linewidth=numpy.inf):
-            myStr = f"Antenna Type: {self.ant_type}\nZenith Vector: {self.zenith_vec}\nAzimuth Vector: {self.azimuth_vec}\n\n"
+            myStr = f"Antenna Type: {self.ant_type}\nZenith Vector: {self.zenith_vec}\n" \
+                    f"Azimuth Vector: {self.azimuth_vec}\nPCO Enabled: {self.pco_enabled}\n" \
+                    f"PCV Enabled: {self.pcv_enabled}\nPCV Model: {self.pcv_model}\n\n"
             for freq, data in self.freq_data.items():
                 myStr += f"Frequency: {freq}\n{str(data)}\n"
             return myStr
@@ -67,6 +74,19 @@ class Antenna:
             raise AttributeError("freq_data must be a PhaseCenter")
         self.freq_data[freq_type] = freq_data
 
+    def get_pcv(self, freq_type: DataType, azimuth, elevation):
+        # perform interpolation
+        # Only zenith, first
+        zenith_angle = 90 - elevation*180/PI
+        # zen_angles = self.freq_data[freq_type]
+        pco_values = self.freq_data[freq_type].pcv_noazi
+        #knot_zenith, idx_zen = binary_search(list(self.zenith_vec), zenith_angle, 1, ret_index=True, extrapolation=True)
+
+        # TODO: simply check this
+        #pco_values2 = [pco_values[i] for i in idx_zen]
+        #intep1 = linear_interpolation_scipy(zenith_angle, knot_zenith, pco_values2)
+        intep2 = linear_interpolation_scipy(zenith_angle, self.zenith_vec, pco_values)
+        return float(intep2)
 
 class SatelliteAntenna(Antenna):
     """ Satellite Antenna class, inherits from Antenna base class.
@@ -109,6 +129,7 @@ class ReceiverAntenna(Antenna):
         super().__init__()
         self.serial_no = 0  # Antenna serial number
         self.arp_offset = [0, 0, 0]
+        self.arp_enabled = False
 
     @property
     def serial_no(self):
@@ -148,5 +169,6 @@ class ReceiverAntenna(Antenna):
 
     def __str__(self):
         """ String representation of the Receiver Antenna. """
-        return f"Antenna Type: {self.ant_type}\nSerial No.: {self.serial_no}\nARP Offset: {self.arp_offset}\n" \
+        return f"Antenna Type: {self.ant_type}\nSerial No.: {self.serial_no}\nARP Enabled: {self.arp_enabled}\n" \
+               f"ARP Offset: {self.arp_offset}\n" \
                f"{super().__str__()}"

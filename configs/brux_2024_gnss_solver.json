@@ -17,7 +17,7 @@
       "ionex_files": ["datasets/gnss/BRUX_2024/COD0OPSFIN_20240900000_01D_01H_GIM.INX"],
       "antex_files": ["datasets/gnss/BRUX_2024/igs20.atx"],
 
-      "bias_type": "DCB",
+      "bias_type": "OSB",
       "dcb_files": ["datasets/gnss/BRUX_2024/DLR0OPSFIN_20240010000_03L_01D_DCB.BIA"],
       "osb_files": ["datasets/gnss/BRUX_2024/COD0MGXFIN_20240900000_01D_01D_OSB.BIA"],
 
@@ -73,7 +73,7 @@
       "algorithm": "PR-PPP",
 
       "_comment1": "Select the observation model. The available models are combined, uncombined. The combined model requires 2 observations.",
-      "obs_model": "combined",
+      "obs_model": "uncombined",
 
       "estimate_velocity": true,
       "_comment2": "Use Doppler measurements to estimate velocity",
@@ -93,6 +93,27 @@
 
          "_comment3": "Select `true` to estimate tropospheric wet delay or `false` to disable tropo estimation",
          "estimate_tropo_wet": false
+      },
+
+      "phase_center_corrections": {
+         "enabled": true,
+         "receiver":
+         {
+            "ARP_enabled": true,
+            "PCO_enabled": true,
+            "PCV_enabled": true,
+
+            "ARP_offset": null,
+            "_comment": "ARP_offset is null if fetched from RINEX OBS file or defined as a delta vector [H, E, N] in meters",
+
+            "PCV_model": 0,
+            "_comment1": "PCV Model 0: non-azimuth dependent, 1: azimuth dependent"
+         },
+         "satellite":
+         {
+            "PCO": false,
+            "PCV": false
+         }
       },
 
       "GPS": {

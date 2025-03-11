@@ -108,10 +108,13 @@ class RinexObsReader:
                 antenna.serial_no = serial_no
 
             elif "ANTENNA: DELTA H/E/N" in line:
-                tokens = line.split()[0:3]
-                arp_offset_vec = [to_float(x) for x in tokens]
-                antenna = self._phase_center.get_receiver_antenna()
-                antenna.arp_offset = arp_offset_vec
+                # check if the ARP offset is to be initialized from RINEX OBS
+                arp_offset = config_dict.get("model", "phase_center_corrections", "receiver", "ARP_offset")
+                if arp_offset is None:
+                    tokens = line.split()[0:3]
+                    arp_offset_vec = [to_float(x) for x in tokens]
+                    antenna = self._phase_center.get_receiver_antenna()
+                    antenna.arp_offset = arp_offset_vec
 
             elif "TIME OF FIRST OBS" in line:
                 data = line[:RINEX_OBS_END_OF_DATA_HEADER]

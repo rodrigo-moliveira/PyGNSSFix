@@ -5,8 +5,9 @@ import os
 import src.data_mng.gnss.geometry
 from src.data_types.gnss.data_type import DataType, get_data_type
 from src.io.config import config_dict
-from src.io.config.enums import EnumOnOff, EnumFrequencyModel
+from src.io.config.enums import EnumOnOff
 from src.models.frames import cartesian2geodetic
+from src.models.gnss_models import compute_receiver_correction
 from src import constants
 from src.data_mng.gnss.bias_manager import BiasManager
 
@@ -127,7 +128,7 @@ class PseudorangeReconstructor(ObservationReconstructor):
         * dI is the estimated ionospheric residual
     """
     __trace_header__ = "epoch,sat,datatype,observation,true_range,receiver_clock,satellite_clock," \
-                       "satellite_bias,iono_model,tropo,iono_correction"
+                       "satellite_bias,iono_model,tropo,iono_correction,pco_rec"
 
     def __init__(self, system_geometry: src.data_mng.gnss.geometry.SystemGeometry, metadata: dict,
                  state: src.data_mng.gnss.state_space.GnssStateSpace,
@@ -203,12 +204,19 @@ class PseudorangeReconstructor(ObservationReconstructor):
                                                                      self._state.tropo_wet)
         self._system_geometry.set("tropo_map_wet", map_wet, sat)
 
+        # receiver antenna phase center corrections
+        pco_rec = 0.0
+        if self._system_geometry.phase_center.enabled:
+            los = self.get_unit_line_of_sight(sat)
+            antenna = self._system_geometry.phase_center.get_receiver_antenna()
+            pco_rec = compute_receiver_correction(antenna, datatype, los, lat, long, az, el)
+
         # finally, construct obs
-        obs = true_range + dt_rec - (dt_sat - bias) * constants.SPEED_OF_LIGHT + iono + tropo + dI
+        obs = true_range + dt_rec - (dt_sat - bias) * constants.SPEED_OF_LIGHT + iono + tropo + dI + pco_rec
         if self._write_trace:
             self._trace_handler.write(f"{epoch},{sat},{datatype},{obs},{true_range},{dt_rec},"
                                       f"{dt_sat*constants.SPEED_OF_LIGHT},{bias*constants.SPEED_OF_LIGHT},"
-                                      f"{iono},{tropo},{dI}\n")
+                                      f"{iono},{tropo},{dI},{pco_rec}\n")
         return obs
 
 

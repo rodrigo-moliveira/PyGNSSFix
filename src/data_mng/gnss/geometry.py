@@ -132,7 +132,7 @@ class SystemGeometry:
     """ System Geometry class.
     This class is serves as a dataframe to store `SatelliteGeometry` objects for all available satellites.
     """
-    def __init__(self, obs_data, sat_clocks, sat_orbits):
+    def __init__(self, obs_data, sat_clocks, sat_orbits, phase_center):
         """
         Constructor of the SystemGeometry. This is a container that stores data (instances of `SatelliteGeometry`)
         for all available satellites and for a single epoch. This data is useful in the reconstruction equations
@@ -143,11 +143,14 @@ class SystemGeometry:
                 for a single epoch)
             sat_clocks(src.data_mng.gnss.sat_clock_data.SatelliteClocks): `SatelliteClocks` object with clock database
             sat_orbits(src.data_mng.gnss.sat_orbit_data.SatelliteOrbits): `SatelliteOrbits` object with orbit database
+            phase_center(src.data_mng.gnss.phase_center_mng.PhaseCenterManager): `PhaseCenterManager` object with
+                phase center data
         """
         self._data = dict.fromkeys(obs_data.get_satellites())
         self.obs_data = obs_data
         self.sat_clocks = sat_clocks
         self.sat_orbits = sat_orbits
+        self.phase_center = phase_center
 
     def _clean(self):
         vSats = self.get_satellites()

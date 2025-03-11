@@ -193,3 +193,17 @@ class EnumSatelliteBias(Enum):
     @classmethod
     def show_options(cls):
         return f"[0 - BGD/TGD, 1 - DCB, 2 - OSB]"
+
+
+class EnumPCVModel(Enum):
+    """
+    Enumeration for the Phase Center Variation (PCV) Model:
+        * 0: non-azimuth dependent
+        * 1: azimuth dependent
+    """
+    NON_AZI_DEPENDENT = 0
+    AZI_DEPENDENT = 1
+
+    @classmethod
+    def show_options(cls):
+        return f"[0 - non-azimuth dependent, 1 - azimuth dependent]"
