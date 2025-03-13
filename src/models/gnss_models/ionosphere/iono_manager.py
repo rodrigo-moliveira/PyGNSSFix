@@ -1,6 +1,6 @@
 """ Ionosphere Corrections Manager Module """
 
-from src.io.config import EnumIonoModel, config_dict as config, EnumOnOff
+from src.io.config import EnumIonoModel, EnumAlgorithmPNT, config_dict as config, EnumOnOff
 from src.errors import ConfigError
 from .iono_klobuchar import IonoKlobuchar
 from .iono_ntcmg import NTCMG
@@ -33,7 +33,11 @@ class IonoManager:
         Raises:
             ConfigError: an exception is raised if the user-configured model is not known.
         """
+        log = get_logger(MODEL_LOG)
+
         iono_model_enum = EnumIonoModel.init_model(config.get("model", constellation, "ionosphere"))
+        pvt_alg = config.get("gnss_alg")
+
         self._estimate_diono = EnumOnOff(config.get("model", "estimate_diono"))
 
         if iono_model_enum == EnumIonoModel.KLOBUCHAR:
@@ -41,11 +45,20 @@ class IonoManager:
         elif iono_model_enum == EnumIonoModel.NTCMG:
             self.iono_model = NTCMG()
         elif iono_model_enum == EnumIonoModel.IONEX:
-            self.iono_model = IonoIonex(gim_data)
+            if pvt_alg == EnumAlgorithmPNT.SPS:
+                log.warning(f"IONEX model for constellation {constellation} is not available for SPS algorithms. "
+                            f"Switching to SPS compatible model.")
+                if constellation == "GPS":
+                    self.iono_model = IonoKlobuchar()
+                elif constellation == "GAL":
+                    self.iono_model = NTCMG()
+            else:
+                self.iono_model = IonoIonex(gim_data)
         elif iono_model_enum == EnumIonoModel.DISABLED:
             self.iono_model = None
         else:
             raise ConfigError(f'Unknown iono model {iono_model_enum}')
+        log.info(f'Iono Manager initialized with model {self.iono_model} for {constellation} constellation.')
 
     def estimate_diono(self):
         """

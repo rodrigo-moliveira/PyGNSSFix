@@ -76,7 +76,10 @@ def setup(log_str, severity_level, file_path=""):
 
     # Create formatters and add it to handlers
     c_format = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
-    f_format = logging.Formatter('[%(asctime)s] :: [%(name)s --- %(levelname)s] :: %(message)s')
+    # f_format = logging.Formatter('[%(asctime)s] :: [%(name)s --- %(levelname)s] :: %(message)s')
+    f_format = logging.Formatter(
+        '[%(asctime)s] :: [%(name)-15s---%(levelname)-7s] :: %(message)s'
+    )
 
     stderr_handler.setFormatter(c_format)
     stdout_handler.setFormatter(c_format)

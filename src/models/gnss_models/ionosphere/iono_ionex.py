@@ -21,6 +21,10 @@ class IonoIonex:
         """
         self.gim_data = gim_data
 
+    def __str__(self):
+        """ String representation of the model """
+        return "IONEX Ionospheric Model"
+
     def compute(self, ut1, user_lat, user_long, sv_el, sv_az, freq):
         """
 
