@@ -1,9 +1,11 @@
 """ Satellite Phase Center Manager Module
 This module implements the Satellite Phase Center manager, that manages the computation of phase center
 offsets and variations for the receiver and satellite antennas in the reconstruction of GNSS observations. """
+import os
+
 
 from src.data_types.gnss import Satellite
-from src.data_types.gnss.antena import ReceiverAntenna, SatelliteAntenna
+from src.data_types.gnss.antenna import ReceiverAntenna, SatelliteAntenna
 from src.io.config import config_dict, EnumPCVModel, EnumAlgorithmPNT
 
 
@@ -22,13 +24,18 @@ class PhaseCenterManager:
             It is a dictionary defined as:
                 * keys -> :py:class:`Satellite` instances.
                 * values -> :py:class:`SatelliteAntenna` instances with the antenna phase center
+                    information for the satellite.
+        _enabled(bool): attribute that stores if the phase center corrections are enabled.
+        _trace_dir(str): attribute that stores the directory to store trace files.
     """
+
     def __init__(self):
         self._receiver_antenna = ReceiverAntenna()
         self._satellite_antennas = {}
+        self._enabled = False
+        self._trace_dir = None
 
         if config_dict.get("gnss_alg") == EnumAlgorithmPNT.SPS:
-            self._enabled = False  # return with self._enabled set to False
             return
 
         # fetch from the user configurations
@@ -48,24 +55,64 @@ class PhaseCenterManager:
         self._receiver_antenna.pcv_enabled = rec_pcv_enabled
         self._receiver_antenna.pcv_model = rec_pcv_model
 
+    def init(self, trace_dir):
+        """ Initialize the Phase Center Manager.
+
+        Args:
+            trace_dir (str): the directory to store trace files.
+        """
+        if self.enabled:
+            write_trace = config_dict.get("solver", "trace_files")
+            self._trace_dir = trace_dir if write_trace else None
+
+            if self._trace_dir is not None:
+                inputs_dir = f"{self._trace_dir}\\interpolations"
+                if not os.path.isdir(inputs_dir):
+                    try:
+                        os.makedirs(inputs_dir)
+                    except:
+                        raise IOError(f"Cannot create dir: {inputs_dir}")
+                self._receiver_antenna.trace_file = f"{inputs_dir}\\receiver_antenna_pcv.txt"
+
     def add_satellite_antenna(self, satellite: Satellite, antenna: SatelliteAntenna):
         """ Add a satellite antenna to the manager. """
-        self._satellite_antennas[satellite] = antenna
+        if self.enabled:
+            self._satellite_antennas[satellite] = antenna
         # TODO: add here extra configurations for SatelliteAntenna PCO and PCV enabled.
+        # TODO: also trace file..
 
     def get_satellite_antenna(self, satellite: Satellite):
-        """ Get the antenna for a given satellite. """
+        """ Get the antenna for a given satellite.
+
+        Args:
+            satellite (Satellite): the satellite to get the antenna for.
+
+        Returns:
+            SatelliteAntenna: the antenna for the satellite. Returns None if the antenna is not loaded.
+
+        Raises:
+            AttributeError: if the antenna for the satellite is not loaded from ANTEX file.
+        """
+        if not self.enabled:
+            return None
         if satellite not in self._satellite_antennas:
             raise AttributeError(f"Antenna for satellite {satellite} not loaded from ANTEX file.")
         return self._satellite_antennas.get(satellite)
 
     def set_receiver_antenna(self, antenna: ReceiverAntenna):
         """ Set the receiver antenna for the manager. """
-        self._receiver_antenna = antenna
+        if self.enabled:
+            self._receiver_antenna = antenna
 
     def get_receiver_antenna(self):
-        """ Get the receiver antenna for the manager. """
-        return self._receiver_antenna
+        """ Get the receiver antenna for the manager.
+
+        Returns:
+            ReceiverAntenna: the receiver antenna for the manager. Returns None if the antenna is not loaded.
+        """
+        if self.enabled:
+            return self._receiver_antenna
+        return None
 
     def __str__(self):
         """ String representation of the Phase Center Manager. """

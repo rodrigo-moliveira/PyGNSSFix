@@ -333,6 +333,29 @@ class DataType:
         raise SignalError(f"Unable to create smooth pseudorange from "
                           f"data type {str(datatype)}")
 
+    @staticmethod
+    def get_iono_free_base_frequencies(datatype):
+        """
+        Get the base frequencies for the iono-free combination of the provided datatype
+
+        Args:
+            datatype(DataType): iono-free datatype
+
+        Returns:
+            tuple[DataType, DataType]: base frequencies for the iono-free combination
+
+        """
+        freq1 = freq2 = None
+        if DataType.is_iono_free(datatype):
+            freq1_number = datatype.freq_number // 10
+            freq2_number = datatype.freq_number % 10
+            for freq in cAvailableFrequencies:
+                if freq.constellation == datatype.constellation and freq.freq_number == freq1_number:
+                    freq1 = freq
+                if freq.constellation == datatype.constellation and freq.freq_number == freq2_number:
+                    freq2 = freq
+        return freq1, freq2
+
 
 # Default Data Types
 
@@ -342,23 +365,23 @@ class DataType:
 
 # GPS Frequencies
 L1 = DataType(data_type="L1", description="Frequency L1 for GPS", freq_value=constants.GPS_L1_FREQ,
-              constellation="GPS")
+              constellation="GPS", freq_number=1)
 L2 = DataType(data_type="L2", description="Frequency L2 for GPS", freq_value=constants.GPS_L2_FREQ,
-              constellation="GPS")
+              constellation="GPS", freq_number=2)
 L5 = DataType(data_type="L5", description="Frequency L5 for GPS", freq_value=constants.GPS_L5_FREQ,
-              constellation="GPS")
+              constellation="GPS", freq_number=5)
 
 # GAL Frequencies
 E1 = DataType(data_type="E1", description="Frequency E1 (GAL)", freq_value=constants.GAL_E1_FREQ,
-              constellation="GAL")
+              constellation="GAL", freq_number=1)
 E5a = DataType(data_type="E5a", description="Frequency E5a (GAL)", freq_value=constants.GAL_E5A_FREQ,
-               constellation="GAL")
+               constellation="GAL", freq_number=5)
 E5b = DataType(data_type="E5b", description="Frequency E5b (GAL)", freq_value=constants.GAL_E5B_FREQ,
-               constellation="GAL")
+               constellation="GAL", freq_number=7)
 E5ALTBOC = DataType(data_type="E5AltBOC", description="Frequency E5AltBOC (GAL)",
-                    freq_value=constants.GAL_E5ALTBOC_FREQ, constellation="GAL")
+                    freq_value=constants.GAL_E5ALTBOC_FREQ, constellation="GAL", freq_number=8)
 E6 = DataType(data_type="E6", description="Frequency E6 (GAL)", freq_value=constants.GAL_E6_FREQ,
-              constellation="GAL")
+              constellation="GAL", freq_number=6)
 
 ###################
 # Raw Observables #

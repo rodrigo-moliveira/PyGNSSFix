@@ -3,6 +3,7 @@ This module implements classes to store and manage (interpolate) GIM data from I
 """
 
 import numpy as np
+import os
 import math
 
 from src.common_log import get_logger, IO_LOG
@@ -111,9 +112,15 @@ class GlobalIonoMap:
             log.warning("Currently only one IONEX file is supported. The first one will be used.")
         IONEXReader(ionex_files[0], self)
 
-        self.write_trace = config_dict.get("inputs", "trace_files")
+        self.write_trace = config_dict.get("solver", "trace_files")
         if self.write_trace:
-            self.trace_file = open(f"{trace_dir}\\gim_interpolations_trace.txt", "w")
+            inputs_dir = f"{trace_dir}\\interpolations"
+            if not os.path.isdir(inputs_dir):
+                try:
+                    os.makedirs(inputs_dir)
+                except:
+                    raise IOError(f"Cannot create dir: {inputs_dir}")
+            self.trace_file = open(f"{inputs_dir}\\gim_interpolations.txt", "w")
 
     def initialize_arrays(self):
         """ Initialize internal arrays from the header information. """

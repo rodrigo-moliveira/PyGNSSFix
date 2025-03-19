@@ -6,7 +6,7 @@ See the original implementation `here <https://github.com/galactics/beyond/tree/
 All credits to Jules David, the owner of Beyond library.
 """
 
-from numpy import sin, radians
+from numpy import sin
 from datetime import datetime, timedelta, date
 
 from src.errors import EpochError, TimeScaleError
@@ -55,12 +55,23 @@ class Timescale(Node):
         """ Definition of the Barycentric Dynamic Time scale relatively to Terrestrial Time
         See function `convtime.m` in https://celestrak.org/software/vallado-sw.php.
         """
-        # NOTE: This is the tdb_opt 3 from Vallado script (ast alm approach (2012) bradley email)
         jd = mjd + Epoch.JD_MJD
         jj = Epoch._julian_century(jd)
-        m = radians(357.5277233 + 35999.05034 * jj)
-        delta_lambda = radians(246.11 + 0.90251792 * (jd - Epoch.J2000))
-        return 0.001657 * sin(m) + 0.000022 * sin(delta_lambda)
+
+        # NOTE: after an update in the Vallado script, the following code was changed
+        # tdb_opt 3 from Vallado script (ast alm approach (2012) bradley email)
+        # m = radians(357.5277233 + 35999.05034 * jj)
+        # delta_lambda = radians(246.11 + 0.90251792 * (jd - Epoch.J2000))
+        # return 0.001657 * sin(m) + 0.000022 * sin(delta_lambda)
+
+        d = (0.001657 * sin(628.3076 * jj + 6.2401)
+             + 0.000022 * sin(575.3385 * jj + 4.2970)
+             + 0.000014 * sin(1256.6152 * jj + 6.1969)
+             + 0.000005 * sin(606.9777 * jj + 4.0212)
+             + 0.000005 * sin(52.9691 * jj + 0.4444)
+             + 0.000002 * sin(21.3299 * jj + 5.5431)
+             + 0.000010 * sin(628.3076 * jj + 4.2490))
+        return d
 
     def offset(self, mjd, new_scale, eop):
         """ Compute the offset necessary in order to convert from one timescale to another
@@ -91,13 +102,13 @@ class Timescale(Node):
         return delta
 
 
-UT1 = Timescale("UT1")      # Universal Time
-GPST = Timescale("GPST")    # GPS Time
-TDB = Timescale("TDB")      # Barycentric Dynamical Time
-UTC = Timescale("UTC")      # Coordinated Universal Time
-TAI = Timescale("TAI")      # International Atomic Time
-TT = Timescale("TT")        # Terrestrial Time
-GST = Timescale("GST")      # Galileo System Time
+UT1 = Timescale("UT1")  # Universal Time
+GPST = Timescale("GPST")  # GPS Time
+TDB = Timescale("TDB")  # Barycentric Dynamical Time
+UTC = Timescale("UTC")  # Coordinated Universal Time
+TAI = Timescale("TAI")  # International Atomic Time
+TT = Timescale("TT")  # Terrestrial Time
+GST = Timescale("GST")  # Galileo System Time
 
 GPST + TAI + UTC + UT1
 TDB + TT + TAI
@@ -445,13 +456,13 @@ class Epoch:
         if "gnss_time" not in self._cache.keys():
             # gps_epoch = self.change_scale(GPST)  # convert this epoch to GPS Time
             dt = (self - Epoch.GPS_ORIGIN).total_seconds()
-            week = (dt/3600/24) // 7
-            sow = dt - week*3600*24*7
+            week = (dt / 3600 / 24) // 7
+            sow = dt - week * 3600 * 24 * 7
             self._cache["gnss_time"] = (int(week), sow)
         return self._cache["gnss_time"]
 
     @classmethod
-    def _gnss_time(cls, mjd) -> tuple[int,float]:
+    def _gnss_time(cls, mjd) -> tuple[int, float]:
         """
         Un-cached implementation of `gnss_time` (and without using any member variables from the Epoch class)
         """
@@ -512,6 +523,17 @@ class Epoch:
     @staticmethod
     def merge_time_arrays(array1, array2):
         return sorted(list(set(array1) & set(array2)))
+
+    @property
+    def ephemeris_time(self):
+        """ Computes the Ephemeris Time (ET) for this Epoch.
+
+        Returns:
+            float: the computed ephemeris time (ET) (for CSpice functions)
+        """
+        tdb = self.change_scale("TDB")
+        et = (tdb.jd * 86400) - 2.118134880000000e+11
+        return et
 
 
 # This part is here to allow matplotlib to display Epoch objects directly

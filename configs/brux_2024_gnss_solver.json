@@ -106,7 +106,7 @@
             "ARP_offset": null,
             "_comment": "ARP_offset is null if fetched from RINEX OBS file or defined as a delta vector [H, E, N] in meters",
 
-            "PCV_model": 0,
+            "PCV_model": 1,
             "_comment1": "PCV Model 0: non-azimuth dependent, 1: azimuth dependent"
          },
          "satellite":

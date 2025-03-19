@@ -190,6 +190,7 @@ class GnssDataManager(Container):
             self.iono_gim.init(ionex_files, trace_dir)
 
             log.info("Reading Antenna Exchange Files.")
+            self.phase_center.init(trace_dir)
             for file in antex_files:
                 AntexReader(file, self.get_data("phase_center"))
 
