@@ -22,11 +22,14 @@
       "osb_files": ["datasets/gnss/BRUX_2024/COD0MGXFIN_20240900000_01D_01D_OSB.BIA"],
 
       "_comment2": "Select 'true' to use CLK and SP3 products or 'false' to use navigation ephemerides",
-      "use_precise_products": false,
 
-      "leap_file": "geo_time_data/tai-utc.dat",
-      "finals_file": "geo_time_data/finals1980.all",
-      "tropo_file": "geo_time_data/gpt3_5.grd",
+      "leap_file": "geo_time_data/eop/tai-utc.dat",
+      "finals_file": "geo_time_data/eop/finals1980.all",
+      "tropo_file": "geo_time_data/eop/gpt3_5.grd",
+      "cspice_metakernel": "geo_time_data/cspice_kernels/metakernel.tm",
+      "cspice_frame": "ITRF93",
+      "IGS_frame": "ITRF2020",
+      "ITRF_rotation_file": "geo_time_data/ITRF/EPSG_9998.json",
 
       "_comment3": "snr threshold to discard RINEX observables (compare with snr control digit). [1-4]: bad, [5:8]: good, 9: excellent",
       "snr_control": 1,

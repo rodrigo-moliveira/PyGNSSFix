@@ -1,5 +1,16 @@
 # RINEX FILES DEFINITIONS:
 
+The distance between a GNSS satellite and a receiver is measured between their
+respective Antenna Phase Centers (APCs). If the precise satellite orbit data are referred to
+the satellite Center of Mass (CoM), such as in the IGS SP3 files and some real-time products,
+the difference between the satellite CoM and APC must be accounted for. On the other
+hand, the receiver’s reference location is often determined at a marker position that can
+be the Antenna Reference Point (ARP) or another point on the ground below the receiver
+antenna. Consequently, the difference between the receiver reference point and its APC
+must be considered.
+APC errors are frequency-dependent and can be classified into Phase Center Offset (PCO) and Phase Center Variation (PCV). Calibrated corrections for these errors are
+available in the ANTenna Exchange (ANTEX) format file provided by the IGS
+
 The GNSS measurements are referred to the so-called antenna phase centre
 (satellite and receiver). The position of the antenna phase centre is not
 necessarily the geometric centre of the antenna. Indeed, it is not constant,

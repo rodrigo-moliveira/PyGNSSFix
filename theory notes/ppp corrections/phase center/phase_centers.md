@@ -1,6 +1,15 @@
 # GNSS Receiver Phase Center Offsets (PCO) and Phase Center Variations (PCV) in PPP
 
-TODO: to be cleaned up
+The distance between a GNSS satellite and a receiver is measured between their
+respective Antenna Phase Centers (APCs). If the precise satellite orbit data are referred to
+the satellite Center of Mass (CoM), such as in the IGS SP3 files and some real-time products,
+the difference between the satellite CoM and APC must be accounted for. On the other
+hand, the receiver’s reference location is often determined at a marker position that can
+be the Antenna Reference Point (ARP) or another point on the ground below the receiver
+antenna. Consequently, the difference between the receiver reference point and its APC
+must be considered.
+APC errors are frequency-dependent and can be classified into Phase Center Offset (PCO) and Phase Center Variation (PCV). Calibrated corrections for these errors are
+available in the ANTenna Exchange (ANTEX) format file provided by the IGS
 
 ## 1. Introduction
 
@@ -287,3 +296,11 @@ Where:
     ζ_PCV,r,j is the PCV correction (directly taken from ANTEX).
 
 This approach ensures that all observations are referenced correctly to the antenna phase center, allowing for consistent and accurate PPP processing.
+
+
+# Satellite APC Errors
+The PCO of a satellite is defined as the distance between its CoM and the mean APC,
+expressed in the satellite body-fixed frame. The IGS definition for this frame is that the
+coordinate system’s origin is at the satellite’s CoM, the z-axis is parallel to the antenna
+boresight, the y-axis is aligned with the rotation axis of the solar panels, and the x-axis
+completes the right-handed system
