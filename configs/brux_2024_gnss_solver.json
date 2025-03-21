@@ -26,7 +26,7 @@
       "leap_file": "geo_time_data/eop/tai-utc.dat",
       "finals_file": "geo_time_data/eop/finals1980.all",
       "tropo_file": "geo_time_data/eop/gpt3_5.grd",
-      "cspice_metakernel": "geo_time_data/cspice_kernels/metakernel.tm",
+      "cspice_kernels": "geo_time_data/cspice_kernels/",
       "cspice_frame": "ITRF93",
       "IGS_frame": "ITRF2020",
       "ITRF_rotation_file": "geo_time_data/ITRF/EPSG_9998.json",

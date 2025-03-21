@@ -1,5 +1,9 @@
-import jsonschema
+"""Module to perform Helmert transformation between different realizations of the International Terrestrial
+ Reference Frame (ITRF).
+"""
+
 import json
+import jsonschema
 import numpy as np
 
 

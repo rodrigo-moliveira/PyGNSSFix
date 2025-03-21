@@ -19,13 +19,13 @@ class Config(dict):
     """
     Configuration class that inherits from :py:class:`dict`.
 
-    The configuration handler is initialzed from the configuration xml file. Several xml files are available
+    The configuration handler is initialzed from the configuration json file. Several json files are available
         (with different content) depending on the selected algorithm.
         The available algorithms are:
             * "gnss": GNSS PNT solver algorithm
             * "post_processing": post-processing / performance evaluation algorithm
 
-        The :py:mod:`jsonschema` module is used for validating the xml files.
+        The :py:mod:`jsonschema` module is used for validating the json files.
 
     Attributes:
         alg(str): selected algorithm for this configuration. Available algorithms are `gnss` and `post_processing`.
@@ -34,7 +34,7 @@ class Config(dict):
         The initialization and usage of the handler is examplified in the following example below:
         Examples:
             >>> from src.io.config import config_dict
-            >>> config_filename = "path/to/config/file.xml"
+            >>> config_filename = "path/to/config/file.json"
             >>> try:
             >>>     with open(config_filename) as json_file:
             >>>         data = json.load(json_file)
@@ -53,7 +53,7 @@ class Config(dict):
         Initializes the configuration handler instance.
 
         Args:
-            initial_dict(dict): a dict instance with the content of the loaded xml file. See :py:meth:`json.load`.
+            initial_dict(dict): a dict instance with the content of the loaded json file. See :py:meth:`json.load`.
             alg(str): the algorithm of the run.
 
         Raises:
@@ -84,6 +84,21 @@ class Config(dict):
                                           f"number of observations for constellation {constellation} is not 2 "
                                           f"({services}). Please revise the configurations.")
 
+            # For PPP Solutions, load CSpice kernels and initialize the ITRF frame transformations
+            if self["gnss_alg"] != EnumAlgorithmPNT.SPS:
+                from src.spicepy_wrapper import setup_cspice
+                from src import WORKSPACE_PATH
+                log = get_logger(IO_LOG)
+
+                # Loading CSpice Kernels
+                kernels_folder = self.get("inputs", "cspice_kernels")
+                log.info(f"Setting up CSpice kernels from folder {kernels_folder}.")
+                setup_cspice(WORKSPACE_PATH / f"{kernels_folder}")
+                log.info("CSpice kernels successfully installed.")
+
+                # Initialize ITRF frame transformations
+                pass
+                # TOOD: see helmert transformation main...
     def _validate(self, initial_dict, alg):
         # Read the schema from the file
         if alg.lower() == "gnss":

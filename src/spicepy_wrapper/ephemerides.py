@@ -1,6 +1,10 @@
 import spiceypy
 from src.data_types.date import Epoch
 
+def compute_body_frame():
+    # TODO: apply equation to compute body frame matrix
+    pass
+
 def compute_sun_pos(date):
     """
     Compute the position of the Sun at the given date.
@@ -10,10 +14,12 @@ def compute_sun_pos(date):
     # Compute the position of the Sun at the given date
     #sun_pos = spiceypy.spkpos('SUN', date, 'J2000', 'NONE', 'EARTH')
     sun_pos = spiceypy.spkpos('SUN', date, 'ITRF93', 'NONE', 'EARTH')
+    # TODO convert to ITRF2020
     return sun_pos[0]
 
 if __name__ == "__main__":
-    import src.spicepy_wrapper
+    from src.spicepy_wrapper import setup_cspice
+    setup_cspice(".")
     # Example date
     utc = Epoch(2019, 10, 1, 12, 13, 39, 0, scale="UTC")
     print(utc.ephemeris_time)

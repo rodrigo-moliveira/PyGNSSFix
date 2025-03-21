@@ -1,0 +1,4 @@
+GPS attitude model: Nominal (yaw-steering) attitude implemented whereas Kouba 2009 for eclipse
+Galileo attitude model: Nominal attitude according to GSA (2019) implemented.
+
+Ephemeris: JPL DE421, Folkner et al. (2009)
