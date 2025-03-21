@@ -93,7 +93,7 @@ class Config(dict):
                 # Loading CSpice Kernels
                 kernels_folder = self.get("inputs", "cspice_kernels")
                 log.info(f"Setting up CSpice kernels from folder {kernels_folder}.")
-                setup_cspice(WORKSPACE_PATH / f"{kernels_folder}")
+                setup_cspice(WORKSPACE_PATH / f"{kernels_folder}", log)
                 log.info("CSpice kernels successfully installed.")
 
                 # Initialize ITRF frame transformations

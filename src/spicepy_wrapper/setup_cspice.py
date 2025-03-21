@@ -8,12 +8,13 @@ def create_metakernel(kernels_path, log=None):
     file_path = kernels_path / 'metakernel.tm'
     with open(file_path, 'w') as file:
         str_first = "KPL/MK \n \\begindata \n\t\t PATH_VALUES       = (\n\t\t\t'"
-        files_path = kernels_path.replace('\\', '/') + '/'
+        files_path = str(kernels_path).replace('\\', '/') + '/'
+        #files_path = str(kernels_path) + '\\'
         str_end = "'\n\t\t)\n\t\tPATH_SYMBOLS      = ('DATA')\n" \
                   "\t\tKERNELS_TO_LOAD   = (\n" \
-                  "\t\t\t'$DATA/de430.bsp',\n" \
-                  "\t\t\t'$DATA/naif0012.tls.pc',\n" \
-                  "\t\t\t'$DATA/earth_latest_high_prec.bpc',\n" \
+                  "\t\t\t'$DATA\\de421.bsp',\n" \
+                  "\t\t\t'$DATA\\naif0012.tls.pc',\n" \
+                  "\t\t\t'$DATA\\earth_latest_high_prec.bpc',\n" \
                   "\\begintext"
         str_doc = str_first + files_path + str_end
         file.write(str_doc)

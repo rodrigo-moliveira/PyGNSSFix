@@ -25,7 +25,7 @@
         "leap_file": {"type": "string"},
         "finals_file": {"type": "string"},
         "tropo_file": {"type": "string"},
-        "cspice_metakernel": {"type": "string"},
+        "cspice_kernels": {"type": "string"},
         "cspice_frame": {"type": "string"},
         "IGS_frame": {"type": "string"},
         "ITRF_rotation_file": {"type": "string"},
@@ -41,7 +41,7 @@
         "rate": {"type": "integer", "minimum": 1}
       },
       "required": ["trace_files", "obs_files", "nav_files", "clk_files", "sp3_files", "ionex_files" , "antex_files", "osb_files", "dcb_files", "bias_type",
-        "leap_file", "finals_file", "tropo_file", "cspice_metakernel", "cspice_frame", "IGS_frame", "ITRF_rotation_file",
+        "leap_file", "finals_file", "tropo_file", "cspice_kernels", "cspice_frame", "IGS_frame", "ITRF_rotation_file",
       "snr_control", "arc", "rate"]
     },
     "model": {
