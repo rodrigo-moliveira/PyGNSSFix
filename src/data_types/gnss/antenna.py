@@ -51,7 +51,7 @@ class Antenna:
         self.freq_data = {}
         self.pco_enabled = False
         self.pcv_enabled = False
-        self.pcv_model = None
+        self._pcv_model = None
         self._trace_file = None
         self.write_trace = False
 
@@ -65,7 +65,7 @@ class Antenna:
         with np.printoptions(threshold=np.inf, linewidth=np.inf):
             myStr = f"Antenna Type: {self.ant_type}\nZenith Vector: {self.zenith_vec}\n" \
                     f"Azimuth Vector: {self.azimuth_vec}\nPCO Enabled: {self.pco_enabled}\n" \
-                    f"PCV Enabled: {self.pcv_enabled}\nPCV Model: {self.pcv_model}\n\n"
+                    f"PCV Enabled: {self.pcv_enabled}\nPCV Model: {self._pcv_model}\n\n"
             for freq, data in self.freq_data.items():
                 myStr += f"Frequency: {freq}\n{str(data)}\n"
             return myStr
@@ -84,6 +84,21 @@ class Antenna:
         if not isinstance(value, str):
             raise AttributeError("Antenna type must be a string.")
         self._ant_type = value
+
+    @property
+    def pcv_model(self):
+        """
+        Returns:
+             EnumPCVModel: the PCV model for the antenna.
+         """
+        return self._pcv_model
+
+    @pcv_model.setter
+    def pcv_model(self, value: EnumPCVModel):
+        """ Set the PCV model for the antenna. """
+        if not isinstance(value, EnumPCVModel):
+            raise AttributeError("PCV model must be an EnumPCVModel.")
+        self._pcv_model = value
 
     @property
     def trace_file(self):
@@ -135,13 +150,20 @@ class Antenna:
         if freq_type is None or freq_type not in self.freq_data:
             raise KeyError(f"Frequency {freq_type} not found in the antenna data.")
 
-        if self.pcv_model == EnumPCVModel.NON_AZI_DEPENDENT:
-            pcv_values = self.freq_data[freq_type].pcv_noazi
-            pcv_out = linear_interpolation_scipy(zenith_deg, self.zenith_vec, pcv_values)
-        else:
+        pcv_out = 0.0
+        if self.pcv_model == EnumPCVModel.AZI_DEPENDENT and self.freq_data[freq_type].pcv_azi is not None:
+            # only apply azimuth dependent PCV if it is available
             pcv_matrix = self.freq_data[freq_type].pcv_azi
             pcv_out = self._interpolate_pcv_matrix(zenith_deg, azimuth_deg, pcv_matrix)
 
+        elif self.freq_data[freq_type].pcv_noazi is not None:
+            # else, apply non-azimuth dependent PCV
+            if self.pcv_model == EnumPCVModel.AZI_DEPENDENT:
+                print("TEMP WARNING: RESORTING TO NON-AZIMUTH DEPENDENT PCV FOR AZI_DEPENDENT MODEL.")
+            pcv_values = self.freq_data[freq_type].pcv_noazi
+            pcv_out = linear_interpolation_scipy(zenith_deg, self.zenith_vec, pcv_values)
+        else:
+            print("TEMP WARNING: NO PCV DATA AVAILABLE")
         return float(pcv_out)
     
     def _interpolate_pcv_matrix(self, zenith: float, azimuth: float, pcv_matrix: np.ndarray) -> float:

@@ -15,6 +15,9 @@ from src.common_log import get_logger, MODEL_LOG
 _warning_cache = set()
 _model_logger = get_logger(MODEL_LOG)
 
+# TODO:
+#  * NOTE: if CSpice is disabled, the satellite PCO / PCV corrections are not computed.
+#  * NOTE: if ITRF data is not provided, the Cspice Sun ephemerides are not rotated.
 
 def compute_receiver_correction(receiver_antenna, datatype, los, lat, long, azim, elev):
     """

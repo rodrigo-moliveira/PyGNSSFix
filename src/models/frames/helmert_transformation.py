@@ -115,7 +115,7 @@ def validate_json(json_data, schema):
 # Example usage
 if __name__ == "__main__":
     # Fetch schema from the URL
-    schema_file = "../../io/config/resources/projjson.schema.json"
+    schema_file = "../../io/config/resources/itrf_epsg.schema.json"
 
     # Load the JSON file
     json_data = load_json_file("../../../workspace/geo_time_data/ITRF/EPSG_9998.json")

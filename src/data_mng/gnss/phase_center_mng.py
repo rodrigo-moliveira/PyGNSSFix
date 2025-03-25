@@ -66,20 +66,33 @@ class PhaseCenterManager:
             self._trace_dir = trace_dir if write_trace else None
 
             if self._trace_dir is not None:
-                inputs_dir = f"{self._trace_dir}\\interpolations"
-                if not os.path.isdir(inputs_dir):
+                interpolations_dir = f"{self._trace_dir}\\interpolations"
+                if not os.path.isdir(interpolations_dir):
                     try:
-                        os.makedirs(inputs_dir)
+                        os.makedirs(interpolations_dir)
                     except:
-                        raise IOError(f"Cannot create dir: {inputs_dir}")
-                self._receiver_antenna.trace_file = f"{inputs_dir}\\receiver_antenna_pcv.txt"
+                        raise IOError(f"Cannot create dir: {interpolations_dir}")
+                self._receiver_antenna.trace_file = f"{interpolations_dir}\\receiver_antenna_pcv.txt"
 
     def add_satellite_antenna(self, satellite: Satellite, antenna: SatelliteAntenna):
         """ Add a satellite antenna to the manager. """
         if self.enabled:
+            # fetch from the user configurations
+            sat_pco_enabled = config_dict.get("model", "phase_center_corrections", "satellite", "PCO_enabled")
+            sat_pcv_enabled = config_dict.get("model", "phase_center_corrections", "satellite", "PCV_enabled")
+            gps_pcv_model = EnumPCVModel(config_dict.get("model", "phase_center_corrections", "satellite",
+                                                         "GPS_PCV_model"))
+            gal_pcv_model = EnumPCVModel(config_dict.get("model", "phase_center_corrections", "satellite",
+                                                         "GAL_PCV_model"))
+
+            antenna.pco_enabled = sat_pco_enabled
+            antenna.pcv_enabled = sat_pcv_enabled
+            if satellite.sat_system == "GPS":
+                antenna.pcv_model = gps_pcv_model
+            elif satellite.sat_system == "GAL":
+                antenna.pcv_model = gal_pcv_model
+            antenna.trace_file = f"{self._trace_dir}\\interpolations\\{str(satellite)}_antenna_pcv.txt"
             self._satellite_antennas[satellite] = antenna
-        # TODO: add here extra configurations for SatelliteAntenna PCO and PCV enabled.
-        # TODO: also trace file..
 
     def get_satellite_antenna(self, satellite: Satellite):
         """ Get the antenna for a given satellite.

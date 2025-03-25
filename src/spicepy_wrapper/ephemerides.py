@@ -1,3 +1,5 @@
+""" This module provides functions to compute the required ephemerides and attitude of celestial bodies (Sun). """
+
 import spiceypy
 from src.data_types.date import Epoch
 

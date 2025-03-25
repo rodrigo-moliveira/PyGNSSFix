@@ -91,14 +91,12 @@ class Config(dict):
                 log = get_logger(IO_LOG)
 
                 # Loading CSpice Kernels
-                kernels_folder = self.get("inputs", "cspice_kernels")
-                log.info(f"Setting up CSpice kernels from folder {kernels_folder}.")
-                setup_cspice(WORKSPACE_PATH / f"{kernels_folder}", log)
-                log.info("CSpice kernels successfully installed.")
+                if self.get("inputs", "cspice_kernels", "enable"):
+                    kernels_folder = self.get("inputs", "cspice_kernels", "dir")
+                    kernel_list = self.get("inputs", "cspice_kernels", "list")
+                    log.info(f"Setting up CSpice kernels {kernel_list} from folder {kernels_folder}.")
+                    setup_cspice(WORKSPACE_PATH / f"{kernels_folder}", kernel_list, log)
 
-                # Initialize ITRF frame transformations
-                pass
-                # TOOD: see helmert transformation main...
     def _validate(self, initial_dict, alg):
         # Read the schema from the file
         if alg.lower() == "gnss":

@@ -25,10 +25,18 @@
         "leap_file": {"type": "string"},
         "finals_file": {"type": "string"},
         "tropo_file": {"type": "string"},
-        "cspice_kernels": {"type": "string"},
-        "cspice_frame": {"type": "string"},
-        "IGS_frame": {"type": "string"},
-        "ITRF_rotation_file": {"type": "string"},
+        "cspice_kernels": {
+          "type": "object",
+          "properties": {
+            "enable": {"type": "boolean"},
+            "dir": {"type": "string"},
+            "list": {"type": "array", "items": {"type": "string"}},
+            "cspice_ecef_frame": {"type": "string"}
+          },
+          "required": ["enable", "dir", "list", "cspice_ecef_frame"]
+        },
+        "IGS_ecef_frame": {"type": "string"},
+        "ITRF_dir": {"type": "string"},
         "snr_control": {"type": "integer", "minimum": 1, "maximum": 9},
         "arc": {
           "type": "object",
@@ -41,8 +49,8 @@
         "rate": {"type": "integer", "minimum": 1}
       },
       "required": ["trace_files", "obs_files", "nav_files", "clk_files", "sp3_files", "ionex_files" , "antex_files", "osb_files", "dcb_files", "bias_type",
-        "leap_file", "finals_file", "tropo_file", "cspice_kernels", "cspice_frame", "IGS_frame", "ITRF_rotation_file",
-      "snr_control", "arc", "rate"]
+        "leap_file", "finals_file", "tropo_file", "cspice_kernels", "IGS_ecef_frame", "ITRF_dir",
+        "snr_control", "arc", "rate"]
     },
     "model": {
       "type": "object",
@@ -80,9 +88,19 @@
                 "PCV_model": {"type": "integer", "minimum": 0, "maximum": 1}
               },
               "required": ["ARP_enabled", "PCO_enabled", "PCV_enabled", "ARP_offset", "PCV_model"]
+            },
+            "satellite": {
+              "type": "object",
+              "properties": {
+                "PCO_enabled": {"type": "boolean"},
+                "PCV_enabled": {"type": "boolean"},
+                "GPS_PCV_model": {"type": "integer", "minimum": 0, "maximum": 1},
+                "GAL_PCV_model": {"type": "integer", "minimum": 0, "maximum": 1}
+              },
+              "required": ["PCO_enabled", "PCV_enabled", "GPS_PCV_model", "GAL_PCV_model"]
             }
           },
-          "required": ["enabled", "receiver"]
+          "required": ["enabled", "receiver", "satellite"]
         },
 
         "GPS": {

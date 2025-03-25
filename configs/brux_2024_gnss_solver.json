@@ -26,10 +26,15 @@
       "leap_file": "geo_time_data/eop/tai-utc.dat",
       "finals_file": "geo_time_data/eop/finals1980.all",
       "tropo_file": "geo_time_data/eop/gpt3_5.grd",
-      "cspice_kernels": "geo_time_data/cspice_kernels/",
-      "cspice_frame": "ITRF93",
-      "IGS_frame": "ITRF2020",
-      "ITRF_rotation_file": "geo_time_data/ITRF/EPSG_9998.json",
+
+      "cspice_kernels": {
+         "enable": true,
+         "dir": "geo_time_data/cspice_kernels/",
+         "list": ["de421.bsp", "earth_latest_high_prec.bpc", "naif0012.tls.pc"],
+         "cspice_ecef_frame": "ITRF93"
+      },
+      "IGS_ecef_frame": "ITRF2020",
+      "ITRF_dir": "geo_time_data/ITRF/",
 
       "_comment3": "snr threshold to discard RINEX observables (compare with snr control digit). [1-4]: bad, [5:8]: good, 9: excellent",
       "snr_control": 1,
@@ -114,8 +119,12 @@
          },
          "satellite":
          {
-            "PCO": false,
-            "PCV": false
+            "PCO_enabled": true,
+            "PCV_enabled": true,
+
+            "GPS_PCV_model": 1,
+            "GAL_PCV_model": 1,
+            "_comment1": "GPS/GAL PCV Models 0: non-azimuth dependent, 1: azimuth dependent. Resort to non-azimuth dependent if no azimuth dependent model is available."
          }
       },
 
