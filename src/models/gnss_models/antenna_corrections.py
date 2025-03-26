@@ -19,7 +19,7 @@ _model_logger = get_logger(MODEL_LOG)
 #  * NOTE: if CSpice is disabled, the satellite PCO / PCV corrections are not computed.
 #  * NOTE: if ITRF data is not provided, the Cspice Sun ephemerides are not rotated.
 
-def compute_receiver_correction(receiver_antenna, datatype, los, lat, long, azim, elev):
+def receiver_phase_center_correction(receiver_antenna, datatype, los, lat, long, azim, elev):
     """
     Compute the receiver antenna corrections for the given datatype and satellite position.
 
@@ -100,6 +100,26 @@ def compute_receiver_correction(receiver_antenna, datatype, los, lat, long, azim
 
     return correction
 
+
+def satellite_phase_center_correction(epoch, sat_antenna, sat_pos, datatype, los, azim, elev):
+    # compute position of the sun
+
+    # rotate sun position from ITRF93 (CSpice ECEF realization) to ITRF2020 (IGS ECEF realization)
+
+    # get matrix from sat satellite body-fixed frame to ECEF
+    # NOTE: for now apply attitude law here
+    e_r = np.array([1, 0, 0])
+
+    # PCO equation
+    # pco = los \cdot (M @ (A * r_pco))
+    # -> los is the line of sight computed at RX time
+    # -> A is the rotation matrix from body-fixed frame to ECEF (TX time)?
+    # -> M is the rotation from ECEF TX to ECEF RX
+    # M = dcm_e_i(-transit)
+    #
+
+
+    pass
 
 def compute_pco_for_freq(los, enu2ecef, receiver_antenna, freq):
     """

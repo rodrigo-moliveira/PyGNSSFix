@@ -7,7 +7,7 @@ from src.data_types.gnss.data_type import DataType, get_data_type
 from src.io.config import config_dict
 from src.io.config.enums import EnumOnOff
 from src.models.frames import cartesian2geodetic
-from src.models.gnss_models import compute_receiver_correction
+from src.models.gnss_models import receiver_phase_center_correction, satellite_phase_center_correction
 from src import constants
 from src.data_mng.gnss.bias_manager import BiasManager
 
@@ -206,17 +206,31 @@ class PseudorangeReconstructor(ObservationReconstructor):
 
         # receiver antenna phase center corrections
         pco_rec = 0.0
+        pco_sat = 0.0
         if self._system_geometry.phase_center.enabled:
             los = self.get_unit_line_of_sight(sat)
-            antenna = self._system_geometry.phase_center.get_receiver_antenna()
-            pco_rec = compute_receiver_correction(antenna, datatype, los, lat, long, az, el)
+            try:
+                rec_antenna = self._system_geometry.phase_center.get_receiver_antenna()
+                pco_rec = receiver_phase_center_correction(rec_antenna, datatype, los, lat, long, az, el)
+            except Exception as e:
+                from src.common_log import get_logger, MODEL_LOG
+                get_logger(MODEL_LOG).warning(f"Error computing receiver antenna correction: {e}")
+                exit()  # TODO: handle this error
+
+            try:
+                sat_antenna = self._system_geometry.phase_center.get_satellite_antenna(sat)
+                pco_sat = satellite_phase_center_correction(epoch, sat_antenna, datatype, los, az, el)
+            except Exception as e:
+                from src.common_log import get_logger, MODEL_LOG
+                get_logger(MODEL_LOG).warning(f"Error computing satellite antenna correction for {sat}: {e}")
+                exit()  # TODO: handle this error
 
         # finally, construct obs
-        obs = true_range + dt_rec - (dt_sat - bias) * constants.SPEED_OF_LIGHT + iono + tropo + dI + pco_rec
+        obs = true_range + dt_rec - (dt_sat - bias) * constants.SPEED_OF_LIGHT + iono + tropo + dI + pco_rec + pco_sat
         if self._write_trace:
             self._trace_handler.write(f"{epoch},{sat},{datatype},{obs},{true_range},{dt_rec},"
                                       f"{dt_sat*constants.SPEED_OF_LIGHT},{bias*constants.SPEED_OF_LIGHT},"
-                                      f"{iono},{tropo},{dI},{pco_rec}\n")
+                                      f"{iono},{tropo},{dI},{pco_rec},{pco_sat}\n")
         return obs
 
 

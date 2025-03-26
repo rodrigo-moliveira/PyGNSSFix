@@ -5,11 +5,13 @@ from datetime import timedelta
 import numpy as np
 
 from src.constants import SPEED_OF_LIGHT
-from src.io.config import EnumTransmissionTime
-from src.models.frames import enu2azel, ecef2enu, cartesian2geodetic
+from src.io.config import EnumTransmissionTime, config_dict
+from src.models.frames import enu2azel, ecef2enu, cartesian2geodetic, dcm_e_i
 from src.data_mng import Container
 from src.models.gnss_models.navigation import compute_tx_time
 from src.common_log import MODEL_LOG, get_logger
+from src.spicepy_wrapper import compute_sun_pos
+from src.models.gnss_models import gnss_attitude
 
 
 class SatelliteGeometry(Container):
@@ -32,10 +34,11 @@ class SatelliteGeometry(Container):
         los(numpy.ndarray): line of sight vector from receiver to satellite
         tropo_map_wet(float): map of tropospheric wet component
         drift_rel_correction(float): relativistic clock drift correction of satellite clock
+        dcm_b_e(numpy.ndarray): DCM from satellite body-fixed frame to ECEF frame (at TX time)
     """
     __slots__ = ["transit_time", "time_emission", "time_reception", "true_range", "az", "el",
                  "satellite_position", "satellite_velocity", "dt_rel_correction", "los", "tropo_map_wet",
-                 "drift_rel_correction"]
+                 "drift_rel_correction", "dcm_b_e"]
 
     def __init__(self):
         """ Base Constructor with no arguments. The attributes are filled in the `compute` method.  """
@@ -52,6 +55,7 @@ class SatelliteGeometry(Container):
         self.dt_rel_correction = 0
         self.drift_rel_correction = 0
         self.los = None
+        self.dcm_b_e = None
 
     def __str__(self):
         _allAttrs = ""
@@ -96,7 +100,8 @@ class SatelliteGeometry(Container):
                                                  sat_clocks=sat_clocks, sat=sat)
 
         # get satellite position and velocity at RX ECEF frame
-        p_sat, v_sat, dt_relative, drift_relative = sat_orbits.compute_orbit_at_rx_time(sat, time_emission, transit)
+        p_sat, v_sat, dt_relative, drift_relative, r_sat_tx = sat_orbits.compute_orbit_at_rx_time(sat, time_emission,
+                                                                                                  transit)
 
         # Compute geometrical range
         if compute_tx != EnumTransmissionTime.NAPEOS:
@@ -110,6 +115,17 @@ class SatelliteGeometry(Container):
         lat, long, h = cartesian2geodetic(rec_pos[0], rec_pos[1], rec_pos[2])
         enu_coord = ecef2enu(p_sat[0], p_sat[1], p_sat[2], lat, long, h)
         az, el = enu2azel(*enu_coord)
+
+        # TODO: to be considered ITRF transformations
+        cspice_frame = config_dict.get("inputs", "cspice_kernels", "cspice_ecef_frame")
+        target_frame = config_dict.get("inputs", "IGS_ecef_frame")
+        # Create or load static ITRF Transformation class.
+
+        # rotation matrix from satellite body-fixed frame to ECEF frame at RX time
+        _R = dcm_e_i(-transit)
+        sun_pos_tx = compute_sun_pos(time_emission, frame=cspice_frame)
+        dcm_tx = gnss_attitude.gnss_attitude(r_sat_tx, sun_pos_tx)
+        dcm_b_e = _R @ dcm_tx
 
         # line of sight (Eq. (21.21) of [1])
         los = np.array([(rec_pos[i] - p_sat[i]) / true_range for i in (0, 1, 2)])
@@ -126,6 +142,7 @@ class SatelliteGeometry(Container):
         self.dt_rel_correction = dt_relative
         self.los = los
         self.drift_rel_correction = drift_relative
+        self.dcm_b_e = dcm_b_e
 
 
 class SystemGeometry:
