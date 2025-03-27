@@ -35,10 +35,15 @@ class SatelliteGeometry(Container):
         tropo_map_wet(float): map of tropospheric wet component
         drift_rel_correction(float): relativistic clock drift correction of satellite clock
         dcm_b_e(numpy.ndarray): DCM from satellite body-fixed frame to ECEF frame (at TX time)
+        nadir_sat(float): nadir angle of the satellite. This is the angle between the direction from satellite toward
+            the center of the earth and the LOS vector
+        azimuth_sat(float): azimuth angle of the satellite. This is the angle between the LOS vector projected in the
+            XY-plane and the +Y-axis, measured clockwise toward +X when looking in the direction of -Z (toward deep
+            space). Axes here are referred to the satellite body-fixed frame.
     """
     __slots__ = ["transit_time", "time_emission", "time_reception", "true_range", "az", "el",
                  "satellite_position", "satellite_velocity", "dt_rel_correction", "los", "tropo_map_wet",
-                 "drift_rel_correction", "dcm_b_e"]
+                 "drift_rel_correction", "dcm_b_e", "nadir_sat", "azimuth_sat"]
 
     def __init__(self):
         """ Base Constructor with no arguments. The attributes are filled in the `compute` method.  """
@@ -56,6 +61,8 @@ class SatelliteGeometry(Container):
         self.drift_rel_correction = 0
         self.los = None
         self.dcm_b_e = None
+        self.nadir_sat = 0
+        self.azimuth_sat = 0
 
     def __str__(self):
         _allAttrs = ""
@@ -118,7 +125,7 @@ class SatelliteGeometry(Container):
 
         # TODO: to be considered ITRF transformations
         cspice_frame = config_dict.get("inputs", "cspice_kernels", "cspice_ecef_frame")
-        target_frame = config_dict.get("inputs", "IGS_ecef_frame")
+        # target_frame = config_dict.get("inputs", "IGS_ecef_frame")
         # Create or load static ITRF Transformation class.
 
         # rotation matrix from satellite body-fixed frame to ECEF frame at RX time
@@ -129,6 +136,17 @@ class SatelliteGeometry(Container):
 
         # line of sight (Eq. (21.21) of [1])
         los = np.array([(rec_pos[i] - p_sat[i]) / true_range for i in (0, 1, 2)])
+
+        # compute satellite nadir and azimuth angles (in the satellite body frame)
+        los_body = dcm_b_e.T @ los  # los in satellite body-fixed frame
+        azimuth_sat = np.arctan2(los_body[0], los_body[1])
+        if azimuth_sat < 0:
+            azimuth_sat += 2 * np.pi  # Ensure range [0, 2pi]
+        e_z = -p_sat / np.linalg.norm(p_sat)
+        nadir_sat = np.arccos(np.dot(los, e_z) / np.linalg.norm(los))
+        # NOTE: The azimuth angle of the receiver as seen from the satellite is the angle between the projected LOS
+        # vector in the XY-plane and the +Y-axis, measured clockwise toward +X when looking in the direction of -Z
+        # (toward deep space).
 
         # save results in container
         self.transit_time = transit
@@ -143,6 +161,8 @@ class SatelliteGeometry(Container):
         self.los = los
         self.drift_rel_correction = drift_relative
         self.dcm_b_e = dcm_b_e
+        self.nadir_sat = nadir_sat
+        self.azimuth_sat = azimuth_sat
 
 
 class SystemGeometry:

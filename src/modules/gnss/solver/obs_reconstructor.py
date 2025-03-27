@@ -218,8 +218,11 @@ class PseudorangeReconstructor(ObservationReconstructor):
                 exit()  # TODO: handle this error
 
             try:
+                dcm_b_e = self._system_geometry.get("dcm_b_e", sat)
+                nadir_sat = self._system_geometry.get("nadir_sat", sat)
+                azimuth_sat = self._system_geometry.get("azimuth_sat", sat)
                 sat_antenna = self._system_geometry.phase_center.get_satellite_antenna(sat)
-                pco_sat = satellite_phase_center_correction(epoch, sat_antenna, datatype, los, az, el)
+                pco_sat = satellite_phase_center_correction(sat_antenna, dcm_b_e, datatype, los, nadir_sat, azimuth_sat)
             except Exception as e:
                 from src.common_log import get_logger, MODEL_LOG
                 get_logger(MODEL_LOG).warning(f"Error computing satellite antenna correction for {sat}: {e}")
