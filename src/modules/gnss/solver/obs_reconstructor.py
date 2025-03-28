@@ -117,7 +117,7 @@ class PseudorangeReconstructor(ObservationReconstructor):
     """
     Reconstructor of pseudorange observations, according to the following equation.
 
-        PR = rho + dt_rec - dt_sat + iono + tropo + dI
+        PR = rho + dt_rec - dt_sat + iono + tropo + dI + pcc_rec + pcc_sat
     where:
         * PR is the reconstructed pseudorange observation
         * rho is the true range (geometrical distance between satellite at TX time and receiver at RX time)
@@ -126,9 +126,11 @@ class PseudorangeReconstructor(ObservationReconstructor):
         * iono is the a-priori ionospheric delay
         * tropo is the tropospheric delay (a-priori model or estimated in the solver)
         * dI is the estimated ionospheric residual
+        * pcc_rec is the receiver antenna phase center correction (ARP, PCO, PCV)
+        * pcc_sat is the satellite antenna phase center correction (PCO, PCV)
     """
     __trace_header__ = "epoch,sat,datatype,observation,true_range,receiver_clock,satellite_clock," \
-                       "satellite_bias,iono_model,tropo,iono_correction,pco_rec"
+                       "satellite_bias,iono_model,tropo,iono_correction,pcc_rec,pcc_sat"
 
     def __init__(self, system_geometry: src.data_mng.gnss.geometry.SystemGeometry, metadata: dict,
                  state: src.data_mng.gnss.state_space.GnssStateSpace,
@@ -205,35 +207,33 @@ class PseudorangeReconstructor(ObservationReconstructor):
         self._system_geometry.set("tropo_map_wet", map_wet, sat)
 
         # receiver antenna phase center corrections
-        pco_rec = 0.0
-        pco_sat = 0.0
+        pcc_rec = pcc_sat = 0.0
         if self._system_geometry.phase_center.enabled:
             los = self.get_unit_line_of_sight(sat)
             try:
                 rec_antenna = self._system_geometry.phase_center.get_receiver_antenna()
-                pco_rec = receiver_phase_center_correction(rec_antenna, datatype, los, lat, long, az, el)
+                pcc_rec = receiver_phase_center_correction(rec_antenna, datatype, los, lat, long, az, el)
             except Exception as e:
                 from src.common_log import get_logger, MODEL_LOG
-                get_logger(MODEL_LOG).warning(f"Error computing receiver antenna correction: {e}")
-                exit()  # TODO: handle this error
-
+                get_logger(MODEL_LOG).warning(f"Error computing receiver antenna correction for "
+                                              f"{epoch}, datatype {datatype} and sat {str(sat)}: {e}")
             try:
                 dcm_b_e = self._system_geometry.get("dcm_b_e", sat)
                 nadir_sat = self._system_geometry.get("nadir_sat", sat)
                 azimuth_sat = self._system_geometry.get("azimuth_sat", sat)
                 sat_antenna = self._system_geometry.phase_center.get_satellite_antenna(sat)
-                pco_sat = satellite_phase_center_correction(sat_antenna, dcm_b_e, datatype, los, nadir_sat, azimuth_sat)
+                pcc_sat = satellite_phase_center_correction(sat_antenna, dcm_b_e, datatype, los, nadir_sat, azimuth_sat)
             except Exception as e:
                 from src.common_log import get_logger, MODEL_LOG
-                get_logger(MODEL_LOG).warning(f"Error computing satellite antenna correction for {sat}: {e}")
-                exit()  # TODO: handle this error
+                get_logger(MODEL_LOG).warning(f"Error computing satellite antenna correction for "
+                                              f"{epoch}, datatype {datatype} and sat {str(sat)}: {e}")
 
         # finally, construct obs
-        obs = true_range + dt_rec - (dt_sat - bias) * constants.SPEED_OF_LIGHT + iono + tropo + dI + pco_rec + pco_sat
+        obs = true_range + dt_rec - (dt_sat - bias) * constants.SPEED_OF_LIGHT + iono + tropo + dI + pcc_rec + pcc_sat
         if self._write_trace:
             self._trace_handler.write(f"{epoch},{sat},{datatype},{obs},{true_range},{dt_rec},"
                                       f"{dt_sat*constants.SPEED_OF_LIGHT},{bias*constants.SPEED_OF_LIGHT},"
-                                      f"{iono},{tropo},{dI},{pco_rec},{pco_sat}\n")
+                                      f"{iono},{tropo},{dI},{pcc_rec},{pcc_sat}\n")
         return obs
 
 

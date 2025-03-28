@@ -8,10 +8,11 @@ from src.constants import SPEED_OF_LIGHT
 from src.io.config import EnumTransmissionTime, config_dict
 from src.models.frames import enu2azel, ecef2enu, cartesian2geodetic, dcm_e_i
 from src.data_mng import Container
-from src.models.gnss_models.navigation import compute_tx_time
 from src.common_log import MODEL_LOG, get_logger
 from src.spicepy_wrapper import compute_sun_pos
-from src.models.gnss_models import gnss_attitude
+from src.models.gnss_models import gnss_attitude, compute_tx_time
+
+_warning_cache = set()
 
 
 class SatelliteGeometry(Container):
@@ -123,30 +124,45 @@ class SatelliteGeometry(Container):
         enu_coord = ecef2enu(p_sat[0], p_sat[1], p_sat[2], lat, long, h)
         az, el = enu2azel(*enu_coord)
 
-        # TODO: to be considered ITRF transformations
-        cspice_frame = config_dict.get("inputs", "cspice_kernels", "cspice_ecef_frame")
-        # target_frame = config_dict.get("inputs", "IGS_ecef_frame")
-        # Create or load static ITRF Transformation class.
-
-        # rotation matrix from satellite body-fixed frame to ECEF frame at RX time
-        _R = dcm_e_i(-transit)
-        sun_pos_tx = compute_sun_pos(time_emission, frame=cspice_frame)
-        dcm_tx = gnss_attitude.gnss_attitude(r_sat_tx, sun_pos_tx)
-        dcm_b_e = _R @ dcm_tx
-
         # line of sight (Eq. (21.21) of [1])
         los = np.array([(rec_pos[i] - p_sat[i]) / true_range for i in (0, 1, 2)])
 
-        # compute satellite nadir and azimuth angles (in the satellite body frame)
-        los_body = dcm_b_e.T @ los  # los in satellite body-fixed frame
-        azimuth_sat = np.arctan2(los_body[0], los_body[1])
-        if azimuth_sat < 0:
-            azimuth_sat += 2 * np.pi  # Ensure range [0, 2pi]
-        e_z = -p_sat / np.linalg.norm(p_sat)
-        nadir_sat = np.arccos(np.dot(los, e_z) / np.linalg.norm(los))
-        # NOTE: The azimuth angle of the receiver as seen from the satellite is the angle between the projected LOS
-        # vector in the XY-plane and the +Y-axis, measured clockwise toward +X when looking in the direction of -Z
-        # (toward deep space).
+        dcm_b_e = None
+        nadir_sat = None
+        azimuth_sat = None
+        # TODO: to be considered ITRF transformations
+        if config_dict.get("inputs", "cspice_kernels", "enable"):
+            try:
+                cspice_frame = config_dict.get("inputs", "cspice_kernels", "cspice_ecef_frame")
+                # target_frame = config_dict.get("inputs", "IGS_ecef_frame")
+                # Create or load static ITRF Transformation class.
+
+                # GNSS Attitude: rotation matrix from satellite body-fixed frame to ECEF frame at RX time
+                _R = dcm_e_i(-transit)
+                sun_pos_tx = compute_sun_pos(time_emission, frame=cspice_frame)
+                dcm_tx = gnss_attitude.gnss_attitude(r_sat_tx, sun_pos_tx)
+                dcm_b_e = _R @ dcm_tx
+
+                # compute satellite nadir and azimuth angles (in the satellite body frame)
+                los_body = dcm_b_e.T @ los  # los in satellite body-fixed frame
+                azimuth_sat = np.arctan2(los_body[0], los_body[1])
+                if azimuth_sat < 0:
+                    azimuth_sat += 2 * np.pi  # Ensure range [0, 2pi]
+                e_z = -p_sat / np.linalg.norm(p_sat)
+                nadir_sat = np.arccos(np.dot(los, e_z) / np.linalg.norm(los))
+                # NOTE: The azimuth angle of the receiver as seen from the satellite is the angle between the
+                # projected LOS vector in the XY-plane and the +Y-axis, measured clockwise toward +X when looking in
+                # the direction of -Z (toward deep space).
+            except Exception as e:
+                if sat not in _warning_cache:
+                    log = get_logger(MODEL_LOG)
+                    log.warning(f"Failed to compute satellite attitude for sat {sat} due to: {e}")
+                    _warning_cache.add(sat)
+        else:
+            if sat not in _warning_cache:
+                log = get_logger(MODEL_LOG)
+                log.warning(f"Not computing satellite attitude for sat {sat} because CSpice is disabled.")
+                _warning_cache.add(sat)
 
         # save results in container
         self.transit_time = transit

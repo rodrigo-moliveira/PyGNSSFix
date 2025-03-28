@@ -16,8 +16,9 @@ class PhaseCenter:
         pcv_noazi (list): List of PCV values in millimeters for non-azimuth dependent PCV
         pcv_azi (numpy.ndarray): Numpy matrix with PCV values in millimeters for azimuth dependent PCV.
             Row axis is azimuth and column axis is zenith.
-        pco (list): List with PCO values for the phase center offset, in the format of the ANTEX file, that is,
-            NORTH / EAST / UP in millimeters
+        pco (list): List with PCO values for the phase center offset, in the format of the ANTEX file, that is:
+            * NORTH / EAST / UP in millimeters for receiver antennas
+            * X / Y / Z in millimeters for satellite antennas (body-fixed frame coordinates)
     """
     def __init__(self):
         self.pcv_noazi = None  # PCV values for non-azimuth dependent PCV
@@ -26,7 +27,7 @@ class PhaseCenter:
 
     def __str__(self):
         """ String representation of the PhaseCenter. """
-        return f"PCO: {self.pco} [mm]\nPCV No Azimuth: {self.pcv_noazi}\nPCV Azimuth:\n{self.pcv_azi}\n"
+        return f"PCO: {self.pco} [mm]\nPCV No Azimuth: {self.pcv_noazi} [mm]\nPCV Azimuth:\n{self.pcv_azi} [mm]\n"
 
 
 class Antenna:
@@ -53,6 +54,7 @@ class Antenna:
         self.pcv_enabled = False
         self._pcv_model = None
         self._trace_file = None
+        self._warning_thrown = False
         self.write_trace = False
 
     def __del__(self):
@@ -108,12 +110,14 @@ class Antenna:
     @trace_file.setter
     def trace_file(self, value):
         """ Set the trace file for the antenna. """
-        if value is not None:
-            self.write_trace = True
-            self._trace_file = open(value, "w")
-        else:
-            self.write_trace = False
-            self._trace_file = None
+        if self._pcv_model == EnumPCVModel.AZI_DEPENDENT:
+            # only create trace file if the PCV model is azimuth dependent (interpolations required)
+            if value is not None:
+                self.write_trace = True
+                self._trace_file = open(value, "w")
+            else:
+                self.write_trace = False
+                self._trace_file = None
 
     def set_freq_data(self, freq_type: DataType, freq_data: PhaseCenter):
         """ Set the frequency data for the antenna.
@@ -131,6 +135,13 @@ class Antenna:
     def get_pcv(self, freq_type: DataType, azimuth, elevation):
         """ Get the PCV value for the antenna.
         This function performs interpolation to get the PCV value for the given azimuth and elevation angles.
+
+        For receiver antennas, the elevation and azimuth angles refer to the local (ENU) frame.
+            - Azimuth counts clockwise from the North toward the East.
+
+        For satellite antennas, the elevation and azimuth angles refer to the body-fixed frame.
+            - Azimuth counts clockwise from the y-axis toward the x-axis when looking in the direction of the
+                negative z-axis or toward deep space.
 
         Args:
             freq_type (DataType): Frequency type to get the PCV for
@@ -152,18 +163,28 @@ class Antenna:
 
         pcv_out = 0.0
         if self.pcv_model == EnumPCVModel.AZI_DEPENDENT and self.freq_data[freq_type].pcv_azi is not None:
-            # only apply azimuth dependent PCV if it is available
+            # only apply azimuth dependent PCV if data is available
             pcv_matrix = self.freq_data[freq_type].pcv_azi
             pcv_out = self._interpolate_pcv_matrix(zenith_deg, azimuth_deg, pcv_matrix)
 
         elif self.freq_data[freq_type].pcv_noazi is not None:
             # else, apply non-azimuth dependent PCV
             if self.pcv_model == EnumPCVModel.AZI_DEPENDENT:
-                print("TEMP WARNING: RESORTING TO NON-AZIMUTH DEPENDENT PCV FOR AZI_DEPENDENT MODEL.")
+                if not self._warning_thrown:
+                    self._warning_thrown = True
+                    from src.common_log import get_logger, MODEL_LOG
+                    log = get_logger(MODEL_LOG)
+                    log.warning(f"Resorting to non-azimuth dependent PCV model for the antenna "
+                                f"{self.ant_type} and frequency {freq_type}.")
             pcv_values = self.freq_data[freq_type].pcv_noazi
             pcv_out = linear_interpolation_scipy(zenith_deg, self.zenith_vec, pcv_values)
         else:
-            print("TEMP WARNING: NO PCV DATA AVAILABLE")
+            if not self._warning_thrown:
+                self._warning_thrown = True
+                from src.common_log import get_logger, MODEL_LOG
+                log = get_logger(MODEL_LOG)
+                log.warning(f"No PCV data available for the antenna {self.ant_type} and frequency {freq_type}. "
+                            f"Setting PCV to 0.")
         return float(pcv_out)
     
     def _interpolate_pcv_matrix(self, zenith: float, azimuth: float, pcv_matrix: np.ndarray) -> float:
