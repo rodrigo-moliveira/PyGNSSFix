@@ -1,11 +1,11 @@
-"""Module to perform Helmert transformation between different realizations of the International Terrestrial
- Reference Frame (ITRF).
-"""
+
 
 import json
 import jsonschema
 import numpy as np
 
+print("DEPRECATED")
+exit()
 
 def extract_param(data, name):
     """Helper function to extract a parameter's value and convert using its unit factor."""
@@ -137,19 +137,3 @@ if __name__ == "__main__":
 
     print("Sun position in ITRF2020:", X_2020)
 
-"""
-Validation Example from https://epncb.oma.be/_productsservices/coord_trans/
-
-#_Station Frame    Epoch        X[m]          Y[m]          Z[m]      VX[m/yr] VY[m/yr] VZ[m/yr]
-Station_1 ITRF93   2000.00  4027894.0060   307045.6000  4919474.9100
-Station_1 ITRF2020 2000.00  4027894.0539   307045.5594  4919474.9073
-
-Station_2 ITRF93   2000.00  4027894.0060   307045.6000  4919474.9100   0.0100   0.2000   0.0300
-Station_2 ITRF2020 2000.00  4027894.0539   307045.5594  4919474.9073   0.0170   0.1962   0.02
-
-Station_3 ITRF93   2025.75  4027894.0060   307045.6000  4919474.9100
-Station_3 ITRF2020 2025.75  4027894.2329   307045.4608  4919474.8600
-
-Station_4 ITRF93   2025.75  4027894.0060   307045.6000  4919474.9100   0.0100   0.2000   0.0300
-Station_4 ITRF2020 2025.75  4027894.2329   307045.4608  4919474.8600   0.0170   0.1962   0.0282
-"""

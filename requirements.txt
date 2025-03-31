@@ -19,3 +19,4 @@ plotly~=5.19.0
 allantools~=2024.6
 folium~=0.17.0
 spiceypy~=6.0.0
+pyproj~=3.6.1

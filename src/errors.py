@@ -123,3 +123,11 @@ class CSpiceWrapperError(GNSSNavPyError):
     def __init__(self, message):
         message = "CSpiceWrapper Error -> " + message
         super().__init__(message)
+
+
+class ITRFError(GNSSNavPyError):
+    """ Error in the `ITRF_Transformations` class. """
+
+    def __init__(self, message):
+        message = "ITRF Transformations Error -> " + message
+        super().__init__(message)
