@@ -13,6 +13,7 @@ from src.errors import EpochError, TimeScaleError
 from .eop import EopDb, Eop
 from src.utils.node import Node
 from src.models.gnss_models.navigation import compute_ggto
+from src.constants import AVERAGE_DAYS_IN_YEAR
 
 __all__ = ["Epoch", "timedelta"]
 
@@ -499,6 +500,15 @@ class Epoch:
         if "year" not in self._cache.keys():
             self._cache["year"] = self.datetime.timetuple().tm_year
         return self._cache["year"]
+
+    @property
+    def decimal_year(self) -> int:
+        """ Computes the decimal year """
+        if "decimal_year" not in self._cache.keys():
+            year = self.year
+            doy = self.doy
+            self._cache["decimal_year"] = year + doy / AVERAGE_DAYS_IN_YEAR
+        return self._cache["decimal_year"]
 
     @classmethod
     def from_year_and_doy(cls, year, doy, secs, scale=DEFAULT_SCALE):

@@ -8,6 +8,7 @@ import numpy as np
 
 from src import PROJECT_PATH
 from src.errors import ITRFError
+from src.data_types.date import Epoch
 
 
 class ITRF_Transformation:
@@ -29,6 +30,7 @@ class ITRF_Transformation:
         out_frame (str): Name of the output frame.
         transformer (pyproj.Transformer): Pyproj transformer object.
         json_data (dict): Dictionary containing transformation parameters from a JSON
+        forward (bool): Flag to indicate the direction of the transformation (default: True).
     """
     _cache = {}
 
@@ -44,6 +46,7 @@ class ITRF_Transformation:
         self.out_frame = out_frame
         self.transformer = None
         self.json_data = None
+        self.forward = True
 
     @staticmethod
     def factory(in_frame: str, out_frame: str, file_path=None):
@@ -135,40 +138,49 @@ class ITRF_Transformation:
         # Validate the JSON
         jsonschema.validate(instance=json_data, schema=json_schema)
 
-        if json_data["source_crs"]["name"] != self.in_frame:
-            raise ValueError(f"User-defined input frame {self.in_frame} does not match JSON source CRS "
-                             f"({json_data['source_crs']['name']}).")
-        if json_data["target_crs"]["name"] != self.out_frame:
-            raise ValueError(f"User-defined output frame {self.out_frame} does not match JSON target CRS "
-                             f"({json_data['target_crs']['name']}).")
+        if json_data["source_crs"]["name"] == self.in_frame and json_data["target_crs"]["name"] == self.out_frame:
+            pass
+        elif json_data["source_crs"]["name"] == self.out_frame and json_data["target_crs"]["name"] == self.in_frame:
+            # backward transformation
+            self.forward = False
+        else:
+            raise ValueError(f"User-defined input frame {self.in_frame} and output frame {self.out_frame} "
+                             f"do not match JSON source CRS ({json_data['source_crs']['name']}) and "
+                             f"target CRS ({json_data['target_crs']['name']}).")
 
         log.info(f"Successfully loaded validated JSON file {file_path} for ITRF transformation.")
         log.info(f"[Input frame for ITRF Transformations] Name: {json_data['source_crs']['name']}")
         log.info(f"[Output frame for ITRF Transformations] Name: {json_data['target_crs']['name']}")
         self.json_data = json_data
 
-    def transform(self, input_position, time: float):
+    def transform(self, input_position, time: float or Epoch):
         """
         Applies the transformation to the input coordinates.
 
         Args:
             input_position (numpy.ndarray or list): Input coordinates in the input frame.
-            time (float): Target epoch in decimal years.
+            time (float or Epoch): Target epoch, either in decimal years (floating point) or as an Epoch object.
 
         Returns:
             numpy.ndarray: Transformed coordinates in the output frame.
         """
+        if len(input_position) != 3:
+            raise ValueError("Input position must be a 3-element list or numpy array.")
+
+        if isinstance(time, Epoch):
+            time = time.decimal_year
+
         if self.transformer is not None:
-            result = self.transformer.transform(xx=X, yy=Y, zz=Z, tt=time)
+            result = self.transformer.transform(xx=input_position[0], yy=input_position[1], zz=input_position[2],
+                                                tt=time)
             position = np.array(result[0:3])
 
         elif self.json_data is not None:
-            # TODO: need to check if this is backwards...
             # Get transformation parameters from JSON
             T, R_matrix, S = ITRF_Transformation.get_transformation_parameters(time, self.json_data)
 
             # Apply Helmert transformation
-            position = ITRF_Transformation.helmert_transform(input_position, T, R_matrix, S)
+            position = self.helmert_transform(input_position, T, R_matrix, S)
 
         else:
             raise ITRFError("No transformation data available.")
@@ -190,13 +202,13 @@ class ITRF_Transformation:
         epoch_ref, T_ref, R_ref, S_ref, T_rate, R_rate, S_rate = ITRF_Transformation.read_transformation_json(data)
 
         # Compute epoch difference
-        factor = ITRF_Transformation.extract_conversion_factor(data, "Parameter reference epoch")
+        factor = ITRF_Transformation._extract_conversion_factor(data, "Parameter reference epoch")
         dt = epoch * factor - epoch_ref
 
         # Compute adjusted parameters
         T = T_ref + T_rate * dt  # Adjusted translation (meters)
         R_rad = R_ref + R_rate * dt  # Adjusted rotation (radians)
-        S = S_ref + S_rate * dt  # Adjusted scale factor (unitless)
+        S = S_ref + S_rate * dt  # Adjusted scale factor (unit-less)
 
         # Compute rotation matrix using small-angle approximation
         R_matrix = np.array([
@@ -207,31 +219,33 @@ class ITRF_Transformation:
 
         return T, R_matrix, S
 
-    @staticmethod
-    def helmert_transform(X, T, R, S):
+    def helmert_transform(self, X, T, R, S):
         """
         Applies the Helmert transformation.
 
-        Parameters:
-            X (numpy array): (3,) Original coordinates in meters (ITRF93).
-            T (numpy array): (3,) Translation vector in meters.
-            R (numpy array): (3,3) Rotation matrix.
-            S (float): Scale factor (unitless, converted from parts per billion).
+        Args:
+            X (numpy.ndarray): (3,) Original coordinates in meters.
+            T (numpy.ndarray): (3,) Translation vector in meters.
+            R (numpy.ndarray): (3,3) Rotation matrix.
+            S (float): Scale factor (unit-less, converted from parts per billion).
 
         Returns:
-            numpy array: Transformed coordinates in ITRF2020.
+            numpy.ndarray: Transformed coordinates in meters.
         """
-        return T + (1 + S) * (R @ X)
+        if self.forward:
+            return T + (1 + S) * (R @ X)
+        else:
+            return 1/(1 + S) * (R.T @ (X - T))
 
     @staticmethod
-    def extract_param(data, name):
-        """Helper function to extract a parameter's value and convert using its unit factor."""
+    def _extract_param(data, name):
+        """ Helper function to extract a parameter's value and convert using its unit factor."""
         param = next(param for param in data["parameters"] if param["name"] == name)
         return param["value"] * param["unit"]["conversion_factor"]
 
     @staticmethod
-    def extract_conversion_factor(data, name):
-        """Helper function to extract a parameter's conversion factor."""
+    def _extract_conversion_factor(data, name):
+        """ Helper function to extract a parameter's conversion factor."""
         param = next(param for param in data["parameters"] if param["name"] == name)
         return param["unit"]["conversion_factor"]
 
@@ -240,7 +254,7 @@ class ITRF_Transformation:
         """
         Reads the transformation parameters from the provided JSON structure.
 
-        Parameters:
+        Args:
             data (dict): Dictionary parsed from a JSON file containing transformation parameters.
 
         Returns:
@@ -248,26 +262,27 @@ class ITRF_Transformation:
         """
 
         # Extract reference epoch
-        epoch_ref = ITRF_Transformation.extract_param(data, "Parameter reference epoch")
+        epoch_ref = ITRF_Transformation._extract_param(data, "Parameter reference epoch")
 
         # Extract translation (converted from mm to meters)
         T_ref = np.array(
-            [ITRF_Transformation.extract_param(data, f"{axis}-axis translation") for axis in ["X", "Y", "Z"]])
+            [ITRF_Transformation._extract_param(data, f"{axis}-axis translation") for axis in ["X", "Y", "Z"]])
 
-        # Extract rotation (converted from milliarc-seconds to radians)
-        R_ref = np.array([ITRF_Transformation.extract_param(data, f"{axis}-axis rotation") for axis in ["X", "Y", "Z"]])
+        # Extract rotation (converted from milli arc-seconds to radians)
+        R_ref = np.array([ITRF_Transformation._extract_param(data, f"{axis}-axis rotation")
+                          for axis in ["X", "Y", "Z"]])
 
-        # Extract scale difference (converted from ppb to unitless)
-        S_ref = ITRF_Transformation.extract_param(data, "Scale difference")
+        # Extract scale difference (converted from ppb to unit-less)
+        S_ref = ITRF_Transformation._extract_param(data, "Scale difference")
 
         # Extract rates of change
         T_rate = np.array(
-            [ITRF_Transformation.extract_param(data, f"Rate of change of {axis}-axis translation") for axis in
+            [ITRF_Transformation._extract_param(data, f"Rate of change of {axis}-axis translation") for axis in
              ["X", "Y", "Z"]])
         R_rate = np.array(
-            [ITRF_Transformation.extract_param(data, f"Rate of change of {axis}-axis rotation") for axis in
+            [ITRF_Transformation._extract_param(data, f"Rate of change of {axis}-axis rotation") for axis in
              ["X", "Y", "Z"]])
-        S_rate = ITRF_Transformation.extract_param(data, "Rate of change of Scale difference")
+        S_rate = ITRF_Transformation._extract_param(data, "Rate of change of Scale difference")
 
         return epoch_ref, T_ref, R_ref, S_ref, T_rate, R_rate, S_rate
 
@@ -279,18 +294,39 @@ class ITRF_Transformation:
 
 # Example usage
 if __name__ == "__main__":
-    tf = ITRF_Transformation.factory("ITRF93", "ITRF2020")
-    tf2 = ITRF_Transformation.factory("IN", "OUT", file_path="../../../workspace/geo_time_data/ITRF/EPSG_9998.json")
-
     # Define input coordinates (X, Y, Z) in meters and time in decimal years
-    _X = 4075578.385
-    _Y = 931852.890
-    _Z = 4801570.154
-    _time = 2025.4  # Year 2025
-    _result = tf.transform(_X, _Y, _Z, _time)
-    tf2.transform(_X, _Y, _Z, _time)
-    # Print the transformed coordinates
-    print(f"Transformed position: {_result}")
+    _X = 4027894.0060
+    _Y = 307045.6000
+    _Z = 4919474.9100
+    _time = 2000.00
+
+    # Unit test 1) Forward Transformation
+    tf_crs = ITRF_Transformation.factory("ITRF93", "ITRF2020")
+    result_crs = tf_crs.transform([_X, _Y, _Z], _time)
+    ITRF_Transformation._cache.clear()
+    tf_json = ITRF_Transformation.factory("ITRF93", "ITRF2020",
+                                          file_path="../../../workspace/geo_time_data/ITRF/EPSG_9998.json")
+    result_json = tf_json.transform([_X, _Y, _Z], _time)
+
+    # Report
+    print("Unit Test 1: Forward Transformation")
+    print(f"Transformed position from CRS: {result_crs}")
+    print(f"Transformed position from JSON: {result_json}")
+    print(f"Transformed position from online tool: [4027894.0539, 307045.5594, 4919474.9073]\n")
+
+    # Unit test 2) Backward Transformation
+    tf_crs = ITRF_Transformation.factory("ITRF2020", "ITRF93")
+    result_crs = tf_crs.transform([_X, _Y, _Z], _time)
+    ITRF_Transformation._cache.clear()
+    tf_json = ITRF_Transformation.factory("ITRF2020", "ITRF93",
+                                          file_path="../../../workspace/geo_time_data/ITRF/EPSG_9998.json")
+    result_json = tf_json.transform([_X, _Y, _Z], _time)
+
+    # Report
+    print("Unit Test 2: Backward Transformation")
+    print(f"Transformed position from CRS: {result_crs}")
+    print(f"Transformed position from JSON: {result_json}")
+
 
 """
 Validation Example from https://epncb.oma.be/_productsservices/coord_trans/
