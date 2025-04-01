@@ -1,6 +1,7 @@
 # PyCharm
 .idea/
 
+**/__pycache__/
 /build/
 make.bat
 Makefile
