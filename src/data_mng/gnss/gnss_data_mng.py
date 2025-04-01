@@ -189,10 +189,13 @@ class GnssDataManager(Container):
             log.info("Launching GlobalIonoMap constructor (ionex products).")
             self.iono_gim.init(ionex_files, trace_dir)
 
-            log.info("Reading Antenna Exchange Files.")
-            self.phase_center.init(trace_dir)
-            for file in antex_files:
-                AntexReader(file, self.get_data("phase_center"))
+            if self.phase_center.enabled:
+                log.info("Reading Antenna Exchange Files.")
+                self.phase_center.init(trace_dir)
+                for file in antex_files:
+                    AntexReader(file, self.get_data("phase_center"))
+            else:
+                log.info("Phase Center Corrections disabled.")
 
             for file in nav_files:
                 RinexNavReader(file, self.get_data("nav_data"), gal_nav_type)

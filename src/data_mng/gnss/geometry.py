@@ -130,16 +130,11 @@ class SatelliteGeometry(Container):
         dcm_b_e = None
         nadir_sat = None
         azimuth_sat = None
-        # TODO: to be considered ITRF transformations
         if config_dict.get("inputs", "cspice_kernels", "enable"):
             try:
-                cspice_frame = config_dict.get("inputs", "cspice_kernels", "cspice_ecef_frame")
-                # target_frame = config_dict.get("inputs", "IGS_ecef_frame")
-                # Create or load static ITRF Transformation class.
-
                 # GNSS Attitude: rotation matrix from satellite body-fixed frame to ECEF frame at RX time
                 _R = dcm_e_i(-transit)
-                sun_pos_tx = compute_sun_pos(time_emission, frame=cspice_frame)
+                sun_pos_tx = compute_sun_pos(time_emission)
                 dcm_tx = gnss_attitude.gnss_attitude(r_sat_tx, sun_pos_tx)
                 dcm_b_e = _R @ dcm_tx
 

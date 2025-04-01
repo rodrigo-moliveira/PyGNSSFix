@@ -109,7 +109,7 @@
          {
             "ARP_enabled": true,
             "PCO_enabled": true,
-            "PCV_enabled": false,
+            "PCV_enabled": true,
 
             "ARP_offset": null,
             "_comment": "ARP_offset is null if fetched from RINEX OBS file or defined as a delta vector [H, E, N] in meters",
