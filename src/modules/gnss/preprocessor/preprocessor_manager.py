@@ -5,7 +5,7 @@ import os
 from src.common_log import get_logger, PREPROCESSOR_LOG
 from src.data_types.gnss import data_type_from_rinex
 from src.data_types.gnss.service_utils import get_freq_from_service
-from src.io.config import config_dict, EnumPositioningMode
+from src.io.config import config_dict, EnumObservationModel
 from src.errors import PreprocessorError
 from .filter import *
 from .functor import *
@@ -89,9 +89,8 @@ class PreprocessorManager:
             raise PreprocessorError(f"PreprocessorManager -> Error performing Downgrade Rate filter: {e}")
 
         # check to compute or not iono free dataset from raw observables
-        model = config_dict.get("model", "mode")
-        compute_iono_free = (model == EnumPositioningMode.SPS_IF)
-        if compute_iono_free:
+        model = config_dict.get("obs_model")
+        if model == EnumObservationModel.COMBINED:
             iono_free_data = self.data_manager.get_data("iono_free_obs_data")
             for constellation in self.services.keys():
                 obs_list = config_dict.get("model", constellation, "observations")
@@ -124,7 +123,8 @@ class PreprocessorManager:
         compute_smooth = config_dict.get("preprocessor", "compute_smooth")
         if compute_smooth:
             try:
-                data = self.data_manager.get_data("iono_free_obs_data") if compute_iono_free else obs_data
+                data = self.data_manager.get_data("iono_free_obs_data") if model == EnumObservationModel.COMBINED \
+                    else obs_data
                 self.smooth(data)
             except Exception as e:
                 raise PreprocessorError(f"Error computing Smooth Observation Data: {e}")
@@ -150,7 +150,7 @@ class PreprocessorManager:
 
         for constellation, services in self.services.items():
             required_datatypes[constellation] = []
-            for service in services:
+            for service in services["user_service"]:
                 pr = data_type_from_rinex(f"C{service}", constellation)
                 required_datatypes[constellation].append(pr)
                 if keep_carrier:
@@ -198,6 +198,12 @@ class PreprocessorManager:
 
     def sv_ura_health_filter(self, observation_data):
         """ Perform Satellite Health Check (GPS URA and GAL SISA test) """
+        nav_data = self.data_manager.get_data("nav_data")
+        if nav_data.is_empty():
+            self.log.info("Not performing Satellite Health Check (GPS URA and GAL SISA test) because no navigation data"
+                          " is available.")
+            return
+
         gps_ura_check = config_dict.get("preprocessor", "satellite_status", "GPS", "URA")
         gps_ura_val = config_dict.get("preprocessor", "satellite_status", "GPS", "max_URA")
         gps_health = config_dict.get("preprocessor", "satellite_status", "GPS", "health")
@@ -212,7 +218,6 @@ class PreprocessorManager:
                       f"GAL SISA filter = {gal_sisa_check} SISA threshold = {gal_sisa_val}m, health status check is "
                       f"{gal_health}")
 
-        nav_data = self.data_manager.get_data("nav_data")
         ura_filter = SatFilterHealthURA(nav_data, gps_ura_check, gps_ura_val, gps_health,
                                         gal_sisa_check, gal_sisa_val, gal_health, self.log, self.trace_path)
         mapper = FilterMapper(ura_filter)
@@ -232,7 +237,7 @@ class PreprocessorManager:
 
     def iono_free(self, raw_data, data_out, constellation):
         """ Compute IonoFree data """
-        services = self.services[constellation]
+        services = self.services[constellation]["user_service"]
         if len(services) != 2:
             raise AttributeError(f"Problem getting base and second frequencies in Iono Free Computation for "
                                  f"constellation {constellation}, observations provided are {services}. "

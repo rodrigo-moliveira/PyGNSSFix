@@ -23,33 +23,47 @@ class EnumSolver(Enum):
             raise EnumError(f"Unsupported Solver Model {model_str}. Available options are {cls.show_options()}")
 
 
-class EnumPositioningMode(Enum):
-    """ Enumeration for the GNSS PNT algorithm (SPS, SPS_IF) """
+class EnumAlgorithmPNT(Enum):
+    """ Enumeration for the GNSS PNT algorithm (SPS, PR_PPP) """
     SPS = 0
-    SPS_IF = 1
+    PR_PPP = 1
 
     @classmethod
     def init_model(cls, model_str: str):
         if model_str.lower() == "sps":
-            return EnumPositioningMode.SPS
-        elif model_str.lower() == "sps_if":
-            return EnumPositioningMode.SPS_IF
+            return EnumAlgorithmPNT.SPS
+        elif model_str.lower() == "pr-ppp":
+            return EnumAlgorithmPNT.PR_PPP
         else:
-            raise EnumError(f"Unsupported model {model_str}. Available options are 'SPS', 'SPS_IF'")
+            raise EnumError(f"Unsupported algorithm {model_str}. Available options are 'SPS', 'PR-PPP'")
 
     @classmethod
     def show_options(cls):
-        return f"[SPS, SPS_IF ]"
+        return f"[SPS, PR-PPP ]"
 
 
-class EnumModel(Enum):
-    """ Enumeration for the selected GNSS Observation model (single frequency, dual frequency) """
-    SINGLE_FREQ = 0
-    DUAL_FREQ = 1
+class EnumObservationModel(Enum):
+    """
+    Enumeration for the selected GNSS Observation model. Available models are:
+        * uncombined model (single or dual frequency)
+        * combined (iono-free combination)
+    """
+    UNCOMBINED = 0
+    COMBINED = 1
+
+    @classmethod
+    def init_model(cls, model_str: str):
+        if model_str.lower() == "uncombined":
+            return EnumObservationModel.UNCOMBINED
+        elif model_str.lower() == "combined":
+            return EnumObservationModel.COMBINED
+        else:
+            raise EnumError(f"Unsupported observation model {model_str}. Available options are 'uncombined', "
+                            f"'combined'")
 
     @classmethod
     def show_options(cls):
-        return f"[0 - SINGLE FREQUENCY MODEL, 1 - DUAL FREQUENCY MODEL]"
+        return f"[0 - Uncombined Model (Single or Dual Frequency), 1 - Combined (Iono-Free Combination)]"
 
 
 class EnumOnOff(Enum):
@@ -62,15 +76,35 @@ class EnumOnOff(Enum):
         return f"[0 - DISABLED, 1 - ENABLED]"
 
 
-class EnumIonoModel(Enum):
-    """ Enumeration for the Ionosphere Model (Disabled, Klobuchar or NTCM-G) """
-    DISABLED = 0
-    KLOBUCHAR = 1
-    NTCMG = 2
+class EnumFrequencyModel(Enum):
+    """ Enumeration for the Frequency Model to be implemented in the estimation process (single or dual frequency) """
+    SINGLE_FREQ = 0
+    DUAL_FREQ = 1
 
     @classmethod
     def show_options(cls):
-        return f"[ NONE, Klobuchar, NTCM-G]"
+        return f"[ SINGLE_FREQ, DUAL_FREQ]"
+
+    @classmethod
+    def init_model(cls, model_str: str):
+        if model_str.lower() == "single":
+            return EnumFrequencyModel.SINGLE_FREQ
+        elif model_str.lower() == "dual":
+            return EnumFrequencyModel.DUAL_FREQ
+        else:
+            raise EnumError(f"Unsupported Frequency Model {model_str}. Available options are {cls.show_options()}")
+
+
+class EnumIonoModel(Enum):
+    """ Enumeration for the Ionosphere A-priori Model (Disabled, Klobuchar, NTCM-G or IONEX) """
+    DISABLED = 0
+    KLOBUCHAR = 1
+    NTCMG = 2
+    IONEX = 3
+
+    @classmethod
+    def show_options(cls):
+        return f"[ NONE, Klobuchar, NTCM-G, IONEX]"
 
     @classmethod
     def init_model(cls, model_str: str):
@@ -80,12 +114,14 @@ class EnumIonoModel(Enum):
             return EnumIonoModel.KLOBUCHAR
         elif model_str.lower() == "ntcm-g" or model_str.lower() == "ntcmg":
             return EnumIonoModel.NTCMG
+        elif model_str.lower() == "ionex":
+            return EnumIonoModel.IONEX
         else:
             raise EnumError(f"Unsupported Ionospheric Model {model_str}. Available options are {cls.show_options()}")
 
 
 class EnumTropoModel(Enum):
-    """ Enumeration for the Troposphere Model (Disabled, Saastamoinen, GPT3) """
+    """ Enumeration for the Troposphere A-priori Model (Disabled, Saastamoinen, GPT3) """
     DISABLED = 0
     SAASTAMOINEM = 1
     GPT3 = 2
@@ -141,3 +177,33 @@ class EnumTransmissionTime(Enum):
     @classmethod
     def show_options(cls):
         return f"[0 - GEOMETRIC, 1 - PSEUDORANGE, 2 - NAPEOS]"
+
+
+class EnumSatelliteBias(Enum):
+    """
+    Enumeration for the selected Satellite Bias type. The available types are:
+        * broadcast code biases (BGD for GAL and TGD for GPS)
+        * precise DCBs (differential code bias)
+        * precise OSBs (observation specific bias)
+    """
+    BROADCAST = 0
+    DCB = 1
+    OSB = 2
+
+    @classmethod
+    def show_options(cls):
+        return f"[0 - BGD/TGD, 1 - DCB, 2 - OSB]"
+
+
+class EnumPCVModel(Enum):
+    """
+    Enumeration for the Phase Center Variation (PCV) Model:
+        * 0: non-azimuth dependent
+        * 1: azimuth dependent
+    """
+    NON_AZI_DEPENDENT = 0
+    AZI_DEPENDENT = 1
+
+    @classmethod
+    def show_options(cls):
+        return f"[0 - non-azimuth dependent, 1 - azimuth dependent]"

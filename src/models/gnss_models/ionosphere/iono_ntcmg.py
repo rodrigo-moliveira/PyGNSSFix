@@ -38,6 +38,10 @@ class NTCMG:
         https://www.gsc-europa.eu/sites/default/files/NTCM-G_Ionospheric_Model_Description_-_v1.0.pdf
     """
 
+    def __str__(self):
+        """ String representation of the model """
+        return "NTCM-G Ionospheric Model"
+
     @staticmethod
     def calculate_azpar(effec_iono: np.array):
         """ Compute Azpar from the `effec_iono` broadcast parameters.

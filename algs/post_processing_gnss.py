@@ -27,7 +27,7 @@ from src import RUNS_PATH
 from src.common_log import set_logs, get_logger, POST_PROC_LOG
 from src.data_mng.csv.csv_data_mng import GnssRunStorageManager
 from src.io.config import config_dict
-from src.io.io_utils import clean_text_file
+from src.io.io_utils import clean_text_file, get_last_run_folder
 from src.modules.performance.performance_manager import PerformanceManager
 
 
@@ -53,6 +53,9 @@ def main():
     # Fetching run path folder
     try:
         run_path = config_dict.get("performance_evaluation", "run_folder")
+        if run_path == "last":
+            run_path = get_last_run_folder()
+
         run_path = RUNS_PATH / run_path
     except IndexError:
         print("ERROR: No valid run path was provided in the configurations")

@@ -59,7 +59,7 @@ class IonoFreeFunctor(Functor):
             self.gama1 = f1 * f1 / (f1 * f1 - f2 * f2)
             self.gama2 = f2 * f2 / (f1 * f1 - f2 * f2)
 
-            pr_std_if = self.gama1 * pr_std_1 - self.gama2 * pr_std_2
+            pr_std_if = abs(self.gama1 * pr_std_1 - self.gama2 * pr_std_2)
             self.pr_if = DataType.get_iono_free_datatype(self.pr1, self.pr2, constellation)
             self.cp_if = DataType.get_iono_free_datatype(self.cp1, self.cp2, constellation)
             config_dict.update_obs_std(constellation, self.pr_if, pr_std_if)

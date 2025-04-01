@@ -294,7 +294,7 @@ def nav_sat_clock_correction(sat_clock, datatype, nav_message):
         In case of GPS users employing the L1 C/A code instead of the P1 code, another correction should be taken
         into account, which accounts for the difference in hardware biases between the P1 and C/A.
         This correction is however not transmitted in the GPS legacy navigation message.
-        It must be fetched from IGS DCB products
+        It must be fetched from IGS DCB products.
         This is **currently** not considered in this algorithm!
 
     Args:
@@ -320,11 +320,11 @@ def get_bgd_correction(datatype, nav_message):
     Args:
         datatype(src.data_types.gnss.data_type.DataType)
         nav_message (src.data_mng.gnss.navigation_data.NavigationPoint): instance of `NavigationPoint` used
-            to fetch to BGDs/TGD
+            to fetch the BGDs/TGDs
     Returns:
         float: the appropriate TGD/BGD correction for the provided datatype
     """
-    #
+
     if nav_message.constellation == "GPS" and datatype.constellation == "GPS":
         if datatype.freq_number == 1 or datatype.freq_number == 2:
             scale = (L1.freq_value / datatype.freq.freq_value) ** 2

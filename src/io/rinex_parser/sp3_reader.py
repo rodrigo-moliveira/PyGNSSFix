@@ -135,6 +135,11 @@ class SP3OrbitReader:
             tokens = line.split()
             if len(tokens) != 0 and tokens[0][0] == "P":
                 try:
+                    # get constellation
+                    const = tokens[0][1]
+                    if utils.RINEX_SATELLITE_SYSTEM[const] not in self._active_constellations:
+                        continue
+
                     # process new satellite orbit
                     sat = get_satellite(tokens[0][1:])
 

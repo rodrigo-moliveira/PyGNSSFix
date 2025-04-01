@@ -6,6 +6,8 @@ from src.errors import TimeSeriesError
 
 __all__ = ["TimeSeries"]
 
+from src.utils.interpolation import binary_search
+
 
 class TimeSeries(OrderedDict):
     """
@@ -252,28 +254,10 @@ class TimeSeries(OrderedDict):
         """
         self._sort()
 
-        keys = list(self.keys())
-
-        # Binary search to find the index where `epoch` would be inserted to maintain sorted order
-        low, high = 0, len(keys) - 1
-        while low <= high:
-            mid = (low + high) // 2
-            if keys[mid] < epoch:
-                low = mid + 1
-            else:
-                high = mid - 1
-
-        # `low` is now the index where `epoch` would be inserted
-        insert_index = low
-
-        # Find the start and end indexes for the sublist
-        start_index = max(0, insert_index - order)
-        end_index = min(len(keys), insert_index + order)
-
-        # Check if there are enough items before and after `epoch` to return `order` items each way
-        if end_index - start_index < 2 * order:
+        try:
+            s = binary_search(list(self.keys()), epoch, order, ret_index=False, extrapolation=False)
+        except ValueError:
             raise TimeSeriesError(
                 f"Not enough elements in the dataset around the specified epoch {epoch} to return the desired number of"
                 f" epochs before and after (selected order is {order}).")
-
-        return keys[start_index:insert_index] + keys[insert_index:end_index]
+        return s

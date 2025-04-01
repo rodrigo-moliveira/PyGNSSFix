@@ -1,0 +1,22 @@
+Obs files download from:
+
+Observations:
+https://cddis.nasa.gov/archive/gnss/data/highrate/2024/341/24d/11/
+https://cddis.nasa.gov/archive/gnss/data/highrate/2024/090/
+
+To decompress the files, use the following software: CRX2RNX
+URL: https://terras.gsi.go.jp/ja/crx2rnx.html
+
+
+DCB:
+https://cddis.nasa.gov/archive/gnss/products/bias/2024/
+
+iono:
+https://cddis.nasa.gov/archive/gnss/products/ionex/2024/090/
+
+NAV:
+https://cddis.nasa.gov/archive/gnss/data/daily/2024/brdc/
+
+CLK/SP3/OSB
+https://cddis.nasa.gov/archive/gnss/products/2307/
+

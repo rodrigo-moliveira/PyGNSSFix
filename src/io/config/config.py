@@ -9,7 +9,7 @@ from jsonschema import validate, ValidationError
 from src import PROJECT_PATH
 from src.data_types.gnss import data_type_from_rinex
 from src.errors import ConfigError
-from .enums import EnumPositioningMode
+from .enums import EnumAlgorithmPNT, EnumObservationModel
 from src.common_log import get_logger, IO_LOG
 
 __all__ = ["config_dict"]
@@ -19,19 +19,22 @@ class Config(dict):
     """
     Configuration class that inherits from :py:class:`dict`.
 
-    The configuration handler is initialzed from the configuration xml file. Several xml files are available
+    The configuration handler is initialzed from the configuration json file. Several json files are available
         (with different content) depending on the selected algorithm.
         The available algorithms are:
             * "gnss": GNSS PNT solver algorithm
             * "post_processing": post-processing / performance evaluation algorithm
 
-        The :py:mod:`jsonschema` module is used for validating the xml files.
+        The :py:mod:`jsonschema` module is used for validating the json files.
+
+    Attributes:
+        alg(str): selected algorithm for this configuration. Available algorithms are `gnss` and `post_processing`.
 
     Once the handler is initialized it can be imported everywhere and used as a global variable.
         The initialization and usage of the handler is examplified in the following example below:
         Examples:
             >>> from src.io.config import config_dict
-            >>> config_filename = "path/to/config/file.xml"
+            >>> config_filename = "path/to/config/file.json"
             >>> try:
             >>>     with open(config_filename) as json_file:
             >>>         data = json.load(json_file)
@@ -50,7 +53,7 @@ class Config(dict):
         Initializes the configuration handler instance.
 
         Args:
-            initial_dict(dict): a dict instance with the content of the loaded xml file. See :py:meth:`json.load`.
+            initial_dict(dict): a dict instance with the content of the loaded json file. See :py:meth:`json.load`.
             alg(str): the algorithm of the run.
 
         Raises:
@@ -64,11 +67,35 @@ class Config(dict):
         # validate config file
         self._validate(initial_dict, alg)
 
-        self.update(initial_dict)  # Update the dictionary with the values from initial_dict
+        # Update the dictionary with the values from initial_dict
+        self.update(initial_dict)
 
+    def init_model(self):
         # model initializations
-        if alg.lower() == "gnss":
-            self["model"]["mode"] = EnumPositioningMode.init_model(self["model"]["mode"])
+        if self.alg.lower() == "gnss":
+            self["gnss_alg"] = EnumAlgorithmPNT.init_model(self["model"]["algorithm"])
+            self["obs_model"] = EnumObservationModel.init_model(self["model"]["obs_model"])
+            service_dict = self.get_services()
+
+            if self["obs_model"] == EnumObservationModel.COMBINED:
+                for constellation, services in service_dict.items():
+                    if len(services) != 2:
+                        raise ConfigError(f"Iono-free combined model was selected but the "
+                                          f"number of observations for constellation {constellation} is not 2 "
+                                          f"({services}). Please revise the configurations.")
+
+            # For PPP Solutions, load CSpice kernels and initialize the ITRF frame transformations
+            if self["gnss_alg"] != EnumAlgorithmPNT.SPS:
+                from src.spicepy_wrapper import setup_cspice
+                from src import WORKSPACE_PATH
+                log = get_logger(IO_LOG)
+
+                # Loading CSpice Kernels
+                if self.get("inputs", "cspice_kernels", "enable"):
+                    kernels_folder = self.get("inputs", "cspice_kernels", "dir")
+                    kernel_list = self.get("inputs", "cspice_kernels", "list")
+                    log.info(f"Setting up CSpice kernels {kernel_list} from folder {kernels_folder}.")
+                    setup_cspice(WORKSPACE_PATH / f"{kernels_folder}", kernel_list, log)
 
     def _validate(self, initial_dict, alg):
         # Read the schema from the file
@@ -168,8 +195,11 @@ class Config(dict):
             constellations = self.get("model", "constellations")
             for constellation in constellations:
                 const_upper = constellation.upper()
+                services[const_upper] = dict()
                 if const_upper == "GPS" or const_upper == "GAL":
-                    services[const_upper] = self.get("model", const_upper, "observations")
+                    services[const_upper]["user_service"] = self.get("model", const_upper, "observations")
+                    clock_services = self.get("model", const_upper, "clock_product_service")
+                    services[const_upper]["clock_product_service"] = [f"C{clock_services[0]}", f"C{clock_services[1]}"]
             self.set("services", services)
         return self["services"]
 
@@ -194,15 +224,16 @@ class Config(dict):
 
             for constellation, services in service_dict.items():
                 obs_dict[constellation] = {}
+                user_service = services["user_service"]
 
                 for obs_std_list, datatype_char in zip(("pr_obs_std", "doppler_obs_std"), ("C", "D")):
                     std_list = self.get("model", constellation, obs_std_list)
-                    if len(std_list) < len(services):
-                        raise ConfigError(f"Inconsistency between number of signals for {constellation}: {services} and"
-                                          f" the correspondent observation noise in field {std_list}. "
+                    if len(std_list) < len(user_service):
+                        raise ConfigError(f"Inconsistency between number of signals for {constellation}: {user_service}"
+                                          f" and the correspondent observation noise in field {std_list}. "
                                           f"Please fix the configuration.")
 
-                    for index, service in enumerate(services):
+                    for index, service in enumerate(user_service):
                         datatype = data_type_from_rinex(f"{datatype_char}{service}", constellation)
                         obs_dict[constellation][datatype] = std_list[index]
                         log.info(f"Setting observation noise std for datatype {datatype} and constellation "

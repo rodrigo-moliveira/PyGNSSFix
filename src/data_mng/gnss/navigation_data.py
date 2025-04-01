@@ -236,3 +236,7 @@ class NavigationData:
     @property
     def header(self):
         return self._header
+
+    def is_empty(self) -> bool:
+        """ Returns True if the navigation data is empty. """
+        return len(self._data) == 0

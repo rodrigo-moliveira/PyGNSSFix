@@ -6,7 +6,7 @@
 
   "performance_evaluation": {
     "_comment0": "Select run folder (or 'last')",
-    "run_folder": "2024-10-23T17H30M57S_BRUX",
+    "run_folder": "last",
 
     "run_error_computation": true,
     "run_residual_analysis": true,
@@ -47,10 +47,15 @@
     "error_configs": {
       "_comment1":"select static or dynamic reference trajectory (coordinates with respect to ECEF frame [meters])",
       "static": true,
-      "true_static_position": [
+      "true_static_position2": [
         4027881.628,
         306998.537,
         4919498.984
+      ],
+      "true_static_position": [
+        0.402788131984481E+07,
+        0.306998818013051E+06,
+        0.491949906282187E+07
       ],
       "traj_file": ""
     }

@@ -6,13 +6,14 @@ See the original implementation `here <https://github.com/galactics/beyond/tree/
 All credits to Jules David, the owner of Beyond library.
 """
 
-from numpy import sin, radians
+from numpy import sin
 from datetime import datetime, timedelta, date
 
 from src.errors import EpochError, TimeScaleError
 from .eop import EopDb, Eop
 from src.utils.node import Node
 from src.models.gnss_models.navigation import compute_ggto
+from src.constants import AVERAGE_DAYS_IN_YEAR
 
 __all__ = ["Epoch", "timedelta"]
 
@@ -55,12 +56,23 @@ class Timescale(Node):
         """ Definition of the Barycentric Dynamic Time scale relatively to Terrestrial Time
         See function `convtime.m` in https://celestrak.org/software/vallado-sw.php.
         """
-        # NOTE: This is the tdb_opt 3 from Vallado script (ast alm approach (2012) bradley email)
         jd = mjd + Epoch.JD_MJD
         jj = Epoch._julian_century(jd)
-        m = radians(357.5277233 + 35999.05034 * jj)
-        delta_lambda = radians(246.11 + 0.90251792 * (jd - Epoch.J2000))
-        return 0.001657 * sin(m) + 0.000022 * sin(delta_lambda)
+
+        # NOTE: after an update in the Vallado script, the following code was changed
+        # tdb_opt 3 from Vallado script (ast alm approach (2012) bradley email)
+        # m = radians(357.5277233 + 35999.05034 * jj)
+        # delta_lambda = radians(246.11 + 0.90251792 * (jd - Epoch.J2000))
+        # return 0.001657 * sin(m) + 0.000022 * sin(delta_lambda)
+
+        d = (0.001657 * sin(628.3076 * jj + 6.2401)
+             + 0.000022 * sin(575.3385 * jj + 4.2970)
+             + 0.000014 * sin(1256.6152 * jj + 6.1969)
+             + 0.000005 * sin(606.9777 * jj + 4.0212)
+             + 0.000005 * sin(52.9691 * jj + 0.4444)
+             + 0.000002 * sin(21.3299 * jj + 5.5431)
+             + 0.000010 * sin(628.3076 * jj + 4.2490))
+        return d
 
     def offset(self, mjd, new_scale, eop):
         """ Compute the offset necessary in order to convert from one timescale to another
@@ -91,13 +103,13 @@ class Timescale(Node):
         return delta
 
 
-UT1 = Timescale("UT1")      # Universal Time
-GPST = Timescale("GPST")    # GPS Time
-TDB = Timescale("TDB")      # Barycentric Dynamical Time
-UTC = Timescale("UTC")      # Coordinated Universal Time
-TAI = Timescale("TAI")      # International Atomic Time
-TT = Timescale("TT")        # Terrestrial Time
-GST = Timescale("GST")      # Galileo System Time
+UT1 = Timescale("UT1")  # Universal Time
+GPST = Timescale("GPST")  # GPS Time
+TDB = Timescale("TDB")  # Barycentric Dynamical Time
+UTC = Timescale("UTC")  # Coordinated Universal Time
+TAI = Timescale("TAI")  # International Atomic Time
+TT = Timescale("TT")  # Terrestrial Time
+GST = Timescale("GST")  # Galileo System Time
 
 GPST + TAI + UTC + UT1
 TDB + TT + TAI
@@ -445,13 +457,13 @@ class Epoch:
         if "gnss_time" not in self._cache.keys():
             # gps_epoch = self.change_scale(GPST)  # convert this epoch to GPS Time
             dt = (self - Epoch.GPS_ORIGIN).total_seconds()
-            week = (dt/3600/24) // 7
-            sow = dt - week*3600*24*7
+            week = (dt / 3600 / 24) // 7
+            sow = dt - week * 3600 * 24 * 7
             self._cache["gnss_time"] = (int(week), sow)
         return self._cache["gnss_time"]
 
     @classmethod
-    def _gnss_time(cls, mjd) -> tuple[int,float]:
+    def _gnss_time(cls, mjd) -> tuple[int, float]:
         """
         Un-cached implementation of `gnss_time` (and without using any member variables from the Epoch class)
         """
@@ -482,9 +494,56 @@ class Epoch:
             self._cache["doy"] = self.datetime.timetuple().tm_yday
         return self._cache["doy"]
 
+    @property
+    def year(self) -> int:
+        """ Computes the calendar year """
+        if "year" not in self._cache.keys():
+            self._cache["year"] = self.datetime.timetuple().tm_year
+        return self._cache["year"]
+
+    @property
+    def decimal_year(self) -> int:
+        """ Computes the decimal year """
+        if "decimal_year" not in self._cache.keys():
+            year = self.year
+            doy = self.doy
+            self._cache["decimal_year"] = year + doy / AVERAGE_DAYS_IN_YEAR
+        return self._cache["decimal_year"]
+
+    @classmethod
+    def from_year_and_doy(cls, year, doy, secs, scale=DEFAULT_SCALE):
+        """ Creates an Epoch instance from the provided time in year, day of year and seconds of day.
+
+        Args:
+            year(int): calendar year
+            doy(int): day of year
+            secs(int): seconds in day
+            scale(str): the scale associated with the provided time
+        Returns:
+            Epoch: the Epoch instance created
+        """
+        # Create a datetime object for January 1st of the given year
+        start_of_year = datetime(year, 1, 1)
+
+        # Calculate the exact datetime by adding the days and seconds
+        result_datetime = start_of_year + timedelta(days=doy - 1, seconds=secs)
+
+        return Epoch(result_datetime, scale=scale)
+
     @staticmethod
     def merge_time_arrays(array1, array2):
         return sorted(list(set(array1) & set(array2)))
+
+    @property
+    def ephemeris_time(self):
+        """ Computes the Ephemeris Time (ET) for this Epoch.
+
+        Returns:
+            float: the computed ephemeris time (ET) (for CSpice functions)
+        """
+        tdb = self.change_scale("TDB")
+        et = (tdb.jd * 86400) - 2.118134880000000e+11
+        return et
 
 
 # This part is here to allow matplotlib to display Epoch objects directly

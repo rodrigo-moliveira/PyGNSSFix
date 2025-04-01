@@ -8,7 +8,7 @@ class SatFilterHealthURA(Filter):
                  gal_sisa_check, gal_sisa_val, gal_health, log, trace_path):
         """
         Constructor for the Satellite Health and URA Filter.
-        The `SatFilterHealthURA` cleans the Observation dataset by observation data of faulty satellites. The following
+        The `SatFilterHealthURA` cleans the Observation dataset by removing data of faulty satellites. The following
         checks are performed:
             * GPS URA Check: removes the GPS satellite if broadcast URA (User Range Accuracy) value is below the
                 defined threshold
@@ -17,7 +17,7 @@ class SatFilterHealthURA(Filter):
             * Health Status: removes the satellite if the broadcast health status flag is faulty
 
         Args:
-            navigation_data():
+            navigation_data(src.data_mng.gnss.navigation_data.NavigationData): navigation data
             gps_ura_check(bool): if True, the GPS URA check is performed
             gps_ura_val(float): threshold for the GPS URA
             gps_health(bool): if True, the GPS health status is evaluated

@@ -1,6 +1,8 @@
 """" Module with common utilities for Input / Output file operations"""
 import time
 import os
+import re
+from datetime import datetime
 
 from src import RUNS_PATH
 
@@ -37,8 +39,7 @@ def create_output_dir(data_dir=None):
     Raises:
         IOError: if the creation of the output directory fails, an IOError exception is raised
     """
-    # check data dir
-    # data_dir is not specified, automatically create one
+    # if data_dir is not specified, automatically create one
     if data_dir is None or data_dir == '' or data_dir == "default":
         data_dir = str(RUNS_PATH)
         if data_dir[-1] != '//':
@@ -56,3 +57,31 @@ def create_output_dir(data_dir=None):
         except:
             raise IOError(f"Cannot create dir: {data_dir}")
     return data_dir
+
+
+def get_last_run_folder():
+    """
+    Get the most recent run folder in the RUNS_PATH directory.
+
+    Returns:
+        str: the name of the most recent run folder
+    """
+
+    home_dir = os.path.expanduser(RUNS_PATH)
+
+    # Regular expression to match the timestamp format YYYY-MM-DDTHHMMSS
+    time_pattern = re.compile(r"(\d{4}-\d{2}-\d{2}T\d{2}H\d{2}M\d{2}S)")
+
+    # Get all valid run folders
+    run_folders = [
+        f for f in os.listdir(home_dir)
+        if os.path.isdir(os.path.join(home_dir, f)) and time_pattern.fullmatch(f)
+    ]
+
+    # Sort folders by timestamp (latest first)
+    run_folders.sort(key=lambda x: datetime.strptime(x, "%Y-%m-%dT%HH%MM%SS"), reverse=True)
+
+    # Get the last (most recent) run folder
+    last_run_folder = run_folders[0] if run_folders else None
+
+    return last_run_folder

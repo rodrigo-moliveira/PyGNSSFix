@@ -3,15 +3,14 @@
 import traceback
 import numpy as np
 
-from src.io.config import config_dict, EnumPositioningMode
+from src.io.config import config_dict, EnumAlgorithmPNT
 from src.models.frames import cartesian2geodetic, latlon2dcm_e_enu
 from src.errors import ConfigError
-from src.common_log import MAIN_LOG, get_logger, set_logs
+from src.common_log import MAIN_LOG, get_logger
 
 from .solver.gnss_solver import GnssSolver
 from .preprocessor import PreprocessorManager
 from ...data_mng.gnss.gnss_data_mng import GnssDataManager
-from ...io.io_utils import create_output_dir
 
 
 class GnssAlgorithmManager:
@@ -32,36 +31,29 @@ class GnssAlgorithmManager:
             main_log(logging.Logger): logger instance
     """
 
-    def __init__(self):
-        # create output folder
-        data_dir = config_dict.get("output", "output_path")
-
-        self.data_dir = create_output_dir(data_dir)
-
-        # initialize logger objects
-        set_logs(config_dict.get("log", "minimum_level"), f"{self.data_dir}\\log.txt")
-
+    def __init__(self, data_dir):
         # create data members
         self.data_manager = GnssDataManager()
         self.main_log = None
+        self.data_dir = data_dir
 
     def run(self):
         """ Main function that executes the GNSS Algorithm """
         self.main_log = get_logger(MAIN_LOG)
         self.main_log.info("Starting GNSS Algorithm Manager")
-        model = config_dict.get('model', 'mode')
+        gnss_alg = config_dict.get('gnss_alg')
 
-        if model not in (EnumPositioningMode.SPS, EnumPositioningMode.SPS_IF):
-            raise ConfigError(f"Selected Model {model} not valid. Available options are "
+        if gnss_alg not in (EnumAlgorithmPNT.SPS, EnumAlgorithmPNT.PR_PPP):
+            raise ConfigError(f"Selected Model {gnss_alg} not valid. Available options are "
                               f"SPS, SPS_IF")
-        self.main_log.info(f"Running GNSS algorithm {model}")
+        self.main_log.info(f"Running GNSS algorithm {gnss_alg}")
 
         config_dict.get_obs_std()
 
         # Input Reader Module
         try:
             self.main_log.info(f"Starting Input Reader Module...")
-            self.data_manager.read_inputs(f"{self.data_dir}\\trace")
+            self.data_manager.read_inputs(gnss_alg, f"{self.data_dir}\\trace")
         except Exception as e:
             self.main_log.error(f"Stopping execution of program due to error in execution of Input Reader Module: {e}")
             print(traceback.format_exc())
@@ -87,7 +79,7 @@ class GnssAlgorithmManager:
             print(traceback.format_exc())
             exit(-1)
 
-        self.main_log.info(f"Successfully executed GNSS algorithm {model}")
+        self.main_log.info(f"Successfully executed GNSS algorithm {gnss_alg}")
 
     def _compute_dop(self):
         """ Internal function for the computation of the DOPs """
@@ -132,9 +124,6 @@ class GnssAlgorithmManager:
 
     def _compute(self, data_manager, trace_path):
         """ Internal function for the computation of the PNT solver task """
-        # get the input raw obs data
-        nav_data = data_manager.get_data("nav_data")
-
         # perform pre-processing here
         self.main_log.info(f"Starting Preprocessor Module")
         preprocessor = PreprocessorManager(trace_path, data_manager)
@@ -142,8 +131,7 @@ class GnssAlgorithmManager:
 
         # run estimation algorithm
         self.main_log.info(f"Running estimation algorithm...")
-        solver = GnssSolver(data_manager.get_clean_obs_data(), data_manager.get_raw_obs_data(), nav_data,
-                            data_manager.sat_orbits, data_manager.sat_clocks)
+        solver = GnssSolver(data_manager, trace_path)
         solver.solve()
 
         data_manager.add_data("nav_solution", solver.solution)

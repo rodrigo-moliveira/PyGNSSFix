@@ -1,0 +1,1108 @@
+=============================================================================
+
+
+                         INTERNATIONAL GNSS SERVICE
+
+                       CODE Analysis Strategy Summary
+
+
+=============================================================================
+| Analysis Center   | Center for Orbit Determination in Europe (CODE)       |
+|                   | Astronomical Institute                                |
+|                   | University of Bern                                    |
+|                   | Sidlerstrasse 5                                       |
+|                   | CH-3012 Bern                                          |
+|                   | Switzerland                                           |
+|                   | E-mail:       code(at)aiub.unibe.ch (CODE AC Team)    |
+|                   | Phone:        +41-31-684-8593                         |
+|                   | Data archive: ftp://ftp.aiub.unibe.ch/CODE/           |
+|                   |               http://www.aiub.unibe.ch/download/CODE/ |
+|                   | Web:          http://www.aiub.unibe.ch (CODE at AIUB) |
+|                   |               http://www.bernese.unibe.ch (Bernese SW)|
+|---------------------------------------------------------------------------|
+| Contact People    | E-mail: code(at)aiub.unibe.ch (CODE AC Team)          |
+|---------------------------------------------------------------------------|
+| Software Used     | Bernese GNSS Software Version 5.5, developed at AIUB  |
+|---------------------------------------------------------------------------|
+| GNSS system(s)    | GPS, GLONASS, Galileo, BeiDou, QZSS                   |
+|---------------------------------------------------------------------------|
+| List of CODE's    | ftp://ftp.aiub.unibe.ch/AIUB_AFTP.TXT                 |
+| analysis products | http://www.aiub.unibe.ch/download/AIUB_AFTP.TXT       |
+|                   |                                                       |
+| Final Products    | Product reference:                                    |
+| generated for     | Dach, R., S. Schaer, D. Arnold, E. Brockmann,         |
+| GPS week 'wwww'   | M. Kalarus, M. Lasser, P. Stebler, A. Jaeggi (2024).  |
+| day of week 'n'   | CODE final product series for the IGS. Published      |
+| (d=0,1,...,6)     | by Astronomical Institute, University of Bern.        |
+| day of year 'ddd' | URL: http://www.aiub.unibe.ch/download/CODE/yyyy;     |
+| year 'yy'|'yyyy'  | DOI: 10.48350/197025.                                 |
+| month 'mm'        |                                                       |
+|                   | Files generated from three-day long-arc solutions:    |
+|                   | COD0OPSFIN_yyyyddd0000_01D_05M_ORB.SP3.gz             |
+|                   |                 (old: CODwwwwd.EPH.Z)                 |
+|                   |                 CODE final GPS+GLONASS+Galileo        |
+|                   |                 orbits                                |
+|                   | COD0OPSFIN_yyyyddd0000_01D_01D_ERP.ERP.gz             |
+|                   |                 (old: CODwwwwd.ERP.Z)                 |
+|                   |                 CODE final ERPs belonging to the final|
+|                   |                 orbits                                |
+|                   | COD0OPSFIN_yyyyddd0000_01D_30S_CLK.CLK.gz             |
+|                   | COD0OPSFIN_yyyyddd0000_01D_30S_CLK.CLK_V2.gz          |
+|                   |                 (old: CODwwwwd_v3.CLK.Z)              |
+|                   |                 (old: CODwwwwd.CLK.Z)                 |
+|                   |                 CODE final clock product, clock RINEX |
+|                   |                 format (versions 3.04 and 2.00)       |
+|                   |                 with a sampling of 30 sec.            |
+|                   |                 for the GNSS satellite and reference  |
+|                   |                 (station) clock corrections and       |
+|                   |                 5 minutes for all other for           |
+|                   |                 all other station clock corrections   |
+|                   | COD0OPSFIN_yyyyddd0000_01D_05S_CLK.CLK.gz             |
+|                   | COD0OPSFIN_yyyyddd0000_01D_05S_CLK.CLK_V2.gz          |
+|                   |                 (old: CODwwwwd_v3.CLK.Z)              |
+|                   |                 (old: CODwwwwd.CLK.Z)                 |
+|                   |                 CODE final clock product, clock RINEX |
+|                   |                 format (versions 3.04 and 2.00)       |
+|                   |                 with a sampling of 5 sec.             |
+|                   |                 for the GNSS satellite and reference  |
+|                   |                 (station) clock corrections and       |
+|                   |                 5 minutes for all other for           |
+|                   |                 all other station clock corrections   |
+|                   | COD0OPSFIN_yyyyddd0000_01D_01D_OSB.BIA.gz             |
+|                   |                 (old: CODwwwwd.BIA.Z                  |
+|                   |                 CODE daily code and phase bias        |
+|                   |                 solution corresponding to the         |
+|                   |                 above mentioned clock products,       |
+|                   |                 bias SINEX format V1.00               |
+|                   | COD0OPSFIN_yyyyddd0000_01D_30S_ATT.OBX.gz             |
+|                   |                 (old: CODwwwwd.OBX.Z)                 |
+|                   |                 Satellite attitude information        |
+|                   |                 in ORBEX format                       |
+|                   | COD0OPSFIN_yyyyddd0000_01D_01D_SOL.SNX.gz             |
+|                   |                 (old: CODwwwwd.SNX.Z)                 |
+|                   |                 CODE daily final solution             |
+|                   |                 in SINEX format                       |
+|                   | COD0OPSFIN_yyyyddd0000_01D_01H_TRO.TRO.gz             |
+|                   |                 (old: CODwwwd.TRO.Z)                  |
+|                   |                 CODE final troposphere product        |
+|                   |                 in troposphere SINEX format           |
+|                   | COD0OPSFIN_yyyyddd0000_01D_01H_GIM.INX.gz             |
+|                   |                 (old: CODGddd0.yyI.Z)                 |
+|                   |                 CODE final ionosphere product         |
+|                   |                 in IONEX format                       |
+|                   | COD0OPSFIN_yyyyddd0000_01D_01H_GIM.ION.gz             |
+|                   |                 (old: CODwwwwd.ION.Z)                 |
+|                   |                 CODE final ionosphere product         |
+|                   |                 in Bernese format                     |
+|                   | COD0OPSFIN_yyyyddd0000_01D_01D_GIM.RNX.gz             |
+|                   |                 (also still available                 |
+|                   |                 CGIMddd0.yyN.Z)                       |
+|                   |                 Improved Klobuchar-style              |
+|                   |                 ionosphere coefficient in             |
+|                   |                 navigation RINEX format               |
+|                   | COD0OPSFIN_yyyyddd0000_07D_07D_SOL.SNX.gz             |
+|                   |                 (old: CODwwww7.SNX.Z)                 |
+|                   |                 CODE weekly final solution in         |
+|                   |                 SINEX format                          |
+|                   |                 (only for Sunday of the related week) |
+|                   | COD0OPSFIN_yyyyddd0000_07D_01D_ERP.ERP.gz             |
+|                   |                 (old: CODwwww7.ERP.Z)                 |
+|                   |                 Collection of the 7~daily CODE-ERP    |
+|                   |                 solutions of the week                 |
+|                   |                 (only for Sunday of the related week) |
+|                   | COD0OPSFIN_yyyyddd0000_07D_01D_SUM.SUM.gz             |
+|                   |                 (old: CODwwww7.SUM.Z)                 |
+|                   |                 CODE weekly summary file              |
+|                   |                 (only for Sunday of the related week) |
+|                   |                                                       |
+|                   | Other product files:                                  |
+|                   |                                                       |
+|                   | P1C1yymm.DCB.Z  CODE monthly P1-C1 code bias solutions|
+|                   |                 in Bernese format                     |
+|                   |                 containing only the GPS satellites    |
+|                   | P1P2yymm.DCB.Z  GNSS monthly P1-P2 code bias          |
+|                   |                 solutions in Bernese format           |
+|                   |                 containing the GPS and GLONASS        |
+|                   |                 satellites                            |
+|                   | P1P2yymm_ALL.DCB.Z  GNSS monthly P1-P2 code bias      |
+|                   |                 solutions in Bernese format           |
+|                   |                 containing the GPS and GLONASS        |
+|                   |                 satellites and all stations used      |
+|                   | P1C1yymm_RINEX.DCB.Z  CODE monthly P1-C1 DCB values   |
+|                   |                 directly extracted from RINEX         |
+|                   |                 observation files                     |
+|                   |                 in Bernese format                     |
+|                   | P2C2yymm_RINEX.DCB.Z  CODE monthly P2-C2 DCB values   |
+|                   |                 directly extracted from RINEX         |
+|                   |                 observation files                     |
+|                   |                 in Bernese format                     |
+|                   | Remarks:                                              |
+|                   |                                                       |
+|                   |   EPH: Orbit positions correspond to the estimates    |
+|                   |        for the middle day of a 3-day in case of a     |
+|                   |        long-arc analysis.                             |
+|                   |   CLK: Clock corrections are consistent with          |
+|                   |        carrier phase as well as P1/P2 pseudorange     |
+|                   |        measurements.                                  |
+|                   |        CODE P1-C1 pseudorange bias values of a        |
+|                   |        moving 30-day solution are considered to       |
+|                   |        correct C1/X2 and C1/P2 receiver data.         |
+|                   |   BIA: The usage of the phase biases for ambiguity    |
+|                   |        resolution in PPP applications is explained    |
+|                   |        in ftp://ftp.aiub.unibe.ch/CODE/IAR_README.TXT |
+|                   |   EPH/ERP/SNX/TRO: These products are extracted from  |
+|                   |        one inversion of the normal equation based     |
+|                   |        either on a long-arc or clean one-day          |
+|                   |        solution.                                      |
+|                   |                                                       |
+| Rapid Products    | Product reference:                                    |
+| generated daily   | Dach, R., S. Schaer, D. Arnold, E. Brockmann,         |
+|                   | M. Kalarus, M. Lasser, P. Stebler, A. Jaeggi (2024).  |
+|                   | CODE rapid product series for the IGS. Published      |
+|                   | by Astronomical Institute, University of Bern.        |
+|                   | URL: http://www.aiub.unibe.ch/download/CODE;          |
+|                   | DOI: 10.48350/197026.                                 |
+|                   |                                                       |
+|                   |                                                       |
+|                   | Two sets of rapid products are generated at CODE:     |
+|                   | Early rapid solution: generated in the morning and    |
+|                   |     is the last day of a three-day long-arc solution  |
+|                   | Final rapid solution: updated rapid solution in the   |
+|                   |     context of the ultra-rapid processing; middle     |
+|                   |     day of a long-arc solution computed from the      |
+|                   |     current and previous day's rapid plus the ultra-  |
+|                   |     rapid solution from the subsequent day            |
+|                   |                                                       |
+|                   |                                                       |
+|                   | Result files from the final rapid solution:           |
+|                   |                                                       |
+|                   | CODMOPSRAP_yyyyddd0000_01D_05M_ORB.SP3                |
+|                   |                 (old:  CODwwwwd.EPH_M)                |
+|                   |                 CODE final rapid GNSS orbits          |
+|                   | CODMOPSRAP_yyyyddd0000_01D_01D_ERP.ERP                |
+|                   |                 (old: CODwwwwd.ERP_M)                 |
+|                   |                 CODE final rapid ERPs belonging       |
+|                   |                 to the final rapid orbits             |
+|                   | CODMOPSRAP_yyyyddd0000_01D_30S_CLK.CLK                |
+|                   | CODMOPSRAP_yyyyddd0000_01D_30S_CLK.CLK_V2             |
+|                   |                 (old: CODwwwwd.CLK_M)                 |
+|                   |                 CODE final rapid clock product        |
+|                   |                 belonging to the final rapid orbits   |
+|                   |                 clock RINEX format                    |
+|                   |                 (versions 3.04 and 2.00)              |
+|                   | CODMOPSRAP_yyyyddd0000_01D_01D_OSB.BIA                |
+|                   |                 code/phase biases related to the      |
+|                   |                 final rapid orbit and clock           |
+|                   |                 corrections, bias SINEX format        |
+|                   |                 V1.00                                 |
+|                   |                                                       |
+|                   | Result files from the early rapid solution:           |
+|                   |                                                       |
+|                   | COD0OPSRAP_yyyyddd0000_01D_05M_ORB.SP3                |
+|                   |                 (old:  CODwwwwd.EPH_R)                |
+|                   |                 CODE early rapid GNSS orbits          |
+|                   | COD0OPSRAP_yyyyddd0000_01D_01D_ERP.ERP                |
+|                   |                 (old: CODwwwwd.ERP_R)                 |
+|                   |                 CODE early rapid ERPs belonging       |
+|                   |                 to the early rapid orbits             |
+|                   | COD0OPSRAP_yyyyddd0000_01D_30S_CLK.CLK                |
+|                   | COD0OPSRAP_yyyyddd0000_01D_30S_CLK.CLK_V2             |
+|                   |                 (old: CODwwwwd.CLK_R)                 |
+|                   |                 CODE early rapid clock product        |
+|                   |                 belonging to the early rapid orbits   |
+|                   |                 clock RINEX format                    |
+|                   |                 (versions 3.04 and 2.00)              |
+|                   | COD0OPSRAP_yyyyddd0000_01D_01H_TRO.TRO                |
+|                   |                 (old: CODwwwwd.TRO_R)                 |
+|                   |                 CODE rapid troposphere product,       |
+|                   |                 troposphere SINEX format              |
+|                   | COD0OPSRAP_yyyyddd0000_01D_01D_SOL.SNX                |
+|                   |                 (old: CODwwwwd.SNX_R.Z)               |
+|                   |                 SINEX file from the CODE rapid        |
+|                   |                 solution containing station           |
+|                   |                 coordinates, ERPs, and satellite      |
+|                   |                 antenna Z-offsets, SINEX format       |
+|                   | COD0OPSRAP_yyyyddd0000_01D_02H_TRO.SNX                |
+|                   |                 (old: CODwwwwd_TRO.SNX_R.Z)           |
+|                   |                 CODE rapid solution, as above but     |
+|                   |                 with troposphere parameters for       |
+|                   |                  selected sites, SINEX format         |
+|                   | COD0OPSRAP_yyyyddd0000_01D_01D_OSB.BIA                |
+|                   |                 code/phase biases related to the      |
+|                   |                 final rapid orbit and clock           |
+|                   |                 corrections, bias SINEX format        |
+|                   |                 V1.00                                 |
+|                   | COD0OPSRAP_yyyyddd0000_01D_30S_ATT.OBX                |
+|                   |                 Satellite attitude, ORBEX format      |
+|                   | COD0OPSRAP_yyyyddd0000_01D_01H_GIM.INX.gz             |
+|                   |                 (old: CORGddd0.yyI)                   |
+|                   |                 CODE rapid ionosphere product,        |
+|                   |                 IONEX format                          |
+|                   | COD0OPSRAP_yyyyddd0000_01D_01H_GIM.ION                |
+|                   |                 (old: CODwwwwd.ION_R)                 |
+|                   |                 CODE rapid ionosphere product,        |
+|                   |                 Bernese format                        |
+|                   | COD0OPSRAP_yyyyddd0000_01D_01D_GIM.RNX                |
+|                   |                 (old: CGIMddd0.yyN_R)                 |
+|                   |                 Improved Klobuchar-style coefficients |
+|                   |                 based on CODE rapid ionosph. product, |
+|                   |                 RINEX format                          |
+|                   | Remarks:                                              |
+|                   |                                                       |
+|                   |   EPH: Orbit positions correspond to the estimates    |
+|                   |        for the last day of a 3-day long-arc analysis. |
+|                   |   CLK: Clock corrections are consistent with carrier  |
+|                   |        phase as well as P1/P2 pseudorange             |
+|                   |        measurements.                                  |
+|                   |        CODE P1-C1 pseudorange bias values of a moving |
+|                   |        30-day solution are considered to correct      |
+|                   |        C1/X2 and C1/P2 receiver data.                 |
+|                   |                                                       |
+|                   |                                                       |
+| Ultra Rapid       | Product reference:                                    |
+| Products updated  | Dach, R., S. Schaer, D. Arnold, E. Brockmann,         |
+| every 6 hours     | M. Kalarus, M. Lasser, P. Stebler, A. Jaeggi (2024).  |
+|                   | CODE ultra-rapid product series for the IGS. Published|
+|                   | by Astronomical Institute, University of Bern.        |
+|                   | URL: http://www.aiub.unibe.ch/download/CODE;          |
+|                   | DOI: 10.48350/197027.                                 |
+|                   |                                                       |
+|                   |                                                       |
+|                   | COD0OPSULT.SP3 (old: COD.EPH_U)                       |
+|                   |                 CODE ultra-rapid GNSS orbits          |
+|                   |                 (GPS+GLONASS+Galileo)                 |
+|                   | COD0OPSULT.ERP (old: COD.ERP_U)                       |
+|                   |                 CODE ultra-rapid ERPs belonging to    |
+|                   |                 the ultra-rapid GNSS orbit product    |
+|                   | COD0OPSULT.TRO (old: COD.TRO_U)                       |
+|                   |                 CODE ultra-rapid troposphere product, |
+|                   |                 troposphere SINEX format              |
+|                   | COD0OPSULT.SNX (old: COD.SNX_U.Z)                     |
+|                   |                 SINEX file from the CODE ultra-rapid  |
+|                   |                 solution containing station           |
+|                   |                 coordinates, ERPs, and satellite      |
+|                   |                 antenna Z-offsets                     |
+|                   | COD0OPSULT_TRO.SNX (old: COD_TRO.SNX_U.Z)             |
+|                   |                 CODE ultra-rapid solution,            |
+|                   |                 as above but with troposphere         |
+|                   |                 parameters for selected sites,        |
+|                   |                 SINEX format                          |
+|                   | COD0OPSULT.SUM (old: COD.SUM_U)                       |
+|                   |                 Summary of stations used for the      |
+|                   |                 latest ultra-rapid orbit product      |
+|                   | COD0OPSULT.ION (old: COD.ION_U)                       |
+|                   |                 Last update of CODE rapid             |
+|                   |                 ionosphere product (1 day)            |
+|                   |                 complemented with ionosphere          |
+|                   |                 predictions (2 days),                 |
+|                   |                 Bernese format                        |
+|                   | COD0OPSULT_yyyyddd0000_01D_05M_ORB.SP3                |
+|                   |                 (old: CODwwwwd.EPH_U)                 |
+|                   |                 CODE ultra-rapid GNSS orbits from the |
+|                   |                 24UT solution available until the     |
+|                   |                 corresponding early rapid orbit       |
+|                   |                 is available (to ensure a complete    |
+|                   |                 coverage of orbits even if the early  |
+|                   |                 rapid solution is delayed  after the  |
+|                   |                 first ultra-rapid solution of the day)|
+|                   | COD0OPSULT_yyyyddd0000_01D_01D_ERP.ERP                |
+|                   |                 (old: CODwwwwd.ERP_U)                 |
+|                   |                 CODE ultra-rapid ERPs belonging to    |
+|                   |                 the above ultra-rapid GNSS orbits     |
+|                   |                                                       |
+|                   | Remarks:                                              |
+|                   |                                                       |
+|                   |   EPH: Orbit positions correspond to the estimates    |
+|                   |        for the last 24 hours of a 3-day long-arc      |
+|                   |        analysis plus predictions for the following    |
+|                   |        24 hours                                       |
+|                   |   EPH/ERP/TRO/SNX: Files contain generally results    |
+|                   |        of last update                                 |
+|                   |   ION: Last rapid ionosphere product complemented by  |
+|                   |        all available ionosphere predictions           |
+|                   |                                                       |
+|                   |                                                       |
+| Predictions       | COD0OPSPRD_05D.SP3 (old: CODwwwwd.EPH_5D)             |
+| updated every 6   |                 CODE 5-day GNSS orbit predictions     |
+| hours             | COD0OPSPRD_yyyyddd0000_05D_05M_ORB.SP3                |
+|                   |                 (old: CODwwwwd.EPH_5D)                |
+|                   |                 CODE 5-day GNSS orbit predictions     |
+|                   | COD0OPSPRD_yyyyddd0000_21D_06H_ERP.ERP                |
+|                   |                 (old: CODwwwwd.ERP_5D)                |
+|                   |                 CODE predicted ERPs belonging to      |
+|                   |                 the predicted orbits                  |
+|                   | COD0OPSPRD_yyyyddd0000_01D_01H_GIM.INX.gz             |
+|                   |                 (old: COPGddd0.yyI)                   |
+|                   |                 CODE ionosphere predictions,          |
+|                   |                 IONEX format                          |
+|                   | COD0OPSPRD_yyyyddd0000_01D_01H_GIM.ION                |
+|                   |                 (old: CODwwwwd.ION_P)                 |
+|                   |                 CODE ionosphere predictions,          |
+|                   |                 Bernese format                        |
+|                   | COD0OPSPRD_yyyyddd0000_01D_01D_GIM.RNX                |
+|                   |                 (old: CGIMddd0.yyN_P)                 |
+|                   |                 predictions of improved Klobuchar-    |
+|                   |                 style coefficients, RINEX format      |
+|                   |                                                       |
+|                   | Remarks (for old filename style):                     |
+|                   |                                                       |
+|                   |   "P2" indicates 2-day predictions (24-48 hours);     |
+|                   |   "P" indicates 1-day predictions (0-24 hours).       |
+|                   |   "5D" indicates files containing predicted           |
+|                   |   information for 5 days (0-120 hours).               |
+|                   |                                                       |
+| Final MGEX        | Product reference:                                    |
+| (expoermental)    | Dach, R., S. Schaer, D. Arnold, E. Brockmann,         |
+| products          | M. Kalarus, M. Lasser, P. Stebler, A. Jaeggi (2024).  |
+|                   | CODE final product series for the IGS. Published      |
+|                   | by Astronomical Institute, University of Bern.        |
+|                   | URL: http://www.aiub.unibe.ch/download/CODE_MGEX/yyyy;|
+|                   | DOI: 10.48350/197028.                                 |
+|                   |                                                       |
+|                   | Files generated from three-day long-arc solutions:    |
+|                   | COD0MGXFIN_yyyyddd0000_01D_05M_ORB.SP3.gz             |
+|                   |                 (old: COMwwwwd.EPH.Z)                 |
+|                   |                 CODE MGEX GPS+GLONASS+Galileo+BDS+    |
+|                   |                 QZSS orbits                           |
+|                   | COD0MGXFIN_yyyyddd0000_01D_01D_ERP.ERP.gz             |
+|                   |                 (old: COMwwwwd.ERP.Z)                 |
+|                   |                 CODE MGEX ERPs belonging to the MGEX  |
+|                   |                 orbits                                |
+|                   | COD0MGXFIN_yyyyddd0000_01D_30S_CLK.CLK.gz             |
+|                   | COD0MGXFIN_yyyyddd0000_01D_30S_CLK.CLK_V2.gz          |
+|                   |                 (old: COMwwwwd_v3.CLK.Z)              |
+|                   |                 (old: COMwwwwd.CLK.Z)                 |
+|                   |                 CODE MGEX clock product, clock RINEX  |
+|                   |                 format (versions 3.04 and 2.00)       |
+|                   |                 with a sampling of 30 sec.            |
+|                   |                 for the GNSS satellite and reference  |
+|                   |                 (station) clock corrections and       |
+|                   |                 5 minutes for all other for           |
+|                   |                 all other station clock corrections   |
+|                   | COD0MGXFIN_yyyyddd0000_01D_01D_OSB.BIA.gz             |
+|                   |                 (old: COMwwwwd.BIA.Z)                 |
+|                   |                 CODE daily code and phase bias,       |
+|                   |                 solution corresponding to the         |
+|                   |                 above mentioned clock products,       |
+|                   |                 bias SINEX format V1.00               |
+|                   | COD0MGXFIN_yyyyddd0000_01D_30S_ATT.OBX.gz             |
+|                   |                 (old: COMwwwwd.OBX.Z)                 |
+|                   |                 Satellite attitude information        |
+|                   |                 in ORBEX format                       |
+|                   |                                                       |
+|                   |                                                       |
+| Specialties in    | - CODE has been generating its products from a        |
+| CODE's analysis   |   rigorous combination of GPS, GLONASS and Galileo    |
+|                   |   observations. In this way, best possible            |
+|                   |   consistency of the orbit products is guaranteed.    |
+|                   | - Uninterrupted POD for all transmitting GNSS         |
+|                   |   satellites, specifically for:                       |
+|                   |   . brand new satellites                              |
+|                   |   . satellites without any broadcast orbit information|
+|                   |   . satellites marked unhealthy/unusable              |
+|                   |   . poorly observed (GLONASS) satellites              |
+|                   |   . (GPS) satellites being repositioned               |
+|                   | - Elevation mask angle of 3 degrees used.             |
+|                   | - Sophisticated ambiguity resolution scheme, already  |
+|                   |   including GLONASS ambiguity resolution (with        |
+|                   |   restrictions, specifically for baseline lengths     |
+|                   |   longer than 200 km), self-calibrating for GLONASS.  |
+|                   | - Ambiguity verification scheme: resolved ambiguities |
+|                   |   are checked in terms of compatibility, also in order|
+|                   |   to detect unexpected quarter-cycle issues.          |
+|                   | - GPS quarter-cycle phase bias issue: potentially     |
+|                   |   affected GPS ambiguities are banned from ambiguity  |
+|                   |   resolution.                                         |
+|                   | - Continuous parametrization, particularly for EOP,   |
+|                   |   troposphere ZPD and horizontal gradient parameters, |
+|                   |   ionosphere parameters, allowing for connection of   |
+|                   |   the parameters at day boundaries.                   |
+|                   | - For the three-day long-arc final solution the       |
+|                   |   continuity is only realized via constraints keeping |
+|                   |   the realted parameters independent, in particular   |
+|                   |   SINEX file generation (compatibility to one-day     |
+|                   |   solutions from other analysis centers).             |
+|                   | - IGS fiducial sites are automatically verified for   |
+|                   |   consistent datum definition for final, rapid, and   |
+|                   |   even the ultra-rapid processing. This is also true  |
+|                   |   with respect to all antenna-sharing fiducial sites. |
+|                   | - Inclusion of fast moving South Pole station AMU2.   |
+|                   | - Generation of high-rate (5-sec) clock products.     |
+|                   | - Generation of high-rate (1-hour) EOP results        |
+|                   |   (internally).                                       |
+|                   | - Setup of GNSS satellite antenna PCV parameters      |
+|                   |   specific to each individual GPS, GLONASS and Galileo|
+|                   |   satellite; corresponding patterns are not only      |
+|                   |   available for the ionosphere-free linear            |
+|                   |   combination but also for the geometry-free (L1-L2)  |
+|                   |   linear combination.                                 |
+|                   | - A multi-GNSS-capable internal PCV file format is    |
+|                   |   used; receiver antenna PCV models specific to       |
+|                   |   GLONASS (or other) frequencies are applied.         |
+|                   | - 3 terms of higher-order ionosphere (HOI) effects are|
+|                   |   taken into account (based on CODE GIM & IGRF11SYN). |
+|                   |   Scaling factor for 2nd and 3rd order HOI as well as |
+|                   |   for ray bending for validation purposes and to      |
+|                   |   switch the parameter on or off                      |
+|                   | - Non-tidal loading deformations from Dill and Dobslaw|
+|                   |   (2013) at observation level with scaling factors to |
+|                   |   obtain solutions without applying such corrections  |
+|                   | - Monitoring of various differential code biases      |
+|                   |   (DCBs), specifically:                               |
+|                   |   . GPS/GLONASS P1-P2 satellite and receiver DCBs     |
+|                   |   . GPS/GLONASS P1-C1 and P2-C2 satellite DCBs        |
+|                   |   . biases crucial for GLONASS ambiguity resolution   |
+|                   |   Values are extracted from different data processing |
+|                   |   steps and directly from the RINEX observation files |
+|                   |   (where possible)                                    |
+|                   | - Extensive monitoring of IGS data flow concerning:   |
+|                   |   . availability                                      |
+|                   |   . latency                                           |
+|                   |   . completeness                                      |
+|                   |   . consistency                                       |
+|                   | - SINEX loop: COD SINEX results are routinely         |
+|                   |   imported and re-introduced. First extracted and     |
+|                   |   secondly re-produced station coordinate results are |
+|                   |   cross-checked to the original analysis results (at  |
+|                   |   0.01-mm level). The extracted list of fiducial      |
+|                   |   stations is used for this re-production.            |
+|                   | - Provision of GNSS geocenter coordinates in SINEX.   |
+|                   | - Production of GNSS rapid SINEX files containing     |
+|                   |   station coordinates and ERPs with a time resolution |
+|                   |   of 6 hours is foreseen as a contribution for the    |
+|                   |   IERS inter-technique combination.                   |
+|                   | - Regular GNSS orbit validation using SLR data; CODE  |
+|                   |   acts as an AAC of the ILRS.                         |
+|                   | - The latest version of our steadily further          |
+|                   |   developed GNSS analysis software is employed for    |
+|                   |   operational analysis.                               |
+|                   |                                                       |
+| Computer platform | Week 2353: UBELIX: Linux, x86_64,a->bnodes 10.2.25    |
+|                   | Week 2318: UBELIX: Linux, x86_64, RockyOS Upd 12.6.24 |
+|                   | Week 1477: UBELIX: Linux, x86_64                      |
+|                   | Week 1065: UBECX: SunOS                               |
+|                   |                                                       |
+| Last changes:     | Week 2352: See IGSMAIL.8543                           |
+|                   | Week 2113: See IGSREPORT.27375                        |
+|                   | Week 2072: See IGSMAIL.7832                           |
+|                   | Week 1691: See IGSREPORT.20913                        |
+|                   | Week 1643: See IGSREPORT.19947                        |
+|                   | Week 1632: See IGSREPORT.19702                        |
+|                   | Week 1625: See IGSREPORT.19560                        |
+|                   | Week 1619: See IGSREPORT.19411                        |
+|                   | Week 1618: See IGSREPORT.19385                        |
+|                   | Week 1604: See IGSREPORT.19068 and IGSMAIL.6287       |
+|                   | Week 1570: See IGSREPORT.18301 and IGSMAIL.6078       |
+|                   | Week 1542: See IGSREPORT.17667 and IGSMAIL.5970       |
+|                   | Week 1488: See IGSREPORT.16472                        |
+|                   | Week 1477: See IGSREPORT.16225 and IGSMAIL.5771       |
+|                   | Week 1452: See IGSREPORT.15669/IGSREPORT.14622        |
+|                   | Week 1440: See IGSREPORT.15405                        |
+|                   | Week 1439: See IGSREPORT.15403                        |
+|                   | Week 1409: See IGSREPORT.14695                        |
+|                   | Week 1406: See IGSREPORT.14622/IGSMAIL.5507 & .5518   |
+|                   | Week 1400: See IGSREPORT.14486 and IGSMAIL.5518       |
+|                   | Week 1367: See IGSREPORT.13669                        |
+|                   | Week 1349: See IGSREPORT.13201                        |
+|                   | Week 1328: See IGSREPORT.12706                        |
+|                   | Week 1326: See IGSREPORT.12657                        |
+|                   | Week 1321: See IGSREPORT.12569 and IGSMAIL.5151       |
+|                   | Week 1299: See IGSREPORT.12031                        |
+|                   | Week 1282: See IGSREPORT.11617                        |
+|                   | Week 1279: See IGSREPORT.11543                        |
+|                   | Week 1255: See IGSMAIL.4913                           |
+|                   | Week 1254: See IGSREPORT.10997 and IGLOSMAIL.963      |
+|                   | Week 1252: See IGSMAIL.4782                           |
+|                   | Week 1242: See IGSREPORT.10752                        |
+|                   | Week 1222: See IGSREPORT.10361 and                    |
+|                   |                IGSMAIL.4474/IGLOSMAIL.770             |
+|                   | Week 1216: See IGSMAIL.4371/IGLOSMAIL.736             |
+|                   | Week 1191: See IGSREPORT.9756 and IGSMAIL.4162        |
+|                   | Week 1158: See IGSREPORT.9147 and IGSMAIL.3823        |
+|                   | Week 1143: See IGSREPORT.8868                         |
+|                   | Week 1142: See IGSREPORT.8848                         |
+|                   | Week 1135: See IGSREPORT.8710                         |
+|                   | Week 1130: See IGSREPORT.8616                         |
+|                   | Week 1128: See IGSREPORT.8577                         |
+|                   | Week 1077: See IGSREPORT.7544                         |
+|                   | Week 1065: See IGSREPORT.7279                         |
+|                   | Week 1057: See IGSREPORT.7107 and IGSMAIL.2827        |
+|                   | Week 1021: See IGSREPORT.6351                         |
+|                   | Week 0978: See IGSREPORT.5415 and IGSMAIL.2043        |
+|                   | Week 0947: See IGSREPORT.4698 and IGSMAIL.1829        |
+|                   | Week 0926: See IGSREPORT.4247 and IGSMAIL.1705        |
+|                   | Week 0873: See IGSREPORT.3056                         |
+|---------------------------------------------------------------------------|
+| Preparation Date  | 18-Aug-1996                                           |
+|---------------------------------------------------------------------------|
+| Modification Dates| 13-Mar-1998                                           |
+|                   | 12-Mar-2002/SS: Major revision and update             |
+|                   | 13-Mar-2002/SS: JGM3 model up to degree 12            |
+|                   | 24-Oct-2002/SS: Typo concerning satellite antenna     |
+|                   |                 offset value corrected                |
+|                   | 28-May-2008/SS/RD: Major revision and update          |
+|                   | 13-Oct-2010/SS/RD: Processing model update            |
+|                   | 19-Dec-2012/SS: Major revision and update             |
+|                   | 13-Feb-2015/RD: Consider most recent processing       |
+|                   |                 updates                               |
+|                   | 08-Sep-2015/RD: Processing model update               |
+|                   | 28-Jan-2019/RD: Adjust file descriptions              |
+|                   | 11-Oct-2019/RD: Update regarding Galileo in           |
+|                   |                 rapid/ultra-rapid processing          |
+|                   | 14-Jan-2022/RD/AV: Processing model update            |
+|                   | 21-Mar-2024/EB: Product update (long file names)      |
+|                   |                 and model changes week 2238 (I20)     |
+|                   | 11-Mar-2025/EB: IGb20 and observation selection J     |
+|---------------------------------------------------------------------------|
+| Effective Date for| 11-Mar-2025                                           |
+| Data Analysis     |                                                       |
+=============================================================================
+
+
+=============================================================================
+|                           MEASUREMENT MODELS                              |
+|---------------------------------------------------------------------------|
+| Preprocessing    | Phase preprocessing in a baseline by baseline mode     |
+|                  | using triple-differences. In most cases, cycle slips   |
+|                  | are fixed looking simultaneously at different linear   |
+|                  | combinations of two frequencies. If a cycle slip cannot|
+|                  | be fixed reliably, bad data points are removed or new  |
+|                  | ambiguities are set up. In addition, a data screening  |
+|                  | step on the basis of weighted postfit residuals is     |
+|                  | performed. Outliers are removed.                       |
+|---------------------------------------------------------------------------|
+| Basic Observables| GPS/GLONASS/Galileo(/BDS/QZSS) carrier phase; code only|
+|                  | used for receiver clock synchronization and MW         |
+|                  | ambiguity resolution                                   |
+|                  | Priorities for observation selection:                  |
+|                  |   G    L1   L1W L1C L1X                                |
+|                  |   G    L2   L2W L2C L2D L2P L2X L2S L2L                |
+|                  |   G    C1   C1W C1C C1X                                |
+|                  |   G    C2   C2W C2C C2D C2P C2X C2S C2L                |
+|                  |   R    L1   L1P L1C L1X                                |
+|                  |   R    L2   L2P L2C L2X                                |
+|                  |   R    C1   C1P C1C C1X                                |
+|                  |   R    C2   C2P C2C C2X                                |
+|                  |   E    L1   L1C L1X                                    |
+|                  |   E    L2   L5Q L5X L5I                                |
+|                  |   E    C1   C1C C1X                                    |
+|                  |   E    C2   C5Q C5X C5I                                |
+|                  |   C    L1   L2I L2X                                    |
+|                  |   C    L2   L6I L6X                                    |
+|                  |   C    C1   C2I C2X                                    |
+|                  |   C    C2   C6I C6X                                    |
+|                  |--------------------------------------------------------|
+|                  |   J    L1   L1C L1X                                    |
+|                  |   J    L2   L2L L2S L2X                                |
+|                  |   J    C1   C1C C1X                                    |
+|                  |   J    C2   C2L C2S C2X                                |
+|                  |--------------------------------------------------------|
+|                  |   MGEX QZSS L1/L2 -> L1/L5 Feb. 2, 2025 (week 2353)    |
+|                  |   J    L1   L1C                                        |
+|                  |   J    L2   L5Q L5X                                    |
+|                  |   J    C1   C1C                                        |
+|                  |   J    C2   C5Q C5X                                    |
+|                  |--------------------------------------------------------|
+|                  | Elevation angle cutoff :  3 degrees                    |
+|                  | Sampling rate          :  3 minutes                    |
+|                  | Weighting              :  6 mm for double-differenced  |
+|                  |                           ionosphere-free phase        |
+|                  |                           observations at zenith;      |
+|                  |                           elevation-dependent weighting|
+|                  |                           function 1/cos(z)**2         |
+|---------------------------------------------------------------------------|
+| Modeled          | Double differences, ionosphere-free linear combination |
+| observables      | of two frequencies (see selection above)               |
+|---------------------------------------------------------------------------|
+| Satellite antenna| SV-specific z-offsets & block-specific x- & y-offsets  |
+| -center of mass  | from IGS using file igs20_wwww.atx based on ITRF2020   |
+| offsets          |                                                        |
+|---------------------------------------------------------------------------|
+| Satellite antenna| block-specific nadir angle-dependent "absolute" PCVs   |
+| phase center     | applied from file igs20_wwww.atx; no azimuth-dependent |
+| corrections      | corrections applied                                    |
+|---------------------------------------------------------------------------|
+| Satellite clock  | 2nd order relativistic correction for non-zero         |
+| corrections      | orbit ellipticity (-2*R*V/c) applied                   |
+|                  | NOTE: Other dynamical relativistic effects under       |
+|                  |       Orbit Models                                     |
+|---------------------------------------------------------------------------|
+| GPS attitude     | Nominal (yaw-steering) attitude implemented            |
+| model            | whereas Kouba 2009 for eclipse                         |
+|---------------------------------------------------------------------------|
+| GLONASS attitude | Nominal (yaw-steering) attitude implemented            |
+| model            | whereas Dilssner et al. 2011 for eclipse               |
+|---------------------------------------------------------------------------|
+| Galileo attitude | Nominal attitude according to GSA (2019) implemented.  |
+| model            |                                                        |
+|---------------------------------------------------------------------------|
+| RHC phase        | Phase polarization effects applied (Wu et al., 1993)   |
+| rotation corr.   |                                                        |
+|---------------------------------------------------------------------------|
+| Ground antenna   | "absolute" elevation- & azimuth-dependent (when        |
+| phase center     | available) PCVs & offsets from ARP applied from        |
+| offsets &        | file igs20_wwww.atx                                    |
+| corrections      | Receiver antenna models GNSS-specific correctiopns are |
+|                  | applied (as far as available).                         |
+|                  | Final: Observations without antenna corrections for the|
+|                  | related GNSS are ignored                               |
+|---------------------------------------------------------------------------|
+| Antenna radome   | Calibration applied if given in file igs20_wwww.atx;   |
+| calibrations     | otherwise radome effect neglected (radome => NONE)     |
+|                  | Final: Stations with a not calibrated antenna/radome   |
+|                  | combination are ignored                                |
+|---------------------------------------------------------------------------|
+| Marker -> antenna| dN, dE, dU eccentricities from site logs applied to    |
+| ARP eccentricity | compute station coordinates                            |
+|                  | Potential not-alignment to North is considered         |
+|---------------------------------------------------------------------------|
+| Troposphere      | ECMWF-based hydrostatic delay mapped with hydrostatic  |
+| a priori model   | VMF3. Coefficients from 3-hourly global grids.         |
+|                  | GPT3/GMF3 in the rapid and ultra-rapid solution.       |
+|                  |                                                        |
+|                  | Gradient model: none                                   |
+|---------------------------------------------------------------------------|
+| Ionosphere       | 1st order effect: eliminated by forming the            |
+|                  |                   ionosphere-free dual frequency linear|
+|                  |                   combination.                         |
+|                  |--------------------------------------------------------|
+|                  | 2nd order effect: applied, IGRF13 implementation, TEC  |
+|                  |                   from CODE global ionosphere model    |
+|                  |--------------------------------------------------------|
+|                  | 3rd order effect: applied, TEC from CODE global        |
+|                  |                   ionosphere model                     |
+|                  |--------------------------------------------------------|
+|                  | Other effects:    ray bending applied, TEC from CODE   |
+|                  |                   global ionosphere model              |
+|                  |                                                        |
+|                  |                   GNSS-derived global ionosphere map   |
+|                  |                   information is used to support       |
+|                  |                   ambiguity resolution when using the  |
+|                  |                   QIF strategy.                        |
+|---------------------------------------------------------------------------|
+| Tidal            | Solid Earth tide     : complete model from IERS        |
+| displacements    |                        Conventions 2010                |
+|                  |                                                        |
+|                  | Step 1: in-phase: degree 2 and 3                       |
+|                  |           Nominal h02 and l02 : 0.6078, 0.0847 (anela.)|
+|                  |           Nominal h22 and l22 :-0.0006, 0.0002         |
+|                  |           Nominal h3  and l3  : 0.292 , 0.015          |
+|                  |                                                        |
+|                  |         out-of-phase: degree 2 only semi- and diurnal  |
+|                  |           diurnal: nominal hI, lI :-0.0025,-0.0007     |
+|                  |           semi-di: nominal hI, lI :-0.0022,-0.0007     |
+|                  |                                                        |
+|                  |         latitude dependence                            |
+|                  |           diurnal: nominal l1 : 0.0012                 |
+|                  |           semi-di: nominal l1 : 0.0024                 |
+|                  |                                                        |
+|                  | Step 2: in-phase: degree 2, diurnal                    |
+|                  |         in-phase and out-of-phase: long-period tides   |
+|                  |--------------------------------------------------------|
+|                  | Permanent tide       : applied in tide model,          |
+|                  |                        NOT included in site coordinates|
+|                  |--------------------------------------------------------|
+|                  | Solid Earth pole tide: applied (IERS 2010)             |
+|                  |--------------------------------------------------------|
+|                  | Oceanic pole tide    : not applied                     |
+|                  |--------------------------------------------------------|
+|                  | Ocean tide loading   : IERS 2010, site-dependent amps  |
+|                  |                        & phases from Bos & Scherneck   |
+|                  |                        website for FES2014b tide model |
+|                  |                        NEU site displacements computed |
+|                  |                        using hardisp.f from D. Agnew   |
+|                  |--------------------------------------------------------|
+|                  | Ocean tide geocenter : coeffs. corrected for center of |
+|                  |                        mass motion of whole Earth      |
+|                  |--------------------------------------------------------|
+|                  | Atmospheric tides    : S1+S2 tidal corrections from the|
+|                  |                        Vienna atmospheric pressure     |
+|                  |                        model                           |
+|---------------------------------------------------------------------------|
+| Non-tidal        | Atmospheric pressure : Non-tidal components from the   |
+| loadings         |                        GFZ loading model (Dill and     |
+|                  |                        Dobslaw, 2013) with three       |
+|                  |                        scaling factors per station (one|
+|                  |                        for each component) for         |
+|                  |                        validation purposes.            |
+|                  |                        The product files are generated |
+|                  |                        without considering the non-    |
+|                  |                        tidal pressure loading by       |
+|                  |                        forcing the scaling factors to  |
+|                  |                        zero.                           |
+|                  |--------------------------------------------------------|
+|                  | Ocean bottom pressure: (as above)                      |
+|                  |--------------------------------------------------------|
+|                  | Surface hydrology    : (as above)                      |
+|                  |--------------------------------------------------------|
+|                  | Other effects        : none applied                    |
+|---------------------------------------------------------------------------|
+| Earth orientation| Ocean tidal: diurnal/semidiurnal variations in x,y, &  |
+| variations       |              UT1 applied according to IERS 2010, Tables|
+|                  |              8.2a, 8.2b, 8.3a, 8.3b                    |
+|                  |--------------------------------------------------------|
+|                  | Atmosphere tidal: S1, S2, S3 tides not applied         |
+|                  |--------------------------------------------------------|
+|                  | High-frequency nutation: applied according to IERS     |
+|                  |                          2010, Table 5.1a              |
+|                  |--------------------------------------------------------|
+|                  | UT1 libration: applied according to IERS 2010, Table   |
+|                  |                5.1.b                                   |
+=============================================================================
+
+=============================================================================
+|                           REFERENCE FRAMES                                |
+|---------------------------------------------------------------------------|
+| Time argument    | TDT                                                    |
+|                  | GPS time as given by observation epochs, which is      |
+|                  | offset by only a fixed constant (approx.) from TT/TDT  |
+|---------------------------------------------------------------------------|
+| Inertial         | geocentric; mean equator and equinox of 2000 Jan 1     |
+| frame            | at 12:00 (J2000.0)                                     |
+|---------------------------------------------------------------------------|
+| Terrestrial      | ITRF2020 reference frame realized through a set of     |
+| frame            | station coordinates and velocities given in the IGS    |
+|                  | internal realization IGS20.                            |
+|                  | Since Feb.2, 2025 (week 2352): IGb20                   |
+|                  |                                                        |
+|                  |   Datum definition:                                    |
+|                  |   . 3 no-net translation conditions (only if geocenter |
+|                  |     is estimated)                                      |
+|                  |   . 3 no-net rotation conditions                       |
+|                  |   . geocenter coordinates constrained nominally to     |
+|                  |     zero values                                        |
+|                  |   IGS20 fiducial sites are selected as reference, if:  |
+|                  |   . horizontal deviation < 10 mm                       |
+|                  |   . vertical   deviation < 30 mm                       |
+|---------------------------------------------------------------------------|
+| Tracking         | Ultra-rapid with about 100, rapid with 120 and final   |
+| network          | 270 stations per day are used.                         |
+|                  | Station selection is based on long time series,        |
+|                  | contribution to existing reference frames, co-location |
+|                  | with other space-geodetic techniques, multi-GNSS-      |
+|                  | capability (RINEX3 file delivery), all-in-view         |
+|                  | tracking support for unhealthy satellites, and         |
+|                  | availability of multi-GNSS antenna calibration values  |
+|---------------------------------------------------------------------------|
+| Interconnection  | Precession: IAU 2000 Precession Theory                 |
+|                  |--------------------------------------------------------|
+| (EOP parameter   | Nutation: IAU 2000R06 Nutation Theory                  |
+| estimation is    |--------------------------------------------------------|
+| below)           | A priori EOPs: polar motion & UT1 from IERS C04 series |
+|                  |                aligned to ITRF2020                     |
+=============================================================================
+
+=============================================================================
+|                             ORBIT MODELS                                  |
+|---------------------------------------------------------------------------|
+| Geopotential     | EGM2008 model up to degree and order 12 (+C21+S21)     |
+| (static)         |--------------------------------------------------------|
+|                  | GM = 398600.4415 km**3/sec**2                          |
+|                  |--------------------------------------------------------|
+|                  | AE =   6378.1363 km                                    |
+|---------------------------------------------------------------------------|
+| Tidal variations | Solid Earth tides: applied according to IERS 2010      |
+| in geopotential  |--------------------------------------------------------|
+|                  | Ocean tides: applied, FES2014b model                   |
+|                  |--------------------------------------------------------|
+|                  | Solid Earth pole tide: applied according to IERS 2010  |
+|                  |--------------------------------------------------------|
+|                  | Oceanic pole tide: applied according to IERS 2010      |
+|---------------------------------------------------------------------------|
+| Third-body       | Sun, Moon, Jupiter, Venus, Mars as point masses        |
+|                  |--------------------------------------------------------|
+|                  | Ephemeris: JPL DE421, Folkner et al. (2009)            |
+|                  |--------------------------------------------------------|
+|                  | GMsun  = 132712500000 km**3/sec**2                     |
+|                  |--------------------------------------------------------|
+|                  | GMmoon =    4902.7890 km**3/sec**2                     |
+|---------------------------------------------------------------------------|
+| Solar radiation  | A priori:           no a priori model for GPS, GLONASS |
+| pressure model   |                     Galileo based on GSA 2019 optical  |
+| (parameter       |                     properties                         |
+|  estimation is   |--------------------------------------------------------|
+|  below)          | Earth shadow model: cylindrical shadow                 |
+|                  |--------------------------------------------------------|
+|                  | Earth albedo:       numerical model according to       |
+|                  |                     Rodriguez et al. (2012)            |
+|                  |--------------------------------------------------------|
+|                  | Moon shadow model:  umbra and penumbra                 |
+|                  |--------------------------------------------------------|
+|                  | Satellite attitude: nominal attitude                   |
+|                  |--------------------------------------------------------|
+|                  | Satellite antenna thrust:                              |
+|                  | Antenna thrust for GPS satellites according to         |
+|                  | http://acc.igs.org/orbits/thrust-power.txt             |
+|                  |  Block I, II, IIA: 76 W                                |
+|                  |  Block IIR:        85 W                                |
+|                  |  Block IIR-M:     198 W (including M-code)             |
+|                  |  Block IIF:       249 W (including M-code)             |
+|                  |  SVN62 after 05 April 2011: 154 W (no M-code)          |
+|                  |                                                        |
+|                  | Assumption for all GLONASS satellites: 100 W           |
+|                  |                                                        |
+|                  | Assumption for Galileo satellites: IOV/FOC: 130/200 W  |
+|                  |--------------------------------------------------------|
+|                  | Other forces:       none applied                       |
+|---------------------------------------------------------------------------|
+| Relativistic     | dynamical correction: applied according to IERS 2010,  |
+| effects          |                       eq. 10.12, Lense-Thirring &      |
+|                  |                       geodesic precession neglected    |
+|                  |--------------------------------------------------------|
+|                  | Gravitational time delay: applied according to         |
+|                  |                           IERS 2010, eq.  11.17        |
+|---------------------------------------------------------------------------|
+| Numerical        | Integration algorithms developed at AIUB by Gerhard    |
+| Integration      | Beutler (1990). Representation of the orbit by a       |
+|                  | polynomial of degree 10 for 1 hour.                    |
+|                  |--------------------------------------------------------|
+|                  | Integration step: 1 hour                               |
+|                  |--------------------------------------------------------|
+|                  | Starter procedure: no special starter procedure needed |
+|                  |--------------------------------------------------------|
+|                  | Arc length: 72 hours for long-arc solutions            |
+=============================================================================
+
+=============================================================================
+|            ESTIMATED PARAMETERS (& APRIORI VALUES & CONSTRAINTS)          |
+|---------------------------------------------------------------------------|
+| Adjustment       | Weighted least-squares algorithms                      |
+| method           |                                                        |
+|---------------------------------------------------------------------------|
+| Data Span        | Long-arc solutions include the data from three days,   |
+|                  |     combined on normal equation level.                 |
+|                  | Early rapid/ultra-rapid: products are extracted from   |
+|                  |     the last day of the triple.                        |
+|                  | Final rapid: middle part of a long-arc solution through|
+|                  |     two rapid and a subsequent ultra-rapid solution    |
+|                  | Final: satellite orbits and troposphere                |
+|                  |     parameters are extracted from the middle day       |
+|---------------------------------------------------------------------------|
+| Station          | All station coordinates are adjusted with minimum      |
+| coordinates      | constraints, see above.                                |
+|---------------------------------------------------------------------------|
+| Satellite clocks | Not applicable for double difference processing        |
+|---------------------------------------------------------------------------|
+| Receiver clocks  | Not applicable for double difference processing        |
+|---------------------------------------------------------------------------|
+| Orbital          | 6 Keplerian elements plus 9 solar radiation parameters |
+| parameters       | at start of arc; no a priori sigmas used.              |
+|                  | Estimated RPR parameters (see Arnold et al., 2015):    |
+|                  |  - Constants in D-, Y- and X-direction                 |
+|                  |  - Periodic 1 per rev. terms in X-direction            |
+|                  |  - Periodic 2 per rev. terms in D-direction            |
+|                  |  - Periodic 1 per rev. sine terms in D-direction       |
+|                  |    for Galileo in eclipse (see Sidorov et al., 2020)   |
+|                  | A priori orbits are from a previous processing run     |
+|                  | or from the CODE rapid orbit solution.                 |
+|                  | Pseudo-stochastic orbit parameters (small velocity     |
+|                  | changes), every 12 hours for rapid nd MGEX but orbit   |
+|                  | midnight in the final solution constrained to:         |
+|                  | . 1.E-6 m/sec in radial                                |
+|                  | . 1.E-5 m/sec in along-track                           |
+|                  | . 1.E-8 m/sec in out-of-plane                          |
+|---------------------------------------------------------------------------|
+| Satellite        | Not estimated                                          |
+| attitude         |                                                        |
+|---------------------------------------------------------------------------|
+| Troposphere      | Zenith delay: estimated for each station in intervals  |
+|                  |               of 2 hours. Loose relative constraints of|
+|                  |               5 m are applied. Piece-wise, linear      |
+|                  |               parametrization, allowing for connection |
+|                  |               of the parameters at day boundaries.     |
+|                  |--------------------------------------------------------|
+|                  | Zenith delay epochs: every two hours starting at       |
+|                  |                      midnight                          |
+|                  |--------------------------------------------------------|
+|                  | Mapping function: wet VMF3 for final; GMF3 for rapid   |
+|                  |--------------------------------------------------------|
+|                  | Gradients: pairs of horizontal delay gradient          |
+|                  |            parameters are estimated in N-S and E-W     |
+|                  |            direction for each station in intervals of  |
+|                  |            24 hours. Loose relative constraints of     |
+|                  |            5 m are applied. Piece-wise, linear         |
+|                  |            parametrization, allowing for connection of |
+|                  |            the parameters at day boundaries.           |
+|                  |            Details about the gradient model can be     |
+|                  |            found in Rothacher et al. (1997).           |
+|                  |            Refined gradient model used, see Chen and   |
+|                  |            Herring (1997).                             |
+|---------------------------------------------------------------------------|
+| Ionospheric      | Not estimated in ionosphere-free analyses              |
+| correction       |                                                        |
+|                  | One scaling factor for 2nd and 3rd order terms and ray |
+|                  | bending is setup to switch the components on or off    |
+|                  | on normal equation level.                              |
+|                  | The products are generated with considering all three  |
+|                  | correction components.                                 |
+|---------------------------------------------------------------------------|
+| Ambiguity        | Ambiguities are resolved in a baseline-by-baseline     |
+|                  | mode performing the following steps:                   |
+|                  | . Melbourne-Wuebbena approach (< 6000 km)              |
+|                  | . Quasi-Ionosphere-Free (QIF) approach (< 2000 km)     |
+|                  |   (also for GLONASS, same frequencies)                 |
+|                  | . Phase-based widelane/narrowlane method (< 200 km)    |
+|                  |   (also for GLONASS, no restrictions)                  |
+|                  | . Direct L1/L2 method, also for GLONASS (< 20 km)      |
+|                  |   (also for GLONASS, no restrictions)                  |
+|                  | GNSS-derived global ionosphere map information is used |
+|                  | to support the code-less methods.                      |
+|---------------------------------------------------------------------------|
+| Earth Orient.    | X- and Y-pole coordinates, and UT1-UTC are represented |
+| Parameters (EOP) | each with piece-wise linear polynomials which are      |
+|                  | continuous in time realized by constraints removable   |
+|                  | on SINEX level. UT1-UTC is fixed to the a priori       |
+|                  | value at the beginning of the first day. No further    |
+|                  | a priori sigmas are used.                              |
+|                  |                                                        |
+|                  | All reported CODE EOP solutions do include a subdaily  |
+|                  | EOP model (see above). The estimates therefore         |
+|                  | correspond to daily averages on top of the introduced  |
+|                  | a priori model.                                        |
+|                  |                                                        |
+|                  | High-rate (1-hour) X-, Y- and UT1-UTC estimates are    |
+|                  | also generated in a special 3-day solution.            |
+|---------------------------------------------------------------------------|
+| Other            | Center of mass coordinates:                            |
+| parameters       |                                                        |
+|                  | Center of mass, or geocenter coordinate parameters are |
+|                  | commonly set up as part of each solution. The related  |
+|                  | parameters are usually heavily constrained to zero     |
+|                  | values. Additional computations on the normal equation |
+|                  | level are made regularly in order to retrieve 1-day,   |
+|                  | 3-day, as well as weekly GNSS geocenter coordinates in |
+|                  | the current ITRF.                                      |
+|                  |                                                        |
+|                  | GNSS satellite phase center offsets and patterns:      |
+|                  |                                                        |
+|                  | Corresponding parameters are commonly set up as part   |
+|                  | of each final solution for each individual GNSS        |
+|                  | satellite. The related parameters are again removed    |
+|                  | from the normal equation before the solution is        |
+|                  | computed to fix parameters to the nominal values (as   |
+|                  | defined by the IGS20 PCV model). Such GNSS PCV         |
+|                  | parameters are available for the ionosphere-free as    |
+|                  | well as the geometry-free linear combination.          |
+|                  |                                                        |
+|                  | GNSS-bias parameter:                                   |
+|                  |                                                        |
+|                  | An extra set of six parameters is set up for each      |
+|                  | GLONASS and Galileo observing station to characterize: |
+|                  | - one GLONASS-GPS/Gallileo-GPS receiver antenna offset |
+|                  |   veector (three components) and                       |
+|                  | - one GLONASS-GPS/Gallileo-GPS ZPD ZPD and gradient    |
+|                  |   troposphere bias                                     |
+|                  | These biases are estimated internally on a weekly basis|
+|                  | together with the station coordinates.                 |
+|                  |                                                        |
+|                  | Loadiung scaling factors: see above                    |
+|                  |                                                        |
+=============================================================================
+
+=============================================================================
+|                               REFERENCES                                  |
+|                                                                           |
+| Arnold, D., M. Meindl, G. Beutler, R. Dach, S. Schaer, S. Lutz, L. Prange,|
+|   K. Sosnica, L. Mervart, A. Jäggi (2015), CODE's new solar radiation     |
+|   pressure model for GNSS orbit determination.                            |
+|   Journal of Geodesy, vol. 89(8), pp. 775-791, 10.1007/s00190-015-0814-4  |
+|                                                                           |
+| Bassiri, S., and G.A. Hajj (1993), Higher-order ionospheric effects on    |
+|   Global Positioning System observables and means of modeling them,       |
+|   Manuscripta Geodaetica, vol. 18, pp. 280-289                            |
+|                                                                           |
+| Beutler, G. (1990), Numerische Integration gewoehnlicher Differential-    |
+|   gleichungssysteme: Prinzipien und Algorithmen. Mitteilungen der         |
+|   Satelliten-Beobachtungsstation Zimmerwald, No. 23, Druckerei der        |
+|   Universitaet Bern                                                       |
+|                                                                           |
+| Beutler, G., E. Brockmann, W. Gurtner, U. Hugentobler, L. Mervart, and    |
+|   M. Rothacher (1994), Extended Orbit Modeling Techniques at the CODE     |
+|   Processing Center of the International GPS Service for Geodynamics (IGS)|
+|   Theory and Initial Results, Manuscripta Geodaetica, vol. 19, pp. 367-386|
+|                                                                           |
+| Boehm, J., B. Werl, and H. Schuh (2006), Troposphere mapping functions    |
+|   for GPS and very long baseline interferometry from European Centre for  |
+|   Medium-Range Weather Forecasts operational analysis data, Journal of    |
+|   Geophysical Research, vol. 111, B02406, doi:10.1029/2005JB003629        |
+|                                                                           |
+| Brockmann, Elmar (1997) Combination of Solutions for Geodetic and         |
+|   Geodynamic Applications of the Global Positioning System (GPS),         |
+|   Vol 55 in Reihe der Schweizerischen Geodätischen Kommission.            |
+|                                                                           |
+| Brunner, FK., and M. Gu (1991), An improved model for the dual frequency  |
+|   ionospheric correction of GPS observations, Manuscripta Geodaetica,     |
+|   vol. 16, pp. 205-214                                                    |
+|                                                                           |
+| Chen and Herring (1997), Effects of atmospheric azimuthal asymmetry on the|
+|   analysis of space geodetic data, Journal of Geophysical Research,       |
+|   vol. 102(B9), pp. 20489-20502, doi:10.1029/97JB01739                    |
+|                                                                           |
+| Dach, R., E. Brockmann, S. Schaer, G. Beutler, M. Meindl, L. Prange,      |
+|   H. Bock, A. Jäggi, L. Ostini (2009), GNSS processing at CODE: status    |
+|   report, Journal of Geodesy, vol. 83(3-4), pp. 353-366                   |
+|                                                                           |
+| Dach, R., S. Lutz, P. Walser, P. Fridez (Eds); 2015: Bernese GNSS Software|
+|   Version 5.2. User manual, Astronomical Institute, University of Bern,   |
+|   Bern Open Publishing. DOI: 10.7892/boris.72297; ISBN: 978-3-906813-05-9.|
+|   URL: ftp://ftp.aiub.unibe.ch/BERN52/DOCU/DOCU52.pdf                     |
+|                                                                           |
+! Dill, R. and H. Dobslaw (2013): ! Numerical simulations of global-scale   |
+|   high-resolution hydrological crustal deformations. J. Geophys. Res.     |
+|   Solid earth 118, doi:10.1002/jgrb.50353.                                |
+|                                                                           |
+| Dilssner, F., T. Springer, G. Gienger, J. Dow (2011), The GLONASS-M       |
+|   satellite yaw-attitude model. Adv. Space Res., vol. 47(1), pp. 160-171, |
+|   doi: 10.1016/j.asr.2010.09.007                                          |
+|                                                                           |
+| Alken, P., Thebault, E., Beggan, C.D. et al. (2021), International        |
+|   Geomagnetic Reference Field: the thirteenth generation. Earth Planets   |
+|   Space vol. 73, 49 doi:10.1186/s40623-020-01288-x                        |
+|                                                                           |
+| Fliegel, H., T. Gallini and E. Swift (1992), Global Positioning System    |
+|   radiation force model for geodetic applications. Journal of Geophysical |
+|   Research, vol. 97(B1), pp. 559-568                                      |
+|                                                                           |
+| GSA (2019). Galileo IOV and FOC satellite metadata.                       |
+|   https://www.gsc-europa.eu/support-todevelopers/                         |
+|           galileo-iov-satellite-metadata                                  |
+|                                                                           |
+| Kouba, J. (2007), Implementation and testing of the gridded Vienna Mapping|
+|   Function 1 (VMF1), Journal of Geodesy, vol. 82(4-5), pp. 193-205,       |
+|   doi: 10.1007/s00190-007-0170-0                                          |
+|                                                                           |
+| Kouba, J. (2009), A simplified yaw-attitude model for eclipsing GPS       |
+|   satellites, GPS Solutions, vol. 13(1), pp. 1-12,                        |
+|   10.1007/s10291-008-0092-1                                               |
+|                                                                           |
+| McCarthy, D.D., G. Petit (eds.) (2010), IERS Conventions (2010). IERS     |
+|   Technical Note 36, Bundesamt fuer Kartographie und Geodaesie            |
+|                                                                           |
+| Pavlis, N.K., S.A. Holmes, S.C. Kenyon, J.K. Factor (2012).The development|
+|   and evaluation of the Earth Gravitational Model 2008 (EGM2008), Journal |
+|   of Geophysical Research, vol. 117, B04406, doi:10.1029/2011JB008916     |
+|                                                                           |
+| Rodriguez-Solano, C. J., U. Hugentobler, P. Steigenberger (2012) Impact of|
+|   albedo radiation on GPS satellites; in: S.C. Kenyon, M.C. Pacino,       |
+|   U.J. Marti, (eds.) Geodesy for Planet Earth, IAG Symposia, Vol. 136,    |
+|   pp. 113-119, Springer, DOI: 10.1007/978-3-642-20338-1_14                |
+|                                                                           |
+| Rothacher, M., T.A. Springer, S. Schaer, G. Beutler (1997), Processing    |
+|   Strategies for Regional GPS Networks, IAG Symposia, vol. 118, pp. 93-100|
+|                                                                           |
+| Folkner, W.M., J.G. Williams, D.H. Boggs (2009), The Planetary and Lunar  |
+|   Ephemeris DE421, IPN Progress Report 42-178                             |
+|                                                                           |
+| Schaer, S. (1999), Mapping and Predicting the Earth's Ionosphere Using the|
+|   Global Positioning System, Geodaetisch-geophysikalische Arbeiten in der |
+|   Schweiz, vol. 59                                                        |
+|                                                                           |
+| Sidorov, D., R. Dach, B. Polle, L. Prange, A. Jäggi (2020), Adopting the  |
+|   empirical CODE orbit model to Galileo satellites, Adv. Space Res.,      |
+|   vol. 66(12), pp. 2799-2811, doi:10.1016/j.asr.2020.05.028               |
+|                                                                           |
+| Wu, J.T., S.C. Wu, G.A. Hajj, W.I. Bertiger, S.M. Lichten (1993),         |
+|   Effects of antenna orientation on GPS carrier phase. Manuscripta        |
+|   Geodaetica, vol. 18, pp. 91-98                                          |
+|                                                                           |
+=============================================================================

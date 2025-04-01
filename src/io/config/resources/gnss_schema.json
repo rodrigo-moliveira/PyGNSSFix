@@ -16,9 +16,27 @@
         "nav_files": {"type": "array", "items": {"type": "string"}},
         "clk_files": {"type": "array", "items": {"type": "string"}},
         "sp3_files": {"type": "array", "items": {"type": "string"}},
-        "use_precise_products": {"type": "boolean"},
+        "ionex_files": {"type": "array", "items": {"type": "string"}},
+        "antex_files": {"type": "array", "items": {"type": "string"}},
+
+        "bias_type": {"type": "string", "enum": ["DCB", "OSB"]},
+        "dcb_files": {"type": "array", "items": {"type": "string"}},
+        "osb_files": {"type": "array", "items": {"type": "string"}},
         "leap_file": {"type": "string"},
         "finals_file": {"type": "string"},
+        "tropo_file": {"type": "string"},
+        "cspice_kernels": {
+          "type": "object",
+          "properties": {
+            "enable": {"type": "boolean"},
+            "dir": {"type": "string"},
+            "list": {"type": "array", "items": {"type": "string"}},
+            "cspice_ecef_frame": {"type": "string"}
+          },
+          "required": ["enable", "dir", "list", "cspice_ecef_frame"]
+        },
+        "IGS_ecef_frame": {"type": "string"},
+        "ITRF_dir": {"type": "string"},
         "snr_control": {"type": "integer", "minimum": 1, "maximum": 9},
         "arc": {
           "type": "object",
@@ -30,17 +48,21 @@
         },
         "rate": {"type": "integer", "minimum": 1}
       },
-      "required": ["trace_files", "obs_files", "nav_files", "clk_files", "sp3_files", "use_precise_products","leap_file", "finals_file",
-      "snr_control", "arc", "rate"]
+      "required": ["trace_files", "obs_files", "nav_files", "clk_files", "sp3_files", "ionex_files" , "antex_files", "osb_files", "dcb_files", "bias_type",
+        "leap_file", "finals_file", "tropo_file", "cspice_kernels", "IGS_ecef_frame", "ITRF_dir",
+        "snr_control", "arc", "rate"]
     },
     "model": {
       "type": "object",
       "properties": {
         "constellations": {"type": "array", "items": {"type": "string", "enum": ["GPS", "GAL"]}},
-        "mode": {"type": "string", "enum": ["SPS", "SPS_IF"]},
+        "algorithm": {"type": "string", "enum": ["SPS", "PR-PPP"]},
+        "obs_model": {"type": "string", "enum": ["combined", "uncombined"]},
         "estimate_velocity": {"type": "boolean"},
 
         "estimate_ggto": {"type": "boolean"},
+
+        "estimate_diono": {"type": "boolean"},
 
         "troposphere": {
           "type": "object",
@@ -52,31 +74,62 @@
           "required": ["model", "map", "estimate_tropo_wet"]
         },
 
+        "phase_center_corrections": {
+          "type": "object",
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "receiver": {
+              "type": "object",
+              "properties": {
+                "ARP_enabled": {"type": "boolean"},
+                "PCO_enabled": {"type": "boolean"},
+                "PCV_enabled": {"type": "boolean"},
+                "ARP_offset": {"type": ["array", "null"], "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
+                "PCV_model": {"type": "integer", "minimum": 0, "maximum": 1}
+              },
+              "required": ["ARP_enabled", "PCO_enabled", "PCV_enabled", "ARP_offset", "PCV_model"]
+            },
+            "satellite": {
+              "type": "object",
+              "properties": {
+                "PCO_enabled": {"type": "boolean"},
+                "PCV_enabled": {"type": "boolean"},
+                "GPS_PCV_model": {"type": "integer", "minimum": 0, "maximum": 1},
+                "GAL_PCV_model": {"type": "integer", "minimum": 0, "maximum": 1}
+              },
+              "required": ["PCO_enabled", "PCV_enabled", "GPS_PCV_model", "GAL_PCV_model"]
+            }
+          },
+          "required": ["enabled", "receiver", "satellite"]
+        },
+
         "GPS": {
           "type": "object",
           "properties": {
             "observations": {"type": "array", "items": {"type": "string"}},
+            "clock_product_service": {"type": "array", "items": {"type": "string"}},
             "pr_obs_std": {"type": "array", "items": {"type": "number"}},
             "doppler_obs_std": {"type": "array", "items": {"type": "number"}},
             "elevation_mask": {"type": "boolean"},
-            "ionosphere": {"type": "string", "enum": ["NONE", "Klobuchar", "NTCM-G"]}
+            "ionosphere": {"type": "string", "enum": ["NONE", "Klobuchar", "NTCM-G", "IONEX"]}
           },
-          "required": ["observations", "pr_obs_std", "doppler_obs_std", "elevation_mask", "ionosphere"]
+          "required": ["observations", "clock_product_service", "pr_obs_std", "doppler_obs_std", "elevation_mask", "ionosphere"]
         },
         "GAL": {
           "type": "object",
           "properties": {
             "observations": {"type": "array", "items": {"type": "string"}},
+            "clock_product_service": {"type": "array", "items": {"type": "string"}},
             "pr_obs_std": {"type": "array", "items": {"type": "number"}},
             "doppler_obs_std": {"type": "array", "items": {"type": "number"}},
             "elevation_mask": {"type": "boolean"},
-            "ionosphere": {"type": "string", "enum": ["NONE", "Klobuchar", "NTCM-G"]},
+            "ionosphere": {"type": "string", "enum": ["NONE", "Klobuchar", "NTCM-G", "IONEX"]},
             "nav_type": {"type": "string", "enum": ["INAV", "FNAV"]}
           },
-          "required": ["observations", "pr_obs_std", "doppler_obs_std", "elevation_mask", "ionosphere", "nav_type"]
+          "required": ["observations", "clock_product_service", "pr_obs_std", "doppler_obs_std", "elevation_mask", "ionosphere", "nav_type"]
         }
       },
-      "required": ["constellations", "mode", "estimate_velocity", "estimate_ggto","GPS", "GAL"]
+      "required": ["constellations", "algorithm", "obs_model", "estimate_velocity", "estimate_ggto", "estimate_diono", "phase_center_corrections", "GPS", "GAL"]
     },
     "preprocessor": {
       "type": "object",
@@ -117,17 +170,23 @@
       "properties": {
         "trace_files": {"type": "boolean"},
         "algorithm": {"type": "string", "enum": ["WSL"]},
+        "a_priori_constrain": {"type": "boolean"},
+        "feedforward_solution": {"type": "boolean"},
         "n_iteration": {"type": "integer", "minimum": 1},
         "stop_criteria": {"type": "number"},
         "transmission_time_alg": {"type": "integer", "minimum": 0, "maximum": 2},
         "relativistic_corrections": {"type": "integer", "minimum": 0, "maximum": 1},
         "elevation_filter": {"type": "number"},
-        "initial_pos_std": {"type": "array", "items": {"type": "number"}},
-        "initial_vel_std": {"type": "array", "items": {"type": "number"}},
-        "initial_clock_std": {"type": "array", "items": {"type": "number"}}
+        "initial_pos_cov": {"type": "array", "items": {"type": "number"}},
+        "initial_vel_cov": {"type": "array", "items": {"type": "number"}},
+        "initial_clock_cov": {"type": "array", "items": {"type": "number"}},
+        "initial_isb_cov": {"type": "array", "items": {"type": "number"}},
+        "initial_iono_cov": {"type": "array", "items": {"type": "number"}},
+        "initial_tropo_cov": {"type": "array", "items": {"type": "number"}},
+        "initial_clock_rate_cov": {"type": "array", "items": {"type": "number"}}
       },
-      "required": ["trace_files","algorithm", "n_iterations", "stop_criteria", "transmission_time_alg", "relativistic_corrections",
-      "elevation_filter", "initial_pos_std", "initial_vel_std", "initial_clock_std"]
+      "required": ["trace_files","algorithm", "a_priori_constrain", "feedforward_solution", "n_iterations", "stop_criteria", "transmission_time_alg", "relativistic_corrections",
+      "elevation_filter", "initial_pos_cov", "initial_vel_cov", "initial_clock_cov", "initial_isb_cov", "initial_iono_cov", "initial_tropo_cov", "initial_clock_rate_cov"]
     },
     "output": {
       "type": "object",

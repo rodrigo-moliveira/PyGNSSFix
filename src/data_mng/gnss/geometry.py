@@ -5,11 +5,14 @@ from datetime import timedelta
 import numpy as np
 
 from src.constants import SPEED_OF_LIGHT
-from src.io.config import EnumTransmissionTime
-from src.models.frames import enu2azel, ecef2enu, cartesian2geodetic
+from src.io.config import EnumTransmissionTime, config_dict
+from src.models.frames import enu2azel, ecef2enu, cartesian2geodetic, dcm_e_i
 from src.data_mng import Container
-from src.models.gnss_models.navigation import compute_tx_time
 from src.common_log import MODEL_LOG, get_logger
+from src.spicepy_wrapper import compute_sun_pos
+from src.models.gnss_models import gnss_attitude, compute_tx_time
+
+_warning_cache = set()
 
 
 class SatelliteGeometry(Container):
@@ -32,10 +35,16 @@ class SatelliteGeometry(Container):
         los(numpy.ndarray): line of sight vector from receiver to satellite
         tropo_map_wet(float): map of tropospheric wet component
         drift_rel_correction(float): relativistic clock drift correction of satellite clock
+        dcm_b_e(numpy.ndarray): DCM from satellite body-fixed frame to ECEF frame (at TX time)
+        nadir_sat(float): nadir angle of the satellite. This is the angle between the direction from satellite toward
+            the center of the earth and the LOS vector
+        azimuth_sat(float): azimuth angle of the satellite. This is the angle between the LOS vector projected in the
+            XY-plane and the +Y-axis, measured clockwise toward +X when looking in the direction of -Z (toward deep
+            space). Axes here are referred to the satellite body-fixed frame.
     """
     __slots__ = ["transit_time", "time_emission", "time_reception", "true_range", "az", "el",
                  "satellite_position", "satellite_velocity", "dt_rel_correction", "los", "tropo_map_wet",
-                 "drift_rel_correction"]
+                 "drift_rel_correction", "dcm_b_e", "nadir_sat", "azimuth_sat"]
 
     def __init__(self):
         """ Base Constructor with no arguments. The attributes are filled in the `compute` method.  """
@@ -52,6 +61,9 @@ class SatelliteGeometry(Container):
         self.dt_rel_correction = 0
         self.drift_rel_correction = 0
         self.los = None
+        self.dcm_b_e = None
+        self.nadir_sat = 0
+        self.azimuth_sat = 0
 
     def __str__(self):
         _allAttrs = ""
@@ -84,7 +96,7 @@ class SatelliteGeometry(Container):
         """
         rec_pos = state.position
         time_correction = sat_clocks.nav_data.header.time_correction if sat_clocks.nav_data is not None else None
-        rec_bias = state.get_clock_bias(constellation, time_correction)
+        rec_bias = state.get_clock_bias(constellation, time_correction) / SPEED_OF_LIGHT  # receiver clock bias in [s]
 
         # get reception time in GNSS time system ( T_GNSS = T_receiver - t_(receiver_bias) )
         time_reception = epoch + timedelta(seconds=-rec_bias)
@@ -96,7 +108,8 @@ class SatelliteGeometry(Container):
                                                  sat_clocks=sat_clocks, sat=sat)
 
         # get satellite position and velocity at RX ECEF frame
-        p_sat, v_sat, dt_relative, drift_relative = sat_orbits.compute_orbit_at_rx_time(sat, time_emission, transit)
+        p_sat, v_sat, dt_relative, drift_relative, r_sat_tx = sat_orbits.compute_orbit_at_rx_time(sat, time_emission,
+                                                                                                  transit)
 
         # Compute geometrical range
         if compute_tx != EnumTransmissionTime.NAPEOS:
@@ -114,6 +127,38 @@ class SatelliteGeometry(Container):
         # line of sight (Eq. (21.21) of [1])
         los = np.array([(rec_pos[i] - p_sat[i]) / true_range for i in (0, 1, 2)])
 
+        dcm_b_e = None
+        nadir_sat = None
+        azimuth_sat = None
+        if config_dict.get("inputs", "cspice_kernels", "enable"):
+            try:
+                # GNSS Attitude: rotation matrix from satellite body-fixed frame to ECEF frame at RX time
+                _R = dcm_e_i(-transit)
+                sun_pos_tx = compute_sun_pos(time_emission)
+                dcm_tx = gnss_attitude.gnss_attitude(r_sat_tx, sun_pos_tx)
+                dcm_b_e = _R @ dcm_tx
+
+                # compute satellite nadir and azimuth angles (in the satellite body frame)
+                los_body = dcm_b_e.T @ los  # los in satellite body-fixed frame
+                azimuth_sat = np.arctan2(los_body[0], los_body[1])
+                if azimuth_sat < 0:
+                    azimuth_sat += 2 * np.pi  # Ensure range [0, 2pi]
+                e_z = -p_sat / np.linalg.norm(p_sat)
+                nadir_sat = np.arccos(np.dot(los, e_z) / np.linalg.norm(los))
+                # NOTE: The azimuth angle of the receiver as seen from the satellite is the angle between the
+                # projected LOS vector in the XY-plane and the +Y-axis, measured clockwise toward +X when looking in
+                # the direction of -Z (toward deep space).
+            except Exception as e:
+                if sat not in _warning_cache:
+                    log = get_logger(MODEL_LOG)
+                    log.warning(f"Failed to compute satellite attitude for sat {sat} due to: {e}")
+                    _warning_cache.add(sat)
+        else:
+            if sat not in _warning_cache:
+                log = get_logger(MODEL_LOG)
+                log.warning(f"Not computing satellite attitude for sat {sat} because CSpice is disabled.")
+                _warning_cache.add(sat)
+
         # save results in container
         self.transit_time = transit
         self.time_emission = time_emission
@@ -126,13 +171,16 @@ class SatelliteGeometry(Container):
         self.dt_rel_correction = dt_relative
         self.los = los
         self.drift_rel_correction = drift_relative
+        self.dcm_b_e = dcm_b_e
+        self.nadir_sat = nadir_sat
+        self.azimuth_sat = azimuth_sat
 
 
 class SystemGeometry:
     """ System Geometry class.
     This class is serves as a dataframe to store `SatelliteGeometry` objects for all available satellites.
     """
-    def __init__(self, obs_data, sat_clocks, sat_orbits):
+    def __init__(self, obs_data, sat_clocks, sat_orbits, phase_center):
         """
         Constructor of the SystemGeometry. This is a container that stores data (instances of `SatelliteGeometry`)
         for all available satellites and for a single epoch. This data is useful in the reconstruction equations
@@ -143,11 +191,14 @@ class SystemGeometry:
                 for a single epoch)
             sat_clocks(src.data_mng.gnss.sat_clock_data.SatelliteClocks): `SatelliteClocks` object with clock database
             sat_orbits(src.data_mng.gnss.sat_orbit_data.SatelliteOrbits): `SatelliteOrbits` object with orbit database
+            phase_center(src.data_mng.gnss.phase_center_mng.PhaseCenterManager): `PhaseCenterManager` object with
+                phase center data
         """
         self._data = dict.fromkeys(obs_data.get_satellites())
         self.obs_data = obs_data
         self.sat_clocks = sat_clocks
         self.sat_orbits = sat_orbits
+        self.phase_center = phase_center
 
     def _clean(self):
         vSats = self.get_satellites()

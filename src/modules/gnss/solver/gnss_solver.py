@@ -1,6 +1,5 @@
 """ Module with the GNSS PNT Solver Algorithm """
-
-import numpy as np
+import os
 
 from src.data_mng.gnss.state_space import GnssStateSpace
 from src.data_types.gnss import DataType
@@ -42,44 +41,64 @@ class GnssSolver:
             the number of available constellations.
 
     Attributes:
-         solution(list[GnssStateSpace]): a list with the solved PNT states for each epoch
+        obs_data_for_pos(src.data_mng.gnss.ObservationData): observation data for the position estimation
+            process (may contain raw, smooth or iono-free pseudorange observations).
+        obs_data_for_vel(src.data_mng.gnss.ObservationData): observation data for the velocity estimation
+            process (contains Doppler measurements).
+        nav_data(src.data_mng.gnss.NavigationData): navigation data object containing RINEX NAV ephemerides.
+        sat_orbits(src.data_mng.gnss.sat_orbit_data.SatelliteOrbits): `SatelliteOrbits` object with orbit data.
+        sat_clocks(src.data_mng.gnss.sat_clock_data.SatelliteClocks): `SatelliteClocks` object with clock data.
+        sat_bias(src.data_mng.gnss.bias_manager.BiasManager): `BiasManager` object that manages code and phase
+            satellite biases.
+        write_trace(bool): control flag to enable trace files for output
+        trace_dir(str): path to store the trace files
+        log(logging.Logger): logger instance
+        solution(list[GnssStateSpace]): a list with the solved PNT states for each epoch (output)
     """
 
-    def __init__(self, obs_data_for_pos, obs_data_for_vel, nav_data, sat_orbits, sat_clocks):
+    def __init__(self, data_manager, trace_dir):
         """
-        Constructor of the GnssSolver class
+        Constructor of the GnssSolver class.
 
         Args:
-            obs_data_for_pos(src.data_mng.gnss.ObservationData): observation data for the position estimation process
-                (may contain raw, smooth or iono-free pseudorange observations)
-            obs_data_for_vel(src.data_mng.gnss.ObservationData): observation data for the velocity estimation process
-                (contains Doppler measurements)
-            nav_data(src.data_mng.gnss.NavigationData): navigation data object containing RINEX NAV ephemerides
-            sat_orbits(src.data_mng.gnss.sat_orbit_data.SatelliteOrbits): `SatelliteOrbits` object with orbit data
-            sat_clocks(src.data_mng.gnss.sat_clock_data.SatelliteClocks): `SatelliteClocks` object with clock data
+            data_manager(src.data_mng.gnss.gnss_data_mng.GnssDataManager): data manager with all necessary data for
+                the GNSS run
+            trace_dir(str): path to store the trace files
         """
-        self.obs_data_for_pos = obs_data_for_pos
-        self.obs_data_for_vel = obs_data_for_vel
-        self.nav_data = nav_data
-        self.sat_orbits = sat_orbits
-        self.sat_clocks = sat_clocks
+        self.obs_data_for_pos = data_manager.get_clean_obs_data()
+        self.obs_data_for_vel = data_manager.get_raw_obs_data()
+        self.nav_data = data_manager.get_data("nav_data")
+        self.sat_orbits = data_manager.get_data("sat_orbits")
+        self.sat_clocks = data_manager.get_data("sat_clocks")
+        self.sat_bias = data_manager.get_data("sat_bias")
+        self.phase_center = data_manager.get_data("phase_center")
         self.write_trace = config_dict.get("solver", "trace_files")
+        if self.write_trace:
+            self.trace_dir = f"{trace_dir}\\solver"
+            try:
+                os.makedirs(self.trace_dir)
+            except:
+                raise IOError(f"Cannot create dir: {self.trace_dir}")
+        else:
+            self.trace_dir = None
 
         self.log = get_logger(GNSS_ALG_LOG)
         self.log.info("Starting module GNSS Positioning Solver...")
 
         # user configurations
-        self._set_solver_metadata(config_dict)
+        self._set_solver_metadata(config_dict, data_manager)
 
         # solution list
         self.solution = list()
 
-    def _set_solver_metadata(self, config):
+    def _set_solver_metadata(self, config, data_manager):
         """
         Set up the metadata dict with the scenario setup (user configurations)
 
         Args:
             config(src.io.config.config.Config): user configurations
+            data_manager(src.data_mng.gnss.gnss_data_mng.GnssDataManager): data manager with all necessary data for
+                the GNSS run
         Raises:
             ConfigError: an exception is raised if there are problems/inconsistencies with the user configuration
 
@@ -90,14 +109,31 @@ class GnssSolver:
         SOLVER_ALG = EnumSolver.init_model(config.get("solver", "algorithm"))
         TX_TIME_ALG = EnumTransmissionTime(config.get("solver", "transmission_time_alg"))
         REL_CORRECTION = EnumOnOff(config.get("solver", "relativistic_corrections"))  # 0 disable, 1 enable
-        INITIAL_POS = config.get("solver", "initial_pos_std")
-        INITIAL_VEL = config.get("solver", "initial_vel_std")
-        INITIAL_CLOCK_BIAS = config.get("solver", "initial_clock_std")
         CONSTELLATIONS = config.get("model", "constellations")
         ELEVATION_FILTER = config.get("solver", "elevation_filter")
         VELOCITY_EST = config.get("model", "estimate_velocity")
+
+        APRIORI_CONSTRAIN = EnumOnOff(config.get("solver", "a_priori_constrain"))
+        FEEDFORWARD = EnumOnOff(config.get("solver", "feedforward_solution"))
+        INITIAL_POS = config.get("solver", "initial_pos_cov")
+        INITIAL_VEL = config.get("solver", "initial_vel_cov")
+        INITIAL_CLOCK_BIAS = config.get("solver", "initial_clock_cov")
+        INITIAL_ISB = config.get("solver", "initial_isb_cov")
+        INITIAL_IONO = config.get("solver", "initial_iono_cov")
+        INITIAL_TROPO = config.get("solver", "initial_tropo_cov")
+        INITIAL_CLOCK_RATE = config.get("solver", "initial_clock_rate_cov")
+        INITIAL_STATE = {
+            "pos": INITIAL_POS,
+            "vel": INITIAL_VEL,
+            "clock": INITIAL_CLOCK_BIAS,
+            "isb": INITIAL_ISB,
+            "iono": INITIAL_IONO,
+            "tropo": INITIAL_TROPO,
+            "clock_rate": INITIAL_CLOCK_RATE
+        }
+
         TROPO = TropoManager()
-        _model = config_dict.get("model", "mode")
+        obs_model = config_dict.get("obs_model")
 
         IONO = {}
         MODEL = {}
@@ -106,31 +142,31 @@ class GnssSolver:
 
         # Set up the user models for each active constellation
         for const in CONSTELLATIONS:
-            IONO[const] = IonoManager(const)
+            IONO[const] = IonoManager(const, data_manager.get_data("iono_gim"))
 
             code_types = self.obs_data_for_pos.get_code_types(const)
             doppler_types = self.obs_data_for_vel.get_doppler_types(const)
 
             # check if the model is single frequency or dual frequency
-            if len(code_types) == 2 and (_model != EnumPositioningMode.SPS_IF):
+            if len(code_types) == 2 and (obs_model == EnumObservationModel.UNCOMBINED):
                 # Dual-Frequency Uncombined Model
                 self.log.info(f"Selected model for {const} is Dual-Frequency Uncombined with observations {code_types}")
-                MODEL[const] = EnumModel.DUAL_FREQ
+                MODEL[const] = EnumFrequencyModel.DUAL_FREQ
                 CODES[const] = [code_types[0], code_types[1]]  # setting main and second code type
-            elif len(code_types) == 1 and _model == EnumPositioningMode.SPS_IF:
+            elif len(code_types) == 1 and obs_model == EnumObservationModel.COMBINED:
                 # Iono-Free Model
                 self.log.info(f"Selected model for {const} is Iono-Free with code observations {code_types}")
                 iono_code = code_types[0]
                 if not DataType.is_iono_free_code(iono_code) and not DataType.is_iono_free_smooth_code(iono_code):
                     raise ConfigError(f"Iono-Free Model is selected for constellation {const} but no iono-free code "
                                       f"observations are available. Available code observations: {code_types}")
-                MODEL[const] = EnumModel.SINGLE_FREQ  # we process as single frequency
+                MODEL[const] = EnumFrequencyModel.SINGLE_FREQ  # Iono-free is treated as single frequency in the LS
                 CODES[const] = [iono_code]
                 IONO[const].iono_model = EnumIonoModel.DISABLED  # disable Iono model in Iono-Free scenarios
             elif len(code_types) == 1:
                 # Single Frequency Model
                 self.log.info(f"Selected model for {const} is Single Frequency with code types {code_types[0]}")
-                MODEL[const] = EnumModel.SINGLE_FREQ
+                MODEL[const] = EnumFrequencyModel.SINGLE_FREQ
                 CODES[const] = [code_types[0]]
             else:
                 raise ConfigError(f"Unable to initialize GNSS Solver Model for constellation {const}. Check configs.")
@@ -149,6 +185,8 @@ class GnssSolver:
             "MAX_ITER": MAX_ITER,
             "STOP_CRITERIA": STOP_CRITERIA,
             "SOLVER": SOLVER_ALG,
+            "APRIORI_CONSTRAIN": APRIORI_CONSTRAIN,
+            "FEEDFORWARD": FEEDFORWARD,
             "TROPO": TROPO,
             "IONO": IONO,
             "MODEL": MODEL,
@@ -156,9 +194,7 @@ class GnssSolver:
             "DOPPLER": DOPPLER,
             "REL_CORRECTION": REL_CORRECTION,
             "TX_TIME_ALG": TX_TIME_ALG,
-            "INITIAL_POS": INITIAL_POS,
-            "INITIAL_VEL": INITIAL_VEL,
-            "INITIAL_CLOCK_BIAS": INITIAL_CLOCK_BIAS,
+            "INITIAL_STATES": INITIAL_STATE,
             "ELEVATION_FILTER": ELEVATION_FILTER,
             "VELOCITY_EST": VELOCITY_EST
         }
@@ -173,10 +209,9 @@ class GnssSolver:
             self.log.info(f"processing epoch {epoch}...")
             # fetch observation data for this epoch
             obs_for_epoch = self.obs_data_for_pos.get_epoch_data(epoch)
-            sats_for_epoch = obs_for_epoch.get_satellites()
 
             # initialize solve-for variables (receiver position and bias) for the present epoch
-            state = self._init_state(epoch, sats_for_epoch)
+            state = self._init_state(epoch, obs_for_epoch.get_satellites())
 
             # call lower level of position estimation
             success = self._estimate_position(epoch, obs_for_epoch, state)
@@ -204,7 +239,7 @@ class GnssSolver:
         self.log.info("Successfully ending module GNSS Positioning Solver...")
 
     def _init_state(self, epoch, sat_list):
-        """ Initialize state vector for this epoch
+        """ Initialize state vector for this epoch.
 
         Args:
             epoch(src.data_types.date.Epoch): epoch to initialize the state vector
@@ -212,18 +247,17 @@ class GnssSolver:
         Returns:
             GnssStateSpace : initialized state vector
         """
-        # initialize GNSS state (first epoch)
-        if len(self.solution) == 0:
-            position = np.array(self._metadata["INITIAL_POS"][0:3], dtype=np.float64)
-            velocity = np.array(self._metadata["INITIAL_VEL"][0:3], dtype=np.float64)
-            clock = self._metadata["INITIAL_CLOCK_BIAS"][0]
-            state = GnssStateSpace(self._metadata, position=position, velocity=velocity, clock_bias=clock,
-                                   epoch=epoch, sat_list=sat_list)
+        # initialize GNSS state from user input configurations
+        feedforward = self._metadata["FEEDFORWARD"]
+        if len(self.solution) == 0 or feedforward == EnumOnOff.DISABLED:
+            state = GnssStateSpace(self._metadata, epoch, sat_list)
+            state.initial_state = state.clone()
         else:
             # initialize from previous state
             prev_state = self.solution[-1]
             state = prev_state.clone()  # deep copy
             state.epoch = epoch
+            state.initial_state = state.clone()
         return state
 
     def _estimate_position(self, epoch, obs_data, state):
@@ -244,13 +278,13 @@ class GnssSolver:
         iteration = 0
         rms = rms_prev = 1
         prefit_residuals = postfit_residuals = dop_matrix = None
-        apply_elevation_filter = False if self._metadata["ELEVATION_FILTER"] is False else True
+        apply_elevation_filter = False if self._metadata["ELEVATION_FILTER"] == -1 else True
+        sats_for_epoch = obs_data.get_satellites()
 
         # build system geometry for this epoch
-        system_geometry = SystemGeometry(obs_data, self.sat_clocks, self.sat_orbits)
+        system_geometry = SystemGeometry(obs_data, self.sat_clocks, self.sat_orbits, self.phase_center)
 
-        self.log.info(f"Processing epoch {str(epoch)}")
-        self.log.debug(f"Available Satellites: {system_geometry.get_satellites()}")
+        self.log.debug(f"Available Satellites: {sats_for_epoch}")
 
         # Iterated Least-Squares algorithm
         while iteration < self._metadata["MAX_ITER"]:
@@ -260,7 +294,7 @@ class GnssSolver:
             # solve the Least Squares
             try:
                 prefit_residuals, postfit_residuals, dop_matrix, rms = \
-                    self._iterate_pos(system_geometry, obs_data, state, epoch)
+                    self._iterate_pos(str(iteration), system_geometry, obs_data, state, epoch)
             except SolverError as e:
                 self.log.warning(f"Least Squares failed for {str(epoch)} on iteration {iteration}."
                                  f"Reason: {e}")
@@ -290,7 +324,7 @@ class GnssSolver:
             # solve the Least Squares
             try:
                 prefit_residuals, postfit_residuals, dop_matrix, rms = \
-                    self._iterate_pos(system_geometry, obs_data, state, epoch)
+                    self._iterate_pos("final", system_geometry, obs_data, state, epoch)
             except SolverError as e:
                 self.log.warning(f"Least Squares failed for {str(epoch)} on additional iteration "
                                  f"(after elevation filter). Reason: {e}")
@@ -305,14 +339,18 @@ class GnssSolver:
 
         return True
 
-    def _iterate_pos(self, system_geometry, obs_data, state, epoch):
+    def _iterate_pos(self, iteration, system_geometry, obs_data, state, epoch):
         """ Low-level function to solve a single iteration of the position estimation iterative process """
         self._check_model_availability(system_geometry, epoch)
 
         satellite_list = system_geometry.get_satellites()
         state.update_sat_list(satellite_list)
 
-        reconstructor = PseudorangeReconstructor(system_geometry, self._metadata, state)
+        if self.trace_dir is not None:
+            trace_file = f"{self.trace_dir}\\PseudorangeReconstructionIter_{iteration}.txt"
+        else:
+            trace_file = None
+        reconstructor = PseudorangeReconstructor(system_geometry, self._metadata, state, self.sat_bias, trace_file)
 
         # build LSQ Engine matrices for all satellites
         lsq_engine = LSQ_Engine_Position(satellite_list, self._metadata, epoch, obs_data, reconstructor)
@@ -364,9 +402,13 @@ class GnssSolver:
         """ Low-level function to solve a single iteration of the velocity estimation process """
         satellite_list = system_geometry.get_satellites()
 
+        if self.trace_dir is not None:
+            trace_file = f"{self.trace_dir}\\RangeRateReconstructor.txt"
+        else:
+            trace_file = None
         reconstructor = RangeRateReconstructor(system_geometry,
                                                self._metadata,
-                                               state)
+                                               state, trace_file)
 
         # build LSQ Engine matrices for all satellites
         lsq_engine = LSQ_Engine_Velocity(satellite_list, self._metadata, epoch, obs_data, reconstructor)

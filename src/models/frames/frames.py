@@ -298,6 +298,9 @@ def enu2azel(x_enu, y_enu, z_enu):
     """
     Transform ENU coordinates to local Azimuth (Az) and Elevation (El) angles.
 
+    Azimuth is measured clockwise from North to East direction.
+    Elevation is measured from the horizontal (ground) plane.
+
     Args:
         x_enu(float) : X component in ENU frame [m]
         y_enu(float) : Y component in ENU frame [m]

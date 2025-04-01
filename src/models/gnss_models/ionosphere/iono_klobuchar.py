@@ -10,6 +10,10 @@ class IonoKlobuchar:
     Implements the Ionospheric Klobuchar model for GPS satellites
     """
 
+    def __str__(self):
+        """ String representation of the model """
+        return "Klobuchar Ionospheric Model"
+
     @staticmethod
     def compute(gps_sow, alfa, beta, user_lat, user_long, sv_el, sv_az, freq):
         """

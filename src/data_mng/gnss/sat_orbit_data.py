@@ -236,6 +236,7 @@ class SatelliteOrbits:
                 vectors at the transmission epoch with respect to the ECEF frame of the reception epoch. The satellite
                 relativistic clock in [s] and clock drift in [s/s] is also returned.
         """
+        # TODO: update docstring
         # satellite coordinates in ECEF frame defined at TX time, relativistic correction for satellite clock
         r_sat, v_sat, rel_correction, rel_drift = self.get_orbit(sat, time_emission)
 
@@ -253,4 +254,4 @@ class SatelliteOrbits:
         # Reference: Eq. (21.29) of Springer Handbook of Global Navigation Satellite Systems, Springer Cham, 2017
         v_sat = _R @ v_sat + np.cross(constants.EARTH_ANGULAR_RATE, p_sat)
 
-        return p_sat, v_sat, rel_correction, rel_drift
+        return p_sat, v_sat, rel_correction, rel_drift, r_sat

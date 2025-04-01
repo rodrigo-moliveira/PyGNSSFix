@@ -1,4 +1,5 @@
 from scipy.interpolate import interp1d
+
 from src.utils.deprecated import deprecated
 import numpy as np
 
@@ -220,9 +221,66 @@ def newton_divided_differences(x_values, y_values, degree):
     return newton_poly_func
 
 
+def binary_search(arr, x, order, ret_index=False, extrapolation=False):
+    """
+    Perform binary search to find the index where x would be inserted to maintain sorted order.
+    This function is useful to find the surrounding knots to perform interpolations.
+
+    Args:
+        arr (list[object]): List of sorted elements
+        x (object): The element to search for
+        order(int): Number of elements to return before and after the specified point
+        ret_index(bool): If True, return the indices of the selected elements in the list
+        extrapolation(bool): If True, allow extrapolation if there are not enough elements around the specified point
+    Returns:
+        list[object]: List of selected elements
+        list[int]: List of indexes of selected elements (optional output if ret_index=True)
+    Raises:
+        ValueError: If there are not enough elements around the specified point to return the desired number of points
+
+    """
+    # Binary search to find the index where `epoch` would be inserted to maintain sorted order
+    low, high = 0, len(arr) - 1
+    while low <= high:
+        mid = (low + high) // 2
+        if arr[mid] <= x:
+            low = mid + 1
+        else:
+            high = mid - 1
+
+    # `low` is now the index where `epoch` would be inserted
+    insert_index = low
+
+    # Find the start and end indexes for the sublist
+    start_index = max(0, insert_index - order)
+    end_index = min(len(arr), insert_index + order)
+
+    # Check if there are enough items before and after `epoch` to return `order` items each way
+    if end_index - start_index < 2 * order:
+        if not extrapolation:
+            raise ValueError(
+                f"Not enough elements in the dataset around the specified point {x} to return the desired number of"
+                f" points before and after (selected order is {order}).")
+        else:
+            if insert_index == 0:
+                start_index = 0
+                end_index = 2*order
+            elif insert_index == len(arr):
+                start_index = len(arr) - 2*order
+                end_index = len(arr)
+
+    if not ret_index:
+        return arr[start_index:insert_index] + arr[insert_index:end_index]
+    else:
+        return arr[start_index:insert_index] + arr[insert_index:end_index], list(
+            range(start_index, insert_index)) + list(range(insert_index, end_index))
+
+
 # Example Usage
 if __name__ == "__main__":
     x_values_ = np.array([0, 1, 2, 3]).reshape(-1, 1)
+    arr_ = np.arange(1, 100)
+    search = binary_search(list(arr_), 105, 1, extrapolation=True)
     y_values_ = np.array([[1, 2], [2, 3], [3, 4], [4, 5]])
     degree_test = 2
 

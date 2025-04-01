@@ -145,7 +145,7 @@ class DataType:
         Args:
             data_type(DataType):
         Returns:
-            bool: True if `data_type` is a iono-free pseudorange observable
+            bool: True if `data_type` is an iono-free pseudorange observable
         """
         return data_type in cAvailableIonoFreeCodes
 
@@ -155,7 +155,7 @@ class DataType:
         Args:
             data_type(DataType):
         Returns:
-            bool: True if `data_type` is a iono-free carrier phase observable
+            bool: True if `data_type` is an iono-free carrier phase observable
         """
         return data_type in cAvailableIonoFreeCarrier
 
@@ -168,6 +168,17 @@ class DataType:
             bool: True if `data_type` is a smooth pseudorange observable
         """
         return data_type in cAvailableIonoFreeSmoothCodes
+
+    @staticmethod
+    def is_iono_free(data_type):
+        """
+        Args:
+            data_type(DataType):
+        Returns:
+            bool: True if `data_type` is iono-free (pseudorange or carrier)
+        """
+        return DataType.is_iono_free_code(data_type) or DataType.is_iono_free_carrier(data_type) \
+            or DataType.is_iono_free_smooth_code(data_type)
 
     @staticmethod
     def is_smooth_code(data_type):
@@ -322,6 +333,29 @@ class DataType:
         raise SignalError(f"Unable to create smooth pseudorange from "
                           f"data type {str(datatype)}")
 
+    @staticmethod
+    def get_iono_free_base_frequencies(datatype):
+        """
+        Get the base frequencies for the iono-free combination of the provided datatype
+
+        Args:
+            datatype(DataType): iono-free datatype
+
+        Returns:
+            tuple[DataType, DataType]: base frequencies for the iono-free combination
+
+        """
+        freq1 = freq2 = None
+        if DataType.is_iono_free(datatype):
+            freq1_number = datatype.freq_number // 10
+            freq2_number = datatype.freq_number % 10
+            for freq in cAvailableFrequencies:
+                if freq.constellation == datatype.constellation and freq.freq_number == freq1_number:
+                    freq1 = freq
+                if freq.constellation == datatype.constellation and freq.freq_number == freq2_number:
+                    freq2 = freq
+        return freq1, freq2
+
 
 # Default Data Types
 
@@ -331,23 +365,23 @@ class DataType:
 
 # GPS Frequencies
 L1 = DataType(data_type="L1", description="Frequency L1 for GPS", freq_value=constants.GPS_L1_FREQ,
-              constellation="GPS")
+              constellation="GPS", freq_number=1)
 L2 = DataType(data_type="L2", description="Frequency L2 for GPS", freq_value=constants.GPS_L2_FREQ,
-              constellation="GPS")
+              constellation="GPS", freq_number=2)
 L5 = DataType(data_type="L5", description="Frequency L5 for GPS", freq_value=constants.GPS_L5_FREQ,
-              constellation="GPS")
+              constellation="GPS", freq_number=5)
 
 # GAL Frequencies
 E1 = DataType(data_type="E1", description="Frequency E1 (GAL)", freq_value=constants.GAL_E1_FREQ,
-              constellation="GAL")
+              constellation="GAL", freq_number=1)
 E5a = DataType(data_type="E5a", description="Frequency E5a (GAL)", freq_value=constants.GAL_E5A_FREQ,
-               constellation="GAL")
+               constellation="GAL", freq_number=5)
 E5b = DataType(data_type="E5b", description="Frequency E5b (GAL)", freq_value=constants.GAL_E5B_FREQ,
-               constellation="GPS")
+               constellation="GAL", freq_number=7)
 E5ALTBOC = DataType(data_type="E5AltBOC", description="Frequency E5AltBOC (GAL)",
-                    freq_value=constants.GAL_E5ALTBOC_FREQ, constellation="GAL")
+                    freq_value=constants.GAL_E5ALTBOC_FREQ, constellation="GAL", freq_number=8)
 E6 = DataType(data_type="E6", description="Frequency E6 (GAL)", freq_value=constants.GAL_E6_FREQ,
-              constellation="GPS")
+              constellation="GAL", freq_number=6)
 
 ###################
 # Raw Observables #
@@ -518,7 +552,7 @@ cAvailableCodes = [PR1_GPS, PR2_GPS, PR5_GPS, PR1_GAL, PR5_GAL, PR6_GAL, PR7_GAL
 cAvailableSignals = [S1_GPS, S2_GPS, S5_GPS, S1_GAL, S5_GAL, S6_GAL, S7_GAL, S8_GAL]
 cAvailableCarriers = [CP1_GPS, CP2_GPS, CP5_GPS, CP1_GAL, CP5_GAL, CP6_GAL, CP7_GAL, CP8_GAL]
 cAvailableFrequencies = [L1, L2, L5, E1, E5a, E5b, E5ALTBOC, E6]
-cAvailableSmoothCodes = [SPR1_GPS, SPR2_GPS, SPR5_GPS, SPR1_GAL, SPR5_GAL, SPR6_GAL, PR7_GAL, PR8_GAL]
+cAvailableSmoothCodes = [SPR1_GPS, SPR2_GPS, SPR5_GPS, SPR1_GAL, SPR5_GAL, SPR6_GAL, SPR7_GAL, SPR8_GAL]
 cAvailableIonoFreeSmoothCodes = [SPR12_GPS, SPR15_GPS, SPR15_GAL, SPR16_GAL, SPR17_GAL, SPR18_GAL]
 cAvailableIonoFreeCodes = [PR12_GPS, PR15_GPS, PR15_GAL, PR16_GAL, PR17_GAL, PR18_GAL]
 cAvailableIonoFreeCarrier = [CP12_GPS, CP15_GPS, CP15_GAL, PR16_GAL, PR17_GAL, PR18_GAL]

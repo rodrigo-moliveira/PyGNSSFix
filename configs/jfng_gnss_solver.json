@@ -15,6 +15,10 @@
       "clk_files": ["datasets/gnss/JFNG/COD0MGXFIN_20190450000_01D_30S_CLK.clk"],
       "sp3_files": ["datasets/gnss/JFNG/COD0MGXFIN_20190450000_01D_05M_ORB.sp3"],
 
+      "bias_type": "DCB",
+      "dcb_files": ["datasets/gnss/JFNG/DLR0MGXFIN_20190010000_03L_01D_DCB.BSX"],
+      "osb_files": [""],
+
       "_comment2": "Select 'true' to use CLK and SP3 products or 'false' to use navigation ephemerides",
       "use_precise_products": false,
 
@@ -40,7 +44,7 @@
       "trace_files": true,
 
       "_comment4": "Signal strength (SNR) filter. Select value of SNR (dBHz) threshold. Select false to turn off",
-      "snr_filter": 30,
+      "snr_filter": 1,
 
       "satellite_status": {
          "_comment": "whether or not to check the SV Accuracy and SV health fields of the navigation message",
@@ -61,15 +65,19 @@
    },
 
    "model": {
-      "constellations": ["GPS", "GAL"],
-      "mode": "SPS",
-      "_comment": "available modes are SPS, SPS_IF",
+      "constellations": ["GAL"],
+
+      "_comment": "Select the GNSS PNT algorithm. The available algorithms are SPS, PR-PPP",
+      "algorithm": "PR-PPP",
+
+      "_comment1": "Select the observation model. The available models are combined, uncombined. The combined model requires 2 observations.",
+      "obs_model": "combined",
 
       "estimate_velocity": true,
-      "_comment1": "Use Doppler measurements to estimate velocity",
+      "_comment2": "Use Doppler measurements to estimate velocity",
 
       "estimate_ggto": true,
-      "_comment2": "Select `true` to estimate GGTO or `false` to use the broadcast GGTO",
+      "_comment3": "Select `true` to estimate GGTO or `false` to use the broadcast GGTO",
 
       "troposphere": {
          "_comment1": "Select Tropospheric model. Available models are 'NONE', 'Saastamoinen', 'GPT3'",
@@ -98,7 +106,9 @@
       },
 
       "GAL": {
-         "observations": ["1X", "5X"],
+         "observations": ["1C", "5Q"],
+
+         "clock_product_service": ["1C", "5Q"],
 
          "_comment1": "in `pr_obs_std` define the observation noise for the selected pseudorange observations (consistent with the signals defined in `observations`), in meters",
          "pr_obs_std": [1.1, 0.8],

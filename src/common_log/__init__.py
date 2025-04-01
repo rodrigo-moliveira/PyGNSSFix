@@ -30,7 +30,7 @@ __all__ = ["get_logger", "set_logs", "IO_LOG", "PREPROCESSOR_LOG", "MAIN_LOG", "
 
 MODEL_LOG = str("MODEL_LOG")
 IO_LOG = str("IO_LOG")
-PREPROCESSOR_LOG = str("PREPROCESSOR_LOG")
+PREPROCESSOR_LOG = str("PRE_PROC_LOG")
 MAIN_LOG = str("MAIN_LOG")
 GNSS_ALG_LOG = str("GNSS_ALG_LOG")
 INS_ALG_LOG = str("INS_ALG_LOG")

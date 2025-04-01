@@ -14,6 +14,11 @@
       "nav_files": ["datasets/gnss/BRUX/BRDC00IGS_R_20190140000_01D_MN.rnx"],
       "clk_files": ["datasets/gnss/BRUX/COD0R03FIN_20190140000_01D_30S_CLK_short.CLK"],
       "sp3_files": ["datasets/gnss/BRUX/COD0R03FIN_20190140000_01D_05M_ORB.SP3"],
+      "ionex_files": ["datasets/gnss/BRUX/codg0140.19i"],
+
+      "bias_type": "OSB",
+      "dcb_files": ["datasets/gnss/BRUX/DLR0MGXFIN_20190010000_03L_01D_DCB_short.BSX"],
+      "osb_files": ["datasets/gnss/BRUX/COD0R03FIN_20190140000_01D_01D_OSB.BIA"],
 
       "_comment2": "Select 'true' to use CLK and SP3 products or 'false' to use navigation ephemerides",
       "use_precise_products": false,
@@ -29,7 +34,7 @@
          "_comment1": "Select first and last epochs in estimation arc in format YYYY-MM-DD hh:mm:ss",
          "_comment2": "Select false to deactivate fields",
          "first_epoch": "2019-01-14 06:15:00",
-         "last_epoch": "2019-01-14 06:29:00"
+         "last_epoch": "2019-01-14 06:15:30"
       },
 
       "_comment4": "Select the input data rate (in seconds). The rate must be consistent with the RINEX OBS rate. Select false to disable.",
@@ -40,7 +45,7 @@
       "trace_files": true,
 
       "_comment4": "Signal strength (SNR) filter. Select value of SNR (dBHz) threshold. Select false to turn off",
-      "snr_filter": 30,
+      "snr_filter": 1,
 
       "satellite_status": {
          "_comment": "whether or not to check the SV Accuracy and SV health fields of the navigation message",
@@ -62,14 +67,21 @@
 
    "model": {
       "constellations": ["GPS", "GAL"],
-      "mode": "SPS",
-      "_comment": "available modes are SPS, SPS_IF",
+
+      "_comment": "Select the GNSS PNT algorithm. The available algorithms are SPS, PR-PPP",
+      "algorithm": "PR-PPP",
+
+      "_comment1": "Select the observation model. The available models are combined, uncombined. The combined model requires 2 observations.",
+      "obs_model": "uncombined",
 
       "estimate_velocity": true,
-      "_comment1": "Use Doppler measurements to estimate velocity",
+      "_comment2": "Use Doppler measurements to estimate velocity",
 
       "estimate_ggto": true,
-      "_comment2": "Select `true` to estimate GGTO or `false` to use the broadcast GGTO",
+      "_comment3": "Select `true` to estimate GGTO or `false` to use the broadcast GGTO",
+
+      "estimate_diono": false,
+        "_comment4": "Select `true` to estimate residual ionospheric delay or `false` to disable it",
 
       "troposphere": {
          "_comment1": "Select Tropospheric model. Available models are 'NONE', 'Saastamoinen', 'GPT3'",
@@ -79,29 +91,33 @@
          "map": "Saastamoinen",
 
          "_comment3": "Select `true` to estimate tropospheric wet delay or `false` to disable tropo estimation",
-         "estimate_tropo_wet": true
+         "estimate_tropo_wet": false
       },
 
       "GPS": {
          "observations": ["1C", "2W"],
 
+         "clock_product_service": ["1W", "2W"],
+
          "_comment1": "in `pr_obs_std` define the observation noise for the selected pseudorange observations (consistent with the signals defined in `observations`), in meters",
-         "pr_obs_std": [1.1, 0.8],
+         "pr_obs_std": [1.0, 2.0],
 
          "_comment2": "in `doppler_obs_std` define the observation noise for the selected doppler observations (consistent with the signals defined in `observations`), in Hertz",
          "doppler_obs_std": [1.7, 1.0],
 
          "elevation_mask": true,
 
-         "_comment3": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G' ",
-         "ionosphere": "Klobuchar"
+         "_comment3": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G', 'IONEX' ",
+         "ionosphere": "IONEX"
       },
 
       "GAL": {
          "observations": ["1C", "5Q"],
 
+         "clock_product_service": ["1C", "5Q"],
+
          "_comment1": "in `pr_obs_std` define the observation noise for the selected pseudorange observations (consistent with the signals defined in `observations`), in meters",
-         "pr_obs_std": [1.1, 0.8],
+         "pr_obs_std": [1.0, 2.0],
 
          "_comment2": "in `doppler_obs_std` define the observation noise for the selected doppler observations (consistent with the signals defined in `observations`), in Hertz",
          "doppler_obs_std": [1.1, 1.0],
@@ -111,8 +127,8 @@
          "_comment3": "select between INAV or FNAV navigation message",
          "nav_type": "FNAV",
 
-         "_comment4": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G' ",
-         "ionosphere": "NTCM-G"
+         "_comment4": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G', 'IONEX' ",
+         "ionosphere": "IONEX"
       }
    },
 
@@ -122,11 +138,14 @@
       "_comment1": "Select Algorithm. Available is 'WSL' - Weighted Least Squares",
       "algorithm": "WSL",
 
+      "a_priori_constrain": false,
+      "feedforward_solution": true,
+
       "_comment2": "maximum number of iterations in iterative procedure",
       "n_iterations": 10,
 
       "_comment3": "stop condition to end iterated least squares. Process ends when (RMS(i-1) - RMS(i)) / RMS(i-1) <= stop_criteria",
-      "stop_criteria": 0.0002,
+      "stop_criteria": 0.0000002,
 
       "_comment6": "Select algorithm to compute the transmission time: 0 - geometric, 1 - pseudorange, 2 - NAPEOS",
       "transmission_time_alg": 0,
@@ -134,13 +153,17 @@
       "_comment34": "Enable / disable relativistic corrections: 0 - disable, 1 - enable",
       "relativistic_corrections": 1,
 
-      "_comment5": "Elevation filter. Select the value of minimum elevation angle to consider, in degree. Select false to turn off",
-      "elevation_filter": 10,
+      "_comment5": "Elevation filter. Select the value of minimum elevation angle to consider, in degree. Select -1 to turn off",
+      "elevation_filter": -1,
 
-      "_comment7": "Initial position (m), velocity (m/s) and clock (s)",
-      "initial_pos_std": [0, 0, 0, 1, 1, 1],
-      "initial_vel_std": [0, 0, 0, 1, 1, 1],
-      "initial_clock_std": [0, 1]
+      "_comment7": "Initial states and expected covariances for the initial state vector.",
+      "initial_pos_cov": [4027881.7539237835,306998.8177072656,4919499.599692411,1.1220253789579304,0.8458168956014995,1.8509878014591057],
+      "initial_vel_cov": [-0.017844201417833716,-0.015539393893845954,-0.01952680734507298,10,10,10],
+      "initial_clock_cov": [1.3923152945095002e-07,1.5692364321243285e-17],
+      "initial_isb_cov": [-2.0163855665068414e-08,6.789479304700753e-18],
+      "initial_iono_cov": [0.0, 10],
+      "initial_tropo_cov": [0.0, 10],
+      "initial_clock_rate_cov": [0.0, 1E-1]
    },
 
    "output": {

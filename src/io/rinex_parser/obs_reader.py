@@ -7,6 +7,7 @@ from math import floor
 from src.data_types.date import Epoch
 from src.data_types.gnss import get_satellite, data_type_from_rinex, DataType, get_constellation, service_utils
 from src.data_mng.gnss.observation_data import ObservationData
+from src.data_mng.gnss.phase_center_mng import PhaseCenterManager
 from src.errors import ConfigError, FileError
 from src.constants import SPEED_OF_LIGHT
 from src import WORKSPACE_PATH
@@ -21,7 +22,7 @@ class RinexObsReader:
     Parser of Rinex Observation files
     """
 
-    def __init__(self, file: str, obs: ObservationData):
+    def __init__(self, file: str, obs: ObservationData, phase_center: PhaseCenterManager):
         """
         Reads the provided observation file and stores its content in the `ObservationData` instance.
 
@@ -29,6 +30,8 @@ class RinexObsReader:
             file(str): path to the input RINEX Observation file to load
             obs(ObservationData): the `ObservationData` object to store the observation information extracted from
                 the file
+            phase_center(PhaseCenterManager): the `PhaseCenterManager` object to store the phase center information
+                extracted from the file header
         """
         first_epoch = config_dict.get("inputs", "arc", "first_epoch")
         last_epoch = config_dict.get("inputs", "arc", "last_epoch")
@@ -37,6 +40,7 @@ class RinexObsReader:
         self._services = config_dict.get_services()
         self._map = {}
         self._obs = obs
+        self._phase_center = phase_center
         self._snr_control_check = config_dict.get("inputs", "snr_control")
         self._log = get_logger(IO_LOG)
 
@@ -96,6 +100,24 @@ class RinexObsReader:
             #    data = line[:RINEX_OBS_END_OF_DATA_HEADER].split()
             #    self._obs.header.leap_seconds = int(data[0])
 
+            elif "ANT # / TYPE" in line:
+                serial_no = int(line[0:20])
+                antenna_type = line[20:40]
+                antenna = self._phase_center.get_receiver_antenna()
+                if antenna is not None:
+                    antenna.ant_type = antenna_type
+                    antenna.serial_no = serial_no
+
+            elif "ANTENNA: DELTA H/E/N" in line:
+                # check if the ARP offset is to be initialized from RINEX OBS
+                arp_offset = config_dict.get("model", "phase_center_corrections", "receiver", "ARP_offset")
+                if arp_offset is None:
+                    tokens = line.split()[0:3]
+                    arp_offset_vec = [to_float(x) for x in tokens]
+                    antenna = self._phase_center.get_receiver_antenna()
+                    if antenna is not None:
+                        antenna.arp_offset = arp_offset_vec
+
             elif "TIME OF FIRST OBS" in line:
                 data = line[:RINEX_OBS_END_OF_DATA_HEADER]
                 self._set_time_system(data[48:51].upper())
@@ -129,7 +151,7 @@ class RinexObsReader:
                         for this_obsCode in data[2:]:
                             if len(this_obsCode) == 3:
                                 this_service = this_obsCode[1:]
-                                if this_service in services:
+                                if this_service in services["user_service"]:
                                     this_type = this_obsCode[0]
                                     if this_type in RINEX_OBS_TYPES_TO_READ:
                                         _map[this_obsCode] = data[2:].index(this_obsCode)
@@ -142,7 +164,7 @@ class RinexObsReader:
         for constellation, services in self._services.items():
             if constellation in self._map:
                 services_read = set([x[1:] for x in self._map[constellation]])
-                for service in services:
+                for service in services["user_service"]:
                     if service not in services_read:
                         raise ConfigError(f"User-selected service "
                                           f"'{service}' {constellation} does not exist in provided Observation File")
