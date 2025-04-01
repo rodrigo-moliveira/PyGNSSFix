@@ -1,20 +1,7 @@
 # Release 1.1 (PR-PPP Mode)
     tasks for 2025:
     [ ] phase center corrections
-        [X] read delta(ARP) from RINEX OBS FILE
-        [ ] read antenna model from RINEX OBS FILE or from user configuration
-        [ ] update marker position from SINEX SOL (or leave as is). This is manual
-        [ ] apply delta ARP correction to the observations
-            in principle, this is just to update the station position in the observation reconstruction
-        [ ] read ANTEX file and apply station phase center corrections for each frequency
-            Data to load and apply:
-                [ ] phase center offset (function of frequency)
-                [ ] phase center variation (function of zenith and azimuth)
-        [ ] load sun ephemerides from somewhere
-        [ ] apply satellite phase center corrections
-
-        -> ver o que é feito com os PCOs no rktlib
-
+        [ ] apply helmert transformation of sun ephemerides
 
     [ ] BUGS and nice-to-haves:
         [ ] post_processing script not running well when velocity is not estimated
@@ -22,6 +9,7 @@
             por exemplo processar C1C e C1W.
         [ ] adicionar um check para verificar se em combined, a primeira frequency é a base frequency
 
+    [ ] float carrier processing
     [ ] Adicionar Kalman filter com user dynamics
     [ ] Adicionar differential SPS/PPPP. D-GNSS para PR only
 
@@ -29,11 +17,15 @@
     [ ] solve all TODOs
 
 # Release 1.2 PPP e PPP-AR
-    [ ] float carrier processing
     [ ] cycle slip detection
         [ ] compute MW observations
     [ ] PPP e PPP-AR com OSBs
-    [ ] phase windup correction (only applicable to carrier observations)
+    [ ] other corrections
+        [ ] phase windup (only applicable to carrier observations)
+        [ ] site-displacement effects
+            * Solid earth tides
+            * Ocean loading
+            * Polar tides
 
 
 nice to have, but not for now
