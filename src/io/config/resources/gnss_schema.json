@@ -56,7 +56,7 @@
       "type": "object",
       "properties": {
         "constellations": {"type": "array", "items": {"type": "string", "enum": ["GPS", "GAL"]}},
-        "algorithm": {"type": "string", "enum": ["SPS", "PR-PPP"]},
+        "algorithm": {"type": "string", "enum": ["SPS", "PR-PPP", "CP-PPP"]},
         "obs_model": {"type": "string", "enum": ["combined", "uncombined"]},
         "estimate_velocity": {"type": "boolean"},
 

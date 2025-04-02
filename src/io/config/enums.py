@@ -27,6 +27,7 @@ class EnumAlgorithmPNT(Enum):
     """ Enumeration for the GNSS PNT algorithm (SPS, PR_PPP) """
     SPS = 0
     PR_PPP = 1
+    CP_PPP = 2
 
     @classmethod
     def init_model(cls, model_str: str):
@@ -34,8 +35,10 @@ class EnumAlgorithmPNT(Enum):
             return EnumAlgorithmPNT.SPS
         elif model_str.lower() == "pr-ppp":
             return EnumAlgorithmPNT.PR_PPP
+        elif model_str.lower() == "cp-ppp":
+            return EnumAlgorithmPNT.CP_PPP
         else:
-            raise EnumError(f"Unsupported algorithm {model_str}. Available options are 'SPS', 'PR-PPP'")
+            raise EnumError(f"Unsupported algorithm {model_str}. Available options are 'SPS', 'PR-PPP', 'CP-PPP'.")
 
     @classmethod
     def show_options(cls):

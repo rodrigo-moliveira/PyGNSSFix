@@ -166,7 +166,7 @@ class GnssDataManager(Container):
             log.info("Launching Satellite Code Bias Manager with BGD/TGD data from broadcast ephemerides.")
             self.sat_bias.init(self.get_data("nav_data"), None, EnumSatelliteBias.BROADCAST)
 
-        elif gnss_alg == EnumAlgorithmPNT.PR_PPP:
+        elif gnss_alg == EnumAlgorithmPNT.PR_PPP or gnss_alg == EnumAlgorithmPNT.CP_PPP:
             log.info("In PR-PPP Mode, GNSS orbits and clocks are provided from precise products (SP3 and CLK files).")
 
             clock_files = config_dict.get("inputs", "clk_files")

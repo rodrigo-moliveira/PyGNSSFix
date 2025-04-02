@@ -253,8 +253,8 @@ class LSQ_Engine_Position(LSQ_Engine):
 
         * r -> r + Δr
         * dt_r -> dt_r + Δdt_r
-        * I -> I + mu * dI
-        * T -> T + map_wet * Δzwd
+        * I -> I + dI
+        * T -> T + Δzwd (only zwd is estimated)
         * ISB -> ISB + ΔISB
 
     These new quantities are then used in the next iteration of the LSQ, for the new computation of the predicted

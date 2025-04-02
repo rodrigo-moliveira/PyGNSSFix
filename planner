@@ -1,17 +1,17 @@
 # Release 1.1 (PR-PPP Mode)
     tasks for 2025:
-    [ ] phase center corrections
-        [ ] apply helmert transformation of sun ephemerides
+    [ ] float ambiguity carrier processing
+    [ ] cycle slip detector 
+    [ ] adicionar configuração com static/dynamic receiver que em vez de feedforward das covs da época anterior
+        aplica valores pre-determinados. No caso de cycle slip, a covariancia da ambiguidade é aumentada
+    [ ] Adicionar Kalman filter com user dynamics
+    [ ] Adicionar differential SPS/PPPP. D-GNSS para PR only
 
     [ ] BUGS and nice-to-haves:
         [ ] post_processing script not running well when velocity is not estimated
         [ ] tornar explicita a impossibilidade de correr vários datatypes para a mesma freq (diferentes atributos)
             por exemplo processar C1C e C1W.
         [ ] adicionar um check para verificar se em combined, a primeira frequency é a base frequency
-
-    [ ] float carrier processing
-    [ ] Adicionar Kalman filter com user dynamics
-    [ ] Adicionar differential SPS/PPPP. D-GNSS para PR only
 
     [ ] Update Readme
     [ ] solve all TODOs

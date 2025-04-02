@@ -214,6 +214,9 @@ class GnssStateSpace(Container):
                 if self.initial_state is not None and sat in self.initial_state.iono:
                     self.iono[sat] = self.initial_state.iono[sat]
                     self.cov_iono[sat] = self.initial_state.cov_iono[sat]
+                elif self.initial_state is not None:
+                    self.initial_state.iono[sat] = 0.0
+                    self.initial_state.cov_iono[sat] = 1.0
 
         _to_remove = []
         for sat in self.iono:
