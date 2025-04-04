@@ -350,6 +350,7 @@ class GnssSolver:
             trace_file = f"{self.trace_dir}\\PseudorangeReconstructionIter_{iteration}.txt"
         else:
             trace_file = None
+        # TODO: move reconstructor creation to LSQ_Engine. Add Carrier Phase Reconstructor
         reconstructor = PseudorangeReconstructor(system_geometry, self._metadata, state, self.sat_bias, trace_file)
 
         # build LSQ Engine matrices for all satellites

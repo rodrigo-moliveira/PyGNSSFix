@@ -265,7 +265,9 @@ class LSQ_Engine_Position(LSQ_Engine):
         datatypes = metadata["CODES"]
         self._estimate_tropo = False
         self._estimate_diono = dict().fromkeys(["GPS", "GAL"], False)
+        self.index_map = None
         super().__init__(datatypes, satellite_list, metadata, epoch, obs_data, reconstructor)
+
 
     def _initialize_matrices(self):
         """
@@ -302,11 +304,26 @@ class LSQ_Engine_Position(LSQ_Engine):
 
         When tropo estimation is enabled, a new state is added to all cases above
         """
+        index_map = {}
+        index_map["iono"] = dict()
+
+        state_counter = 0
+
         n_observables = 0  # number of rows
         n_states = 3  # number of columns (default is 3 - position)
 
-        for const in self.constellations:
+        index_map["position"] = state_counter
+        state_counter += 3  # position
+
+        for iConst, const in enumerate(self.constellations):
             n_states += 1  # clock/isb variable
+
+            # TODO: instead of enumerate, use master constellation comparison
+            if iConst == 0:
+                index_map["clock"] = state_counter
+            else:
+                index_map["isb"] = state_counter
+            state_counter += 1  # clock/isb
 
             n_sats = len(self.sat_list[const])
 
@@ -315,6 +332,10 @@ class LSQ_Engine_Position(LSQ_Engine):
                 if self._metadata["IONO"][const].estimate_diono():
                     self._estimate_diono[const] = True
                     n_states += n_sats
+
+                    for sat in self.sat_list[const]:
+                        index_map["iono"][sat] = state_counter
+                        state_counter += 1  # iono
                 else:
                     self._estimate_diono[const] = False
                 n_observables += 2 * n_sats
@@ -324,12 +345,16 @@ class LSQ_Engine_Position(LSQ_Engine):
         if self._metadata["TROPO"].estimate_tropo():
             self._estimate_tropo = True
             n_states += 1
+
+            index_map["tropo"] = state_counter
+            state_counter += 1  # tropo
         else:
             self._estimate_tropo = False
 
         self.y_vec = np.zeros(n_observables)
         self.design_mat = np.zeros((n_observables, n_states))
         self.weight_mat = np.eye(n_observables)
+        self.index_map = index_map.copy()
 
     @staticmethod
     def compute_residual_los(sat, epoch, datatype, obs_data, reconstructor):
@@ -395,6 +420,7 @@ class LSQ_Engine_Position(LSQ_Engine):
         iono_offset = 0
         obs_offset = 0
         tropo_offset = 1 if self._estimate_tropo else 0
+        design2 = np.zeros(np.shape(self.design_mat))
 
         for iConst, const in enumerate(self.constellations):
 
@@ -409,23 +435,33 @@ class LSQ_Engine_Position(LSQ_Engine):
 
                     # position
                     self.design_mat[obs_offset + iSat][0:3] = los
+                    idx_pos = self.index_map["position"]
+                    design2[obs_offset + iSat][idx_pos:idx_pos+3] = los
 
                     # clock
                     self.design_mat[obs_offset + iSat, 3] = 1.0
+                    idx_clock = self.index_map["clock"]
+                    design2[obs_offset + iSat, idx_clock] = 1.0
 
                     # tropo
                     if self._estimate_tropo:
                         map_wet = reconstructor._system_geometry.get("tropo_map_wet", sat)
                         self.design_mat[obs_offset + iSat, 4] = map_wet
+                        idx_tropo = self.index_map["tropo"]
+                        design2[obs_offset + iSat, idx_tropo] = map_wet
 
                     # iono
                     if self._estimate_diono[const]:
                         factor = (self.datatypes[const][0].freq.freq_value / datatype.freq.freq_value) ** 2
                         self.design_mat[obs_offset + iSat, 4 + tropo_offset + iono_offset + iSat] = 1.0 * factor  # iono
-
+                        idx_iono = self.index_map["iono"][sat]
+                        design2[obs_offset + iSat, idx_iono] = 1.0 * factor  # iono
                     # ISB
                     if iConst > 0:
                         self.design_mat[obs_offset + iSat, -1] = 1.0  # ISB
+                    if iConst > 0 and "isb" in self.index_map:
+                        idx_isb = self.index_map["isb"]
+                        design2[obs_offset + iSat, idx_isb] = 1.0
 
                     # Weight matrix -> as 1/(obs_std^2)
                     std = reconstructor.get_obs_std(sat, datatype)
@@ -436,36 +472,52 @@ class LSQ_Engine_Position(LSQ_Engine):
                 obs_offset += n_sats
             if self._estimate_diono[const]:
                 iono_offset += n_sats
+        self.design_mat = np.copy(design2)
 
     def _update_state(self, state, dX, cov):
         tropo_offset = 1 if self._estimate_tropo else 0
 
-        state.position += dX[0:3]
-        state.clock_bias += dX[3]
+        idx_pos = self.index_map["position"]
+        idx_clock = self.index_map["clock"]
+        #state.position += dX[0:3]
+        #state.clock_bias += dX[3]
+        state.position = state.position + dX[idx_pos:idx_pos+3]
+        state.clock_bias = state.clock_bias + dX[idx_clock]
 
         # if iono is estimated
         iono_offset = 0
         for const in self.constellations:
             if self._estimate_diono[const]:
                 for iSat, sat in enumerate(self.sat_list[const]):
-                    state.iono[sat] += float(dX[iono_offset + iSat + 4 + tropo_offset])
-                    state.cov_iono[sat] = cov[
-                        iono_offset + iSat + 4 + tropo_offset, iono_offset + iSat + 4 + tropo_offset]
+                    idx_iono = self.index_map["iono"][sat]
+                    # state.iono[sat] += float(dX[iono_offset + iSat + 4 + tropo_offset])
+                    state.iono[sat] += float(dX[idx_iono])
+                    #state.cov_iono[sat] = cov[
+                    #    iono_offset + iSat + 4 + tropo_offset, iono_offset + iSat + 4 + tropo_offset]
+                    state.cov_iono[sat] = cov[idx_iono, idx_iono]
                 iono_offset += len(self.sat_list[const])
 
         # ISB
         if len(self.constellations) > 1:
-            state.isb += dX[-1]
-            state.cov_isb = float(cov[-1, -1])
+            idx_isb = self.index_map["isb"]
+            state.isb += dX[idx_isb]
+            # state.isb += dX[-1]
+            # state.cov_isb = float(cov[-1, -1])
+            state.cov_isb = float(cov[idx_isb, idx_isb])
 
         # tropo
         if self._estimate_tropo:
-            state.tropo_wet += dX[4]
-            state.cov_tropo_wet = cov[4, 4]
+            idx_tropo = self.index_map["tropo"]
+            # state.tropo_wet += dX[4]
+            # state.cov_tropo_wet = cov[4, 4]
+            state.tropo_wet += dX[idx_tropo]
+            state.cov_tropo_wet = cov[idx_tropo, idx_tropo]
 
         # unpack covariance matrices
-        state.cov_position = np.array(cov[0:3, 0:3])
-        state.cov_clock_bias = float(cov[3, 3])
+        #state.cov_position = np.array(cov[0:3, 0:3])
+        #state.cov_clock_bias = float(cov[3, 3])
+        state.cov_position = np.array(cov[idx_pos:idx_pos+3, idx_pos:idx_pos+3])
+        state.cov_clock_bias = float(cov[idx_clock, idx_clock])
 
 
 class LSQ_Engine_Velocity(LSQ_Engine):
