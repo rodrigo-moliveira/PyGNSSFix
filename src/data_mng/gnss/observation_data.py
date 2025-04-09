@@ -200,6 +200,14 @@ class EpochData:
                 obj.set_observable(sat, obs.copy())
         return obj
 
+    def get_number_of_pr_observables(self):
+        """ Returns the number of pseudorange observables for this epoch """
+        count = 0
+        for sat, obs_list in self._data.items():
+            for obs in obs_list:
+                if DataType.is_code(obs.datatype):
+                    count += 1
+        return count
 
 class ObservationData:
     """

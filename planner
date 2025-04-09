@@ -27,6 +27,8 @@
             * Ocean loading
             * Polar tides
 
+[ ] check allan variance computation from SimLib / NAVIKA Repository
+maybe https://stash.deimos-space.com/projects/GNCCCKANAV/repos/navika/browse/tools/Attitude_Estimation_Control_Design_Analysis/code/genericGyroNoise.m
 
 nice to have, but not for now
     [ ] fazer cleanup ao theory notes

@@ -8,6 +8,13 @@ from src.io.config.enums import EnumFrequencyModel, EnumOnOff
 from src.modules.estimators.weighted_ls import WeightedLeastSquares
 
 
+# TODO:
+#   - Test with 2 Constellations 1 Freq (no DI)
+#   - Test with 2 Constellations 2 Freq (no DI)
+#   - Test with 2 Constellations 2 Freq (with DI)
+#   - Test with 1 Constellations Iono free
+#   - Test with 2 Constellations Iono free
+
 class LSQ_Engine:
     """
     Base class for the LSQ Engine.
@@ -43,7 +50,7 @@ class LSQ_Engine:
         sat_list(dict): dict with available constellations as keys and available satellites to be used as values
     """
 
-    def __init__(self, datatypes, satellite_list, metadata, epoch, obs_data, reconstructor):
+    def __init__(self, datatypes, satellite_list, metadata, epoch, obs_data, reconstructor, state=None):
         """
         Constructor of the LSQ_Engine instance.
 
@@ -57,6 +64,7 @@ class LSQ_Engine:
                 for a single epoch)
             reconstructor(src.modules.gnss.solver.ObservationReconstructor): instance of the observation reconstructor
                 class
+        TODO: update docstring
         """
         self.datatypes = datatypes
 
@@ -72,10 +80,10 @@ class LSQ_Engine:
                 self.sat_list[sat.sat_system] = list()
             self.sat_list[sat.sat_system].append(sat)
 
-        self._initialize_matrices()
-        self._build_lsq(epoch, obs_data, reconstructor)
+        self._initialize_matrices(state, obs_data.get_number_of_pr_observables())
+        self._build_lsq(epoch, obs_data, reconstructor, state)
 
-    def _initialize_matrices(self):
+    def _initialize_matrices(self, state=None, n_obs=None):
         """
         Initializes the observation vector y (attribute `y_vec`), the state matrix G (attribute `design_mat`) 
         and the weight matrix W (attribute `weight_mat`) to numpy objects of the correct size and shape 
@@ -86,7 +94,7 @@ class LSQ_Engine:
         """
         pass
 
-    def _build_lsq(self, epoch, obs_data, reconstructor):
+    def _build_lsq(self, epoch, obs_data, reconstructor, state=None):
         """
         Fills the observation vector y (attribute `y_vec`), the state matrix G (attribute `design_mat`) and the weight
         matrix W (attribute `weight_mat`) with the appropriate data.
@@ -259,17 +267,17 @@ class LSQ_Engine_Position(LSQ_Engine):
 
     These new quantities are then used in the next iteration of the LSQ, for the new computation of the predicted
     pseudorange observation (see :py:class:`src.modules.gnss.solver.obs_reconstructor.PseudorangeReconstructor`).
+    TODO: update docstring
     """
 
-    def __init__(self, satellite_list, metadata, epoch, obs_data, reconstructor):
+    def __init__(self, satellite_list, metadata, epoch, obs_data, reconstructor, state):
         datatypes = metadata["CODES"]
         self._estimate_tropo = False
         self._estimate_diono = dict().fromkeys(["GPS", "GAL"], False)
-        self.index_map = None
-        super().__init__(datatypes, satellite_list, metadata, epoch, obs_data, reconstructor)
+        super().__init__(datatypes, satellite_list, metadata, epoch, obs_data, reconstructor, state)
 
 
-    def _initialize_matrices(self):
+    def _initialize_matrices(self, state=None, n_obs=None):
         """
         Initializes the observation vector y (attribute `y_vec`), the state matrix G (attribute `design_mat`)
         and the weight matrix W (attribute `weight_mat`) to numpy objects of the correct size and shape
@@ -304,12 +312,15 @@ class LSQ_Engine_Position(LSQ_Engine):
 
         When tropo estimation is enabled, a new state is added to all cases above
         """
+        n_states2 = state.index_map["total_states"]
+
         index_map = {}
         index_map["iono"] = dict()
 
         state_counter = 0
 
         n_observables = 0  # number of rows
+        n_observables2 = 0
         n_states = 3  # number of columns (default is 3 - position)
 
         index_map["position"] = state_counter
@@ -320,7 +331,7 @@ class LSQ_Engine_Position(LSQ_Engine):
 
             # TODO: instead of enumerate, use master constellation comparison
             if iConst == 0:
-                index_map["clock"] = state_counter
+                index_map["clock_bias"] = state_counter
             else:
                 index_map["isb"] = state_counter
             state_counter += 1  # clock/isb
@@ -351,10 +362,18 @@ class LSQ_Engine_Position(LSQ_Engine):
         else:
             self._estimate_tropo = False
 
-        self.y_vec = np.zeros(n_observables)
-        self.design_mat = np.zeros((n_observables, n_states))
-        self.weight_mat = np.eye(n_observables)
-        self.index_map = index_map.copy()
+        # TODO: retirar self.constellations
+        # TODO: add this as requirement...
+        for const in self.constellations:
+            for sat in self.sat_list[const]:
+                if sat in index_map["iono"]:
+                    n_observables2 += 2
+                else:
+                    n_observables2 += 1
+
+        self.y_vec = np.zeros(n_obs)
+        self.design_mat = np.zeros((n_observables, n_states2))
+        self.weight_mat = np.eye(n_obs)
 
     @staticmethod
     def compute_residual_los(sat, epoch, datatype, obs_data, reconstructor):
@@ -416,9 +435,10 @@ class LSQ_Engine_Position(LSQ_Engine):
 
         return X0 - X0_prev, np.linalg.inv(P0)
 
-    def _build_lsq(self, epoch, obs_data, reconstructor):
+    def _build_lsq(self, epoch, obs_data, reconstructor, state=None):
         iono_offset = 0
         obs_offset = 0
+        index_map = state.index_map
         tropo_offset = 1 if self._estimate_tropo else 0
         design2 = np.zeros(np.shape(self.design_mat))
 
@@ -435,32 +455,32 @@ class LSQ_Engine_Position(LSQ_Engine):
 
                     # position
                     self.design_mat[obs_offset + iSat][0:3] = los
-                    idx_pos = self.index_map["position"]
+                    idx_pos = index_map["position"]
                     design2[obs_offset + iSat][idx_pos:idx_pos+3] = los
 
                     # clock
                     self.design_mat[obs_offset + iSat, 3] = 1.0
-                    idx_clock = self.index_map["clock"]
+                    idx_clock = index_map["clock_bias"]
                     design2[obs_offset + iSat, idx_clock] = 1.0
 
                     # tropo
                     if self._estimate_tropo:
                         map_wet = reconstructor._system_geometry.get("tropo_map_wet", sat)
                         self.design_mat[obs_offset + iSat, 4] = map_wet
-                        idx_tropo = self.index_map["tropo"]
+                        idx_tropo = index_map["tropo"]
                         design2[obs_offset + iSat, idx_tropo] = map_wet
 
                     # iono
                     if self._estimate_diono[const]:
                         factor = (self.datatypes[const][0].freq.freq_value / datatype.freq.freq_value) ** 2
                         self.design_mat[obs_offset + iSat, 4 + tropo_offset + iono_offset + iSat] = 1.0 * factor  # iono
-                        idx_iono = self.index_map["iono"][sat]
+                        idx_iono = index_map["iono"][sat]
                         design2[obs_offset + iSat, idx_iono] = 1.0 * factor  # iono
                     # ISB
                     if iConst > 0:
                         self.design_mat[obs_offset + iSat, -1] = 1.0  # ISB
-                    if iConst > 0 and "isb" in self.index_map:
-                        idx_isb = self.index_map["isb"]
+                    if iConst > 0 and "isb" in index_map:
+                        idx_isb = index_map["isb"]
                         design2[obs_offset + iSat, idx_isb] = 1.0
 
                     # Weight matrix -> as 1/(obs_std^2)
@@ -476,9 +496,9 @@ class LSQ_Engine_Position(LSQ_Engine):
 
     def _update_state(self, state, dX, cov):
         tropo_offset = 1 if self._estimate_tropo else 0
-
-        idx_pos = self.index_map["position"]
-        idx_clock = self.index_map["clock"]
+        index_map = state.index_map
+        idx_pos = index_map["position"]
+        idx_clock = index_map["clock_bias"]
         #state.position += dX[0:3]
         #state.clock_bias += dX[3]
         state.position = state.position + dX[idx_pos:idx_pos+3]
@@ -489,7 +509,7 @@ class LSQ_Engine_Position(LSQ_Engine):
         for const in self.constellations:
             if self._estimate_diono[const]:
                 for iSat, sat in enumerate(self.sat_list[const]):
-                    idx_iono = self.index_map["iono"][sat]
+                    idx_iono = index_map["iono"][sat]
                     # state.iono[sat] += float(dX[iono_offset + iSat + 4 + tropo_offset])
                     state.iono[sat] += float(dX[idx_iono])
                     #state.cov_iono[sat] = cov[
@@ -499,7 +519,7 @@ class LSQ_Engine_Position(LSQ_Engine):
 
         # ISB
         if len(self.constellations) > 1:
-            idx_isb = self.index_map["isb"]
+            idx_isb = index_map["isb"]
             state.isb += dX[idx_isb]
             # state.isb += dX[-1]
             # state.cov_isb = float(cov[-1, -1])
@@ -507,7 +527,7 @@ class LSQ_Engine_Position(LSQ_Engine):
 
         # tropo
         if self._estimate_tropo:
-            idx_tropo = self.index_map["tropo"]
+            idx_tropo = index_map["tropo"]
             # state.tropo_wet += dX[4]
             # state.cov_tropo_wet = cov[4, 4]
             state.tropo_wet += dX[idx_tropo]
@@ -566,7 +586,7 @@ class LSQ_Engine_Velocity(LSQ_Engine):
             datatypes[key] = datatypes[key][:1]
         super().__init__(datatypes, satellite_list, metadata, epoch, obs_data, reconstructor)
 
-    def _initialize_matrices(self):
+    def _initialize_matrices(self, state=None, n_obs=None):
         """
         Initializes the observation vector y (attribute `y_vec`), the state matrix G (attribute `design_mat`)
         and the weight matrix W (attribute `weight_mat`) to numpy objects of the correct size and shape
@@ -616,7 +636,7 @@ class LSQ_Engine_Velocity(LSQ_Engine):
 
         return prefit_residuals, los
 
-    def _build_lsq(self, epoch, obs_data, reconstructor):
+    def _build_lsq(self, epoch, obs_data, reconstructor, state=None):
         obs_offset = 0
         const_offset = 0
         for iConst, const in enumerate(self.constellations):

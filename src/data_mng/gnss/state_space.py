@@ -28,6 +28,9 @@ class GnssStateSpace(Container):
         * _info (dict): auxiliary information (see paragraph below)
         * initial_state (GnssStateSpace): initial state space object with the initial states and covariances
             for the iteration process of the GNSS solver
+        * index_map (dict): dictionary with the index of each state variable in the state vector. Map to be used
+            in the Normal Equations of the GNSS solver
+            (see :py:class:`src.modules.gnss.solver.lsq_engine.LSQ_Engine_Position`)
 
     Some auxiliary information is saved in the `_info` attribute dict, namely:
         * _info["states"] provides a list with all valid states to be estimated, depending on the configuration
@@ -46,7 +49,7 @@ class GnssStateSpace(Container):
     __states__ = ["position", "velocity", "clock_bias", "iono", "tropo_wet", "isb", "clock_bias_rate"]
     __covs__ = ["cov_position", "cov_velocity", "cov_clock_bias", "cov_iono", "cov_tropo_wet", "cov_isb",
                 "cov_clock_bias_rate"]
-    __slots__ = __states__ + __covs__ + ["epoch", "_info", "initial_state"]
+    __slots__ = __states__ + __covs__ + ["epoch", "_info", "initial_state", "index_map"]
 
     def __init__(self, metadata=None, epoch=None, sat_list=None):
         """
@@ -66,6 +69,7 @@ class GnssStateSpace(Container):
         # dict to store state information
         self._info = dict()
         self.initial_state = None
+        self.index_map = dict()
 
         # initialize state variables
         if metadata is not None and sat_list is not None:
@@ -197,7 +201,7 @@ class GnssStateSpace(Container):
 
         self.add_additional_info("states", _states)
 
-    def update_sat_list(self, sat_list):
+    def _update_sat_list(self, sat_list):
         """ Update the satellite list of the internal iono state with the one provided as argument.
 
         Args:
@@ -225,6 +229,58 @@ class GnssStateSpace(Container):
         for sat in _to_remove:
             self.iono.pop(sat)
             self.cov_iono.pop(sat)
+
+    def build_index_map(self, sat_list):
+        """
+        Builds the index map for the state vector. The index map is a dictionary with:
+            * keys - state names
+            * values - index of the state in the state vector
+
+        Available states:
+            * position (dimension 3)
+            * clock bias (dimension 1)
+            * ISB (dimension 1)
+            * iono (dimension 1 per satellite)
+            * tropo wet (dimension 1)
+
+        Args:
+            sat_list(list[src.data_types.gnss.Satellite]) : list of available satellites
+        """
+        self._update_sat_list(sat_list)
+
+        index_map = {}
+        state_counter = 0
+        states = self.get_additional_info("states")
+
+        # position index
+        if "position" in states:
+            index_map["position"] = state_counter
+            state_counter += 3
+
+        # clock index
+        if "clock_bias" in states:
+            index_map["clock_bias"] = state_counter
+            state_counter += 1
+
+        # check if ISB is present
+        if "isb" in states:
+            index_map["isb"] = state_counter
+            state_counter += 1
+
+        # add iono states
+        if "iono" in states:
+            index_map["iono"] = dict()
+            for sat in self.iono.keys():
+                index_map["iono"][sat] = state_counter
+                state_counter += 1
+
+        if "tropo_wet" in states:
+            index_map["tropo_wet"] = state_counter
+            state_counter += 1
+
+        index_map["total_states"] = state_counter
+
+        self.index_map = index_map
 
     def __str__(self):
         _states = self.get_additional_info("states")

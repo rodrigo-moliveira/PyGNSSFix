@@ -89,7 +89,7 @@
       "estimate_ggto": true,
       "_comment3": "Select `true` to estimate GGTO or `false` to use the broadcast GGTO",
 
-      "estimate_diono": false,
+      "estimate_diono": true,
         "_comment4": "Select `true` to estimate residual ionospheric delay or `false` to disable it",
 
       "troposphere": {
@@ -191,12 +191,12 @@
       "elevation_filter": -1,
 
       "_comment7": "Initial states and expected covariances for the initial state vector.",
-      "initial_pos_cov": [4027880.927528511,306998.5204864742,4919498.026916793,1.4714576982724443,0.5879739784462265,1.7770612828000436],
+      "initial_pos_cov": [0.402788131984481E+07,0.306998818013051E+06,0.491949906282187E+07,10,10,10],
       "initial_vel_cov": [0,0,0,10,10,10],
       "initial_clock_cov": [0,1e-17],
       "initial_isb_cov": [0,1E-18],
-      "initial_iono_cov": [0.0, 1E-1],
-      "initial_tropo_cov": [0.0, 1E-1],
+      "initial_iono_cov": [0.0, 10],
+      "initial_tropo_cov": [0.0, 10],
       "initial_clock_rate_cov": [0.0, 1E-1]
    },
 

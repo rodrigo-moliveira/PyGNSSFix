@@ -344,7 +344,7 @@ class GnssSolver:
         self._check_model_availability(system_geometry, epoch)
 
         satellite_list = system_geometry.get_satellites()
-        state.update_sat_list(satellite_list)
+        state.build_index_map(satellite_list)
 
         if self.trace_dir is not None:
             trace_file = f"{self.trace_dir}\\PseudorangeReconstructionIter_{iteration}.txt"
@@ -354,7 +354,7 @@ class GnssSolver:
         reconstructor = PseudorangeReconstructor(system_geometry, self._metadata, state, self.sat_bias, trace_file)
 
         # build LSQ Engine matrices for all satellites
-        lsq_engine = LSQ_Engine_Position(satellite_list, self._metadata, epoch, obs_data, reconstructor)
+        lsq_engine = LSQ_Engine_Position(satellite_list, self._metadata, epoch, obs_data, reconstructor, state)
 
         # solve LS problem
         return lsq_engine.solve_ls(state)
