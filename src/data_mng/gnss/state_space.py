@@ -113,6 +113,7 @@ class GnssStateSpace(Container):
                 state.clock_bias_rate[const] = self.clock_bias_rate[const]
                 state.cov_clock_bias_rate[const] = self.cov_clock_bias_rate[const]
 
+        state.add_additional_info("estimate_iono", self.get_additional_info("estimate_iono"))
         if "iono" in _states:
             state.iono = dict()
             state.cov_iono = dict()
@@ -167,15 +168,18 @@ class GnssStateSpace(Container):
         # iono dict (if dual-frequency mode is selected)
         self.iono = dict()
         self.cov_iono = dict()
+        estimate_iono = set()
         for constellation in metadata["CONSTELLATIONS"]:
             if metadata["MODEL"][constellation] == EnumFrequencyModel.DUAL_FREQ and \
                     metadata["IONO"][constellation].estimate_diono():
+                estimate_iono.add(constellation)
                 for sat in sat_list:
                     if sat.sat_system == constellation:
                         self.iono[sat] = list(metadata["INITIAL_STATES"].get("iono"))[0]
                         self.cov_iono[sat] = list(metadata["INITIAL_STATES"].get("iono"))[1]
         if len(self.iono) >= 1:
             _states.append("iono")
+        self.add_additional_info("estimate_iono", estimate_iono)
 
         # isb (optional -> in case there are 2 constellations)
         self.isb = None
@@ -211,17 +215,20 @@ class GnssStateSpace(Container):
         if "iono" not in _states:
             return
 
+        # add new visible satellites to the iono state, if applicable
         for sat in sat_list:
-            if sat not in self.iono:
-                self.iono[sat] = 0.0
-                self.cov_iono[sat] = 1.0
-                if self.initial_state is not None and sat in self.initial_state.iono:
-                    self.iono[sat] = self.initial_state.iono[sat]
-                    self.cov_iono[sat] = self.initial_state.cov_iono[sat]
-                elif self.initial_state is not None:
-                    self.initial_state.iono[sat] = 0.0
-                    self.initial_state.cov_iono[sat] = 1.0
+            if sat.sat_system in self.get_additional_info("estimate_iono"):
+                if sat not in self.iono:
+                    self.iono[sat] = 0.0
+                    self.cov_iono[sat] = 1.0
+                    if self.initial_state is not None and sat in self.initial_state.iono:
+                        self.iono[sat] = self.initial_state.iono[sat]
+                        self.cov_iono[sat] = self.initial_state.cov_iono[sat]
+                    elif self.initial_state is not None:
+                        self.initial_state.iono[sat] = 0.0
+                        self.initial_state.cov_iono[sat] = 1.0
 
+        # remove satellites that are not in the provided list
         _to_remove = []
         for sat in self.iono:
             if sat not in sat_list:

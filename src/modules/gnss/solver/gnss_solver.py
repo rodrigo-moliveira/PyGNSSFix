@@ -282,7 +282,7 @@ class GnssSolver:
         sats_for_epoch = obs_data.get_satellites()
 
         # build system geometry for this epoch
-        system_geometry = SystemGeometry(obs_data, self.sat_clocks, self.sat_orbits, self.phase_center)
+        system_geometry = SystemGeometry(obs_data, self.sat_clocks, self.sat_orbits, self.phase_center, self.sat_bias)
 
         self.log.debug(f"Available Satellites: {sats_for_epoch}")
 
@@ -342,22 +342,16 @@ class GnssSolver:
     def _iterate_pos(self, iteration, system_geometry, obs_data, state, epoch):
         """ Low-level function to solve a single iteration of the position estimation iterative process """
         self._check_model_availability(system_geometry, epoch)
+        state.build_index_map(system_geometry.get_satellites())
 
-        satellite_list = system_geometry.get_satellites()
-        state.build_index_map(satellite_list)
-
-        if self.trace_dir is not None:
-            trace_file = f"{self.trace_dir}\\PseudorangeReconstructionIter_{iteration}.txt"
-        else:
-            trace_file = None
-        # TODO: move reconstructor creation to LSQ_Engine. Add Carrier Phase Reconstructor
-        reconstructor = PseudorangeReconstructor(system_geometry, self._metadata, state, self.sat_bias, trace_file)
+        trace_file = f"{self.trace_dir}\\PseudorangeReconstructionIter_{iteration}.txt" if self.trace_dir is not None \
+            else None
 
         # build LSQ Engine matrices for all satellites
-        lsq_engine = LSQ_Engine_Position(satellite_list, self._metadata, epoch, obs_data, reconstructor, state)
+        lsq_engine = LSQ_Engine_Position(system_geometry, self._metadata, epoch, obs_data, state, trace_file)
 
         # solve LS problem
-        return lsq_engine.solve_ls(state)
+        return lsq_engine.solve_ls(state, self._metadata["APRIORI_CONSTRAIN"] == EnumOnOff.ENABLED)
 
     def _check_model_availability(self, system_geometry, epoch) -> None:
         """

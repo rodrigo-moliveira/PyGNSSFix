@@ -200,14 +200,33 @@ class EpochData:
                 obj.set_observable(sat, obs.copy())
         return obj
 
-    def get_number_of_pr_observables(self):
-        """ Returns the number of pseudorange observables for this epoch """
+    def get_number_of_pr_observations(self):
+        """ Returns the number of pseudorange observations for this epoch """
         count = 0
         for sat, obs_list in self._data.items():
             for obs in obs_list:
                 if DataType.is_code(obs.datatype):
                     count += 1
         return count
+
+    def get_number_of_observations(self, datatypes):
+        """ Returns the number of observations for this epoch for the provided datatype list
+
+        Args:
+            datatypes (list[DataType] or dict): either a list with DataType instances to be queried or a dict
+                with constellation as key and a list of DataType instances as value
+        """
+        count = 0
+        for sat, obs_list in self._data.items():
+            for obs in obs_list:
+                if isinstance(datatypes, list):
+                    if obs.datatype in datatypes:
+                        count += 1
+                elif isinstance(datatypes, dict):
+                    if obs.datatype in datatypes[sat.sat_system]:
+                        count += 1
+        return count
+
 
 class ObservationData:
     """
