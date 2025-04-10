@@ -5,15 +5,8 @@ from src import constants
 from src.constants import SPEED_OF_LIGHT
 from src.errors import SolverError
 from src.modules.estimators.weighted_ls import WeightedLeastSquares
-from src.modules.gnss.solver import PseudorangeReconstructor
+from src.modules.gnss.solver import PseudorangeReconstructor, RangeRateReconstructor
 
-
-# TODO:
-#   - Test with 2 Constellations 1 Freq (no DI)
-#   - Test with 2 Constellations 2 Freq (no DI)
-#   - Test with 2 Constellations 2 Freq (with DI)
-#   - Test with 1 Constellations Iono free
-#   - Test with 2 Constellations Iono free
 
 class LSQ_Engine:
     """
@@ -516,14 +509,15 @@ class LSQ_Engine_Velocity(LSQ_Engine):
             Springer Cham, 2017
     """
 
-    def __init__(self, satellite_list, metadata, epoch, obs_data, reconstructor):
-        datatypes = metadata["DOPPLER"]
+    def __init__(self, system_geometry, metadata, epoch, obs_data, state, trace_file):
         # currently we always use one observation per constellation (dual-frequency is not possible)
+        datatypes = metadata["DOPPLER"]
         for key in datatypes:
             datatypes[key] = datatypes[key][:1]
-        super().__init__(datatypes, satellite_list, metadata, epoch, obs_data, reconstructor)
+        self.reconstructor = RangeRateReconstructor(system_geometry, metadata, state, trace_file)
+        super().__init__(datatypes, system_geometry.get_satellites(), epoch, obs_data, state)
 
-    def _initialize_matrices(self, state=None, n_obs=None):
+    def _initialize_matrices(self, state, n_obs):
         """
         Initializes the observation vector y (attribute `y_vec`), the state matrix G (attribute `design_mat`)
         and the weight matrix W (attribute `weight_mat`) to numpy objects of the correct size and shape
@@ -554,8 +548,7 @@ class LSQ_Engine_Velocity(LSQ_Engine):
         self.design_mat = np.zeros((n_observables, n_states))
         self.weight_mat = np.eye(n_observables)
 
-    @staticmethod
-    def compute_residual_los(sat, epoch, doppler_datatype, obs_data, reconstructor):
+    def compute_residual_los(self, sat, epoch, doppler_datatype, obs_data):
 
         # get observable and compute predicted observable
         obs = float(obs_data.get_observable(sat, doppler_datatype))  # in Hz
@@ -564,16 +557,16 @@ class LSQ_Engine_Velocity(LSQ_Engine):
         wavelength = SPEED_OF_LIGHT / doppler_datatype.freq_value  # in meters
         obs_range_rate = -wavelength * obs  # in m/s
 
-        predicted_obs = reconstructor.compute(sat, epoch, doppler_datatype)
+        predicted_obs = self.reconstructor.compute(sat, epoch, doppler_datatype)
 
         # prefit residuals (observed minus computed)
         prefit_residuals = obs_range_rate - predicted_obs
 
-        los = -reconstructor.get_unit_line_of_sight(sat)
+        los = -self.reconstructor.get_unit_line_of_sight(sat)
 
         return prefit_residuals, los
 
-    def _build_lsq(self, epoch, obs_data, reconstructor, state=None):
+    def _build_lsq(self, epoch, obs_data, state):
         obs_offset = 0
         const_offset = 0
         for iConst, const in enumerate(self.sat_list.keys()):
@@ -582,7 +575,7 @@ class LSQ_Engine_Velocity(LSQ_Engine):
             datatype = self.datatypes[const][0]
 
             for iSat, sat in enumerate(self.sat_list[const]):
-                residual, los = self.compute_residual_los(sat, epoch, datatype, obs_data, reconstructor)
+                residual, los = self.compute_residual_los(sat, epoch, datatype, obs_data)
 
                 # filling the LS matrices
                 self.y_vec[obs_offset + iSat] = residual
@@ -590,7 +583,7 @@ class LSQ_Engine_Velocity(LSQ_Engine):
                 self.design_mat[obs_offset + iSat][3 + const_offset] = 1
 
                 # Weight matrix -> as 1/(obs_std^2)
-                std = reconstructor.get_obs_std(sat, datatype)
+                std = self.reconstructor.get_obs_std(sat, datatype)
                 obs_data.get_observable(sat, datatype).set_std(std)
                 self.weight_mat[obs_offset + iSat, obs_offset + iSat] = \
                     1 / (std ** 2)

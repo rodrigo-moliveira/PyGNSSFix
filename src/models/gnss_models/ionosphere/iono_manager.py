@@ -118,3 +118,10 @@ class IonoManager:
                 log = get_logger(MODEL_LOG)
                 log.warning(f"Problem at computing iono a-priori model IONEX for {sat} at {epoch}: {e}")
         return iono
+
+    def disable(self):
+        """
+        Disable the iono model
+        """
+        self.iono_model = EnumIonoModel.DISABLED
+        self._estimate_diono = EnumOnOff.DISABLED

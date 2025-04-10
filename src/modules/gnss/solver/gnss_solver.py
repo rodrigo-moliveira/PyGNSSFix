@@ -162,7 +162,7 @@ class GnssSolver:
                                       f"observations are available. Available code observations: {code_types}")
                 MODEL[const] = EnumFrequencyModel.SINGLE_FREQ  # Iono-free is treated as single frequency in the LS
                 CODES[const] = [iono_code]
-                IONO[const].iono_model = EnumIonoModel.DISABLED  # disable Iono model in Iono-Free scenarios
+                IONO[const].disable()
             elif len(code_types) == 1:
                 # Single Frequency Model
                 self.log.info(f"Selected model for {const} is Single Frequency with code types {code_types[0]}")
@@ -401,12 +401,8 @@ class GnssSolver:
             trace_file = f"{self.trace_dir}\\RangeRateReconstructor.txt"
         else:
             trace_file = None
-        reconstructor = RangeRateReconstructor(system_geometry,
-                                               self._metadata,
-                                               state, trace_file)
-
         # build LSQ Engine matrices for all satellites
-        lsq_engine = LSQ_Engine_Velocity(satellite_list, self._metadata, epoch, obs_data, reconstructor)
+        lsq_engine = LSQ_Engine_Velocity(system_geometry, self._metadata, epoch, obs_data, state, trace_file)
 
         # solve LS problem
         return lsq_engine.solve_ls(state)

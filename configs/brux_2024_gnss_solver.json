@@ -100,7 +100,7 @@
          "map": "Saastamoinen",
 
          "_comment3": "Select `true` to estimate tropospheric wet delay or `false` to disable tropo estimation",
-         "estimate_tropo_wet": false
+         "estimate_tropo_wet": true
       },
 
       "phase_center_corrections": {
