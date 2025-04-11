@@ -226,7 +226,8 @@ class Config(dict):
                 obs_dict[constellation] = {}
                 user_service = services["user_service"]
 
-                for obs_std_list, datatype_char in zip(("pr_obs_std", "doppler_obs_std"), ("C", "D")):
+                for obs_std_list, datatype_char in zip(("pr_obs_std", "doppler_obs_std", "cp_obs_std"),
+                                                       ("C", "D", "L")):
                     std_list = self.get("model", constellation, obs_std_list)
                     if len(std_list) < len(user_service):
                         raise ConfigError(f"Inconsistency between number of signals for {constellation}: {user_service}"
@@ -267,6 +268,15 @@ class Config(dict):
         if constellation not in self["obs_std"]:
             self["obs_std"][constellation] = {}
         self["obs_std"][constellation][datatype] = std
+
+    def keep_carrier(self):
+        """ Returns True if the carrier phase observations are kept in the processing, False otherwise
+
+        Carrier phase observations are kept:
+            * processing PR-based algorithms (SPS or PR-PPP) with smoothing enabled
+            * processing CP-based algorithms (CP-PPP)
+        """
+        return self.get("preprocessor", "compute_smooth") or self.get("gnss_alg") == EnumAlgorithmPNT.CP_PPP
 
 
 config_dict = Config()

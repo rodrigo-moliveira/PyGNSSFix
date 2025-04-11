@@ -4,6 +4,7 @@ import numpy as np
 
 from src.data_mng import Container
 from src import constants
+from src.data_types.gnss import Ambiguity
 from src.io.config import config_dict, EnumFrequencyModel
 from src.models.gnss_models import compute_ggto
 
@@ -22,6 +23,7 @@ class GnssStateSpace(Container):
         * tropo_wet (float): estimated wet component of troposphere delay
         * isb (float): estimated inter system bias
         * clock_bias_rate (dict): dictionary with constellations as keys and clock bias rates as values
+        * ambiguity (dict): dictionary with satellites as keys and Ambiguity instances as values
 
     Additional parameters:
         * epoch (Epoch): Epoch object for this time instant
@@ -46,7 +48,7 @@ class GnssStateSpace(Container):
         * pr_rate_prefit_residuals
         * pr_rate_postfit_residuals
     """
-    __states__ = ["position", "velocity", "clock_bias", "iono", "tropo_wet", "isb", "clock_bias_rate"]
+    __states__ = ["position", "velocity", "clock_bias", "iono", "tropo_wet", "isb", "clock_bias_rate", "ambiguity"]
     __covs__ = ["cov_position", "cov_velocity", "cov_clock_bias", "cov_iono", "cov_tropo_wet", "cov_isb",
                 "cov_clock_bias_rate"]
     __slots__ = __states__ + __covs__ + ["epoch", "_info", "initial_state", "index_map"]
@@ -129,6 +131,13 @@ class GnssStateSpace(Container):
             state.tropo_wet = self.tropo_wet
             state.cov_tropo_wet = self.cov_tropo_wet
 
+        if "ambiguity" in _states:
+            state.ambiguity = dict()
+            for sat, cp_types in self.ambiguity.items():
+                state.ambiguity[sat] = dict()
+                for cp_type, ambiguity in cp_types.items():
+                    state.ambiguity[sat][cp_type] = ambiguity.clone()
+
         state.add_additional_info("states", _states)
         state.add_additional_info("clock_master", self.get_additional_info("clock_master"))
         state.add_additional_info("clock_slave", self.get_additional_info("clock_slave"))
@@ -203,6 +212,18 @@ class GnssStateSpace(Container):
             self.cov_tropo_wet = list(metadata["INITIAL_STATES"].get("tropo"))[1]
             _states.append("tropo_wet")
 
+        # ambiguity (optional -> in case algorithm is CP-based)
+        self.ambiguity = None
+        if metadata["CP_BASED"]:
+            self.ambiguity = dict()
+            for sat in sat_list:
+                # NOTE: when other types of ambiguity are implemented (NL or WL), this part should be modified
+                cp_types = metadata["PHASES"][sat.sat_system]
+                self.ambiguity[sat] = dict()
+                for cp_type in cp_types:
+                    self.ambiguity[sat][cp_type] = Ambiguity()
+            _states.append("ambiguity")
+
         self.add_additional_info("states", _states)
 
     def _update_sat_list(self, sat_list):
@@ -253,6 +274,7 @@ class GnssStateSpace(Container):
         Args:
             sat_list(list[src.data_types.gnss.Satellite]) : list of available satellites
         """
+        # TODO: check new enterings or new exits in the list and create `add` and `remove` methods
         self._update_sat_list(sat_list)
 
         index_map = {}
@@ -285,6 +307,14 @@ class GnssStateSpace(Container):
             index_map["tropo_wet"] = state_counter
             state_counter += 1
 
+        if "ambiguity" in states:
+            index_map["ambiguity"] = dict()
+            for sat, cp_types in self.ambiguity.items():
+                index_map["ambiguity"][sat] = dict()
+                for cp_type, ambiguity in cp_types.items():
+                    index_map["ambiguity"][sat][cp_type] = state_counter
+                    state_counter += 1
+
         index_map["total_states"] = state_counter
 
         self.index_map = index_map
@@ -303,6 +333,9 @@ class GnssStateSpace(Container):
             _str += f", tropo_wet = {self.tropo_wet}"
         if "clock_bias_rate" in _states:
             _str += f", clock_bias_rate = {self.clock_bias_rate}"
+        if "ambiguity" in _states:
+            # TODO: check this
+            _str += f", ambiguity = {self.ambiguity}"
 
         return f'{type(self).__name__}[{str(self.epoch)}]({_str})'
 

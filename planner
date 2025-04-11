@@ -11,6 +11,7 @@
         [ ] post_processing script not running well when velocity is not estimated
         [ ] tornar explicita a impossibilidade de correr vários datatypes para a mesma freq (diferentes atributos)
             por exemplo processar C1C e C1W.
+        [ ] para cp-ppp o tem de haver consitencia entre observações pr e cp
         [ ] adicionar um check para verificar se em combined, a primeira frequency é a base frequency
 
     [ ] Update Readme

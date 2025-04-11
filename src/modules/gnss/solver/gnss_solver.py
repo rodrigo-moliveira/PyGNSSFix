@@ -4,7 +4,6 @@ import os
 from src.data_mng.gnss.state_space import GnssStateSpace
 from src.data_types.gnss import DataType
 from src.modules.gnss.solver.lsq_engine import LSQ_Engine_Position, LSQ_Engine_Velocity
-from src.modules.gnss.solver.obs_reconstructor import PseudorangeReconstructor, RangeRateReconstructor
 from src.common_log import get_logger, GNSS_ALG_LOG
 from src.errors import SolverError, ConfigError
 from src.io.config import config_dict
@@ -122,6 +121,7 @@ class GnssSolver:
         INITIAL_IONO = config.get("solver", "initial_iono_cov")
         INITIAL_TROPO = config.get("solver", "initial_tropo_cov")
         INITIAL_CLOCK_RATE = config.get("solver", "initial_clock_rate_cov")
+        INITIAL_AMBIGUITY = config.get("solver", "initial_ambiguity_cov")
         INITIAL_STATE = {
             "pos": INITIAL_POS,
             "vel": INITIAL_VEL,
@@ -129,7 +129,8 @@ class GnssSolver:
             "isb": INITIAL_ISB,
             "iono": INITIAL_IONO,
             "tropo": INITIAL_TROPO,
-            "clock_rate": INITIAL_CLOCK_RATE
+            "clock_rate": INITIAL_CLOCK_RATE,
+            "ambiguity": INITIAL_AMBIGUITY
         }
 
         TROPO = TropoManager()
@@ -138,7 +139,9 @@ class GnssSolver:
         IONO = {}
         MODEL = {}
         CODES = {}
+        PHASES = {}
         DOPPLER = {}
+        cp_based = config.get("gnss_alg") == EnumAlgorithmPNT.CP_PPP
 
         # Set up the user models for each active constellation
         for const in CONSTELLATIONS:
@@ -146,28 +149,53 @@ class GnssSolver:
 
             code_types = self.obs_data_for_pos.get_code_types(const)
             doppler_types = self.obs_data_for_vel.get_doppler_types(const)
+            if cp_based:
+                phase_types = self.obs_data_for_pos.get_phase_types(const)
+                if len(phase_types) != len(code_types):
+                    raise ConfigError(f"Number of phase and code observations do not match for constellation {const}. "
+                                      f"Code types: {code_types}, Phase types: {phase_types}")
+            else:
+                phase_types = []
 
             # check if the model is single frequency or dual frequency
             if len(code_types) == 2 and (obs_model == EnumObservationModel.UNCOMBINED):
                 # Dual-Frequency Uncombined Model
-                self.log.info(f"Selected model for {const} is Dual-Frequency Uncombined with observations {code_types}")
+                if not cp_based:
+                    self.log.info(f"Selected model for {const} is Dual-Frequency Uncombined with observations "
+                                  f"{code_types}")
+                else:
+                    self.log.info(f"Selected model for {const} is Dual-Frequency Uncombined with observations "
+                                  f"{code_types} and phase types {phase_types}")
                 MODEL[const] = EnumFrequencyModel.DUAL_FREQ
                 CODES[const] = [code_types[0], code_types[1]]  # setting main and second code type
+                PHASES[const] = [phase_types[0], phase_types[1]] if cp_based else []
             elif len(code_types) == 1 and obs_model == EnumObservationModel.COMBINED:
                 # Iono-Free Model
-                self.log.info(f"Selected model for {const} is Iono-Free with code observations {code_types}")
-                iono_code = code_types[0]
-                if not DataType.is_iono_free_code(iono_code) and not DataType.is_iono_free_smooth_code(iono_code):
+                if not cp_based:
+                    self.log.info(f"Selected model for {const} is Iono-Free with code observations {code_types}")
+                else:
+                    self.log.info(f"Selected model for {const} is Iono-Free with code observations {code_types} and "
+                                  f"phase types {phase_types}")
+                # TODO: add verification for phase types as well.
+                iono_pr_code = code_types[0]
+                iono_cp_code = phase_types[0] if cp_based else None
+                if not DataType.is_iono_free_code(iono_pr_code) and not DataType.is_iono_free_smooth_code(iono_pr_code):
                     raise ConfigError(f"Iono-Free Model is selected for constellation {const} but no iono-free code "
                                       f"observations are available. Available code observations: {code_types}")
                 MODEL[const] = EnumFrequencyModel.SINGLE_FREQ  # Iono-free is treated as single frequency in the LS
-                CODES[const] = [iono_code]
+                CODES[const] = [iono_pr_code]
+                PHASES[const] = [iono_cp_code] if cp_based else []
                 IONO[const].disable()
             elif len(code_types) == 1:
                 # Single Frequency Model
-                self.log.info(f"Selected model for {const} is Single Frequency with code types {code_types[0]}")
+                if not cp_based:
+                    self.log.info(f"Selected model for {const} is Single Frequency with code types {code_types[0]}")
+                else:
+                    self.log.info(f"Selected model for {const} is Single Frequency with code types "
+                                  f"{code_types[0]} and phase types {phase_types[0]}")
                 MODEL[const] = EnumFrequencyModel.SINGLE_FREQ
                 CODES[const] = [code_types[0]]
+                PHASES[const] = [phase_types[0]] if cp_based else []
             else:
                 raise ConfigError(f"Unable to initialize GNSS Solver Model for constellation {const}. Check configs.")
 
@@ -191,6 +219,8 @@ class GnssSolver:
             "IONO": IONO,
             "MODEL": MODEL,
             "CODES": CODES,
+            "CP_BASED": cp_based,
+            "PHASES": PHASES,
             "DOPPLER": DOPPLER,
             "REL_CORRECTION": REL_CORRECTION,
             "TX_TIME_ALG": TX_TIME_ALG,

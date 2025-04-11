@@ -5,7 +5,8 @@ from src import constants
 from src.constants import SPEED_OF_LIGHT
 from src.errors import SolverError
 from src.modules.estimators.weighted_ls import WeightedLeastSquares
-from src.modules.gnss.solver import PseudorangeReconstructor, RangeRateReconstructor
+from src.modules.gnss.solver import PseudorangeReconstructor, RangeRateReconstructor, CarrierPhaseReconstructor
+from src.data_types.gnss import DataType
 
 
 class LSQ_Engine:
@@ -265,8 +266,21 @@ class LSQ_Engine_Position(LSQ_Engine):
     """
 
     def __init__(self, system_geometry, metadata, epoch, obs_data, state, trace_file):
-        datatypes = metadata["CODES"]
-        self.reconstructor = PseudorangeReconstructor(system_geometry, metadata, state, trace_file)
+        self.cp_based = metadata["CP_BASED"]
+        pr_datatypes = metadata["CODES"]
+        cp_datatypes = metadata["PHASES"]
+
+        self.reconstructor = dict()
+        self.reconstructor["PR"] = PseudorangeReconstructor(system_geometry, metadata, state, trace_file)
+
+        if self.cp_based:
+            datatypes = dict()
+            for const in pr_datatypes.keys():
+                datatypes[const] = dict()
+                datatypes[const] = pr_datatypes[const] + cp_datatypes[const]
+            self.reconstructor["CP"] = CarrierPhaseReconstructor(system_geometry, metadata, state, trace_file)
+        else:
+            datatypes = pr_datatypes
         super().__init__(datatypes, system_geometry.get_satellites(), epoch, obs_data, state)
 
     def _initialize_matrices(self, state, n_obs):
@@ -328,13 +342,19 @@ class LSQ_Engine_Position(LSQ_Engine):
         """
         # get observable and compute predicted observable
         obs = float(obs_data.get_observable(sat, datatype))
-        predicted_obs = self.reconstructor.compute(sat, epoch, datatype)
+        if DataType.is_code(datatype):
+            reconstructor = self.reconstructor["PR"]
+        elif DataType.is_carrier(datatype):
+            reconstructor = self.reconstructor["CP"]
+        else:
+            raise SolverError(f"Unknown datatype {datatype} for satellite {sat} at epoch {epoch}.")
+        predicted_obs = reconstructor.compute(sat, epoch, datatype)
 
         # prefit residuals (observed minus computed)
         prefit_residuals = obs - predicted_obs
 
         # get LOS vector w.r.t. ECEF frame (column in geometry matrix)
-        line_sight = self.reconstructor.get_unit_line_of_sight(sat)
+        line_sight = reconstructor.get_unit_line_of_sight(sat)
 
         return prefit_residuals, line_sight
 
@@ -385,6 +405,8 @@ class LSQ_Engine_Position(LSQ_Engine):
                 X0[idx_isb] = initial_state.isb
                 X0_prev[idx_isb] = state.isb
 
+            # TODO: add ambiguity
+
         return X0 - X0_prev, np.linalg.inv(P0)
 
     def _build_lsq(self, epoch, obs_data, state):
@@ -395,6 +417,13 @@ class LSQ_Engine_Position(LSQ_Engine):
 
             n_sats = len(self.sat_list[const])
             for iFreq, datatype in enumerate(self.datatypes[const]):
+
+                if DataType.is_code(datatype):
+                    reconstructor = self.reconstructor["PR"]
+                elif DataType.is_carrier(datatype):
+                    reconstructor = self.reconstructor["CP"]
+                else:
+                    raise SolverError(f"Unknown datatype {datatype} at epoch {epoch}.")
 
                 for iSat, sat in enumerate(self.sat_list[const]):
                     residual, los = self.compute_residual_los(sat, epoch, datatype, obs_data)
@@ -412,7 +441,7 @@ class LSQ_Engine_Position(LSQ_Engine):
 
                     # tropo
                     if "tropo_wet" in index_map:
-                        map_wet = self.reconstructor._system_geometry.get("tropo_map_wet", sat)
+                        map_wet = reconstructor._system_geometry.get("tropo_map_wet", sat)
                         idx_tropo = index_map["tropo_wet"]
                         self.design_mat[obs_offset + iSat, idx_tropo] = map_wet
 
@@ -428,13 +457,12 @@ class LSQ_Engine_Position(LSQ_Engine):
                         self.design_mat[obs_offset + iSat, idx_isb] = 1.0
 
                     # Weight matrix -> as 1/(obs_std^2)
-                    std = self.reconstructor.get_obs_std(sat, datatype)
+                    std = reconstructor.get_obs_std(sat, datatype)
                     obs_data.get_observable(sat, datatype).set_std(std)
                     self.weight_mat[obs_offset + iSat, obs_offset + iSat] = \
                         1 / (std ** 2)
 
                 obs_offset += n_sats
-        pass
 
     def _update_state(self, state, dX, cov):
         index_map = state.index_map
@@ -464,6 +492,8 @@ class LSQ_Engine_Position(LSQ_Engine):
             idx_tropo = index_map["tropo_wet"]
             state.tropo_wet += dX[idx_tropo]
             state.cov_tropo_wet = cov[idx_tropo, idx_tropo]
+
+        # TODO: add ambiguity
 
         # unpack covariance matrices
         state.cov_position = np.array(cov[idx_pos:idx_pos+3, idx_pos:idx_pos+3])

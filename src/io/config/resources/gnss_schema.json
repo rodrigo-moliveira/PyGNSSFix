@@ -109,11 +109,12 @@
             "observations": {"type": "array", "items": {"type": "string"}},
             "clock_product_service": {"type": "array", "items": {"type": "string"}},
             "pr_obs_std": {"type": "array", "items": {"type": "number"}},
+            "cp_obs_std": {"type": "array", "items": {"type": "number"}},
             "doppler_obs_std": {"type": "array", "items": {"type": "number"}},
             "elevation_mask": {"type": "boolean"},
             "ionosphere": {"type": "string", "enum": ["NONE", "Klobuchar", "NTCM-G", "IONEX"]}
           },
-          "required": ["observations", "clock_product_service", "pr_obs_std", "doppler_obs_std", "elevation_mask", "ionosphere"]
+          "required": ["observations", "clock_product_service", "pr_obs_std", "cp_obs_std", "doppler_obs_std", "elevation_mask", "ionosphere"]
         },
         "GAL": {
           "type": "object",
@@ -121,12 +122,13 @@
             "observations": {"type": "array", "items": {"type": "string"}},
             "clock_product_service": {"type": "array", "items": {"type": "string"}},
             "pr_obs_std": {"type": "array", "items": {"type": "number"}},
+            "cp_obs_std": {"type": "array", "items": {"type": "number"}},
             "doppler_obs_std": {"type": "array", "items": {"type": "number"}},
             "elevation_mask": {"type": "boolean"},
             "ionosphere": {"type": "string", "enum": ["NONE", "Klobuchar", "NTCM-G", "IONEX"]},
             "nav_type": {"type": "string", "enum": ["INAV", "FNAV"]}
           },
-          "required": ["observations", "clock_product_service", "pr_obs_std", "doppler_obs_std", "elevation_mask", "ionosphere", "nav_type"]
+          "required": ["observations", "clock_product_service", "pr_obs_std", "cp_obs_std", "doppler_obs_std", "elevation_mask", "ionosphere", "nav_type"]
         }
       },
       "required": ["constellations", "algorithm", "obs_model", "estimate_velocity", "estimate_ggto", "estimate_diono", "phase_center_corrections", "GPS", "GAL"]
@@ -183,10 +185,12 @@
         "initial_isb_cov": {"type": "array", "items": {"type": "number"}},
         "initial_iono_cov": {"type": "array", "items": {"type": "number"}},
         "initial_tropo_cov": {"type": "array", "items": {"type": "number"}},
-        "initial_clock_rate_cov": {"type": "array", "items": {"type": "number"}}
+        "initial_clock_rate_cov": {"type": "array", "items": {"type": "number"}},
+        "initial_ambiguity_cov": {"type": "array", "items": {"type": "number"}}
       },
       "required": ["trace_files","algorithm", "a_priori_constrain", "feedforward_solution", "n_iterations", "stop_criteria", "transmission_time_alg", "relativistic_corrections",
-      "elevation_filter", "initial_pos_cov", "initial_vel_cov", "initial_clock_cov", "initial_isb_cov", "initial_iono_cov", "initial_tropo_cov", "initial_clock_rate_cov"]
+      "elevation_filter", "initial_pos_cov", "initial_vel_cov", "initial_clock_cov", "initial_isb_cov", "initial_iono_cov", "initial_tropo_cov", "initial_clock_rate_cov",
+      "initial_ambiguity_cov"]
     },
     "output": {
       "type": "object",

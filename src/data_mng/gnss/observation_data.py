@@ -396,6 +396,12 @@ class ObservationData:
         code_types = [x for x in types if DataType.is_code(x)]
         return code_types
 
+    def get_phase_types(self, constellation) -> list[DataType]:
+        """ Returns a list with all available carrier phase datatypes for the provided constellation """
+        types = list(self.get_types(constellation))
+        phase_types = [x for x in types if DataType.is_carrier(x)]
+        return phase_types
+
     def get_doppler_types(self, constellation) -> list[DataType]:
         """ Returns a list with all available doppler datatypes for the provided constellation """
         types = list(self.get_types(constellation))

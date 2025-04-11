@@ -146,7 +146,7 @@ class PreprocessorManager:
         required_datatypes = {}
 
         keep_doppler = config_dict.get("model", "estimate_velocity")  # doppler only needed when velocity is estimated
-        keep_carrier = config_dict.get("preprocessor", "compute_smooth")  # carrier only needed for smoothing
+        keep_carrier = config_dict.keep_carrier()
 
         for constellation, services in self.services.items():
             required_datatypes[constellation] = []
