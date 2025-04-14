@@ -32,6 +32,10 @@ def get_file_header(state_variable, state):
         return f"Week_Number({epoch_system}),Time_of_Week[s],constellation,clock_bias_rate[s/s],cov[(s/s)^2]"
     elif state_variable == "iono":
         return f"Week_Number({epoch_system}),Time_of_Week[s],sat,iono[m],cov[m^2]"
+    elif state_variable == "ambiguity":
+        return f"Week_Number({epoch_system}),Time_of_Week[s],sat,datatype,ambiguity[m],cov[m^2]"
+    elif state_variable == "phase_bias":
+        return f"Week_Number({epoch_system}),Time_of_Week[s],constellation,datatype,phase_bias[s],cov[s^2]"
     elif state_variable == "tropo_wet":
         return f"Week_Number({epoch_system}),Time_of_Week[s],tropo_wet[m],cov[m^2]"
     elif state_variable == "time":
@@ -81,7 +85,7 @@ def export_to_file(state_variable, state):
         return f"{state.position[0]},{state.position[1]},{state.position[2]},{cov_xx},{cov_yy}," \
                f"{cov_zz},{cov_xy},{cov_xz},{cov_yz}"
 
-    if state_variable == "velocity":
+    elif state_variable == "velocity":
         cov = state.cov_velocity
         cov_xx = cov[0, 0]
         cov_yy = cov[1, 1]
@@ -92,10 +96,31 @@ def export_to_file(state_variable, state):
         return f"{state.velocity[0]},{state.velocity[1]},{state.velocity[2]},{cov_xx},{cov_yy}," \
                f"{cov_zz},{cov_xy},{cov_xz},{cov_yz}"
 
-    if state_variable == "clock_bias":
+    elif state_variable == "clock_bias":
         return f"{state.clock_bias/constants.SPEED_OF_LIGHT},{state.cov_clock_bias/constants.SPEED_OF_LIGHT**2}"
 
-    if state_variable == "clock_bias_rate":
+    elif state_variable == "phase_bias":
+        data = []
+        for constellation, cp_types in state.phase_bias.items():
+            for cp_type, bias in cp_types.items():
+                try:
+                    data.append(f"{constellation},{cp_type},{bias/constants.SPEED_OF_LIGHT},"
+                                f"{state.cov_phase_bias[constellation][cp_type]/constants.SPEED_OF_LIGHT**2}")
+                except KeyError:
+                    pass
+        return data
+
+    elif state_variable == "ambiguity":
+        data = []
+        for sat, cp_types in state.ambiguity.items():
+            for cp_type, ambiguity in cp_types.items():
+                try:
+                    data.append(f"{sat},{cp_type},{ambiguity.val},{ambiguity.cov}")
+                except KeyError:
+                    pass
+        return data
+
+    elif state_variable == "clock_bias_rate":
         data = []
         for constellation, clock_rate in state.clock_bias_rate.items():
             try:
@@ -105,13 +130,13 @@ def export_to_file(state_variable, state):
                 pass
         return data
 
-    if state_variable == "tropo_wet":
+    elif state_variable == "tropo_wet":
         return f"{state.tropo_wet},{state.cov_tropo_wet}"
 
-    if state_variable == "isb":
+    elif state_variable == "isb":
         return f"{state.isb/constants.SPEED_OF_LIGHT},{state.cov_isb/constants.SPEED_OF_LIGHT**2}"
 
-    if state_variable == "iono":
+    elif state_variable == "iono":
         cov = state.cov_iono
 
         data = []

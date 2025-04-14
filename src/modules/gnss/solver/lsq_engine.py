@@ -265,20 +265,20 @@ class LSQ_Engine_Position(LSQ_Engine):
     TODO: update docstring when CP is added
     """
 
-    def __init__(self, system_geometry, metadata, epoch, obs_data, state, trace_file):
+    def __init__(self, system_geometry, metadata, epoch, obs_data, state, trace_data):
         self.cp_based = metadata["CP_BASED"]
         pr_datatypes = metadata["CODES"]
         cp_datatypes = metadata["PHASES"]
 
         self.reconstructor = dict()
-        self.reconstructor["PR"] = PseudorangeReconstructor(system_geometry, metadata, state, trace_file)
+        self.reconstructor["PR"] = PseudorangeReconstructor(system_geometry, metadata, state, trace_data)
 
         if self.cp_based:
             datatypes = dict()
             for const in pr_datatypes.keys():
                 datatypes[const] = dict()
                 datatypes[const] = pr_datatypes[const] + cp_datatypes[const]
-            self.reconstructor["CP"] = CarrierPhaseReconstructor(system_geometry, metadata, state, trace_file)
+            self.reconstructor["CP"] = CarrierPhaseReconstructor(system_geometry, metadata, state, trace_data)
         else:
             datatypes = pr_datatypes
         super().__init__(datatypes, system_geometry.get_satellites(), epoch, obs_data, state)
@@ -449,12 +449,28 @@ class LSQ_Engine_Position(LSQ_Engine):
                     if "iono" in index_map and sat in index_map["iono"]:
                         factor = (self.datatypes[const][0].freq.freq_value / datatype.freq.freq_value) ** 2
                         idx_iono = index_map["iono"][sat]
-                        self.design_mat[obs_offset + iSat, idx_iono] = 1.0 * factor  # iono
+                        if DataType.is_carrier(datatype):
+                            self.design_mat[obs_offset + iSat, idx_iono] = -1.0 * factor  # iono
+                        else:
+                            self.design_mat[obs_offset + iSat, idx_iono] = 1.0 * factor  # iono
 
                     # ISB
                     if iConst > 0 and "isb" in index_map:
                         idx_isb = index_map["isb"]
                         self.design_mat[obs_offset + iSat, idx_isb] = 1.0
+
+                    if DataType.is_carrier(datatype):
+                        # ambiguity
+                        if "ambiguity" in index_map and sat in index_map["ambiguity"]:
+                            idx_amb = index_map["ambiguity"][sat][datatype]
+                            wavelength = constants.SPEED_OF_LIGHT / datatype.freq.freq_value
+                            self.design_mat[obs_offset + iSat, idx_amb] = wavelength
+
+                        # phase bias
+                        if "phase_bias" in index_map and const in index_map["phase_bias"]:
+                            idx_phase_bias = index_map["phase_bias"][const][datatype]
+                            self.design_mat[obs_offset + iSat, idx_phase_bias] = 1.0
+
 
                     # Weight matrix -> as 1/(obs_std^2)
                     std = reconstructor.get_obs_std(sat, datatype)
@@ -494,6 +510,19 @@ class LSQ_Engine_Position(LSQ_Engine):
             state.cov_tropo_wet = cov[idx_tropo, idx_tropo]
 
         # TODO: add ambiguity
+        if "ambiguity" in index_map:
+            for sat, cp_types in index_map["ambiguity"].items():
+                for cp_type in cp_types:
+                    idx_amb = cp_types[cp_type]
+                    state.ambiguity[sat][cp_type].val += dX[idx_amb]
+                    state.ambiguity[sat][cp_type].cov = cov[idx_amb, idx_amb]
+
+        if "phase_bias" in index_map:
+            for const, cp_types in index_map["phase_bias"].items():
+                for cp_type in cp_types:
+                    idx_phase_bias = cp_types[cp_type]
+                    state.phase_bias[const][cp_type] += dX[idx_phase_bias]
+                    state.cov_phase_bias[const][cp_type] = cov[idx_phase_bias, idx_phase_bias]
 
         # unpack covariance matrices
         state.cov_position = np.array(cov[idx_pos:idx_pos+3, idx_pos:idx_pos+3])
@@ -539,12 +568,12 @@ class LSQ_Engine_Velocity(LSQ_Engine):
             Springer Cham, 2017
     """
 
-    def __init__(self, system_geometry, metadata, epoch, obs_data, state, trace_file):
+    def __init__(self, system_geometry, metadata, epoch, obs_data, state, trace_data):
         # currently we always use one observation per constellation (dual-frequency is not possible)
         datatypes = metadata["DOPPLER"]
         for key in datatypes:
             datatypes[key] = datatypes[key][:1]
-        self.reconstructor = RangeRateReconstructor(system_geometry, metadata, state, trace_file)
+        self.reconstructor = RangeRateReconstructor(system_geometry, metadata, state, trace_data)
         super().__init__(datatypes, system_geometry.get_satellites(), epoch, obs_data, state)
 
     def _initialize_matrices(self, state, n_obs):

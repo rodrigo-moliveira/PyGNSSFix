@@ -75,7 +75,7 @@
    },
 
    "model": {
-      "constellations": ["GPS", "GAL"],
+      "constellations": ["GPS"],
 
       "_comment": "Select the GNSS PNT algorithm. The available algorithms are SPS, PR-PPP, CP-PPP",
       "algorithm": "CP-PPP",

@@ -48,9 +48,10 @@ class GnssStateSpace(Container):
         * pr_rate_prefit_residuals
         * pr_rate_postfit_residuals
     """
-    __states__ = ["position", "velocity", "clock_bias", "iono", "tropo_wet", "isb", "clock_bias_rate", "ambiguity"]
+    __states__ = ["position", "velocity", "clock_bias", "iono", "tropo_wet", "isb", "clock_bias_rate", "ambiguity",
+                  "phase_bias"]
     __covs__ = ["cov_position", "cov_velocity", "cov_clock_bias", "cov_iono", "cov_tropo_wet", "cov_isb",
-                "cov_clock_bias_rate"]
+                "cov_clock_bias_rate", "cov_phase_bias"]
     __slots__ = __states__ + __covs__ + ["epoch", "_info", "initial_state", "index_map"]
 
     def __init__(self, metadata=None, epoch=None, sat_list=None):
@@ -138,9 +139,21 @@ class GnssStateSpace(Container):
                 for cp_type, ambiguity in cp_types.items():
                     state.ambiguity[sat][cp_type] = ambiguity.clone()
 
+        if "phase_bias" in _states:
+            state.phase_bias = dict()
+            state.cov_phase_bias = dict()
+            for const in self.phase_bias.keys():
+                if const not in state.phase_bias:
+                    state.phase_bias[const] = dict()
+                    state.cov_phase_bias[const] = dict()
+                for cp_type in self.phase_bias[const].keys():
+                    state.phase_bias[const][cp_type] = self.phase_bias[const][cp_type]
+                    state.cov_phase_bias[const][cp_type] = self.cov_phase_bias[const][cp_type]
+
         state.add_additional_info("states", _states)
         state.add_additional_info("clock_master", self.get_additional_info("clock_master"))
         state.add_additional_info("clock_slave", self.get_additional_info("clock_slave"))
+        state.add_additional_info("pivot", self.get_additional_info("pivot"))
 
         return state
 
@@ -213,16 +226,37 @@ class GnssStateSpace(Container):
             _states.append("tropo_wet")
 
         # ambiguity (optional -> in case algorithm is CP-based)
-        self.ambiguity = None
+        #self.ambiguity = None
+        #self.phase_bias = None
+        #self.cov_phase_bias = None
+        # TODO: need better way to define pivot
+        pivot = None
         if metadata["CP_BASED"]:
             self.ambiguity = dict()
             for sat in sat_list:
+                if pivot is None:
+                    pivot = sat
+                    continue
                 # NOTE: when other types of ambiguity are implemented (NL or WL), this part should be modified
                 cp_types = metadata["PHASES"][sat.sat_system]
                 self.ambiguity[sat] = dict()
                 for cp_type in cp_types:
-                    self.ambiguity[sat][cp_type] = Ambiguity()
+                    self.ambiguity[sat][cp_type] = Ambiguity(0, 1)
             _states.append("ambiguity")
+            self.add_additional_info("pivot", pivot)
+
+            cp_datatypes = metadata["PHASES"]
+            self.phase_bias = dict()
+            self.cov_phase_bias = dict()
+            for const in cp_datatypes.keys():
+                types = cp_datatypes[const]
+                if const not in self.phase_bias:
+                    self.phase_bias[const] = dict()
+                    self.cov_phase_bias[const] = dict()
+                for cp_type in types:
+                    self.phase_bias[const][cp_type] = 1.0
+                    self.cov_phase_bias[const][cp_type] = 2.0
+            _states.append("phase_bias")
 
         self.add_additional_info("states", _states)
 
@@ -232,6 +266,7 @@ class GnssStateSpace(Container):
         Args:
             sat_list(list[src.data_types.gnss.Satellite]) : list of available satellites
         """
+        # TODO: update sat list for ambiguity
         _states = self.get_additional_info("states")
         if "iono" not in _states:
             return
@@ -315,6 +350,14 @@ class GnssStateSpace(Container):
                     index_map["ambiguity"][sat][cp_type] = state_counter
                     state_counter += 1
 
+        if "phase_bias" in states:
+            index_map["phase_bias"] = dict()
+            for const, cp_types in self.phase_bias.items():
+                index_map["phase_bias"][const] = dict()
+                for cp_type in cp_types.keys():
+                    index_map["phase_bias"][const][cp_type] = state_counter
+                    state_counter += 1
+
         index_map["total_states"] = state_counter
 
         self.index_map = index_map
@@ -336,6 +379,7 @@ class GnssStateSpace(Container):
         if "ambiguity" in _states:
             # TODO: check this
             _str += f", ambiguity = {self.ambiguity}"
+        # TODO: add phase bias
 
         return f'{type(self).__name__}[{str(self.epoch)}]({_str})'
 

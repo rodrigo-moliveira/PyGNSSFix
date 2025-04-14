@@ -1,10 +1,10 @@
 class Ambiguity:
-    def __init__(self):
-        self.a = 1
+    def __init__(self, val, cov):
+        self.val = val
+        self.cov = cov
 
     def clone(self):
-        obj = Ambiguity()
-        obj.a = 10
+        obj = Ambiguity(self.val, self.cov)
         return obj
 
 

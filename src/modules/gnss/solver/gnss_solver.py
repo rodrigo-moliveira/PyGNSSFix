@@ -374,11 +374,10 @@ class GnssSolver:
         self._check_model_availability(system_geometry, epoch)
         state.build_index_map(system_geometry.get_satellites())
 
-        trace_file = f"{self.trace_dir}\\PseudorangeReconstructionIter_{iteration}.txt" if self.trace_dir is not None \
-            else None
+        trace_data = (self.trace_dir, iteration) if self.trace_dir is not None else None
 
         # build LSQ Engine matrices for all satellites
-        lsq_engine = LSQ_Engine_Position(system_geometry, self._metadata, epoch, obs_data, state, trace_file)
+        lsq_engine = LSQ_Engine_Position(system_geometry, self._metadata, epoch, obs_data, state, trace_data)
 
         # solve LS problem
         return lsq_engine.solve_ls(state, self._metadata["APRIORI_CONSTRAIN"] == EnumOnOff.ENABLED)
@@ -425,14 +424,10 @@ class GnssSolver:
 
     def _iterate_vel(self, system_geometry, obs_data, state, epoch):
         """ Low-level function to solve a single iteration of the velocity estimation process """
-        satellite_list = system_geometry.get_satellites()
+        trace_data = (self.trace_dir, 0) if self.trace_dir is not None else None
 
-        if self.trace_dir is not None:
-            trace_file = f"{self.trace_dir}\\RangeRateReconstructor.txt"
-        else:
-            trace_file = None
         # build LSQ Engine matrices for all satellites
-        lsq_engine = LSQ_Engine_Velocity(system_geometry, self._metadata, epoch, obs_data, state, trace_file)
+        lsq_engine = LSQ_Engine_Velocity(system_geometry, self._metadata, epoch, obs_data, state, trace_data)
 
         # solve LS problem
         return lsq_engine.solve_ls(state)

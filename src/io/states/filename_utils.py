@@ -3,6 +3,8 @@
 
 # Output file names
 AZEL = "satellite_azel.txt"
+AMBIGUITY = "ambiguity.txt"
+PHASE_BIAS = "receiver_phase_bias.txt"
 DOP_ECEF = "DOP_ECEF.txt"
 DOP_LOCAL = "DOP_ENU.txt"
 PR_PRE_RESIDUALS = "pr_prefit_residuals.txt"
@@ -35,5 +37,7 @@ OUTPUT_FILENAME_MAP = {
     "tropo_wet": TROPO,
     "velocity": VELOCITY,
     "clock_bias_rate": CLOCK_BIAS_RATE,
-    "obs": OBSERVATIONS
+    "obs": OBSERVATIONS,
+    "ambiguity": AMBIGUITY,
+    "phase_bias": PHASE_BIAS
 }
