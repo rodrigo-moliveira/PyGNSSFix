@@ -33,10 +33,12 @@ class GnssRunStorageManager(Container):
             pr_rate_prefit_residuals(CSVData)
             pr_rate_postfit_residuals(CSVData)
             obs(CSVData)
+            ambiguity(CSVData)
+            phase_bias(CSVData)
         """
     __inputs__ = ["time", "position", "velocity", "clock_bias", "dop_ecef", "dop_local", "clock_bias_rate", "isb",
                   "tropo_wet", "pr_prefit_residuals", "pr_postfit_residuals", "iono", "satellite_azel",
-                  "pr_rate_prefit_residuals", "pr_rate_postfit_residuals", "obs"]
+                  "pr_rate_prefit_residuals", "pr_rate_postfit_residuals", "obs", "ambiguity", "phase_bias"]
     __slots__ = __inputs__ + ["_available", "log"]
 
     def __init__(self, log: logging.Logger):
@@ -178,6 +180,26 @@ class GnssRunStorageManager(Container):
                            title="GNSS Observations",
                            time_cols=(0, 1),
                            data_cols=(2, 3, 4, 5))
+
+        # Ambiguity
+        self.ambiguity = CSVData(name="ambiguity",
+                                 description="Ambiguity",
+                                 units=['', '', 'm', 'm^2'],
+                                 legend=['sat', 'datatype', 'ambiguity', 'cov'],
+                                 title="Estimated Ambiguity",
+                                 time_cols=(0, 1),
+                                 data_cols=(2, 3, 4, 5),
+                                 )
+
+        # Phase Bias
+        self.phase_bias = CSVData(name="phase_bias",
+                                  description="Receiver Phase Bias",
+                                  units=['', '', 'm', 'm^2'],
+                                  legend=['constellation', 'datatype', 'phase_bias', 'cov'],
+                                  title="Estimated Receiver Phase Bias",
+                                  time_cols=(0, 1),
+                                  data_cols=(2, 3, 4, 5),
+                                  )
 
         # available data for the current simulation
         self._available = []

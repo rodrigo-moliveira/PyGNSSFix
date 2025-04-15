@@ -287,6 +287,8 @@ class PerformanceManager:
             self._plot_clock_rate(plot_dir)
             self._plot_iono(plot_dir)
             self._plot_tropo(plot_dir)
+            self._plot_ambiguity(plot_dir)
+            self._plot_phase_bias(plot_dir)
 
         if config_dict.get("performance_evaluation", "plot_configs", "plot_dops"):
             self.log.info("Plotting DOPs...")
@@ -425,6 +427,38 @@ class PerformanceManager:
                 self._save_figure(plot_dir, ax)
         except Exception as e:
             self.log.error(f"Unexpected error when performing plot_iono function: {e}")
+
+    def _plot_ambiguity(self, plot_dir):
+        """ Plot Ambiguity estimated states for all available satellites. """
+        try:
+            ambiguity = self.data_manager.get_data("ambiguity")
+            if ambiguity.is_empty():
+                raise ValueError
+        except ValueError:
+            self.log.warning("Satellite Ambiguity dataframe not found or is empty. Skipping plot_ambiguity")
+            return
+        try:
+            ax_list = plot_gnss.plot_ambiguity_states(ambiguity)
+            for ax in ax_list:
+                self._save_figure(plot_dir, ax)
+        except Exception as e:
+            self.log.error(f"Unexpected error when performing plot_ambiguity function: {e}")
+
+    def _plot_phase_bias(self, plot_dir):
+        """ Plot Receiver Phase Bias estimated states for all available datatypes. """
+        try:
+            phase_bias = self.data_manager.get_data("phase_bias")
+            if phase_bias.is_empty():
+                raise ValueError
+        except ValueError:
+            self.log.warning("Receiver Phase Bias dataframe not found or is empty. Skipping _plot_phase_bias")
+            return
+        try:
+            ax_list = plot_gnss.plot_phase_bias_states(phase_bias)
+            for ax in ax_list:
+                self._save_figure(plot_dir, ax)
+        except Exception as e:
+            self.log.error(f"Unexpected error when performing _plot_phase_bias function: {e}")
 
     def _plot_tropo(self, plot_dir):
         """ Plot the estimated troposphere wet delay. """
