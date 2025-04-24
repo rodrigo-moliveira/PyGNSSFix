@@ -462,15 +462,15 @@ class LSQ_Engine_Position(LSQ_Engine):
                     if DataType.is_carrier(datatype):
                         # ambiguity
                         if "ambiguity" in index_map and sat in index_map["ambiguity"]:
-                            idx_amb = index_map["ambiguity"][sat][datatype]
-                            wavelength = constants.SPEED_OF_LIGHT / datatype.freq.freq_value
-                            self.design_mat[obs_offset + iSat, idx_amb] = wavelength
+                            if state.get_additional_info("pivot") != sat:
+                                idx_amb = index_map["ambiguity"][sat][datatype]
+                                wavelength = constants.SPEED_OF_LIGHT / datatype.freq.freq_value
+                                self.design_mat[obs_offset + iSat, idx_amb] = wavelength
 
                         # phase bias
                         if "phase_bias" in index_map and const in index_map["phase_bias"]:
                             idx_phase_bias = index_map["phase_bias"][const][datatype]
                             self.design_mat[obs_offset + iSat, idx_phase_bias] = 1.0
-
 
                     # Weight matrix -> as 1/(obs_std^2)
                     std = reconstructor.get_obs_std(sat, datatype)
@@ -509,13 +509,13 @@ class LSQ_Engine_Position(LSQ_Engine):
             state.tropo_wet += dX[idx_tropo]
             state.cov_tropo_wet = cov[idx_tropo, idx_tropo]
 
-        # TODO: add ambiguity
         if "ambiguity" in index_map:
             for sat, cp_types in index_map["ambiguity"].items():
-                for cp_type in cp_types:
-                    idx_amb = cp_types[cp_type]
-                    state.ambiguity[sat][cp_type].val += dX[idx_amb]
-                    state.ambiguity[sat][cp_type].cov = cov[idx_amb, idx_amb]
+                if state.get_additional_info("pivot") != sat:
+                    for cp_type in cp_types:
+                        idx_amb = cp_types[cp_type]
+                        state.ambiguity[sat][cp_type].val += dX[idx_amb]
+                        state.ambiguity[sat][cp_type].cov = cov[idx_amb, idx_amb]
 
         if "phase_bias" in index_map:
             for const, cp_types in index_map["phase_bias"].items():

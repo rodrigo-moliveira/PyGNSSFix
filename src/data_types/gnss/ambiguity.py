@@ -7,6 +7,12 @@ class Ambiguity:
         obj = Ambiguity(self.val, self.cov)
         return obj
 
+    def __str__(self):
+        return f"Ambiguity(val={self.val}, cov={self.cov})"
+
+    def __repr__(self):
+        return str(self)
+
 
 
 

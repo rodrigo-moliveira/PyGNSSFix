@@ -228,19 +228,18 @@ class GnssStateSpace(Container):
             _states.append("tropo_wet")
 
         # ambiguity (optional -> in case algorithm is CP-based)
-        pivot = None
+        pivot = sat_list[0]
         if metadata["CP_BASED"]:
             self.ambiguity = dict()
             cp_types = metadata["PHASES"]
 
             for sat in sat_list:
-                if pivot is None:
-                    pivot = sat
-                    # continue
                 # NOTE: when other types of ambiguity are implemented (NL or WL), this part should be modified
                 self.ambiguity[sat] = dict()
                 for cp_type in cp_types[sat.sat_system]:
-                    self.ambiguity[sat][cp_type] = Ambiguity(0, 1)
+                    self.ambiguity[sat][cp_type] = Ambiguity(metadata["INITIAL_STATES"]["ambiguity"][0],
+                                                             metadata["INITIAL_STATES"]["ambiguity"][1])
+
             _states.append("ambiguity")
 
             self.phase_bias = dict()
@@ -250,8 +249,10 @@ class GnssStateSpace(Container):
                     self.phase_bias[const] = dict()
                     self.cov_phase_bias[const] = dict()
                 for cp_type in types:
-                    self.phase_bias[const][cp_type] = 0.0
-                    self.cov_phase_bias[const][cp_type] = 1.0
+                    self.phase_bias[const][cp_type] = metadata["INITIAL_STATES"]["phase_bias"][0] * \
+                                                      constants.SPEED_OF_LIGHT
+                    self.cov_phase_bias[const][cp_type] = metadata["INITIAL_STATES"]["phase_bias"][1] * \
+                                                          constants.SPEED_OF_LIGHT ** 2
             _states.append("phase_bias")
 
         self.add_additional_info("pivot", pivot)
@@ -302,6 +303,8 @@ class GnssStateSpace(Container):
             * ISB (dimension 1)
             * iono (dimension 1 per satellite)
             * tropo wet (dimension 1)
+            * ambiguity (dimension 1 per satellite and CP type, excluding the pivot satellite)
+            * phase bias (dimension 1 per constellation and CP type)
 
         Args:
             sat_list(list[src.data_types.gnss.Satellite]) : list of available satellites
@@ -375,9 +378,9 @@ class GnssStateSpace(Container):
         if "clock_bias_rate" in _states:
             _str += f", clock_bias_rate = {self.clock_bias_rate}"
         if "ambiguity" in _states:
-            # TODO: check this
             _str += f", ambiguity = {self.ambiguity}"
-        # TODO: add phase bias
+        if "phase_bias" in _states:
+            _str += f", phase_bias = {self.phase_bias}"
 
         return f'{type(self).__name__}[{str(self.epoch)}]({_str})'
 

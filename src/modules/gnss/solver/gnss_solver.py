@@ -122,6 +122,7 @@ class GnssSolver:
         INITIAL_TROPO = config.get("solver", "initial_tropo_cov")
         INITIAL_CLOCK_RATE = config.get("solver", "initial_clock_rate_cov")
         INITIAL_AMBIGUITY = config.get("solver", "initial_ambiguity_cov")
+        INITIAL_PHASE_BIAS = config.get("solver", "initial_phase_bias_cov")
         INITIAL_STATE = {
             "pos": INITIAL_POS,
             "vel": INITIAL_VEL,
@@ -130,7 +131,8 @@ class GnssSolver:
             "iono": INITIAL_IONO,
             "tropo": INITIAL_TROPO,
             "clock_rate": INITIAL_CLOCK_RATE,
-            "ambiguity": INITIAL_AMBIGUITY
+            "ambiguity": INITIAL_AMBIGUITY,
+            "phase_bias": INITIAL_PHASE_BIAS
         }
 
         TROPO = TropoManager()
