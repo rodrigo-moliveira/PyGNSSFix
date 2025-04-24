@@ -347,7 +347,7 @@ class PerformanceManager:
 
     def _plot_residuals(self, plot_dir):
         """ Plot the GNSS prefit and postfit residuals of the estimation process. """
-        ax1 = ax2 = ax3 = ax4 = None
+        ax1 = ax2 = ax3 = ax4 = ax5 = ax6 = None
         try:
             ax1 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("pr_rate_prefit_residuals"), "m/s")
         except Exception as e:
@@ -364,8 +364,16 @@ class PerformanceManager:
             ax4 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("pr_postfit_residuals"), "m")
         except Exception as e:
             self.log.warning(f"Error plotting Pseudorange Postfit Residuals in function plot_residuals: {e}")
+        try:
+            ax5 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("cp_prefit_residuals"), "m")
+        except Exception as e:
+            self.log.warning(f"Error plotting Carrier Phase Prefit Residuals in function plot_residuals: {e}")
+        try:
+            ax6 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("cp_postfit_residuals"), "m")
+        except Exception as e:
+            self.log.warning(f"Error plotting Carrier Phase Postfit Residuals in function plot_residuals: {e}")
 
-        for ax in [ax1, ax2, ax3, ax4]:
+        for ax in [ax1, ax2, ax3, ax4, ax5, ax6]:
             self._save_figure(plot_dir, ax)
 
     def _plot_clock_bias(self, plot_dir):

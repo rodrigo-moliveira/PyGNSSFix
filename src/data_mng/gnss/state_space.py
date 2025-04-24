@@ -23,7 +23,10 @@ class GnssStateSpace(Container):
         * tropo_wet (float): estimated wet component of troposphere delay
         * isb (float): estimated inter system bias
         * clock_bias_rate (dict): dictionary with constellations as keys and clock bias rates as values
-        * ambiguity (dict): dictionary with satellites as keys and Ambiguity instances as values
+        * ambiguity (dict): two-level dictionary with satellites as first keys and CP types as second keys
+            and estimated ambiguity values as values
+        * phase_bias (dict): two-level dictionary with constellations as first keys and CP types as second keys
+            and estimated phase bias values as values
 
     Additional parameters:
         * epoch (Epoch): Epoch object for this time instant
@@ -33,6 +36,7 @@ class GnssStateSpace(Container):
         * index_map (dict): dictionary with the index of each state variable in the state vector. Map to be used
             in the Normal Equations of the GNSS solver
             (see :py:class:`src.modules.gnss.solver.lsq_engine.LSQ_Engine_Position`)
+        * pivot (Satellite): satellite used as pivot for the ambiguity estimation.
 
     Some auxiliary information is saved in the `_info` attribute dict, namely:
         * _info["states"] provides a list with all valid states to be estimated, depending on the configuration
@@ -142,11 +146,11 @@ class GnssStateSpace(Container):
         if "phase_bias" in _states:
             state.phase_bias = dict()
             state.cov_phase_bias = dict()
-            for const in self.phase_bias.keys():
+            for const, cp_types in self.phase_bias.items():
                 if const not in state.phase_bias:
                     state.phase_bias[const] = dict()
                     state.cov_phase_bias[const] = dict()
-                for cp_type in self.phase_bias[const].keys():
+                for cp_type in cp_types:
                     state.phase_bias[const][cp_type] = self.phase_bias[const][cp_type]
                     state.cov_phase_bias[const][cp_type] = self.cov_phase_bias[const][cp_type]
 
@@ -204,8 +208,6 @@ class GnssStateSpace(Container):
         self.add_additional_info("estimate_iono", estimate_iono)
 
         # isb (optional -> in case there are 2 constellations)
-        self.isb = None
-        self.cov_isb = None
         if len(metadata["CONSTELLATIONS"]) > 1:
             # convert input units from seconds to meters
             self.isb = list(metadata["INITIAL_STATES"].get("isb"))[0] * constants.SPEED_OF_LIGHT
@@ -226,38 +228,33 @@ class GnssStateSpace(Container):
             _states.append("tropo_wet")
 
         # ambiguity (optional -> in case algorithm is CP-based)
-        #self.ambiguity = None
-        #self.phase_bias = None
-        #self.cov_phase_bias = None
-        # TODO: need better way to define pivot
         pivot = None
         if metadata["CP_BASED"]:
             self.ambiguity = dict()
+            cp_types = metadata["PHASES"]
+
             for sat in sat_list:
                 if pivot is None:
                     pivot = sat
-                    continue
+                    # continue
                 # NOTE: when other types of ambiguity are implemented (NL or WL), this part should be modified
-                cp_types = metadata["PHASES"][sat.sat_system]
                 self.ambiguity[sat] = dict()
-                for cp_type in cp_types:
+                for cp_type in cp_types[sat.sat_system]:
                     self.ambiguity[sat][cp_type] = Ambiguity(0, 1)
             _states.append("ambiguity")
-            self.add_additional_info("pivot", pivot)
 
-            cp_datatypes = metadata["PHASES"]
             self.phase_bias = dict()
             self.cov_phase_bias = dict()
-            for const in cp_datatypes.keys():
-                types = cp_datatypes[const]
+            for const, types in cp_types.items():
                 if const not in self.phase_bias:
                     self.phase_bias[const] = dict()
                     self.cov_phase_bias[const] = dict()
                 for cp_type in types:
-                    self.phase_bias[const][cp_type] = 1.0
-                    self.cov_phase_bias[const][cp_type] = 2.0
+                    self.phase_bias[const][cp_type] = 0.0
+                    self.cov_phase_bias[const][cp_type] = 1.0
             _states.append("phase_bias")
 
+        self.add_additional_info("pivot", pivot)
         self.add_additional_info("states", _states)
 
     def _update_sat_list(self, sat_list):
@@ -345,10 +342,11 @@ class GnssStateSpace(Container):
         if "ambiguity" in states:
             index_map["ambiguity"] = dict()
             for sat, cp_types in self.ambiguity.items():
-                index_map["ambiguity"][sat] = dict()
-                for cp_type, ambiguity in cp_types.items():
-                    index_map["ambiguity"][sat][cp_type] = state_counter
-                    state_counter += 1
+                if self.get_additional_info("pivot") != sat:
+                    index_map["ambiguity"][sat] = dict()
+                    for cp_type, ambiguity in cp_types.items():
+                        index_map["ambiguity"][sat][cp_type] = state_counter
+                        state_counter += 1
 
         if "phase_bias" in states:
             index_map["phase_bias"] = dict()
@@ -479,12 +477,12 @@ class GnssStateSpace(Container):
             exportable_lst.append("dop_ecef")
         if "dop_local" in self._info:
             exportable_lst.append("dop_local")
-        if "pr_prefit_residuals" in self._info:
-            exportable_lst.append("pr_prefit_residuals")
-        if "pr_postfit_residuals" in self._info:
-            exportable_lst.append("pr_postfit_residuals")
-        if "pr_rate_prefit_residuals" in self._info:
-            exportable_lst.append("pr_rate_prefit_residuals")
-        if "pr_rate_postfit_residuals" in self._info:
-            exportable_lst.append("pr_rate_postfit_residuals")
+        if "pos_prefit_residuals" in self._info:
+            exportable_lst.append("pos_prefit_residuals")
+        if "pos_postfit_residuals" in self._info:
+            exportable_lst.append("pos_postfit_residuals")
+        if "vel_prefit_residuals" in self._info:
+            exportable_lst.append("vel_prefit_residuals")
+        if "vel_postfit_residuals" in self._info:
+            exportable_lst.append("vel_postfit_residuals")
         return exportable_lst

@@ -362,8 +362,8 @@ class GnssSolver:
 
         # save other iteration data to state variable
         state.add_additional_info("geometry", system_geometry)
-        state.add_additional_info("pr_prefit_residuals", prefit_residuals)
-        state.add_additional_info("pr_postfit_residuals", postfit_residuals)
+        state.add_additional_info("pos_prefit_residuals", prefit_residuals)
+        state.add_additional_info("pos_postfit_residuals", postfit_residuals)
         state.add_additional_info("rms", rms)
         state.add_additional_info("dop_matrix", dop_matrix)
 
@@ -460,8 +460,8 @@ class GnssSolver:
             return False
 
         # save other iteration data to state variable
-        state.add_additional_info("pr_rate_prefit_residuals", prefit_residuals)
-        state.add_additional_info("pr_rate_postfit_residuals", postfit_residuals)
+        state.add_additional_info("vel_prefit_residuals", prefit_residuals)
+        state.add_additional_info("vel_postfit_residuals", postfit_residuals)
         state.add_additional_info("vel_rms", rms)
 
         return True

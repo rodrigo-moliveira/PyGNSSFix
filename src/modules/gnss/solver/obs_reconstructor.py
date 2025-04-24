@@ -313,8 +313,7 @@ class CarrierPhaseReconstructor(ObservationReconstructor):
 
         # correct satellite clock for (code or phase) hardware biases
         # DCB data can either come from a precise file or from the nav message
-        # TODO: need to check that for phase datatype, this is correct
-        sat_pr_bias = self._system_geometry.sat_bias.bias_correction(epoch, sat, datatype)
+        bias = self._system_geometry.sat_bias.bias_correction(epoch, sat, datatype)
 
         # ionosphere (a-priori correction)
         iono_corrections = sat_clocks.nav_data.header.iono_corrections if sat_clocks.nav_data is not None else None
@@ -367,11 +366,11 @@ class CarrierPhaseReconstructor(ObservationReconstructor):
             N = wavelength = 0.0
 
         # finally, construct obs
-        obs = true_range + dt_rec + phase_bias - (dt_sat - sat_pr_bias) * constants.SPEED_OF_LIGHT - iono + tropo - \
+        obs = true_range + dt_rec + phase_bias - (dt_sat - bias) * constants.SPEED_OF_LIGHT - iono + tropo - \
               dI + pcc_rec + pcc_sat + wavelength * N
         if self._write_trace:
             self._trace_handler.write(f"{epoch},{sat},{datatype},{obs},{true_range},{dt_rec},"
-                                      f"{dt_sat*constants.SPEED_OF_LIGHT},{sat_pr_bias*constants.SPEED_OF_LIGHT},"
+                                      f"{dt_sat*constants.SPEED_OF_LIGHT},{bias*constants.SPEED_OF_LIGHT},"
                                       f"{iono},{tropo},{dI},{pcc_rec},{pcc_sat}\n")
         return obs
 

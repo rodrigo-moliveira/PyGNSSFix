@@ -28,6 +28,8 @@ class GnssRunStorageManager(Container):
             tropo_wet(CSVData)
             pr_prefit_residuals(CSVData)
             pr_postfit_residuals(CSVData)
+            cp_prefit_residuals(CSVData)
+            cp_postfit_residuals(CSVData)
             iono(CSVData)
             satellite_azel(CSVData)
             pr_rate_prefit_residuals(CSVData)
@@ -38,7 +40,8 @@ class GnssRunStorageManager(Container):
         """
     __inputs__ = ["time", "position", "velocity", "clock_bias", "dop_ecef", "dop_local", "clock_bias_rate", "isb",
                   "tropo_wet", "pr_prefit_residuals", "pr_postfit_residuals", "iono", "satellite_azel",
-                  "pr_rate_prefit_residuals", "pr_rate_postfit_residuals", "obs", "ambiguity", "phase_bias"]
+                  "pr_rate_prefit_residuals", "pr_rate_postfit_residuals", "obs", "ambiguity", "phase_bias",
+                  "cp_prefit_residuals", "cp_postfit_residuals"]
     __slots__ = __inputs__ + ["_available", "log"]
 
     def __init__(self, log: logging.Logger):
@@ -108,28 +111,46 @@ class GnssRunStorageManager(Container):
                                  time_cols=(0, 1),
                                  data_cols=(2, 3, 4, 5))
 
-        # prefit residuals
+        # pseudorange prefit residuals
         self.pr_prefit_residuals = CSVData(name="pr_prefit_residuals",
                                            description="Pseudorange Prefit Residuals",
                                            title="Pseudorange Prefit Residuals",
                                            time_cols=(0, 1),
-                                           data_cols=(2, 3, 4, 5))
+                                           data_cols=(2, 3, 4, 5),
+                                           func_filter=lambda df: df[df["data_type"].str.contains("PR")])
 
-        # postfit residuals
+        # pseudorange postfit residuals
         self.pr_postfit_residuals = CSVData(name="pr_postfit_residuals",
                                             description="Pseudorange Postfit Residuals",
                                             title="Pseudorange Postfit Residuals",
                                             time_cols=(0, 1),
-                                            data_cols=(2, 3, 4, 5))
+                                            data_cols=(2, 3, 4, 5),
+                                            func_filter=lambda df: df[df["data_type"].str.contains("PR")])
 
-        # velocity prefit residuals
+        # carrier phase prefit residuals
+        self.cp_prefit_residuals = CSVData(name="cp_prefit_residuals",
+                                           description="Carrier Phase Prefit Residuals",
+                                           title="Carrier Phase Prefit Residuals",
+                                           time_cols=(0, 1),
+                                           data_cols=(2, 3, 4, 5),
+                                           func_filter=lambda df: df[df["data_type"].str.contains("CP")])
+
+        # carrier phase postfit residuals
+        self.cp_postfit_residuals = CSVData(name="cp_postfit_residuals",
+                                            description="Carrier Phase Postfit Residuals",
+                                            title="Carrier Phase Postfit Residuals",
+                                            time_cols=(0, 1),
+                                            data_cols=(2, 3, 4, 5),
+                                            func_filter=lambda df: df[df["data_type"].str.contains("CP")])
+
+        # pr rate prefit residuals
         self.pr_rate_prefit_residuals = CSVData(name="pr_rate_prefit_residuals",
                                                 description="Pseudorange Rate Prefit Residuals",
                                                 title="Pseudorange Rate Prefit Residuals",
                                                 time_cols=(0, 1),
                                                 data_cols=(2, 3, 4, 5))
 
-        # postfit residuals
+        # pr rate postfit residuals
         self.pr_rate_postfit_residuals = CSVData(name="pr_rate_postfit_residuals",
                                                  description="Pseudorange Rate Postfit Residuals",
                                                  title="Pseudorange Rate Postfit Residuals",

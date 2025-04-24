@@ -196,7 +196,7 @@ class DataType:
         Args:
             data_type(DataType):
         Returns:
-            bool: True if `data_type` is a carrier phase observable
+            bool: True if `data_type` is a carrier phase observable (raw or iono free)
         """
         return data_type in cAvailableCarriers or data_type in cAvailableIonoFreeCarrier
 
@@ -355,6 +355,22 @@ class DataType:
                 if freq.constellation == datatype.constellation and freq.freq_number == freq2_number:
                     freq2 = freq
         return freq1, freq2
+
+    @staticmethod
+    def carrier_to_code(datatype):
+        """
+        Converts a carrier phase datatype to the corresponding code datatype
+
+        Args:
+            datatype(DataType): carrier phase datatype
+
+        Returns:
+            DataType: code datatype
+        """
+        if DataType.is_carrier(datatype):
+            data_type = datatype.data_type.replace("CP", "PR")
+            return get_data_type(data_type, datatype.constellation)
+        raise SignalError(f"Unable to convert carrier {datatype} to the corresponding code datatype")
 
 
 # Default Data Types
