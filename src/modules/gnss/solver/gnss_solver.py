@@ -325,6 +325,7 @@ class GnssSolver:
 
             # solve the Least Squares
             try:
+                self.log.info(f"Solving LSQ for {str(epoch)} on iteration {iteration}")
                 prefit_residuals, postfit_residuals, dop_matrix, rms = \
                     self._iterate_pos(str(iteration), system_geometry, obs_data, state, epoch)
             except SolverError as e:
@@ -375,6 +376,7 @@ class GnssSolver:
         """ Low-level function to solve a single iteration of the position estimation iterative process """
         self._check_model_availability(system_geometry, epoch)
         state.build_index_map(system_geometry.get_satellites())
+        self.log.info(f"Selected Pivot Satellite for Ambiguity: {state.get_additional_info('pivot')}")
 
         trace_data = (self.trace_dir, iteration) if self.trace_dir is not None else None
 

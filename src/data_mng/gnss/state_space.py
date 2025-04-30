@@ -36,7 +36,6 @@ class GnssStateSpace(Container):
         * index_map (dict): dictionary with the index of each state variable in the state vector. Map to be used
             in the Normal Equations of the GNSS solver
             (see :py:class:`src.modules.gnss.solver.lsq_engine.LSQ_Engine_Position`)
-        * pivot (Satellite): satellite used as pivot for the ambiguity estimation.
 
     Some auxiliary information is saved in the `_info` attribute dict, namely:
         * _info["states"] provides a list with all valid states to be estimated, depending on the configuration
@@ -51,6 +50,8 @@ class GnssStateSpace(Container):
         * pr_postfit_residuals
         * pr_rate_prefit_residuals
         * pr_rate_postfit_residuals
+        * sat_list
+        * pivot (Satellite): satellite used as pivot for the ambiguity estimation.
     """
     __states__ = ["position", "velocity", "clock_bias", "iono", "tropo_wet", "isb", "clock_bias_rate", "ambiguity",
                   "phase_bias"]
@@ -158,6 +159,7 @@ class GnssStateSpace(Container):
         state.add_additional_info("clock_master", self.get_additional_info("clock_master"))
         state.add_additional_info("clock_slave", self.get_additional_info("clock_slave"))
         state.add_additional_info("pivot", self.get_additional_info("pivot"))
+        state.add_additional_info("sat_list", self.get_additional_info("sat_list"))
 
         return state
 
@@ -257,39 +259,81 @@ class GnssStateSpace(Container):
 
         self.add_additional_info("pivot", pivot)
         self.add_additional_info("states", _states)
+        self.add_additional_info("sat_list", sat_list)
 
-    def _update_sat_list(self, sat_list):
-        """ Update the satellite list of the internal iono state with the one provided as argument.
+    def _update_sat_list(self, new_sat_list):
+        """
+        Update the internal satellite list (used for the iono and ambiguity states) with the one provided as argument.
 
         Args:
-            sat_list(list[src.data_types.gnss.Satellite]) : list of available satellites
+            new_sat_list(list[src.data_types.gnss.Satellite]) : list of available satellites
         """
-        # TODO: update sat list for ambiguity
-        _states = self.get_additional_info("states")
-        if "iono" not in _states:
-            return
+        prev_sat_list = self.get_additional_info("sat_list")
 
-        # add new visible satellites to the iono state, if applicable
-        for sat in sat_list:
-            if sat.sat_system in self.get_additional_info("estimate_iono"):
-                if sat not in self.iono:
-                    self.iono[sat] = 0.0
-                    self.cov_iono[sat] = 1.0
-                    if self.initial_state is not None and sat in self.initial_state.iono:
-                        self.iono[sat] = self.initial_state.iono[sat]
-                        self.cov_iono[sat] = self.initial_state.cov_iono[sat]
-                    elif self.initial_state is not None:
-                        self.initial_state.iono[sat] = 0.0
-                        self.initial_state.cov_iono[sat] = 1.0
+        # add the new satellites to the internal data (new visible satellites)
+        for sat in new_sat_list:
+            if sat not in prev_sat_list:
+                self._add_sat(sat)
 
-        # remove satellites that are not in the provided list
+        # remove satellites that are not in the new list (satellites that are not visible anymore)
         _to_remove = []
-        for sat in self.iono:
-            if sat not in sat_list:
+        for sat in prev_sat_list:
+            if sat not in new_sat_list:
                 _to_remove.append(sat)  # satellite to be removed
         for sat in _to_remove:
-            self.iono.pop(sat)
-            self.cov_iono.pop(sat)
+            self._remove_sat(sat)
+
+        # update satellite list and pivot
+        self.add_additional_info("sat_list", new_sat_list)
+        pivot = self.get_additional_info("pivot")
+        if pivot not in new_sat_list:
+            self.add_additional_info("pivot", new_sat_list[0])
+
+    def _add_sat(self, sat):
+        """ Add a new satellite to the state space. """
+        _states = self.get_additional_info("states")
+        if "iono" in _states:
+            self.iono[sat] = 0.0
+            self.cov_iono[sat] = 1.0
+
+        if "ambiguity" in _states:
+            self.ambiguity[sat] = dict()
+            cp_types = self.phase_bias[sat.sat_system].keys()
+            for cp_type in cp_types:
+                self.ambiguity[sat][cp_type] = Ambiguity(0.0, 1.0)
+
+        # initialize from initial_state
+        if self.initial_state is not None:
+            if "iono" in _states:
+                if sat in self.initial_state.iono:
+                    self.iono[sat] = self.initial_state.iono[sat]
+                    self.cov_iono[sat] = self.initial_state.cov_iono[sat]
+
+                else:
+                    self.initial_state.iono[sat] = 0.0
+                    self.initial_state.cov_iono[sat] = 1.0
+
+            if "ambiguity" in _states:
+                cp_types = self.phase_bias[sat.sat_system].keys()
+                if sat in self.initial_state.ambiguity:
+                    self.ambiguity[sat] = dict()
+                    for cp_type in cp_types:
+                        self.ambiguity[sat][cp_type] = self.initial_state.ambiguity[sat][cp_type].clone()
+                else:
+                    self.initial_state.ambiguity[sat] = dict()
+                    for cp_type in cp_types:
+                        self.initial_state.ambiguity[sat][cp_type] = Ambiguity(0.0, 1.0)
+
+    def _remove_sat(self, sat):
+        """ Remove a satellite from the state space. """
+        _states = self.get_additional_info("states")
+        if "iono" in _states:
+            if sat in self.iono:
+                self.iono.pop(sat)
+                self.cov_iono.pop(sat)
+        if "ambiguity" in _states:
+            if sat in self.ambiguity:
+                self.ambiguity.pop(sat)
 
     def build_index_map(self, sat_list):
         """
@@ -309,7 +353,6 @@ class GnssStateSpace(Container):
         Args:
             sat_list(list[src.data_types.gnss.Satellite]) : list of available satellites
         """
-        # TODO: check new enterings or new exits in the list and create `add` and `remove` methods
         self._update_sat_list(sat_list)
 
         index_map = {}
