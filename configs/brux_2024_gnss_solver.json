@@ -43,7 +43,7 @@
          "_comment1": "Select first and last epochs in estimation arc in format YYYY-MM-DD hh:mm:ss",
          "_comment2": "Select false to deactivate fields",
          "first_epoch": "2024-03-30 11:00:00",
-         "last_epoch": "2024-03-30 11:01:00"
+         "last_epoch": "2024-03-30 11:05:00"
       },
 
       "_comment4": "Select the input data rate (in seconds). The rate must be consistent with the RINEX OBS rate. Select false to disable.",
@@ -75,10 +75,10 @@
    },
 
    "model": {
-      "constellations": ["GPS"],
+      "constellations": ["GPS", "GAL"],
 
       "_comment": "Select the GNSS PNT algorithm. The available algorithms are SPS, PR-PPP, CP-PPP",
-      "algorithm": "CP-PPP",
+      "algorithm": "PR-PPP",
 
       "_comment1": "Select the observation model. The available models are combined, uncombined. The combined model requires 2 observations.",
       "obs_model": "uncombined",
@@ -89,7 +89,7 @@
       "estimate_ggto": true,
       "_comment3": "Select `true` to estimate GGTO or `false` to use the broadcast GGTO",
 
-      "estimate_diono": true,
+      "estimate_diono": false,
         "_comment4": "Select `true` to estimate residual ionospheric delay or `false` to disable it",
 
       "troposphere": {
@@ -134,7 +134,7 @@
          "clock_product_service": ["1W", "2W"],
 
          "_comment1": "in `pr_obs_std` define the observation noise for the selected pseudorange observations (consistent with the signals defined in `observations`), in meters",
-         "pr_obs_std": [1.0, 2.0],
+         "pr_obs_std": [1.0, 0.5],
 
          "_comment2": "in `cp_obs_std` define the observation noise for the selected carrier phase observations (consistent with the signals defined in `observations`), in meters",
          "cp_obs_std": [0.01, 0.01],
@@ -154,7 +154,7 @@
          "clock_product_service": ["1C", "5Q"],
 
          "_comment1": "in `pr_obs_std` define the observation noise for the selected pseudorange observations (consistent with the signals defined in `observations`), in meters",
-         "pr_obs_std": [1.0, 2.0],
+         "pr_obs_std": [1.0, 0.5],
 
          "_comment2": "in `cp_obs_std` define the observation noise for the selected carrier phase observations (consistent with the signals defined in `observations`), in meters",
          "cp_obs_std": [0.01, 0.01],
@@ -178,7 +178,7 @@
       "_comment1": "Select Algorithm. Available is 'WSL' - Weighted Least Squares",
       "algorithm": "WSL",
 
-      "a_priori_constrain": false,
+      "a_priori_constrain": true,
       "feedforward_solution": true,
 
       "_comment2": "maximum number of iterations in iterative procedure",
@@ -197,14 +197,15 @@
       "elevation_filter": -1,
 
       "_comment7": "Initial states and expected covariances for the initial state vector.",
-      "initial_pos_cov": [0.402788131984481E+07,0.306998818013051E+06,0.491949906282187E+07,10,10,10],
-      "initial_vel_cov": [0,0,0,10,10,10],
+      "initial_pos_cov": [0.402788131984481E+07,0.306998818013051E+06,0.491949906282187E+07,1E-2,1E-2,1E-2],
+      "initial_vel_cov": [0,0,0,1,1,1],
       "initial_clock_cov": [0,1e-17],
       "initial_isb_cov": [0,1E-18],
       "initial_iono_cov": [0.0, 10],
       "initial_tropo_cov": [0.0, 10],
       "initial_clock_rate_cov": [0.0, 1E-1],
-      "initial_ambiguity_cov": [0.0, 1E-5]
+      "initial_ambiguity_cov": [0.0, 1E2],
+      "initial_phase_bias_cov": [0.0, 1e-18]
    },
 
    "output": {

@@ -178,15 +178,19 @@ class GnssSolver:
                 else:
                     self.log.info(f"Selected model for {const} is Iono-Free with code observations {code_types} and "
                                   f"phase types {phase_types}")
-                # TODO: add verification for phase types as well.
-                iono_pr_code = code_types[0]
-                iono_cp_code = phase_types[0] if cp_based else None
-                if not DataType.is_iono_free_code(iono_pr_code) and not DataType.is_iono_free_smooth_code(iono_pr_code):
+
+                iono_pr = code_types[0]
+                iono_cp = phase_types[0] if cp_based else None
+                if not DataType.is_iono_free_code(iono_pr) and not DataType.is_iono_free_smooth_code(iono_pr):
                     raise ConfigError(f"Iono-Free Model is selected for constellation {const} but no iono-free code "
                                       f"observations are available. Available code observations: {code_types}")
+                if cp_based and not DataType.is_iono_free_carrier(iono_cp):
+                    raise ConfigError(f"Iono-Free Model is selected for constellation {const} but no iono-free "
+                                      f"phase observations are available. Available phase observations: "
+                                      f"{phase_types}")
                 MODEL[const] = EnumFrequencyModel.SINGLE_FREQ  # Iono-free is treated as single frequency in the LS
-                CODES[const] = [iono_pr_code]
-                PHASES[const] = [iono_cp_code] if cp_based else []
+                CODES[const] = [iono_pr]
+                PHASES[const] = [iono_cp] if cp_based else []
                 IONO[const].disable()
             elif len(code_types) == 1:
                 # Single Frequency Model

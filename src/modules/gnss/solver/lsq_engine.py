@@ -222,47 +222,61 @@ class LSQ_Engine_Position(LSQ_Engine):
     LSQ_Engine_Position class inherits from :py:class:`LSQ_Engine`.
 
     The `LSQ_Engine_Position` class performs estimation of position and clock for a GNSS system using pseudorange
-    observations from GPS and GAL constellations. The system can handle single or dual frequencies per constellation.
+    and carrier phase (optional) observations from GPS and GAL constellations. The system can handle single or dual
+    frequencies per constellation.
 
-    Since the pseudorange equation is non-linear with respect to the user position, it has to be linearized.
-    The linearized observation equation adopted in the model is:
+    Since the pseudorange and carrier phase equations are non-linear with respect to the user position, they have to be
+    linearized.
+
+    The linearized PR and CP observation equation adopted in the model are:
 
         ΔPR = -LOS * Δr + ΔT + c * Δdt_r + ΔI + c * ΔISB
+        ΔCP = -LOS * Δr + ΔT + c * Δdt_r + c * Δδ_r - ΔI + c * ΔISB + λ * ΔN
 
     where:
-        - ΔPR: is the prefit residual (true minus computed PR observation)
+        - ΔPR: is the prefit residual pseudorange observation (true minus computed PR observation)
+        - ΔCP: is the prefit residual carrier phase observation (true minus computed CP observation)
         - LOS: Line of sight vector w.r.t. ECEF frame
         - Δr: Change in receiver position
         - ΔT: Change in tropospheric wet delay (when tropo estimation is enabled). ΔT = Δzwd * map_wet
         - c: Speed of light
         - Δdt_r: Change in receiver clock bias
+        - Δδ_r: Change in receiver phase bias
         - ΔI: Change in ionospheric delay (when iono estimation is enabled). ΔI = mu * dI
         - ΔISB: Change in Inter System Bias (only enabled for the slave constellations)
+        - λ: Wavelength of the carrier phase observation
+        - ΔN: Change in ambiguity (only enabled for the carrier phase observation)
 
-    Note that the residual ΔPR is defined as the difference between the observed and computed pseudorange.
-    The computed pseudorange is obtained from the reconstructed pseudorange observation.
-    See the modelled effects in :py:class:`src.modules.gnss.solver.obs_reconstructor.PseudorangeReconstructor`.
+    In the model implemented, the ambiguity is estimated as floating point number (not fixed). The fixing process, if
+    enabled, is implemented a-posteriori. The estimated state is then refined with the fixed ambiguity value.
+
+    Note that the residual ΔPR and ΔCP are defined as the difference between the observed and computed observations.
+        * The computed pseudorange is obtained from the reconstructed pseudorange observation.
+            See the modelled effects in :py:class:`src.modules.gnss.solver.obs_reconstructor.PseudorangeReconstructor`.
+        * The computed carrier phase is obtained from the reconstructed carrier phase observation.
+            See the modelled effects in :py:class:`src.modules.gnss.solver.obs_reconstructor.CarrierPhaseReconstructor`.
 
     The terms in the right-hand side of the equation above form the state vector of the LSQ system. To evidence them,
     the equation can be re-written in matrix form:
 
         ΔPR = [-LOS map_wet c mu c] * [Δr Δzwd Δdt_r dI ΔISB]^T
+        ΔCP = [-LOS map_wet c c -mu c λ] * [Δr Δzwd Δdt_r Δδ_r dI ΔISB ΔN]^T
 
-    where [Δr Δzwd Δdt_r dI ΔISB] is the state vector (x^hat) of the LSQ problem.
+    where [Δr Δzwd Δdt_r Δdt_r dI ΔISB ΔN] is the state vector (x^hat) of the LSQ problem.
     Depending on the user configuration, some states may be enabled or disabled (Δr and Δdt_r are mandatory).
 
     After the Normal Equation is solved, the GNSS state vector is updated accordingly
 
         * r -> r + Δr
         * dt_r -> dt_r + Δdt_r
+        * δ_r -> δ_r + Δδ_r (only for CP)
         * I -> I + dI
         * T -> T + Δzwd (only zwd is estimated)
         * ISB -> ISB + ΔISB
+        * N -> N + ΔN (only for CP)
 
     These new quantities are then used in the next iteration of the LSQ, for the new computation of the predicted
-    pseudorange observation (see :py:class:`src.modules.gnss.solver.obs_reconstructor.PseudorangeReconstructor`).
-
-    TODO: update docstring when CP is added
+    observations.
     """
 
     def __init__(self, system_geometry, metadata, epoch, obs_data, state, trace_data):
@@ -405,7 +419,22 @@ class LSQ_Engine_Position(LSQ_Engine):
                 X0[idx_isb] = initial_state.isb
                 X0_prev[idx_isb] = state.isb
 
-            # TODO: add ambiguity
+        if "ambiguity" in index_map:
+            for sat, cp_types in index_map["ambiguity"].items():
+                if state.get_additional_info("pivot") != sat:
+                    for cp_type in cp_types:
+                        idx_amb = cp_types[cp_type]
+                        P0[idx_amb, idx_amb] = initial_state.ambiguity[sat][cp_type].cov
+                        X0[idx_amb] = initial_state.ambiguity[sat][cp_type].val
+                        X0_prev[idx_amb] = state.ambiguity[sat][cp_type].val
+
+        if "phase_bias" in index_map:
+            for const, cp_types in index_map["phase_bias"].items():
+                for cp_type in cp_types:
+                    idx_phase_bias = cp_types[cp_type]
+                    P0[idx_phase_bias, idx_phase_bias] = initial_state.cov_phase_bias[const][cp_type]
+                    X0[idx_phase_bias] = initial_state.phase_bias[const][cp_type]
+                    X0_prev[idx_phase_bias] = state.phase_bias[const][cp_type]
 
         return X0 - X0_prev, np.linalg.inv(P0)
 

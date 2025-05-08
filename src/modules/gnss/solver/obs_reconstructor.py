@@ -251,7 +251,7 @@ class CarrierPhaseReconstructor(ObservationReconstructor):
         * iono is the a-priori ionospheric delay
         * tropo is the tropospheric delay (a-priori model or estimated in the solver)
         * dI is the estimated ionospheric residual
-        * phase_bias is the receiver phase bias (hardware bias)
+        * phase_bias is the receiver phase bias (hardware bias) for this frequency
         * N is the ambiguity (float or integer) in cycles
         * lambda is the wavelength of the signal in meters
         * pcc_rec is the receiver antenna phase center correction (ARP, PCO, PCV)
@@ -378,8 +378,9 @@ class CarrierPhaseReconstructor(ObservationReconstructor):
               dI + pcc_rec + pcc_sat + wavelength * N
         if self._write_trace:
             self._trace_handler.write(f"{epoch},{sat},{datatype},{obs},{true_range},{dt_rec},"
-                                      f"{dt_sat * constants.SPEED_OF_LIGHT},{bias * constants.SPEED_OF_LIGHT},"
-                                      f"{iono},{tropo},{dI},{pcc_rec},{pcc_sat}\n")
+                                      f"{dt_sat * constants.SPEED_OF_LIGHT},{phase_bias},"
+                                      f"{bias * constants.SPEED_OF_LIGHT},"
+                                      f"{iono},{wavelength * N},{tropo},{dI},{pcc_rec},{pcc_sat}\n")
         return obs
 
 

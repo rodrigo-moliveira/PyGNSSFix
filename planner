@@ -1,10 +1,14 @@
 # Release 1.1 (PR-PPP Mode)
     tasks for 2025:
     [ ] float ambiguity carrier processing
-    [ ] cycle slip detector 
-    [ ] adicionar configuração com static/dynamic receiver que em vez de feedforward das covs da época anterior
-        aplica valores pre-determinados. No caso de cycle slip, a covariancia da ambiguidade é aumentada
+        - the only thing missing is clean up TODOs
+    [ ] Test and or tune the feedforward with CP-PPP
+    [ ] Computation of WL, NL and MW combinations (ver código do correia)
+    [ ] cycle slip detector (ver código do correia)
     [ ] Adicionar Kalman filter com user dynamics
+    [ ] Adicionar Batch Least Squares
+        [ ] adicionar configuração com static/dynamic receiver que em vez de feedforward das covs da época anterior
+        aplica valores pre-determinados. No caso de cycle slip, a covariancia da ambiguidade é aumentada
     [ ] Adicionar differential SPS/PPPP. D-GNSS para PR only
 
     [ ] BUGS and nice-to-haves:
@@ -18,9 +22,7 @@
     [ ] solve all TODOs
 
 # Release 1.2 PPP e PPP-AR
-    [ ] cycle slip detection
-        [ ] compute MW observations
-    [ ] PPP e PPP-AR com OSBs
+    [ ] Ambiguity Resolution (PPP-AR)
     [ ] other corrections
         [ ] phase windup (only applicable to carrier observations)
         [ ] site-displacement effects
