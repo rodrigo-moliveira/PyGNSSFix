@@ -78,7 +78,7 @@
       "constellations": ["GPS", "GAL"],
 
       "_comment": "Select the GNSS PNT algorithm. The available algorithms are SPS, PR-PPP, CP-PPP",
-      "algorithm": "PR-PPP",
+      "algorithm": "CP-PPP",
 
       "_comment1": "Select the observation model. The available models are combined, uncombined. The combined model requires 2 observations.",
       "obs_model": "uncombined",
@@ -137,7 +137,7 @@
          "pr_obs_std": [1.0, 0.5],
 
          "_comment2": "in `cp_obs_std` define the observation noise for the selected carrier phase observations (consistent with the signals defined in `observations`), in meters",
-         "cp_obs_std": [0.01, 0.01],
+         "cp_obs_std": [0.001, 0.005],
 
          "_comment3": "in `doppler_obs_std` define the observation noise for the selected doppler observations (consistent with the signals defined in `observations`), in Hertz",
          "doppler_obs_std": [1.7, 1.0],
@@ -157,7 +157,7 @@
          "pr_obs_std": [1.0, 0.5],
 
          "_comment2": "in `cp_obs_std` define the observation noise for the selected carrier phase observations (consistent with the signals defined in `observations`), in meters",
-         "cp_obs_std": [0.01, 0.01],
+         "cp_obs_std": [0.001, 0.005],
 
          "_comment3": "in `doppler_obs_std` define the observation noise for the selected doppler observations (consistent with the signals defined in `observations`), in Hertz",
          "doppler_obs_std": [1.1, 1.0],
@@ -200,12 +200,12 @@
       "initial_pos_cov": [0.402788131984481E+07,0.306998818013051E+06,0.491949906282187E+07,1E-2,1E-2,1E-2],
       "initial_vel_cov": [0,0,0,1,1,1],
       "initial_clock_cov": [0,1e-17],
-      "initial_isb_cov": [0,1E-18],
+      "initial_isb_cov": [0,1E-16],
       "initial_iono_cov": [0.0, 10],
       "initial_tropo_cov": [0.0, 10],
       "initial_clock_rate_cov": [0.0, 1E-1],
-      "initial_ambiguity_cov": [0.0, 1E2],
-      "initial_phase_bias_cov": [0.0, 1e-18]
+      "initial_ambiguity_cov": [0.0, 10],
+      "initial_phase_bias_cov": [0.0, 1e-16]
    },
 
    "output": {

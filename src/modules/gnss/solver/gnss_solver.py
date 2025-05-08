@@ -380,7 +380,8 @@ class GnssSolver:
         """ Low-level function to solve a single iteration of the position estimation iterative process """
         self._check_model_availability(system_geometry, epoch)
         state.build_index_map(system_geometry.get_satellites())
-        self.log.info(f"Selected Pivot Satellite for Ambiguity: {state.get_additional_info('pivot')}")
+        self.log.info(f"Selected Pivot Satellites for Ambiguity (Per constellation): "
+                      f"{state.get_additional_info('pivot')}")
 
         trace_data = (self.trace_dir, iteration) if self.trace_dir is not None else None
 

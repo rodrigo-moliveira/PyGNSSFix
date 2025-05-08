@@ -51,7 +51,7 @@ class GnssStateSpace(Container):
         * pr_rate_prefit_residuals
         * pr_rate_postfit_residuals
         * sat_list
-        * pivot (Satellite): satellite used as pivot for the ambiguity estimation.
+        * pivot: satellites used as pivot for the ambiguity estimation (one per constellation).
     """
     __states__ = ["position", "velocity", "clock_bias", "iono", "tropo_wet", "isb", "clock_bias_rate", "ambiguity",
                   "phase_bias"]
@@ -230,7 +230,6 @@ class GnssStateSpace(Container):
             _states.append("tropo_wet")
 
         # ambiguity (optional -> in case algorithm is CP-based)
-        pivot = sat_list[0]
         if metadata["CP_BASED"]:
             self.ambiguity = dict()
             cp_types = metadata["PHASES"]
@@ -257,7 +256,17 @@ class GnssStateSpace(Container):
                                                           constants.SPEED_OF_LIGHT ** 2
             _states.append("phase_bias")
 
-        self.add_additional_info("pivot", pivot)
+        # Define Pivot Satellite
+        if metadata["CP_BASED"]:
+            pivot_dict = dict.fromkeys(metadata["CONSTELLATIONS"], None)
+
+            for sat in sat_list:
+                if pivot_dict[sat.sat_system] is None:
+                    pivot_dict[sat.sat_system] = sat
+        else:
+            pivot_dict = None
+
+        self.add_additional_info("pivot", pivot_dict)
         self.add_additional_info("states", _states)
         self.add_additional_info("sat_list", sat_list)
 
@@ -283,11 +292,17 @@ class GnssStateSpace(Container):
         for sat in _to_remove:
             self._remove_sat(sat)
 
-        # update satellite list and pivot
         self.add_additional_info("sat_list", new_sat_list)
-        pivot = self.get_additional_info("pivot")
-        if pivot not in new_sat_list:
-            self.add_additional_info("pivot", new_sat_list[0])
+
+        # update pivot information
+        pivot_dict = self.get_additional_info("pivot")
+        for pivot in pivot_dict.values():
+            if pivot not in new_sat_list:
+                for sat in new_sat_list:
+                    if sat.sat_system == pivot.sat_system:
+                        pivot_dict[pivot.sat_system] = sat
+                        break
+        self.add_additional_info("pivot", pivot_dict)
 
     def _add_sat(self, sat):
         """ Add a new satellite to the state space. """
@@ -386,9 +401,10 @@ class GnssStateSpace(Container):
             state_counter += 1
 
         if "ambiguity" in states:
+            pivot_dict = self.get_additional_info("pivot")
             index_map["ambiguity"] = dict()
             for sat, cp_types in self.ambiguity.items():
-                if self.get_additional_info("pivot") != sat:
+                if pivot_dict[sat.sat_system] != sat:
                     index_map["ambiguity"][sat] = dict()
                     for cp_type, ambiguity in cp_types.items():
                         index_map["ambiguity"][sat][cp_type] = state_counter
