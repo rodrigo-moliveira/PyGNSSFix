@@ -287,18 +287,13 @@ class PreprocessorManager:
                                  f"for constellation {constellation} and services {services}. Please review"
                                  f" the input observation data and the configurations.")
 
-    def melbourne_wubbena(self, constellation, nl_obs_data, wl_obs_data):
+    def melbourne_wubbena(self, constellation, nl_obs_data, wl_obs_data, mw_obs_data):
         """ Compute Melbourne Wubbena observation """
-        # TODO: update docs
-        pass
-
-        nl_functor = NLFunctor(constellation, base_freq, second_freq)
-        mapper = FunctorMapper(nl_functor)
-        mapper.apply(raw_data, nl_obs_data)
-
-        wl_functor = WLFunctor(constellation, base_freq, second_freq)
-        mapper = FunctorMapper(wl_functor)
-        mapper.apply(raw_data, wl_obs_data)
+        self.log.info(f"Computing Melbourne Wubbena data for constellation {constellation} with observations"
+                      f"{nl_obs_data.get_types(constellation)} and {wl_obs_data.get_types(constellation)}")
+        mw_functor = MWFunctor(constellation, nl_obs_data, wl_obs_data)
+        mapper = FunctorMapper(mw_functor)
+        mapper.apply(nl_obs_data, mw_obs_data)
 
     def smooth(self, data):
         """ Compute Smooth data """
@@ -344,6 +339,7 @@ class PreprocessorManager:
         # Getting Narrow-Lane and Wide-Lane data
         nl_obs_data = self.data_manager.get_data("narrow_lane_obs_data")
         wl_obs_data = self.data_manager.get_data("wide_lane_obs_data")
+        mw_obs_data = self.data_manager.get_data("melbourne_obs_data")
         for constellation in self.services.keys():
             obs_list = config_dict.get("model", constellation, "observations")
             n_obs = len(obs_list)
@@ -355,16 +351,20 @@ class PreprocessorManager:
                 self.log.info(f"Computing narrow- and wide-lane data for constellation {constellation} with "
                               f"observations {obs_list}")
                 self.narrow_wide_lane(constellation, obs_data, nl_obs_data, wl_obs_data)
-                self.melbourne_wubbena(constellation, nl_obs_data, wl_obs_data)
+                self.melbourne_wubbena(constellation, nl_obs_data, wl_obs_data, mw_obs_data)
 
         if self.write_trace:
             self.log.debug(
-                "Writing Narrow and Wide Lane Observation Data to trace files {} and {}".
-                format("NLObservationData.txt", "WLObservationData.txt"))
+                "Writing Narrow-, Wide-Lane and Melbourne-Wubbena Observation Data to trace files {}, {} and {}".
+                format("NLObservationData.txt", "WLObservationData.txt", "MWObservationData.txt"))
             f = open(self.trace_path + "/NLObservationData.txt", "w")
             f.write(str(nl_obs_data))
             f.close()
 
             f = open(self.trace_path + "/WLObservationData.txt", "w")
             f.write(str(wl_obs_data))
+            f.close()
+
+            f = open(self.trace_path + "/MWObservationData.txt", "w")
+            f.write(str(mw_obs_data))
             f.close()

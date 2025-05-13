@@ -267,7 +267,8 @@ class PerformanceManager:
         """ Plot (main function). """
         if config_dict.get("performance_evaluation", "plot_configs", "plot_observations"):
             self.log.info("Plotting observations and additional information (satellite availability and skyplot...")
-            self._plot_obs(plot_dir)
+            self._plot_obs(plot_dir, "obs")
+            self._plot_obs(plot_dir, "mw_obs")
             self._plot_sat_availability(plot_dir)
             self._skyplot(plot_dir)
 
@@ -303,16 +304,17 @@ class PerformanceManager:
             self.log.info("Plotting Planimetric Maps...")
             self._plot_planimetric(plot_dir)
 
-    def _plot_obs(self, plot_dir):
+    def _plot_obs(self, plot_dir, obs_type):
         """ Plot the GNSS observables. """
         try:
-            observations = self.data_manager.get_data("obs")
+            observations = self.data_manager.get_data(obs_type)
             if observations.is_empty():
                 raise ValueError
         except ValueError:
             self.log.warning("Observations dataframe not found or is empty. Skipping plot_obs")
             return
         try:
+            self.log.info(f"Plotting Observations dataframe {observations.description}")
             ax_dict = plot_gnss.plot_observations(observations)
 
             for ax in ax_dict.values():

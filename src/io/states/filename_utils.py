@@ -20,6 +20,7 @@ ISB = "isb.txt"
 TROPO = "tropo.txt"
 CLOCK_BIAS_RATE = "clock_bias_rate.txt"
 OBSERVATIONS = "observations.txt"
+MW_OBSERVATIONS = "melbourne_wubbena_obs.txt"
 
 OUTPUT_FILENAME_MAP = {
     "satellite_azel": AZEL,
@@ -44,6 +45,7 @@ OUTPUT_FILENAME_MAP = {
     "velocity": VELOCITY,
     "clock_bias_rate": CLOCK_BIAS_RATE,
     "obs": OBSERVATIONS,
+    "mw_obs": MW_OBSERVATIONS,
     "ambiguity": AMBIGUITY,
     "phase_bias": PHASE_BIAS
 }

@@ -298,6 +298,13 @@ class GnssDataManager(Container):
         file_list[ext].write(f"{obs_data.to_csv_file()}")
         log.info(f"creating output file {filename}")
 
+        # save melbourne-wubbena data
+        ext = 'mw_obs'
+        filename = f"{directory}\\{OUTPUT_FILENAME_MAP[ext]}"
+        file_list[ext] = open(filename, "w")
+        file_list[ext].write(f"{self.melbourne_obs_data.to_csv_file()}")
+        log.info(f"creating output file {filename}")
+
         # close all files
         for ext in file_list.keys():
             file_list[ext].close()

@@ -180,6 +180,16 @@ class DataType:
         return data_type in cAvailableWLCarrier
 
     @staticmethod
+    def is_mw(data_type):
+        """
+        Args:
+            data_type(DataType):
+        Returns:
+            bool: True if `data_type` is a melbourne-wubbena observable
+        """
+        return data_type in cAvailableMWObs
+
+    @staticmethod
     def is_iono_free_code(data_type):
         """
         Args:
@@ -413,6 +423,39 @@ class DataType:
         raise SignalError(f"Unable to obtain wide-lane datatype from the provided arguments. "
                           f"Datatype1 and datatype2 must be both code."
                           f"datatype1 = {datatype1.data_type}, datatype2 = {datatype2.data_type}")
+
+    @staticmethod
+    def get_mw_datatype(datatype1, datatype2, constellation):
+        """
+        Mix `DataType` objects (narrow-lane and wide-lane) to get the associated melbourne-wubbena datatype.
+        The datatypes must both be either:
+            * datatype1 is narrow-lane cide and datatype2 is wide-lane carrier
+            * datatype1 is wide-lane carrier and datatype2 is narrow-lane code
+
+        Args:
+            datatype1(DataType):
+            datatype2(DataType):
+            constellation(str):
+
+        Returns:
+            DataType: melbourne-wubbena datatype
+
+        Raises:
+             SignalError: an exception is raised if the melbourne-wubbena datatype could not be formed from the
+                provided input arguments
+
+        Example:
+            >>> DataType.get_mw_datatype(PR_NL12_GPS, CP_WL12_GPS, "GPS")
+            returns the DataType instance `MW12_GPS`
+        """
+        if (DataType.is_nl_code(datatype1) and DataType.is_wl_carrier(datatype2)) or \
+              (DataType.is_wl_carrier(datatype1) and DataType.is_nl_code(datatype2)):
+            if datatype1.freq_number == datatype2.freq_number:
+                return get_data_type(f"MW{datatype1.freq_number}", constellation)
+
+        raise SignalError(f"Unable to obtain melbourne-wubbena datatype from the provided arguments. "
+                          f"Datatype1 ({datatype1}) and datatype2 ({datatype2}) must be NL and WL datatypes "
+                          f"with matching frequency numbers.")
 
     @staticmethod
     def get_smooth_datatype(datatype):
@@ -704,6 +747,26 @@ CP_WL18_GAL = DataType(data_type="CP_WL18", description="E1-E5AltBOC Wide-Lane C
 CP_WL16_GAL = DataType(data_type="CP_WL16", description="E1-E6 Wide-Lane CarrierPhase (GAL)", freq_number=16,
                        constellation="GAL")
 
+
+#############################################
+# Melbourne-Wubbena Combination Observables #
+#############################################
+# GPS
+MW12_GPS = DataType(data_type="MW12", description="L1-L2 Melbourne-Wubbena Combination (GPS)", freq_number=12,
+                       constellation="GPS")
+MW15_GPS = DataType(data_type="MW15", description="L1-L5 Melbourne-Wubbena Combination (GPS)", freq_number=15,
+                       constellation="GPS")
+
+# GAL
+MW15_GAL = DataType(data_type="MW15", description="E1-E5a Melbourne-Wubbena Combination (GAL)", freq_number=15,
+                       constellation="GAL")
+MW17_GAL = DataType(data_type="MW17", description="E1-E5b Melbourne-Wubbena Combination (GAL)", freq_number=17,
+                       constellation="GAL")
+MW18_GAL = DataType(data_type="MW18", description="E1-E5AltBOC Melbourne-Wubbena Combination (GAL)", freq_number=18,
+                       constellation="GAL")
+MW16_GAL = DataType(data_type="MW16", description="E1-E6 Melbourne-Wubbena Combination (GAL)", freq_number=16,
+                       constellation="GAL")
+
 ##################################
 # Smooth PseudoRange Observables #
 ##################################
@@ -764,6 +827,7 @@ cAvailableNLCodes = [PR_NL12_GPS, PR_NL15_GPS, PR_NL15_GAL, PR_NL16_GAL, PR_NL17
 cAvailableNLCarrier = [CP_NL12_GPS, CP_NL15_GPS, CP_NL15_GAL, PR_NL16_GAL, PR_NL17_GAL, PR_NL18_GAL]
 cAvailableWLCodes = [PR_WL12_GPS, PR_WL15_GPS, PR_WL15_GAL, PR_WL16_GAL, PR_WL17_GAL, PR_WL18_GAL]
 cAvailableWLCarrier = [CP_WL12_GPS, CP_WL15_GPS, CP_WL15_GAL, PR_WL16_GAL, PR_WL17_GAL, PR_WL18_GAL]
+cAvailableMWObs = [MW12_GPS, MW15_GPS, MW15_GAL, MW16_GAL, MW17_GAL, MW18_GAL]
 cAvailableDoppler = [D1_GPS, D2_GPS, D5_GPS, D1_GAL, D5_GAL, D6_GAL, D7_GAL, D8_GAL]
 
 cGPSObsSignals = {"C": {"1": PR1_GPS, "2": PR2_GPS, "5": PR5_GPS},
@@ -790,7 +854,7 @@ def get_data_type(datatype: str, constellation: str):
     for container in [cAvailableCodes, cAvailableSignals, cAvailableFrequencies, cAvailableCarriers,
                       cAvailableSmoothCodes, cAvailableIonoFreeCodes, cAvailableIonoFreeSmoothCodes,
                       cAvailableIonoFreeCarrier, cAvailableNLCarrier, cAvailableNLCodes,
-                      cAvailableWLCarrier, cAvailableWLCodes]:
+                      cAvailableWLCarrier, cAvailableWLCodes, cAvailableMWObs]:
         for _type in container:
             if _type.data_type == datatype and constellation == _type.constellation:
                 return _type
