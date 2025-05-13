@@ -140,6 +140,46 @@ class DataType:
             data_type in cAvailableSmoothCodes or data_type in cAvailableIonoFreeSmoothCodes
 
     @staticmethod
+    def is_nl_code(data_type):
+        """
+        Args:
+            data_type(DataType):
+        Returns:
+            bool: True if `data_type` is a pseudorange-based narrow-lane observable
+        """
+        return data_type in cAvailableNLCodes
+
+    @staticmethod
+    def is_nl_carrier(data_type):
+        """
+        Args:
+            data_type(DataType):
+        Returns:
+            bool: True if `data_type` is a carrier phase-based narrow-lane observable
+        """
+        return data_type in cAvailableNLCarrier
+
+    @staticmethod
+    def is_wl_code(data_type):
+        """
+        Args:
+            data_type(DataType):
+        Returns:
+            bool: True if `data_type` is a pseudorange-based wide-lane observable
+        """
+        return data_type in cAvailableWLCodes
+
+    @staticmethod
+    def is_wl_carrier(data_type):
+        """
+        Args:
+            data_type(DataType):
+        Returns:
+            bool: True if `data_type` is a carrier phase-based wide-lane observable
+        """
+        return data_type in cAvailableWLCarrier
+
+    @staticmethod
     def is_iono_free_code(data_type):
         """
         Args:
@@ -299,6 +339,78 @@ class DataType:
             return get_data_type(f"CP{min(index1, index2)}{max(index1, index2)}", constellation)
 
         raise SignalError(f"Unable to obtain iono free pseudorange from the provided arguments. "
+                          f"Datatype1 and datatype2 must be both code."
+                          f"datatype1 = {datatype1.data_type}, datatype2 = {datatype2.data_type}")
+
+    @staticmethod
+    def get_nl_datatype(datatype1, datatype2, constellation):
+        """
+        Mix `DataType` objects to get the associated narrow-lane datatype. The datatypes must both be either
+        code or carrier datatypes.
+
+        Args:
+            datatype1(DataType):
+            datatype2(DataType):
+            constellation(str):
+
+        Returns:
+            DataType: narrow-lane datatype
+
+        Raises:
+             SignalError: an exception is raised if the narrow-lane datatype could not be formed from the provided input
+                arguments
+
+        Example:
+            >>> DataType.get_nl_datatype(PR1_GPS, PR2_GPS, "GPS")
+            returns the DataType instance `PR_NL12_GPS`
+        """
+        if DataType.is_code(datatype1) and DataType.is_code(datatype2):
+            index1 = datatype1.freq_number
+            index2 = datatype2.freq_number
+            return get_data_type(f"PR_NL{min(index1, index2)}{max(index1, index2)}", constellation)
+
+        if DataType.is_carrier(datatype1) and DataType.is_carrier(datatype2):
+            index1 = datatype1.freq_number
+            index2 = datatype2.freq_number
+            return get_data_type(f"CP_NL{min(index1, index2)}{max(index1, index2)}", constellation)
+
+        raise SignalError(f"Unable to obtain narrow-lane datatype from the provided arguments. "
+                          f"Datatype1 and datatype2 must be both code."
+                          f"datatype1 = {datatype1.data_type}, datatype2 = {datatype2.data_type}")
+
+    @staticmethod
+    def get_wl_datatype(datatype1, datatype2, constellation):
+        """
+        Mix `DataType` objects to get the associated wide-lane datatype. The datatypes must both be either
+        code or carrier datatypes.
+
+        Args:
+            datatype1(DataType):
+            datatype2(DataType):
+            constellation(str):
+
+        Returns:
+            DataType: wide-lane datatype
+
+        Raises:
+             SignalError: an exception is raised if the wide-lane datatype could not be formed from the provided input
+                arguments
+
+        Example:
+            >>> DataType.get_wl_datatype(PR1_GPS, PR2_GPS, "GPS")
+            returns the DataType instance `PR_WL12_GPS`
+        """
+        if DataType.is_code(datatype1) and DataType.is_code(datatype2):
+            index1 = datatype1.freq_number
+            index2 = datatype2.freq_number
+            return get_data_type(f"PR_WL{min(index1, index2)}{max(index1, index2)}", constellation)
+
+        if DataType.is_carrier(datatype1) and DataType.is_carrier(datatype2):
+            index1 = datatype1.freq_number
+            index2 = datatype2.freq_number
+            return get_data_type(f"CP_WL{min(index1, index2)}{max(index1, index2)}", constellation)
+
+        raise SignalError(f"Unable to obtain wide-lane datatype from the provided arguments. "
                           f"Datatype1 and datatype2 must be both code."
                           f"datatype1 = {datatype1.data_type}, datatype2 = {datatype2.data_type}")
 
@@ -516,6 +628,82 @@ CP18_GAL = DataType(data_type="CP18", description="E1-E5AltBOC Iono-Free Carrier
 CP16_GAL = DataType(data_type="CP16", description="E1-E6 Iono-Free Carrier Phase (GAL)", freq_number=16,
                     constellation="GAL")
 
+#######################################
+# Narrow-Lane PseudoRange Observables #
+#######################################
+# GPS
+PR_NL12_GPS = DataType(data_type="PR_NL12", description="L1-L2 Narrow-Lane PseudoRange (GPS)", freq_number=12,
+                       constellation="GPS")
+PR_NL15_GPS = DataType(data_type="PR_NL15", description="L1-L5 Narrow-Lane PseudoRange (GPS)", freq_number=15,
+                       constellation="GPS")
+
+# GAL
+PR_NL15_GAL = DataType(data_type="PR_NL15", description="E1-E5a Narrow-Lane PseudoRange (GAL)", freq_number=15,
+                       constellation="GAL")
+PR_NL17_GAL = DataType(data_type="PR_NL17", description="E1-E5b Narrow-Lane PseudoRange (GAL)", freq_number=17,
+                       constellation="GAL")
+PR_NL18_GAL = DataType(data_type="PR_NL18", description="E1-E5AltBOC Narrow-Lane PseudoRange (GAL)", freq_number=18,
+                       constellation="GAL")
+PR_NL16_GAL = DataType(data_type="PR_NL16", description="E1-E6 Narrow-Lane PseudoRange (GAL)", freq_number=16,
+                       constellation="GAL")
+
+########################################
+# Narrow-Lane CarrierPhase Observables #
+########################################
+# GPS
+CP_NL12_GPS = DataType(data_type="CP_NL12", description="L1-L2 Narrow-Lane CarrierPhase (GPS)", freq_number=12,
+                       constellation="GPS")
+CP_NL15_GPS = DataType(data_type="CP_NL15", description="L1-L5 Narrow-Lane CarrierPhase (GPS)", freq_number=15,
+                       constellation="GPS")
+
+# GAL
+CP_NL15_GAL = DataType(data_type="CP_NL15", description="E1-E5a Narrow-Lane CarrierPhase (GAL)", freq_number=15,
+                       constellation="GAL")
+CP_NL17_GAL = DataType(data_type="CP_NL17", description="E1-E5b Narrow-Lane CarrierPhase (GAL)", freq_number=17,
+                       constellation="GAL")
+CP_NL18_GAL = DataType(data_type="CP_NL18", description="E1-E5AltBOC Narrow-Lane CarrierPhase (GAL)", freq_number=18,
+                       constellation="GAL")
+CP_NL16_GAL = DataType(data_type="CP_NL16", description="E1-E6 Narrow-Lane CarrierPhase (GAL)", freq_number=16,
+                       constellation="GAL")
+
+#####################################
+# Wide-Lane PseudoRange Observables #
+#####################################
+# GPS
+PR_WL12_GPS = DataType(data_type="PR_WL12", description="L1-L2 Wide-Lane PseudoRange (GPS)", freq_number=12,
+                       constellation="GPS")
+PR_WL15_GPS = DataType(data_type="PR_WL15", description="L1-L5 Wide-Lane PseudoRange (GPS)", freq_number=15,
+                       constellation="GPS")
+
+# GAL
+PR_WL15_GAL = DataType(data_type="PR_WL15", description="E1-E5a Wide-Lane PseudoRange (GAL)", freq_number=15,
+                       constellation="GAL")
+PR_WL17_GAL = DataType(data_type="PR_WL17", description="E1-E5b Wide-Lane PseudoRange (GAL)", freq_number=17,
+                       constellation="GAL")
+PR_WL18_GAL = DataType(data_type="PR_WL18", description="E1-E5AltBOC Wide-Lane PseudoRange (GAL)", freq_number=18,
+                       constellation="GAL")
+PR_WL16_GAL = DataType(data_type="PR_WL16", description="E1-E6 Wide-Lane PseudoRange (GAL)", freq_number=16,
+                       constellation="GAL")
+
+######################################
+# Wide-Lane CarrierPhase Observables #
+######################################
+# GPS
+CP_WL12_GPS = DataType(data_type="CP_WL12", description="L1-L2 Wide-Lane CarrierPhase (GPS)", freq_number=12,
+                       constellation="GPS")
+CP_WL15_GPS = DataType(data_type="CP_WL15", description="L1-L5 Wide-Lane CarrierPhase (GPS)", freq_number=15,
+                       constellation="GPS")
+
+# GAL
+CP_WL15_GAL = DataType(data_type="CP_WL15", description="E1-E5a Wide-Lane CarrierPhase (GAL)", freq_number=15,
+                       constellation="GAL")
+CP_WL17_GAL = DataType(data_type="CP_WL17", description="E1-E5b Wide-Lane CarrierPhase (GAL)", freq_number=17,
+                       constellation="GAL")
+CP_WL18_GAL = DataType(data_type="CP_WL18", description="E1-E5AltBOC Wide-Lane CarrierPhase (GAL)", freq_number=18,
+                       constellation="GAL")
+CP_WL16_GAL = DataType(data_type="CP_WL16", description="E1-E6 Wide-Lane CarrierPhase (GAL)", freq_number=16,
+                       constellation="GAL")
+
 ##################################
 # Smooth PseudoRange Observables #
 ##################################
@@ -572,6 +760,10 @@ cAvailableSmoothCodes = [SPR1_GPS, SPR2_GPS, SPR5_GPS, SPR1_GAL, SPR5_GAL, SPR6_
 cAvailableIonoFreeSmoothCodes = [SPR12_GPS, SPR15_GPS, SPR15_GAL, SPR16_GAL, SPR17_GAL, SPR18_GAL]
 cAvailableIonoFreeCodes = [PR12_GPS, PR15_GPS, PR15_GAL, PR16_GAL, PR17_GAL, PR18_GAL]
 cAvailableIonoFreeCarrier = [CP12_GPS, CP15_GPS, CP15_GAL, PR16_GAL, PR17_GAL, PR18_GAL]
+cAvailableNLCodes = [PR_NL12_GPS, PR_NL15_GPS, PR_NL15_GAL, PR_NL16_GAL, PR_NL17_GAL, PR_NL18_GAL]
+cAvailableNLCarrier = [CP_NL12_GPS, CP_NL15_GPS, CP_NL15_GAL, PR_NL16_GAL, PR_NL17_GAL, PR_NL18_GAL]
+cAvailableWLCodes = [PR_WL12_GPS, PR_WL15_GPS, PR_WL15_GAL, PR_WL16_GAL, PR_WL17_GAL, PR_WL18_GAL]
+cAvailableWLCarrier = [CP_WL12_GPS, CP_WL15_GPS, CP_WL15_GAL, PR_WL16_GAL, PR_WL17_GAL, PR_WL18_GAL]
 cAvailableDoppler = [D1_GPS, D2_GPS, D5_GPS, D1_GAL, D5_GAL, D6_GAL, D7_GAL, D8_GAL]
 
 cGPSObsSignals = {"C": {"1": PR1_GPS, "2": PR2_GPS, "5": PR5_GPS},
@@ -597,7 +789,8 @@ def get_data_type(datatype: str, constellation: str):
     """
     for container in [cAvailableCodes, cAvailableSignals, cAvailableFrequencies, cAvailableCarriers,
                       cAvailableSmoothCodes, cAvailableIonoFreeCodes, cAvailableIonoFreeSmoothCodes,
-                      cAvailableIonoFreeCarrier]:
+                      cAvailableIonoFreeCarrier, cAvailableNLCarrier, cAvailableNLCodes,
+                      cAvailableWLCarrier, cAvailableWLCodes]:
         for _type in container:
             if _type.data_type == datatype and constellation == _type.constellation:
                 return _type

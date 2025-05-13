@@ -43,7 +43,7 @@
          "_comment1": "Select first and last epochs in estimation arc in format YYYY-MM-DD hh:mm:ss",
          "_comment2": "Select false to deactivate fields",
          "first_epoch": "2024-03-30 11:00:00",
-         "last_epoch": "2024-03-30 11:05:00"
+         "last_epoch": "2024-03-30 11:01:00"
       },
 
       "_comment4": "Select the input data rate (in seconds). The rate must be consistent with the RINEX OBS rate. Select false to disable.",
@@ -69,7 +69,14 @@
             "health": true
          }
       },
+      "cycle_slips":
+      {
+         "_comment": "Select `true` to detect cycle slip detection or `false` to disable it",
+         "enabled": true,
 
+         "_comment1": "Select `true` to compute narrow-lane, wide-lane and melbourne-wubbena combinations or `false` to disable it",
+         "compute_nl_wl_mw": true
+      },
       "compute_smooth": false,
       "smooth_time_constant_secs": 300
    },
@@ -178,7 +185,7 @@
       "_comment1": "Select Algorithm. Available is 'WSL' - Weighted Least Squares",
       "algorithm": "WSL",
 
-      "a_priori_constrain": true,
+      "a_priori_constrain": false,
       "feedforward_solution": true,
 
       "_comment2": "maximum number of iterations in iterative procedure",
