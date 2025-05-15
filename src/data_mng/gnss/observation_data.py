@@ -386,6 +386,10 @@ class ObservationData:
         """ Returns a list with all available epochs """
         return self._data.get_all_epochs()
 
+    def get_satellites(self) -> list[Satellite]:
+        """ Returns a list with all available satellites """
+        return self._satellites
+
     def get_types(self, constellation: src.data_types.gnss.Constellation) -> list[DataType]:
         """ Returns a list with all available datatypes for the provided constellation """
         return self._types[constellation]

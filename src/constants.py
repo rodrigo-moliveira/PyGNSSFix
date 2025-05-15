@@ -8,21 +8,44 @@ Reference:
         Springer Cham, 2017 
 """
 
-# PI
-PI = 3.141592653589793
-
+#######################
 # RAD - DEG Conversions
+#######################
+PI = 3.141592653589793
 DEG2RAD = PI / 180
 RAD2DEG = 180 / PI
 
+#######################################
 # Orbital Mechanics and Earth constants
+#######################################
 MU_WGS84 = 3.986005E14  # [m^3/sec^2] (WGS84 value, for GPS)
 MU_GTRF = 3.986004418e14  # (GTRF value, for GAL)
 EARTH_ROTATION = 7.292115E-5  # [rad/sec]
 SPEED_OF_LIGHT = 299792458  # [m/s]
 EARTH_ANGULAR_RATE = np.array([0.0, 0.0, EARTH_ROTATION])
+EARTH_FLATNESS = 1 / 298.257223563
+EARTH_ECCENTRICITY_SQ = 2 * EARTH_FLATNESS - EARTH_FLATNESS * EARTH_FLATNESS
+EARTH_SEMI_MAJOR_AXIS = 6378137.0  # [m]  Equatorial radius Re
+EARTH_J2 = 1.08262668355315130e-3  # J2 harmonic
+EARTH_MASS = 5.97237e24  # [kg]
+EARTH_G0 = 9.80665  # [m/s^2] standard value cf. https://www.convertunits.com/from/g-unit/to/m/s%5E2
 
+##################
+# Time Definitions
+##################
+SECONDS_IN_DAY = 86400  # In a Julian day
+MINUTES_IN_DAY = 1440  # In a Julian day
+MINUTES_IN_HOUR = 60.0  # In a Julian day
+HOURS_IN_DAY = 24.0
+SECONDS_IN_GNSS_WEEK = 604800
+DAYS_PER_WEEK = 7
+AVERAGE_DAYS_IN_YEAR = 365.25
+SECONDS_IN_HOUR = 3600
+
+
+#######################
 # GNSS Frequencies (Hz)
+#######################
 # GPS Frequencies
 GPS_L1_FREQ = 1575.42e6
 GPS_L2_FREQ = 1227.60e6
@@ -61,20 +84,20 @@ GAL_E1E5b_FREQ = 77 * GAL_E1_FREQ - 59 * GAL_E5B_FREQ  # E1-E5b IF Frequency
 GAL_E1E6_FREQ = 154 * GAL_E1_FREQ - 125 * GAL_E6_FREQ  # E1-E6 IF Frequency
 GAL_E1E5AltBOC_FREQ = 154 * GAL_E1_FREQ - 116.5 * GAL_E5ALTBOC_FREQ  # E1-E5AltBOC IF Frequency
 
-# Time
-SECONDS_IN_DAY = 86400  # In a Julian day
-MINUTES_IN_DAY = 1440  # In a Julian day
-MINUTES_IN_HOUR = 60.0  # In a Julian day
-HOURS_IN_DAY = 24.0
-SECONDS_IN_GNSS_WEEK = 604800
-DAYS_PER_WEEK = 7
-AVERAGE_DAYS_IN_YEAR = 365.25
-SECONDS_IN_HOUR = 3600
+# Wide-Lane Frequencies
+# See Eq. (20.23) of [1]
+GPS_WL_L1L2_FREQ = GPS_L1_FREQ - GPS_L2_FREQ
+GPS_WL_L1L5_FREQ = GPS_L1_FREQ - GPS_L5_FREQ
+GAL_WL_E1E5a_FREQ = GAL_E1_FREQ - GAL_E5A_FREQ
+GAL_WL_E1E5b_FREQ = GAL_E1_FREQ - GAL_E5B_FREQ
+GAL_WL_E1E6_FREQ = GAL_E1_FREQ - GAL_E6_FREQ
+GAL_WL_E1E5AltBOC_FREQ = GAL_E1_FREQ - GAL_E5ALTBOC_FREQ
 
-
-EARTH_FLATNESS = 1 / 298.257223563
-EARTH_ECCENTRICITY_SQ = 2 * EARTH_FLATNESS - EARTH_FLATNESS * EARTH_FLATNESS
-EARTH_SEMI_MAJOR_AXIS = 6378137.0  # [m]  Equatorial radius Re
-EARTH_J2 = 1.08262668355315130e-3  # J2 harmonic
-EARTH_MASS = 5.97237e24  # [kg]
-EARTH_G0 = 9.80665  # [m/s^2] standard value cf. https://www.convertunits.com/from/g-unit/to/m/s%5E2
+# Narrow-Lane Frequencies
+# See Eq. (20.26) of [1]
+GPS_NL_L1L2_FREQ = GPS_L1_FREQ + GPS_L2_FREQ
+GPS_NL_L1L5_FREQ = GPS_L1_FREQ + GPS_L5_FREQ
+GAL_NL_E1E5a_FREQ = GAL_E1_FREQ + GAL_E5A_FREQ
+GAL_NL_E1E5b_FREQ = GAL_E1_FREQ + GAL_E5B_FREQ
+GAL_NL_E1E6_FREQ = GAL_E1_FREQ + GAL_E6_FREQ
+GAL_NL_E1E5AltBOC_FREQ = GAL_E1_FREQ + GAL_E5ALTBOC_FREQ

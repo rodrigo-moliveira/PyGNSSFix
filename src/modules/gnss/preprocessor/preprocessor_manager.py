@@ -9,6 +9,7 @@ from src.io.config import config_dict, EnumObservationModel
 from src.errors import PreprocessorError
 from .filter import *
 from .functor import *
+from .cycle_slips import CycleSlipDetector
 
 
 class PreprocessorManager:
@@ -355,6 +356,10 @@ class PreprocessorManager:
                               f"observations {obs_list}")
                 self.narrow_wide_lane(constellation, obs_data, nl_obs_data, wl_obs_data)
                 self.melbourne_wubbena(constellation, nl_obs_data, wl_obs_data, mw_obs_data)
+
+        # Perform Cycle Slip Detection
+        # TODO: continuar aqui...
+        detector = CycleSlipDetector(mw_obs_data)
 
         if self.write_trace:
             self.log.debug(
