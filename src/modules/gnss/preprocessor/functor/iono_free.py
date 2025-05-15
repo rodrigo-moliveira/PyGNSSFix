@@ -51,29 +51,34 @@ class IonoFreeFunctor(Functor):
 
         if self.pr1 is not None and self.pr2 is not None:
             pr_std_1 = std_dict[self.pr1]
+            cp_std_1 = std_dict[self.cp1]
             f1 = self.pr1.freq.freq_value
 
             pr_std_2 = std_dict[self.pr2]
+            cp_std_2 = std_dict[self.cp2]
             f2 = self.pr2.freq.freq_value
 
             self.gama1 = f1 * f1 / (f1 * f1 - f2 * f2)
             self.gama2 = f2 * f2 / (f1 * f1 - f2 * f2)
 
             pr_std_if = abs(self.gama1 * pr_std_1 - self.gama2 * pr_std_2)
+            cp_std_if = abs(self.gama1 * cp_std_1 - self.gama2 * cp_std_2)
             self.pr_if = DataType.get_iono_free_datatype(self.pr1, self.pr2, constellation)
             self.cp_if = DataType.get_iono_free_datatype(self.cp1, self.cp2, constellation)
             config_dict.update_obs_std(constellation, self.pr_if, pr_std_if)
+            config_dict.update_obs_std(constellation, self.cp_if, cp_std_if)
 
             log = get_logger(MODEL_LOG)
             log.info(f"Computing iono-free observation std for constellation {constellation}. {self.pr1}: {pr_std_1} - "
-                     f"{self.pr2}: {pr_std_2} -> {self.pr_if}: {pr_std_if}")
+                     f"{self.pr2}: {pr_std_2} -> {self.pr_if}: {pr_std_if}. {self.cp1}: {cp_std_1} - "
+                        f"{self.cp2}: {cp_std_2} -> {self.cp_if}: {cp_std_if}")
         else:
             raise AttributeError(f"Error computing observation stds for constellation {constellation}: "
                                  f"Mismatch between observation std list {std_dict} and base and second frequencies "
                                  f"{self.base_freq} and {self.second_freq}")
 
-    def _get_iono_free_observations(self, v_obs_in) -> list[DataType]:
-        """ Gets the Iono Free DataType """
+    def _get_iono_free_observations(self, v_obs_in) -> list[Observation]:
+        """ Gets the observations matching each datatype from the input list of Observations """
         # get code and carrier for first frequency (C1, L1)
         C1 = C2 = L1 = L2 = None
 

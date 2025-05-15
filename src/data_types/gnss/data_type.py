@@ -42,8 +42,8 @@ class DataType:
             super(DataType, self).__setattr__('_freq_number', freq_number)
         if freq_value is not None:
             super(DataType, self).__setattr__('_freq_value', freq_value)
-        if freq is not None:
-            super(DataType, self).__setattr__('_freq', freq)
+        # if freq is not None:
+        super(DataType, self).__setattr__('_freq', freq)
         if constellation is not None:
             super(DataType, self).__setattr__('_constellation', constellation)
         if data_type is not None:
@@ -449,7 +449,7 @@ class DataType:
             returns the DataType instance `MW12_GPS`
         """
         if (DataType.is_nl_code(datatype1) and DataType.is_wl_carrier(datatype2)) or \
-              (DataType.is_wl_carrier(datatype1) and DataType.is_nl_code(datatype2)):
+                (DataType.is_wl_carrier(datatype1) and DataType.is_nl_code(datatype2)):
             if datatype1.freq_number == datatype2.freq_number:
                 return get_data_type(f"MW{datatype1.freq_number}", constellation)
 
@@ -541,6 +541,10 @@ L2 = DataType(data_type="L2", description="Frequency L2 for GPS", freq_value=con
               constellation="GPS", freq_number=2)
 L5 = DataType(data_type="L5", description="Frequency L5 for GPS", freq_value=constants.GPS_L5_FREQ,
               constellation="GPS", freq_number=5)
+L1L2_IF = DataType(data_type="L1L2_IF", description="Iono-Free Frequency L1-L2 for GPS",
+                   freq_value=constants.GPS_L1L2_FREQ, constellation="GPS", freq_number=12)
+L1L5_IF = DataType(data_type="L1L5_IF", description="Iono-Free Frequency L1-L5 for GPS",
+                   freq_value=constants.GPS_L1L5_FREQ, constellation="GPS", freq_number=15)
 
 # GAL Frequencies
 E1 = DataType(data_type="E1", description="Frequency E1 (GAL)", freq_value=constants.GAL_E1_FREQ,
@@ -553,6 +557,14 @@ E5ALTBOC = DataType(data_type="E5AltBOC", description="Frequency E5AltBOC (GAL)"
                     freq_value=constants.GAL_E5ALTBOC_FREQ, constellation="GAL", freq_number=8)
 E6 = DataType(data_type="E6", description="Frequency E6 (GAL)", freq_value=constants.GAL_E6_FREQ,
               constellation="GAL", freq_number=6)
+E1E5a_IF = DataType(data_type="E1E5a_IF", description="Iono-Free Frequency E1-E5a (GAL)",
+                    freq_value=constants.GAL_E1E5a_FREQ, constellation="GAL", freq_number=15)
+E1E5b_IF = DataType(data_type="E1E5b_IF", description="Iono-Free Frequency E1-E5b (GAL)",
+                    freq_value=constants.GAL_E1E5b_FREQ, constellation="GAL", freq_number=17)
+E1E5AltBOC_IF = DataType(data_type="E1E5AltBOC_IF", description="Iono-Free Frequency E1-E5AltBOC (GAL)",
+                         freq_value=constants.GAL_E1E5AltBOC_FREQ, constellation="GAL", freq_number=18)
+E1E6_IF = DataType(data_type="E1E6_IF", description="Iono-Free Frequency E1-E6 (GAL)",
+                    freq_value=constants.GAL_E1E6_FREQ, constellation="GAL", freq_number=16)
 
 ###################
 # Raw Observables #
@@ -638,38 +650,38 @@ D6_GAL = DataType(data_type="D6", description="Doppler in E6 (GAL)", freq=E6, fr
 # NOTE: currently, only allow for combinations between L1/E1 and secondary frequencies (L1/E1 must be present)
 # GPS
 PR12_GPS = DataType(data_type="PR12", description="L1-L2 Iono-Free PseudoRange (GPS)", freq_number=12,
-                    constellation="GPS")
+                    constellation="GPS", freq=L1L2_IF)
 PR15_GPS = DataType(data_type="PR15", description="L1-L5 Iono-Free PseudoRange (GPS)", freq_number=15,
-                    constellation="GPS")
+                    constellation="GPS", freq=L1L5_IF)
 
 # GAL
 PR15_GAL = DataType(data_type="PR15", description="E1-E5a Iono-Free PseudoRange (GAL)", freq_number=15,
-                    constellation="GAL")
+                    constellation="GAL", freq=E1E5a_IF)
 PR17_GAL = DataType(data_type="PR17", description="E1-E5b Iono-Free PseudoRange (GAL)", freq_number=17,
-                    constellation="GAL")
+                    constellation="GAL", freq=E1E5b_IF)
 PR18_GAL = DataType(data_type="PR18", description="E1-E5AltBOC Iono-Free PseudoRange (GAL)", freq_number=18,
-                    constellation="GAL")
+                    constellation="GAL", freq=E1E5AltBOC_IF)
 PR16_GAL = DataType(data_type="PR16", description="E1-E6 Iono-Free PseudoRange (GAL)", freq_number=16,
-                    constellation="GAL")
+                    constellation="GAL", freq=E1E6_IF)
 
 #######################################
 # Iono Free Carrier Phase Observables #
 #######################################
 # GPS
 CP12_GPS = DataType(data_type="CP12", description="L1-L2 Iono-Free Carrier Phase (GPS)", freq_number=12,
-                    constellation="GPS")
+                    constellation="GPS", freq=L1L2_IF)
 CP15_GPS = DataType(data_type="CP15", description="L1-L5 Iono-Free Carrier Phase (GPS)", freq_number=15,
-                    constellation="GPS")
+                    constellation="GPS", freq=L1L5_IF)
 
 # GAL
 CP15_GAL = DataType(data_type="CP15", description="E1-E5a Iono-Free Carrier Phase (GAL)", freq_number=15,
-                    constellation="GAL")
+                    constellation="GAL", freq=E1E5a_IF)
 CP17_GAL = DataType(data_type="CP17", description="E1-E5b Iono-Free Carrier Phase (GAL)", freq_number=17,
-                    constellation="GAL")
+                    constellation="GAL", freq=E1E5b_IF)
 CP18_GAL = DataType(data_type="CP18", description="E1-E5AltBOC Iono-Free Carrier Phase (GAL)", freq_number=18,
-                    constellation="GAL")
+                    constellation="GAL", freq=E1E5AltBOC_IF)
 CP16_GAL = DataType(data_type="CP16", description="E1-E6 Iono-Free Carrier Phase (GAL)", freq_number=16,
-                    constellation="GAL")
+                    constellation="GAL", freq=E1E6_IF)
 
 #######################################
 # Narrow-Lane PseudoRange Observables #
@@ -747,25 +759,24 @@ CP_WL18_GAL = DataType(data_type="CP_WL18", description="E1-E5AltBOC Wide-Lane C
 CP_WL16_GAL = DataType(data_type="CP_WL16", description="E1-E6 Wide-Lane CarrierPhase (GAL)", freq_number=16,
                        constellation="GAL")
 
-
 #############################################
 # Melbourne-Wubbena Combination Observables #
 #############################################
 # GPS
 MW12_GPS = DataType(data_type="MW12", description="L1-L2 Melbourne-Wubbena Combination (GPS)", freq_number=12,
-                       constellation="GPS")
+                    constellation="GPS")
 MW15_GPS = DataType(data_type="MW15", description="L1-L5 Melbourne-Wubbena Combination (GPS)", freq_number=15,
-                       constellation="GPS")
+                    constellation="GPS")
 
 # GAL
 MW15_GAL = DataType(data_type="MW15", description="E1-E5a Melbourne-Wubbena Combination (GAL)", freq_number=15,
-                       constellation="GAL")
+                    constellation="GAL")
 MW17_GAL = DataType(data_type="MW17", description="E1-E5b Melbourne-Wubbena Combination (GAL)", freq_number=17,
-                       constellation="GAL")
+                    constellation="GAL")
 MW18_GAL = DataType(data_type="MW18", description="E1-E5AltBOC Melbourne-Wubbena Combination (GAL)", freq_number=18,
-                       constellation="GAL")
+                    constellation="GAL")
 MW16_GAL = DataType(data_type="MW16", description="E1-E6 Melbourne-Wubbena Combination (GAL)", freq_number=16,
-                       constellation="GAL")
+                    constellation="GAL")
 
 ##################################
 # Smooth PseudoRange Observables #

@@ -325,7 +325,7 @@ class CarrierPhaseReconstructor(ObservationReconstructor):
 
         # ionosphere (a-priori correction)
         iono_corrections = sat_clocks.nav_data.header.iono_corrections if sat_clocks.nav_data is not None else None
-        if not DataType.is_iono_free_code(datatype) and not DataType.is_iono_free_smooth_code(datatype):
+        if not DataType.is_iono_free_carrier(datatype):
             iono = self._metadata["IONO"][sat.sat_system].compute_iono_delay(
                 epoch, iono_corrections, sat, lat, long, el, az, datatype.freq)
 

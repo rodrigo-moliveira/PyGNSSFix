@@ -26,7 +26,10 @@ class PreprocessorManager:
         * Creating Processed ObservationData:
                 - Compute IonoFree observation dataset (only if defined in the user configurations)
                 - Compute Smooth and IonoFree Smooth observation dataset (only if defined in the user configurations)
-                - TODO: add NL, WD and MW
+                - Compute Narrow-Lane, Wide-Lane and Melbourne-Wubbena observation dataset
+                    (only if defined in the user configurations)
+
+        * Perform Cycle Slip Detection: detect cycle slips in the GNSS measurements
 
         * Write intermediate trace files for each operation
     """
