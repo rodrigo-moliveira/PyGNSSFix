@@ -38,11 +38,12 @@ class GnssRunStorageManager(Container):
             ambiguity(CSVData)
             phase_bias(CSVData)
             mw_obs(CSVData)
+            gf_obs(CSVData)
         """
     __inputs__ = ["time", "position", "velocity", "clock_bias", "dop_ecef", "dop_local", "clock_bias_rate", "isb",
                   "tropo_wet", "pr_prefit_residuals", "pr_postfit_residuals", "iono", "satellite_azel",
                   "pr_rate_prefit_residuals", "pr_rate_postfit_residuals", "obs", "ambiguity", "phase_bias",
-                  "cp_prefit_residuals", "cp_postfit_residuals", "mw_obs"]
+                  "cp_prefit_residuals", "cp_postfit_residuals", "mw_obs", "gf_obs"]
     __slots__ = __inputs__ + ["_available", "log"]
 
     def __init__(self, log: logging.Logger):
@@ -207,6 +208,13 @@ class GnssRunStorageManager(Container):
         self.mw_obs = CSVData(name="mw_obs",
                               description="Melbourne-Wubbena Observations",
                               title="Melbourne-Wubbena Observations",
+                              time_cols=(0, 1),
+                              data_cols=(2, 3, 4, 5))
+
+        # GNSS observation data (Geometry-Free Combinations)
+        self.gf_obs = CSVData(name="gf_obs",
+                              description="Geometry-Free Observations",
+                              title="Geometry-Free Observations",
                               time_cols=(0, 1),
                               data_cols=(2, 3, 4, 5))
 

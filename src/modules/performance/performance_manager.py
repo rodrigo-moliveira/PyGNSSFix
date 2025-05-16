@@ -269,6 +269,7 @@ class PerformanceManager:
             self.log.info("Plotting observations and additional information (satellite availability and skyplot...")
             self._plot_obs(plot_dir, "obs")
             self._plot_obs(plot_dir, "mw_obs")
+            self._plot_obs(plot_dir, "gf_obs")
             self._plot_sat_availability(plot_dir)
             self._skyplot(plot_dir)
 

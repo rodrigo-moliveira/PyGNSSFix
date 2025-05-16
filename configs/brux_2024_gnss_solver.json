@@ -74,8 +74,11 @@
          "_comment": "Select `true` to detect cycle slip detection or `false` to disable it",
          "enabled": true,
 
-         "_comment1": "Select `true` to compute narrow-lane, wide-lane and melbourne-wubbena combinations or `false` to disable it",
-         "compute_nl_wl_mw": true
+         "_comment1": "Select `true` to run the Melbourne-Wubbena Cycle Slip Detector (requires computation of narrow-lane, wide-lane and melbourne-wubbena combinations)",
+         "compute_nl_wl_mw": true,
+
+         "_comment2": "Select `true` to run the Geometry-Free Cycle Slip Detector (requires computation of geometry-free combinations)",
+         "compute_geometry_free": true
       },
       "compute_smooth": false,
       "smooth_time_constant_secs": 300

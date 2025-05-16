@@ -166,9 +166,10 @@
           "type": "object",
           "properties": {
             "enabled": {"type": "boolean"},
-            "compute_nl_wl_mw": {"type": "boolean"}
+            "compute_nl_wl_mw": {"type": "boolean"},
+            "compute_geometry_free": {"type": "boolean"}
           },
-          "required": ["enabled", "compute_nl_wl_mw"]
+          "required": ["enabled", "compute_nl_wl_mw", "compute_geometry_free"]
         },
         "compute_smooth": {"type": "boolean"},
         "smooth_time_constant_secs": {"type": "integer", "minimum": 1}

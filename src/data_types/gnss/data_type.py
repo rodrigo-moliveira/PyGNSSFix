@@ -458,6 +458,44 @@ class DataType:
                           f"with matching frequency numbers.")
 
     @staticmethod
+    def get_gf_datatype(datatype1, datatype2, constellation):
+        """
+        Mix `DataType` objects to get the associated geometry-free datatype.
+        The datatypes must both be either:
+            * datatype1 is PR or CP of band 1
+            * datatype1 is PR or CP of band 2
+
+        Args:
+            datatype1(DataType):
+            datatype2(DataType):
+            constellation(str):
+
+        Returns:
+            DataType: geometry-free datatype
+
+        Raises:
+             SignalError: an exception is raised if the geometry-free datatype could not be formed from the
+                provided input arguments
+
+        Example:
+            >>> DataType.get_gf_datatype(PR1_GPS, PR2_GPS,  "GPS")
+            returns the DataType instance `PR_GF12_GPS`
+        """
+        if DataType.is_code(datatype1) and DataType.is_code(datatype2):
+            index1 = datatype1.freq_number
+            index2 = datatype2.freq_number
+            return get_data_type(f"PR_GF{min(index1, index2)}{max(index1, index2)}", constellation)
+
+        if DataType.is_carrier(datatype1) and DataType.is_carrier(datatype2):
+            index1 = datatype1.freq_number
+            index2 = datatype2.freq_number
+            return get_data_type(f"CP_GF{min(index1, index2)}{max(index1, index2)}", constellation)
+
+        raise SignalError(f"Unable to obtain geometry-free datatype from the provided arguments. "
+                          f"Datatype1 and datatype2 must be both code."
+                          f"datatype1 = {datatype1.data_type}, datatype2 = {datatype2.data_type}")
+
+    @staticmethod
     def get_smooth_datatype(datatype):
         """
         Returns the smooth pseudorange (SPR) of the provided code `DataType` instance.
@@ -802,6 +840,44 @@ MW18_GAL = DataType(data_type="MW18", description="E1-E5AltBOC Melbourne-Wubbena
 MW16_GAL = DataType(data_type="MW16", description="E1-E6 Melbourne-Wubbena Combination (GAL)", freq_number=16,
                     constellation="GAL", freq=E1E6_WL)
 
+#########################################
+# Geometry-Free PseudoRange Observables #
+#########################################
+# GPS
+PR_GF12_GPS = DataType(data_type="PR_GF12", description="L1-L2 Geometry-Free PseudoRange (GPS)", freq_number=12,
+                       constellation="GPS")
+PR_GF15_GPS = DataType(data_type="PR_GF15", description="L1-L5 Geometry-Free PseudoRange (GPS)", freq_number=15,
+                       constellation="GPS")
+
+# GAL
+PR_GF15_GAL = DataType(data_type="PR_GF15", description="E1-E5a Geometry-Free PseudoRange (GAL)", freq_number=15,
+                       constellation="GAL")
+PR_GF17_GAL = DataType(data_type="PR_GF17", description="E1-E5b Geometry-Free PseudoRange (GAL)", freq_number=17,
+                       constellation="GAL")
+PR_GF18_GAL = DataType(data_type="PR_GF18", description="E1-E5AltBOC Geometry-Free PseudoRange (GAL)", freq_number=18,
+                       constellation="GAL")
+PR_GF16_GAL = DataType(data_type="PR_GF16", description="E1-E6 Geometry-Free PseudoRange (GAL)", freq_number=16,
+                       constellation="GAL")
+
+##########################################
+# Geometry-Free CarrierPhase Observables #
+##########################################
+# GPS
+CP_GF12_GPS = DataType(data_type="CP_GF12", description="L1-L2 Geometry-Free CarrierPhase (GPS)", freq_number=12,
+                       constellation="GPS")
+CP_GF15_GPS = DataType(data_type="CP_GF15", description="L1-L5 Geometry-Free CarrierPhase (GPS)", freq_number=15,
+                       constellation="GPS")
+
+# GAL
+CP_GF15_GAL = DataType(data_type="CP_GF15", description="E1-E5a Geometry-Free CarrierPhase (GAL)", freq_number=15,
+                       constellation="GAL")
+CP_GF17_GAL = DataType(data_type="CP_GF17", description="E1-E5b Geometry-Free CarrierPhase (GAL)", freq_number=17,
+                       constellation="GAL")
+CP_GF18_GAL = DataType(data_type="CP_GF18", description="E1-E5AltBOC Geometry-Free CarrierPhase (GAL)", freq_number=18,
+                       constellation="GAL")
+CP_GF16_GAL = DataType(data_type="CP_GF16", description="E1-E6 Geometry-Free CarrierPhase (GAL)", freq_number=16,
+                       constellation="GAL")
+
 ##################################
 # Smooth PseudoRange Observables #
 ##################################
@@ -861,6 +937,8 @@ cAvailableIonoFreeCarrier = [CP12_GPS, CP15_GPS, CP15_GAL, PR16_GAL, PR17_GAL, P
 cAvailableNLCodes = [PR_NL12_GPS, PR_NL15_GPS, PR_NL15_GAL, PR_NL16_GAL, PR_NL17_GAL, PR_NL18_GAL]
 cAvailableNLCarrier = [CP_NL12_GPS, CP_NL15_GPS, CP_NL15_GAL, PR_NL16_GAL, PR_NL17_GAL, PR_NL18_GAL]
 cAvailableWLCodes = [PR_WL12_GPS, PR_WL15_GPS, PR_WL15_GAL, PR_WL16_GAL, PR_WL17_GAL, PR_WL18_GAL]
+cAvailableGFCodes = [PR_GF12_GPS, PR_GF15_GPS, PR_GF15_GAL, PR_GF16_GAL, PR_GF17_GAL, PR_GF18_GAL]
+cAvailableGFCarrier = [CP_GF12_GPS, CP_GF15_GPS, CP_GF15_GAL, CP_GF16_GAL, CP_GF17_GAL, CP_GF18_GAL]
 cAvailableWLCarrier = [CP_WL12_GPS, CP_WL15_GPS, CP_WL15_GAL, PR_WL16_GAL, PR_WL17_GAL, PR_WL18_GAL]
 cAvailableMWObs = [MW12_GPS, MW15_GPS, MW15_GAL, MW16_GAL, MW17_GAL, MW18_GAL]
 cAvailableDoppler = [D1_GPS, D2_GPS, D5_GPS, D1_GAL, D5_GAL, D6_GAL, D7_GAL, D8_GAL]
@@ -889,7 +967,8 @@ def get_data_type(datatype: str, constellation: str):
     for container in [cAvailableCodes, cAvailableSignals, cAvailableFrequencies, cAvailableCarriers,
                       cAvailableSmoothCodes, cAvailableIonoFreeCodes, cAvailableIonoFreeSmoothCodes,
                       cAvailableIonoFreeCarrier, cAvailableNLCarrier, cAvailableNLCodes,
-                      cAvailableWLCarrier, cAvailableWLCodes, cAvailableMWObs]:
+                      cAvailableWLCarrier, cAvailableWLCodes, cAvailableMWObs,
+                      cAvailableGFCodes, cAvailableGFCarrier]:
         for _type in container:
             if _type.data_type == datatype and constellation == _type.constellation:
                 return _type
