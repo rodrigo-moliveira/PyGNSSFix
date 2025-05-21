@@ -359,8 +359,8 @@ class PreprocessorManager:
                 self.log.info(f"Rate Downgrade Filter Report: {mapper.report}")
 
     def cycle_slip(self, obs_data):
-        compute_mw = config_dict.get("preprocessor", "cycle_slips", "compute_nl_wl_mw")
-        compute_gf = config_dict.get("preprocessor", "cycle_slips", "compute_geometry_free")
+        compute_mw = config_dict.get("preprocessor", "cycle_slips", "melbourne_wubbena")
+        compute_gf = config_dict.get("preprocessor", "cycle_slips", "geometry_free")
         self.log.info(f"Performing Cycle Slip Detection with the following detectors: "
                       f"Melbourne-Wubbena Detector = {compute_mw}, Geometry-Free Detector = {compute_gf}")
 
@@ -387,8 +387,9 @@ class PreprocessorManager:
                     self.geometry_free(constellation, obs_data, gf_obs_data)
 
         # Perform Cycle Slip Detection
-        # TODO: continuar aqui...
-        detector = CycleSlipDetector(mw_obs_data)
+        detector = CycleSlipDetector(mw_obs_data, gf_obs_data, self.write_trace, self.trace_path)
+        detector.compute()
+        self.data_manager.add_data("cycle_slips", detector.cycle_slips)
 
         if self.write_trace:
             self.log.debug(
@@ -409,4 +410,8 @@ class PreprocessorManager:
 
             f = open(self.trace_path + "/GFObservationData.txt", "w")
             f.write(str(gf_obs_data))
+            f.close()
+
+            f = open(self.trace_path + "/CycleSlips.txt", "w")
+            f.write(str(detector.cycle_slips))
             f.close()

@@ -166,10 +166,13 @@
           "type": "object",
           "properties": {
             "enabled": {"type": "boolean"},
-            "compute_nl_wl_mw": {"type": "boolean"},
-            "compute_geometry_free": {"type": "boolean"}
+            "melbourne_wubbena": {"type": "boolean"},
+            "mw_k_factor": {"type": "number"},
+            "geometry_free": {"type": "boolean"},
+            "gf_threshold": {"type": "number"},
+            "max_gap": {"type": "number"}
           },
-          "required": ["enabled", "compute_nl_wl_mw", "compute_geometry_free"]
+          "required": ["enabled", "melbourne_wubbena", "geometry_free", "mw_k_factor", "gf_threshold", "max_gap"]
         },
         "compute_smooth": {"type": "boolean"},
         "smooth_time_constant_secs": {"type": "integer", "minimum": 1}

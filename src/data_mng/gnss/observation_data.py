@@ -494,6 +494,14 @@ class ObservationData:
 
         return obj
 
+    def is_empty(self):
+        """
+        Check if the observation data is empty
+        Returns:
+            bool: True if the observation data is empty
+        """
+        return self._data.is_empty()
+
     def to_csv_file(self):
         """
         Export this ObservationData to a csv file format.

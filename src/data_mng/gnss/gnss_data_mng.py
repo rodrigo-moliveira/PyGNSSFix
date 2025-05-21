@@ -37,6 +37,7 @@ class GnssDataManager(Container):
         wide_lane_obs_data(ObservationData): processed wide lane observation data
         melbourne_obs_data(ObservationData): processed Melbourne-Wubbena observation data
         geometry_free_obs_data(ObservationData): processed geometry-free observation data
+        cycle_slips(dict): dictionary of cycle slips
         nav_solution(list): navigation solution, list of :py:class:`src.data_mng.gnss.state_space.GnssStateSpace`
             objects
 
@@ -55,6 +56,7 @@ class GnssDataManager(Container):
         "wide_lane_obs_data",      # Internal data
         "melbourne_obs_data",      # Internal data
         "geometry_free_obs_data",  # Internal data
+        "cycle_slips",             # Internal data
         "nav_solution"             # Output
     ]
 
@@ -75,6 +77,7 @@ class GnssDataManager(Container):
         self.wide_lane_obs_data = ObservationData()
         self.melbourne_obs_data = ObservationData()
         self.geometry_free_obs_data = ObservationData()
+        self.cycle_slips = {}  # Cycle slips dictionary
         self.nav_solution = None  # Navigation solution
 
     def __str__(self):

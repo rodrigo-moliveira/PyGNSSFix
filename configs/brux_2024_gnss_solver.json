@@ -75,10 +75,16 @@
          "enabled": true,
 
          "_comment1": "Select `true` to run the Melbourne-Wubbena Cycle Slip Detector (requires computation of narrow-lane, wide-lane and melbourne-wubbena combinations)",
-         "compute_nl_wl_mw": true,
+         "melbourne_wubbena": true,
+         "mw_k_factor": 4.0,
 
          "_comment2": "Select `true` to run the Geometry-Free Cycle Slip Detector (requires computation of geometry-free combinations)",
-         "compute_geometry_free": true
+         "geometry_free": true,
+         "_comment3": "Select threshold for the Geometry-Free Cycle Slip Detector. -1 to let the algorithm choose the threshold",
+         "gf_threshold": -1,
+
+         "_comment4": "Select maximum number of missing observations to be considered as cycle slip",
+         "max_gap": 5
       },
       "compute_smooth": false,
       "smooth_time_constant_secs": 300

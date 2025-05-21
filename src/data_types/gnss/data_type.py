@@ -591,6 +591,10 @@ L1L2_WL = DataType(data_type="L1L2_WL", description="Wide-Lane Frequency L1-L2 f
                    freq_value=constants.GPS_WL_L1L2_FREQ, constellation="GPS", freq_number=12)
 L1L5_WL = DataType(data_type="L1L5_WL", description="Wide-Lane Frequency L1-L5 for GPS",
                    freq_value=constants.GPS_WL_L1L5_FREQ, constellation="GPS", freq_number=15)
+L1L2_GF = DataType(data_type="L1L2_GF", description="Geometry-Free Frequency L1-L2 for GPS",
+                   freq_value=constants.GPS_GF_L1L2_FREQ, constellation="GPS", freq_number=12)
+L1L5_GF = DataType(data_type="L1L5_GF", description="Geometry-Free Frequency L1-L5 for GPS",
+                     freq_value=constants.GPS_GF_L1L5_FREQ, constellation="GPS", freq_number=15)
 
 # GAL Frequencies
 E1 = DataType(data_type="E1", description="Frequency E1 (GAL)", freq_value=constants.GAL_E1_FREQ,
@@ -627,6 +631,14 @@ E1E6_WL = DataType(data_type="E1E6_WL", description="Wide-Lane Frequency E1-E6 (
                    freq_value=constants.GAL_WL_E1E6_FREQ, constellation="GAL", freq_number=16)
 E1E5AltBOC_WL = DataType(data_type="E1E5AltBOC_WL", description="Wide-Lane Frequency E1-E5AltBOC (GAL)",
                          freq_value=constants.GAL_WL_E1E5AltBOC_FREQ, constellation="GAL", freq_number=18)
+E1E5a_GF = DataType(data_type="E1E5a_GF", description="Geometry-Free Frequency E1-E5a (GAL)",
+                    freq_value=constants.GAL_GF_E1E5a_FREQ, constellation="GAL", freq_number=15)
+E1E5b_GF = DataType(data_type="E1E5b_GF", description="Geometry-Free Frequency E1-E5b (GAL)",
+                    freq_value=constants.GAL_GF_E1E5b_FREQ, constellation="GAL", freq_number=17)
+E1E5AltBOC_GF = DataType(data_type="E1E5AltBOC_GF", description="Geometry-Free Frequency E1-E5AltBOC (GAL)",
+                            freq_value=constants.GAL_GF_E1E5AltBOC_FREQ, constellation="GAL", freq_number=18)
+E1E6_GF = DataType(data_type="E1E6_GF", description="Geometry-Free Frequency E1-E6 (GAL)",
+                     freq_value=constants.GAL_GF_E1E6_FREQ, constellation="GAL", freq_number=16)
 
 ###################
 # Raw Observables #
@@ -845,38 +857,38 @@ MW16_GAL = DataType(data_type="MW16", description="E1-E6 Melbourne-Wubbena Combi
 #########################################
 # GPS
 PR_GF12_GPS = DataType(data_type="PR_GF12", description="L1-L2 Geometry-Free PseudoRange (GPS)", freq_number=12,
-                       constellation="GPS")
+                       constellation="GPS", freq=L1L2_GF)
 PR_GF15_GPS = DataType(data_type="PR_GF15", description="L1-L5 Geometry-Free PseudoRange (GPS)", freq_number=15,
-                       constellation="GPS")
+                       constellation="GPS", freq=L1L5_GF)
 
 # GAL
 PR_GF15_GAL = DataType(data_type="PR_GF15", description="E1-E5a Geometry-Free PseudoRange (GAL)", freq_number=15,
-                       constellation="GAL")
+                       constellation="GAL", freq=E1E5a_GF)
 PR_GF17_GAL = DataType(data_type="PR_GF17", description="E1-E5b Geometry-Free PseudoRange (GAL)", freq_number=17,
-                       constellation="GAL")
+                       constellation="GAL", freq=E1E5b_GF)
 PR_GF18_GAL = DataType(data_type="PR_GF18", description="E1-E5AltBOC Geometry-Free PseudoRange (GAL)", freq_number=18,
-                       constellation="GAL")
+                       constellation="GAL", freq=E1E5AltBOC_GF)
 PR_GF16_GAL = DataType(data_type="PR_GF16", description="E1-E6 Geometry-Free PseudoRange (GAL)", freq_number=16,
-                       constellation="GAL")
+                       constellation="GAL", freq=E1E6_GF)
 
 ##########################################
 # Geometry-Free CarrierPhase Observables #
 ##########################################
 # GPS
 CP_GF12_GPS = DataType(data_type="CP_GF12", description="L1-L2 Geometry-Free CarrierPhase (GPS)", freq_number=12,
-                       constellation="GPS")
+                       constellation="GPS", freq=L1L2_GF)
 CP_GF15_GPS = DataType(data_type="CP_GF15", description="L1-L5 Geometry-Free CarrierPhase (GPS)", freq_number=15,
-                       constellation="GPS")
+                       constellation="GPS", freq=L1L5_GF)
 
 # GAL
 CP_GF15_GAL = DataType(data_type="CP_GF15", description="E1-E5a Geometry-Free CarrierPhase (GAL)", freq_number=15,
-                       constellation="GAL")
+                       constellation="GAL", freq=E1E5a_GF)
 CP_GF17_GAL = DataType(data_type="CP_GF17", description="E1-E5b Geometry-Free CarrierPhase (GAL)", freq_number=17,
-                       constellation="GAL")
+                       constellation="GAL", freq=E1E5b_GF)
 CP_GF18_GAL = DataType(data_type="CP_GF18", description="E1-E5AltBOC Geometry-Free CarrierPhase (GAL)", freq_number=18,
-                       constellation="GAL")
+                       constellation="GAL", freq=E1E5AltBOC_GF)
 CP_GF16_GAL = DataType(data_type="CP_GF16", description="E1-E6 Geometry-Free CarrierPhase (GAL)", freq_number=16,
-                       constellation="GAL")
+                       constellation="GAL", freq=E1E6_GF)
 
 ##################################
 # Smooth PseudoRange Observables #
