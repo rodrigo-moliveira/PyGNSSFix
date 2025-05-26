@@ -7,6 +7,7 @@ from src.errors import SolverError
 from src.modules.estimators.weighted_ls import WeightedLeastSquares
 from src.modules.gnss.solver import PseudorangeReconstructor, RangeRateReconstructor, CarrierPhaseReconstructor
 from src.data_types.gnss import DataType
+from src.lambda_alg import LAMBDA
 
 
 class LSQ_Engine:
@@ -511,8 +512,75 @@ class LSQ_Engine_Position(LSQ_Engine):
 
                 obs_offset += n_sats
 
+    def _amb_fix(self, index_map, state, dX, cov):
+        if "ambiguity" in index_map:
+            pivot_dict = state.get_additional_info("pivot")
+            lowest_index = -1
+            highest_index = -1
+            ambiguities = []
+            for sat, cp_types in index_map["ambiguity"].items():
+                if pivot_dict[sat.sat_system] != sat:
+                    for cp_type in cp_types:
+                        idx_amb = cp_types[cp_type]
+                        if idx_amb < lowest_index or lowest_index == -1:
+                            lowest_index = idx_amb
+                        if idx_amb > highest_index:
+                            highest_index = idx_amb
+                        ambiguities.append(state.ambiguity[sat][cp_type].val + dX[idx_amb])
+            amb_cov = cov[lowest_index:highest_index + 1, lowest_index:highest_index + 1]
+
+            # Ambiguity Resolution
+            method = 4
+            ncands = 2
+            P0 = 0.995
+            mu = 0.95
+            afixed_ils, sqnorm_ils, Ps_ils, Qzhat_ils, Z_ils, nfixed_ils, mu_ils = LAMBDA.main(np.array(ambiguities),
+                                                                                               amb_cov, 1, ncands, P0,
+                                                                                               mu)
+
+            # Indices to keep: [0:lowest_index) + [11:20)
+            keep_indices = list(range(0, lowest_index)) + list(range(highest_index+1, len(dX)))
+            remove_indices = [i for i in range(len(dX)) if i not in keep_indices]  # B
+
+            # Create reduced state vector and covariance
+            # Partition the state vector
+            x_B = dX[keep_indices]
+            x_A = dX[remove_indices]
+
+            # Partition the covariance matrix
+            P_B = cov[np.ix_(keep_indices, keep_indices)]
+            P_A = cov[np.ix_(remove_indices, remove_indices)]
+            P_AB = cov[np.ix_(keep_indices, remove_indices)]
+
+            x_B2 = x_B - P_AB @ np.linalg.inv(P_A) @ (np.array(ambiguities) - afixed_ils[:,0])
+            print(x_A)
+            print(ambiguities)
+            print(afixed_ils[:,0])
+            print(f"correction: {P_AB @ np.linalg.inv(P_A) @ (np.array(ambiguities) - afixed_ils[:,0])}")
+            print("\n\n")
+
+            new_dX = np.zeros(len(dX))
+            new_dX[keep_indices] = x_B2
+            new_dX[remove_indices] = afixed_ils[:,0]
+            #afixed_rd, sqnorm_rd, Ps_rd, Qzhat_rd, Z_rd, nfixed_rd, mu_rd = LAMBDA.main(np.array(ambiguities),
+            #                                                                            amb_cov, 2, ncands, P0,
+            #                                                                            mu)
+            #afixed_bs, sqnorm_bs, Ps_bs, Qzhat_bs, Z_bs, nfixed_bs, mu_bs = LAMBDA.main(np.array(ambiguities),
+            #                                                                            amb_cov, 3, ncands, P0,
+            #                                                                            mu)
+            #afixed_par, sqnorm_par, Ps_par, Qzhat_par, Z_par, nfixed_par, mu_par = LAMBDA.main(np.array(ambiguities),
+            #                                                                                   amb_cov, 4, ncands, P0,
+            #                                                                                   mu)
+            return new_dX
+        return np.array([])
+
     def _update_state(self, state, dX, cov):
+
         index_map = state.index_map
+
+        # Perform Ambiguity Resolution (if enabled)
+        if "ambiguity" in index_map and state.ambiguity.amb_resolution_enable:
+            dX = self._amb_fix(index_map, state, dX, cov)
         idx_pos = index_map["position"]
         idx_clock = index_map["clock_bias"]
 
@@ -546,8 +614,12 @@ class LSQ_Engine_Position(LSQ_Engine):
                 if pivot_dict[sat.sat_system] != sat:
                     for cp_type in cp_types:
                         idx_amb = cp_types[cp_type]
-                        state.ambiguity[sat][cp_type].val += dX[idx_amb]
-                        state.ambiguity[sat][cp_type].cov = cov[idx_amb, idx_amb]
+                        if not state.ambiguity.amb_resolution_enable:
+                            state.ambiguity[sat][cp_type].val += dX[idx_amb]
+                            state.ambiguity[sat][cp_type].cov = cov[idx_amb, idx_amb]
+                        else:
+                            # TODO: fix the ambiguities directly in the _amb_fix method
+                            print("TO BE IMPLEMENTED: Ambiguity Resolution in LSQ_Engine_Position")
 
         if "phase_bias" in index_map:
             for const, cp_types in index_map["phase_bias"].items():

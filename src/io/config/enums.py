@@ -210,3 +210,36 @@ class EnumPCVModel(Enum):
     @classmethod
     def show_options(cls):
         return f"[0 - non-azimuth dependent, 1 - azimuth dependent]"
+
+
+class EnumLambdaMethod(Enum):
+    """
+    Enumeration for the Lambda Method used in the ambiguity resolution.
+
+    Available methods are:
+        1 - Integer Least Squares (ILS)
+        2 - Integer Rounding (IR)
+        3 - Integer bootstrapping (BS)
+        4 - Partial ambiguity resolution (PAR)
+    """
+    ILS = 1
+    IR = 2
+    BS = 3
+    PAR = 4
+
+    @classmethod
+    def init_model(cls, model_str: str):
+        if model_str.lower() == "ils":
+            return EnumLambdaMethod.ILS
+        elif model_str.lower() == "ir":
+            return EnumLambdaMethod.IR
+        elif model_str.lower() == "bs":
+            return EnumLambdaMethod.BS
+        elif model_str.lower() == "par":
+            return EnumLambdaMethod.PAR
+        else:
+            raise EnumError(f"Unsupported Lambda Method {model_str}. Available options are {cls.show_options()}")
+
+    @classmethod
+    def show_options(cls):
+        return f"[ILS, IR, BS, PAR]"

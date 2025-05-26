@@ -192,6 +192,16 @@
         "transmission_time_alg": {"type": "integer", "minimum": 0, "maximum": 2},
         "relativistic_corrections": {"type": "integer", "minimum": 0, "maximum": 1},
         "elevation_filter": {"type": "number"},
+        "ambiguity_resolution": {
+          "type": "object",
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "method": {"type": "string", "enum": ["ILS", "IR", "BS", "PAR"]},
+            "P0": {"type": "number"},
+            "mu": {"type": "number"}
+          },
+          "required": ["enabled", "method", "P0", "mu"]
+        },
         "initial_pos_cov": {"type": "array", "items": {"type": "number"}},
         "initial_vel_cov": {"type": "array", "items": {"type": "number"}},
         "initial_clock_cov": {"type": "array", "items": {"type": "number"}},
@@ -203,7 +213,7 @@
         "initial_phase_bias_cov": {"type": "array", "items": {"type": "number"}}
       },
       "required": ["trace_files","algorithm", "a_priori_constrain", "feedforward_solution", "n_iterations", "stop_criteria", "transmission_time_alg", "relativistic_corrections",
-      "elevation_filter", "initial_pos_cov", "initial_vel_cov", "initial_clock_cov", "initial_isb_cov", "initial_iono_cov", "initial_tropo_cov", "initial_clock_rate_cov",
+      "elevation_filter", "ambiguity_resolution", "initial_pos_cov", "initial_vel_cov", "initial_clock_cov", "initial_isb_cov", "initial_iono_cov", "initial_tropo_cov", "initial_clock_rate_cov",
       "initial_ambiguity_cov", "initial_phase_bias_cov"]
     },
     "output": {

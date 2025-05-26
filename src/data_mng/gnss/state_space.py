@@ -4,7 +4,7 @@ import numpy as np
 
 from src.data_mng import Container
 from src import constants
-from src.data_types.gnss import Ambiguity
+from src.data_types.gnss.ambiguity_mng import AmbiguityManager
 from src.io.config import config_dict, EnumFrequencyModel
 from src.models.gnss_models import compute_ggto
 
@@ -138,11 +138,7 @@ class GnssStateSpace(Container):
             state.cov_tropo_wet = self.cov_tropo_wet
 
         if "ambiguity" in _states:
-            state.ambiguity = dict()
-            for sat, cp_types in self.ambiguity.items():
-                state.ambiguity[sat] = dict()
-                for cp_type, ambiguity in cp_types.items():
-                    state.ambiguity[sat][cp_type] = ambiguity.clone()
+            state.ambiguity = self.ambiguity.copy()
 
         if "phase_bias" in _states:
             state.phase_bias = dict()
@@ -231,16 +227,9 @@ class GnssStateSpace(Container):
 
         # ambiguity (optional -> in case algorithm is CP-based)
         if metadata["CP_BASED"]:
-            self.ambiguity = dict()
             cp_types = metadata["PHASES"]
-
-            for sat in sat_list:
-                # NOTE: when other types of ambiguity are implemented (NL or WL), this part should be modified
-                self.ambiguity[sat] = dict()
-                for cp_type in cp_types[sat.sat_system]:
-                    self.ambiguity[sat][cp_type] = Ambiguity(metadata["INITIAL_STATES"]["ambiguity"][0],
-                                                             metadata["INITIAL_STATES"]["ambiguity"][1])
-
+            self.ambiguity = AmbiguityManager(sat_list, metadata["INITIAL_STATES"]["ambiguity"][0],
+                                              metadata["INITIAL_STATES"]["ambiguity"][1], cp_types)
             _states.append("ambiguity")
 
             self.phase_bias = dict()
@@ -312,10 +301,9 @@ class GnssStateSpace(Container):
             self.cov_iono[sat] = 1.0
 
         if "ambiguity" in _states:
-            self.ambiguity[sat] = dict()
             cp_types = self.phase_bias[sat.sat_system].keys()
             for cp_type in cp_types:
-                self.ambiguity[sat][cp_type] = Ambiguity(0.0, 1.0)
+                self.ambiguity.add_ambiguity(sat, cp_type)
 
         # initialize from initial_state
         if self.initial_state is not None:
@@ -331,13 +319,11 @@ class GnssStateSpace(Container):
             if "ambiguity" in _states:
                 cp_types = self.phase_bias[sat.sat_system].keys()
                 if sat in self.initial_state.ambiguity:
-                    self.ambiguity[sat] = dict()
                     for cp_type in cp_types:
-                        self.ambiguity[sat][cp_type] = self.initial_state.ambiguity[sat][cp_type].clone()
+                        self.ambiguity.add_ambiguity(sat, cp_type, self.initial_state.ambiguity[sat][cp_type])
                 else:
-                    self.initial_state.ambiguity[sat] = dict()
                     for cp_type in cp_types:
-                        self.initial_state.ambiguity[sat][cp_type] = Ambiguity(0.0, 1.0)
+                        self.initial_state.ambiguity.add_ambiguity(sat, cp_type)
 
     def _remove_sat(self, sat):
         """ Remove a satellite from the state space. """
@@ -403,7 +389,7 @@ class GnssStateSpace(Container):
         if "ambiguity" in states:
             pivot_dict = self.get_additional_info("pivot")
             index_map["ambiguity"] = dict()
-            for sat, cp_types in self.ambiguity.items():
+            for sat, cp_types in self.ambiguity:
                 if pivot_dict[sat.sat_system] != sat:
                     index_map["ambiguity"][sat] = dict()
                     for cp_type, ambiguity in cp_types.items():

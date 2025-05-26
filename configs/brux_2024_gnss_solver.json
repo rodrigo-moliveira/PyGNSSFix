@@ -212,15 +212,29 @@
       "_comment5": "Elevation filter. Select the value of minimum elevation angle to consider, in degree. Select -1 to turn off",
       "elevation_filter": -1,
 
+      "ambiguity_resolution": {
+         "_comment1": "Select `true` to enable ambiguity resolution or `false` to disable it",
+         "enabled": false,
+
+         "_comment2": "Select the ambiguity resolution method. Available methods are 'ILS', 'IR', 'BS', 'PAR'",
+         "method": "ILS",
+
+         "_comment3": "Select P0 value: minimum required success rate for method PAR",
+         "P0": 0.995,
+
+         "_comment4": "Select mu value: Fixed threshold value for Ratio Test (value must be between 0 and 1)",
+         "mu": 0.95
+      },
+
       "_comment7": "Initial states and expected covariances for the initial state vector.",
-      "initial_pos_cov": [0.402788131984481E+07,0.306998818013051E+06,0.491949906282187E+07,1E-2,1E-2,1E-2],
+      "initial_pos_cov": [0.402788131984481E+07,0.306998818013051E+06,0.491949906282187E+07,1E0,1E0,1E0],
       "initial_vel_cov": [0,0,0,1,1,1],
       "initial_clock_cov": [0,1e-17],
       "initial_isb_cov": [0,1E-16],
       "initial_iono_cov": [0.0, 10],
       "initial_tropo_cov": [0.0, 10],
       "initial_clock_rate_cov": [0.0, 1E-1],
-      "initial_ambiguity_cov": [0.0, 10],
+      "initial_ambiguity_cov": [0.0, 100],
       "initial_phase_bias_cov": [0.0, 1e-16]
    },
 

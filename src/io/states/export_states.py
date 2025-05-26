@@ -33,7 +33,7 @@ def get_file_header(state_variable, state):
     elif state_variable == "iono":
         return f"Week_Number({epoch_system}),Time_of_Week[s],sat,iono[m],cov[m^2]"
     elif state_variable == "ambiguity":
-        return f"Week_Number({epoch_system}),Time_of_Week[s],sat,datatype,ambiguity[m],cov[m^2]"
+        return f"Week_Number({epoch_system}),Time_of_Week[s],sat,datatype,ambiguity[cyc],cov[cyc^2]"
     elif state_variable == "phase_bias":
         return f"Week_Number({epoch_system}),Time_of_Week[s],constellation,datatype,phase_bias[s],cov[s^2]"
     elif state_variable == "tropo_wet":
@@ -112,7 +112,7 @@ def export_to_file(state_variable, state):
 
     elif state_variable == "ambiguity":
         data = []
-        for sat, cp_types in state.ambiguity.items():
+        for sat, cp_types in state.ambiguity:
             for cp_type, ambiguity in cp_types.items():
                 try:
                     data.append(f"{sat},{cp_type},{ambiguity.val},{ambiguity.cov}")
