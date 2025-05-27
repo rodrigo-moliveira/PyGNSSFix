@@ -4,17 +4,17 @@ from src.io.config.config import config_dict
 
 
 class Ambiguity:
-    def __init__(self, val, cov):
+    def __init__(self, val, cov, fixed=False):
         self.val = val
         self.cov = cov
-        self.full_cross_cov = None
+        self.fixed = fixed
 
     def clone(self):
-        obj = Ambiguity(self.val, self.cov)
+        obj = Ambiguity(self.val, self.cov, fixed=self.fixed)
         return obj
 
     def __str__(self):
-        return f"Ambiguity(val={self.val}, cov={self.cov})"
+        return f"Ambiguity(val={self.val}, cov={self.cov}, fixed={self.fixed})"
 
     def __repr__(self):
         return str(self)
@@ -32,7 +32,6 @@ class AmbiguityManager:
         self.amb_resolution_model = EnumLambdaMethod.init_model(config_dict.get("solver", "ambiguity_resolution", "method"))
         self.amb_resolution_p0 = config_dict.get("solver", "ambiguity_resolution", "P0")
         self.amb_resolution_mu = config_dict.get("solver", "ambiguity_resolution", "mu")
-
 
         for sat in sat_list:
             # NOTE: when other types of ambiguity are implemented (NL or WL), this part should be modified

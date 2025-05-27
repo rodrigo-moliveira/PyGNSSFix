@@ -495,9 +495,10 @@ class LSQ_Engine_Position(LSQ_Engine):
                         if "ambiguity" in index_map and sat in index_map["ambiguity"]:
                             pivot_dict = state.get_additional_info("pivot")
                             if pivot_dict[sat.sat_system] != sat:
-                                idx_amb = index_map["ambiguity"][sat][datatype]
-                                wavelength = constants.SPEED_OF_LIGHT / datatype.freq.freq_value
-                                self.design_mat[obs_offset + iSat, idx_amb] = wavelength
+                                if not state.ambiguity[sat][datatype].fixed:
+                                    idx_amb = index_map["ambiguity"][sat][datatype]
+                                    wavelength = constants.SPEED_OF_LIGHT / datatype.freq.freq_value
+                                    self.design_mat[obs_offset + iSat, idx_amb] = wavelength
 
                         # phase bias
                         if "phase_bias" in index_map and const in index_map["phase_bias"]:
@@ -518,6 +519,7 @@ class LSQ_Engine_Position(LSQ_Engine):
             lowest_index = -1
             highest_index = -1
             ambiguities = []
+            # check if ambiguity is already fixed
             for sat, cp_types in index_map["ambiguity"].items():
                 if pivot_dict[sat.sat_system] != sat:
                     for cp_type in cp_types:
@@ -528,7 +530,8 @@ class LSQ_Engine_Position(LSQ_Engine):
                             highest_index = idx_amb
                         ambiguities.append(state.ambiguity[sat][cp_type].val + dX[idx_amb])
             amb_cov = cov[lowest_index:highest_index + 1, lowest_index:highest_index + 1]
-
+            if len(ambiguities) == 0:
+                return dX
             # Ambiguity Resolution
             method = 4
             ncands = 2
@@ -537,6 +540,15 @@ class LSQ_Engine_Position(LSQ_Engine):
             afixed_ils, sqnorm_ils, Ps_ils, Qzhat_ils, Z_ils, nfixed_ils, mu_ils = LAMBDA.main(np.array(ambiguities),
                                                                                                amb_cov, 1, ncands, P0,
                                                                                                mu)
+
+            # fix ambiguities in state space
+            for sat, cp_types in index_map["ambiguity"].items():
+                if pivot_dict[sat.sat_system] != sat:
+                    for cp_type in cp_types:
+                        idx_amb = cp_types[cp_type]
+                        state.ambiguity[sat][cp_type].val = afixed_ils[idx_amb - lowest_index, 0]
+                        state.ambiguity[sat][cp_type].cov = amb_cov[idx_amb - lowest_index, idx_amb - lowest_index]
+                        state.ambiguity[sat][cp_type].fixed = True
 
             # Indices to keep: [0:lowest_index) + [11:20)
             keep_indices = list(range(0, lowest_index)) + list(range(highest_index+1, len(dX)))
@@ -553,11 +565,11 @@ class LSQ_Engine_Position(LSQ_Engine):
             P_AB = cov[np.ix_(keep_indices, remove_indices)]
 
             x_B2 = x_B - P_AB @ np.linalg.inv(P_A) @ (np.array(ambiguities) - afixed_ils[:,0])
-            print(x_A)
-            print(ambiguities)
-            print(afixed_ils[:,0])
-            print(f"correction: {P_AB @ np.linalg.inv(P_A) @ (np.array(ambiguities) - afixed_ils[:,0])}")
-            print("\n\n")
+            #print(x_A)
+            #print(ambiguities)
+            #print(afixed_ils[:,0])
+            #print(f"correction: {P_AB @ np.linalg.inv(P_A) @ (np.array(ambiguities) - afixed_ils[:,0])}")
+            #print("\n\n")
 
             new_dX = np.zeros(len(dX))
             new_dX[keep_indices] = x_B2
@@ -620,6 +632,8 @@ class LSQ_Engine_Position(LSQ_Engine):
                         else:
                             # TODO: fix the ambiguities directly in the _amb_fix method
                             print("TO BE IMPLEMENTED: Ambiguity Resolution in LSQ_Engine_Position")
+                            #state.ambiguity[sat][cp_type].val = dX[idx_amb]
+                            #state.ambiguity[sat][cp_type].cov = cov[idx_amb, idx_amb]
 
         if "phase_bias" in index_map:
             for const, cp_types in index_map["phase_bias"].items():
