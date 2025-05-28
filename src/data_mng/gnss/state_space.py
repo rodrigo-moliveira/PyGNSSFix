@@ -138,7 +138,7 @@ class GnssStateSpace(Container):
             state.cov_tropo_wet = self.cov_tropo_wet
 
         if "ambiguity" in _states:
-            state.ambiguity = self.ambiguity.copy()
+            state.ambiguity = self.ambiguity.clone()
 
         if "phase_bias" in _states:
             state.phase_bias = dict()
@@ -267,7 +267,6 @@ class GnssStateSpace(Container):
             new_sat_list(list[src.data_types.gnss.Satellite]) : list of available satellites
         """
         prev_sat_list = self.get_additional_info("sat_list")
-        # TODO: test add and remove sat for ambiguity fix
         # add the new satellites to the internal data (new visible satellites)
         for sat in new_sat_list:
             if sat not in prev_sat_list:
@@ -283,14 +282,19 @@ class GnssStateSpace(Container):
 
         self.add_additional_info("sat_list", new_sat_list)
 
-        # update pivot information
-        # TODO: check this (unfix all ambiguities if pivot is changed)
+        # update pivot (in case the previous pivot satellite is not in the updated list)
         pivot_dict = self.get_additional_info("pivot")
         for pivot in pivot_dict.values():
             if pivot not in new_sat_list:
                 for sat in new_sat_list:
                     if sat.sat_system == pivot.sat_system:
+                        # TODO: change to log message
+                        print(f"Warning: Pivot satellite changed from satellite {pivot} to {sat} for "
+                              f"{pivot.sat_system} constellation. "
+                              f"All ambiguities for this constellation will be set unfixed.")
                         pivot_dict[pivot.sat_system] = sat
+                        if "ambiguity" in self.get_additional_info("states"):
+                            self.ambiguity.unfix_ambiguities(pivot.sat_system)
                         break
         self.add_additional_info("pivot", pivot_dict)
 
@@ -305,27 +309,6 @@ class GnssStateSpace(Container):
             cp_types = self.phase_bias[sat.sat_system].keys()
             for cp_type in cp_types:
                 self.ambiguity.add_ambiguity(sat, cp_type)
-
-        # initialize from initial_state
-        # TODO: remove this
-        #if self.initial_state is not None:
-        #    if "iono" in _states:
-        #        if sat in self.initial_state.iono:
-        #            self.iono[sat] = self.initial_state.iono[sat]
-        #            self.cov_iono[sat] = self.initial_state.cov_iono[sat]
-
-        #        else:
-        #            self.initial_state.iono[sat] = 0.0
-        #            self.initial_state.cov_iono[sat] = 1.0
-
-            #if "ambiguity" in _states:
-            #    cp_types = self.phase_bias[sat.sat_system].keys()
-            #    if sat in self.initial_state.ambiguity:
-            #        for cp_type in cp_types:
-            #            self.ambiguity.add_ambiguity(sat, cp_type, self.initial_state.ambiguity[sat][cp_type])
-            #    else:
-            #        for cp_type in cp_types:
-            #            self.initial_state.ambiguity.add_ambiguity(sat, cp_type)
 
     def _remove_sat(self, sat):
         """ Remove a satellite from the state space. """
