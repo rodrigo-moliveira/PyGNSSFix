@@ -424,11 +424,11 @@ class LSQ_Engine_Position(LSQ_Engine):
             for sat, cp_types in index_map["ambiguity"].items():
                 if pivot_dict[sat.sat_system] != sat:
                     for cp_type in cp_types:
-                        # TODO: update here...
-                        idx_amb = cp_types[cp_type]
-                        P0[idx_amb, idx_amb] = initial_state.ambiguity[sat][cp_type].cov
-                        X0[idx_amb] = initial_state.ambiguity[sat][cp_type].val
-                        X0_prev[idx_amb] = state.ambiguity[sat][cp_type].val
+                        if not initial_state.ambiguity[sat][cp_type].fixed:
+                            idx_amb = cp_types[cp_type]
+                            P0[idx_amb, idx_amb] = initial_state.ambiguity[sat][cp_type].cov
+                            X0[idx_amb] = initial_state.ambiguity[sat][cp_type].val
+                            X0_prev[idx_amb] = state.ambiguity[sat][cp_type].val
 
         if "phase_bias" in index_map:
             for const, cp_types in index_map["phase_bias"].items():

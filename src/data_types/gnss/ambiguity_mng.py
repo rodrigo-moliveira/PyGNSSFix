@@ -4,8 +4,8 @@ import numpy as np
 from src.lambda_alg import LAMBDA
 from src.io.config.enums import EnumLambdaMethod
 from src.io.config.config import config_dict
+from src.common_log import get_logger, GNSS_ALG_LOG
 
-# TODO: add documentation
 
 class Ambiguity:
     """Class representing a GNSS ambiguity with its value, covariance, and fixed status.
@@ -34,7 +34,7 @@ class Ambiguity:
         self.fixed = False
 
     def clone(self):
-        """ Creates a clone of the Ambiguity object. """
+        """ Creates a clone (deep copy) of the Ambiguity object. """
         obj = Ambiguity(self.val, self.cov, fixed=self.fixed)
         return obj
 
@@ -46,7 +46,28 @@ class Ambiguity:
 
 
 class AmbiguityManager:
+    """ Class for managing GNSS ambiguities across multiple satellites and carrier phases.
+    Manages the ambiguity resolution algorithm using the LAMBDA algorithm.
+
+    Attributes:
+        ambiguities (dict): Dictionary mapping satellites to their ambiguities for different carrier phase types.
+        init_val (float): Initial value for ambiguities (in cycles).
+        init_cov (float): Initial covariance for ambiguities (in cycles^2).
+        cp_types (dict): Dictionary mapping satellite systems to their carrier phase types.
+        amb_resolution_enable (bool): Flag to enable ambiguity resolution.
+        amb_resolution_model (EnumLambdaMethod): The model used for ambiguity resolution.
+        amb_resolution_p0 (float): Initial value for the LAMBDA algorithm (P0).
+        amb_resolution_mu (float): The mu parameter for the LAMBDA algorithm (Mu).
+    """
     def __init__(self, sat_list, init_val, init_cov, cp_types):
+        """ Constructor for the AmbiguityManager class.
+
+        Args:
+            sat_list (list): List of satellites for which ambiguities are managed.
+            init_val (float): Initial value for ambiguities (in cycles).
+            init_cov (float): Initial covariance for ambiguities (in cycles^2).
+            cp_types (dict): Dictionary mapping satellite systems to their carrier phase types.
+        """
         self.ambiguities = dict()
         self.init_val = init_val
         self.init_cov = init_cov
@@ -66,9 +87,19 @@ class AmbiguityManager:
                 self.ambiguities[sat][cp_type] = Ambiguity(init_val, init_cov)
 
     def copy(self):
+        """ Creates a shallow copy of the AmbiguityManager object.
+
+        Returns:
+            AmbiguityManager: A shallow copy of AmbiguityManager with the same ambiguities.
+        """
         return self
 
     def clone(self):
+        """ Creates a deep copy of the AmbiguityManager object.
+
+        Returns:
+            AmbiguityManager: A deep copy of the AmbiguityManager with cloned ambiguities.
+        """
         obj = AmbiguityManager(
             sat_list=list(self.ambiguities.keys()),
             init_val=self.init_val,
@@ -81,6 +112,13 @@ class AmbiguityManager:
         return obj
 
     def add_ambiguity(self, sat, cp_type, other_ambiguity=None):
+        """ Adds an ambiguity for a given satellite and carrier phase type.
+
+        Args:
+            sat (src.data_types.gnss.Satellite): The satellite for which the ambiguity is added.
+            cp_type (src.data_types.gnss.DataType): The carrier phase type for the ambiguity.
+            other_ambiguity (Ambiguity or None): An existing ambiguity to clone (optional). Defaults to None.
+        """
         if sat not in self.ambiguities:
             self.ambiguities[sat] = dict()
         if cp_type not in self.ambiguities[sat]:
@@ -111,16 +149,40 @@ class AmbiguityManager:
         return key in self.ambiguities
 
     def pop(self, key, default=None):
+        """ Removes and returns an ambiguity for a given key. """
         return self.ambiguities.pop(key, default)
 
-    def unfix_ambiguities(self, sat_system):
-        """Unfix ambiguities for a given satellite system."""
+    def unfix_ambiguities(self, constellation: str):
+        """ Unfix ambiguities for all available satellites in the given constellation."""
         for sat in self.ambiguities:
-            if sat.sat_system == sat_system:
+            if sat.sat_system == constellation:
                 for cp_type in self.ambiguities[sat]:
                     self.ambiguities[sat][cp_type].reset()
 
     def main_fix(self, index_map, state, dX, cov):
+        """
+        Main function to perform ambiguity resolution using the LAMBDA algorithm.
+
+        This function is divided into several steps:
+            1. Identify ambiguities and their indices.
+            2. Create reduced state vector and covariance matrix.
+            3. Call the LAMBDA algorithm to resolve ambiguities.
+            4. Perform the acceptance test to assess the quality of the resolved ambiguities.
+            5. Update the state vector and covariance with resolved ambiguities.
+
+        This function handles exceptions and logs errors if ambiguity resolution fails.
+
+        Args:
+            index_map (dict): Dictionary mapping satellites to their ambiguity indices.
+            state (src.data_mng.gnss.state_space.GnssStateSpace): The current state containing additional information.
+            dX (np.ndarray): The estimated GNSS state vector.
+            cov (np.ndarray): The covariance matrix of the estimated state vector.
+
+        Returns:
+            tuple[np.ndarray, np.ndarray]: Updated state vector and covariance matrix after ambiguity resolution.
+
+        If any error occurs during the process, the original state vector and covariance are returned without changes.
+        """
         try:
             pivot_dict = state.get_additional_info("pivot")
             lowest_index = -1
@@ -183,7 +245,7 @@ class AmbiguityManager:
             dX_updated[a_indices] = a_fixed[:, 0]
 
         except (Exception, SystemExit) as e:
-            print("Error in main_fix:", e)
-            return None, None
-            # TODO: properly take care of this
+            log = get_logger(GNSS_ALG_LOG)
+            log.warning(f"Error in ambiguity resolution: {e}. Not fixing ambiguities in this epoch.")
+            return dX, cov
         return dX_updated, cov_updated

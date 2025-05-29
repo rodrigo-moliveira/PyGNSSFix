@@ -7,6 +7,7 @@ from src import constants
 from src.data_types.gnss.ambiguity_mng import AmbiguityManager
 from src.io.config import config_dict, EnumFrequencyModel
 from src.models.gnss_models import compute_ggto
+from src.common_log import get_logger, GNSS_ALG_LOG
 
 
 class GnssStateSpace(Container):
@@ -288,10 +289,9 @@ class GnssStateSpace(Container):
             if pivot not in new_sat_list:
                 for sat in new_sat_list:
                     if sat.sat_system == pivot.sat_system:
-                        # TODO: change to log message
-                        print(f"Warning: Pivot satellite changed from satellite {pivot} to {sat} for "
-                              f"{pivot.sat_system} constellation. "
-                              f"All ambiguities for this constellation will be set unfixed.")
+                        log = get_logger(GNSS_ALG_LOG)
+                        log.warning(f"Pivot satellite changed from satellite {pivot} to {sat} for {pivot.sat_system} "
+                                    f"constellation. All ambiguities for this constellation will be set unfixed.")
                         pivot_dict[pivot.sat_system] = sat
                         if "ambiguity" in self.get_additional_info("states"):
                             self.ambiguity.unfix_ambiguities(pivot.sat_system)
@@ -304,11 +304,17 @@ class GnssStateSpace(Container):
         if "iono" in _states:
             self.iono[sat] = 0.0
             self.cov_iono[sat] = 1.0
+            if sat not in self.initial_state.iono:
+                self.initial_state.iono[sat] = 0.0
+                self.initial_state.cov_iono[sat] = 1.0
 
         if "ambiguity" in _states:
             cp_types = self.phase_bias[sat.sat_system].keys()
             for cp_type in cp_types:
                 self.ambiguity.add_ambiguity(sat, cp_type)
+            if sat not in self.initial_state.ambiguity:
+                for cp_type in cp_types:
+                    self.initial_state.ambiguity.add_ambiguity(sat, cp_type)
 
     def _remove_sat(self, sat):
         """ Remove a satellite from the state space. """
