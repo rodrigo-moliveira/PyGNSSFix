@@ -125,3 +125,9 @@ class IonoManager:
         """
         self.iono_model = EnumIonoModel.DISABLED
         self._estimate_diono = EnumOnOff.DISABLED
+
+    def disable_diono(self):
+        """
+        Disable the iono delay estimation in the filter algorithm
+        """
+        self._estimate_diono = EnumOnOff.DISABLED

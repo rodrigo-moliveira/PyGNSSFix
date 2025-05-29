@@ -202,6 +202,7 @@ class GnssSolver:
                 MODEL[const] = EnumFrequencyModel.SINGLE_FREQ
                 CODES[const] = [code_types[0]]
                 PHASES[const] = [phase_types[0]] if cp_based else []
+                IONO[const].disable_diono()
             else:
                 raise ConfigError(f"Unable to initialize GNSS Solver Model for constellation {const}. Check configs.")
 
@@ -232,7 +233,8 @@ class GnssSolver:
             "TX_TIME_ALG": TX_TIME_ALG,
             "INITIAL_STATES": INITIAL_STATE,
             "ELEVATION_FILTER": ELEVATION_FILTER,
-            "VELOCITY_EST": VELOCITY_EST
+            "VELOCITY_EST": VELOCITY_EST,
+            "SAT_BIAS_ENUM": self.sat_bias.bias_enum
         }
 
     def solve(self) -> None:

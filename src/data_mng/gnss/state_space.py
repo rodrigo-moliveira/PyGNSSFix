@@ -230,7 +230,8 @@ class GnssStateSpace(Container):
         if metadata["CP_BASED"]:
             cp_types = metadata["PHASES"]
             self.ambiguity = AmbiguityManager(sat_list, metadata["INITIAL_STATES"]["ambiguity"][0],
-                                              metadata["INITIAL_STATES"]["ambiguity"][1], cp_types)
+                                              metadata["INITIAL_STATES"]["ambiguity"][1], cp_types,
+                                              metadata["SAT_BIAS_ENUM"])
             _states.append("ambiguity")
 
             self.phase_bias = dict()

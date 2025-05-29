@@ -2,7 +2,7 @@
 import numpy as np
 
 from src.lambda_alg import LAMBDA
-from src.io.config.enums import EnumLambdaMethod
+from src.io.config.enums import EnumLambdaMethod, EnumSatelliteBias
 from src.io.config.config import config_dict
 from src.common_log import get_logger, GNSS_ALG_LOG
 
@@ -59,7 +59,7 @@ class AmbiguityManager:
         amb_resolution_p0 (float): Initial value for the LAMBDA algorithm (P0).
         amb_resolution_mu (float): The mu parameter for the LAMBDA algorithm (Mu).
     """
-    def __init__(self, sat_list, init_val, init_cov, cp_types):
+    def __init__(self, sat_list, init_val, init_cov, cp_types, bias_enum=None):
         """ Constructor for the AmbiguityManager class.
 
         Args:
@@ -67,6 +67,7 @@ class AmbiguityManager:
             init_val (float): Initial value for ambiguities (in cycles).
             init_cov (float): Initial covariance for ambiguities (in cycles^2).
             cp_types (dict): Dictionary mapping satellite systems to their carrier phase types.
+            bias_enum (EnumSatelliteBias): Enumeration for satellite biases (e.g., broadcast, OSB, DCB).
         """
         self.ambiguities = dict()
         self.init_val = init_val
@@ -79,6 +80,14 @@ class AmbiguityManager:
                                                                                 "ambiguity_resolution", "method"))
         self.amb_resolution_p0 = config_dict.get("solver", "ambiguity_resolution", "P0")
         self.amb_resolution_mu = config_dict.get("solver", "ambiguity_resolution", "mu")
+
+        # Check if OSB products are enabled (AR is not possible with DCBs)
+        if bias_enum is not None:
+            if bias_enum != EnumSatelliteBias.OSB:
+                log = get_logger(GNSS_ALG_LOG)
+                log.warning(f"Ambiguity resolution is not possible with satellite biases as {bias_enum}. "
+                            f"OSB products are required for ambiguity resolution.")
+                self.amb_resolution_enable = False
 
         for sat in sat_list:
             # NOTE: when other types of ambiguity are implemented (NL or WL), this part should be modified
@@ -106,6 +115,7 @@ class AmbiguityManager:
             init_cov=self.init_cov,
             cp_types=self.cp_types
         )
+        obj.amb_resolution_enable = self.amb_resolution_enable
         for sat in self.ambiguities:
             for cp_type in self.ambiguities[sat]:
                 obj.ambiguities[sat][cp_type] = self.ambiguities[sat][cp_type].clone()
@@ -183,6 +193,10 @@ class AmbiguityManager:
 
         If any error occurs during the process, the original state vector and covariance are returned without changes.
         """
+        if not self.amb_resolution_enable:
+            # If ambiguity resolution is disabled, return the original state vector and covariance
+            return dX, cov
+
         try:
             pivot_dict = state.get_additional_info("pivot")
             lowest_index = -1
