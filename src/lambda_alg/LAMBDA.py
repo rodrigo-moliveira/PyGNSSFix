@@ -60,6 +60,7 @@
 """
 
 # Import libraries
+import os
 import numpy as np
 from numpy.linalg import inv
 from scipy.stats import norm
@@ -650,11 +651,13 @@ def ratioinv(Pf_FIX,Pf_ILS,n):
     kPf = round(Pf_FIX*1000)
 
     if kPf == 1: # fixed failure rate of 0.1%
-        f_in         = open('./table1.txt','r')
+        file_path = os.path.join(os.path.dirname(__file__), 'table1.txt')
+        f_in = open(file_path, 'r')
         ratio_tab    = np.zeros((31,64))
         ratio_tab[:] = np.nan        
     elif kPf == 10: # fixed failure rate of 1%
-        f_in         = open('./table10.txt','r')
+        file_path = os.path.join(os.path.dirname(__file__), 'table10.txt')
+        f_in = open(file_path, 'r')
         ratio_tab    = np.zeros((31,41))
         ratio_tab[:] = np.nan        
     else:

@@ -15,6 +15,7 @@ class Ambiguity:
         cov (float): The covariance of the ambiguity (in cycles^2).
         fixed (bool): Indicates whether the ambiguity is fixed or not.
     """
+
     def __init__(self, val, cov, fixed=False):
         """ Constructor for the Ambiguity class.
 
@@ -56,9 +57,10 @@ class AmbiguityManager:
         cp_types (dict): Dictionary mapping satellite systems to their carrier phase types.
         amb_resolution_enable (bool): Flag to enable ambiguity resolution.
         amb_resolution_model (EnumLambdaMethod): The model used for ambiguity resolution.
-        amb_resolution_p0 (float): Initial value for the LAMBDA algorithm (P0).
-        amb_resolution_mu (float): The mu parameter for the LAMBDA algorithm (Mu).
+        config_P0_PAR (float): The minimum required success rate for method PAR.
+        config_P0_RatioTest (float): The fixed failure rate for method ILS + Ratio Test.
     """
+
     def __init__(self, sat_list, init_val, init_cov, cp_types, bias_enum=None):
         """ Constructor for the AmbiguityManager class.
 
@@ -70,6 +72,7 @@ class AmbiguityManager:
             bias_enum (EnumSatelliteBias): Enumeration for satellite biases (e.g., broadcast, OSB, DCB).
         """
         self.ambiguities = dict()
+        self._log = get_logger(GNSS_ALG_LOG)
         self.init_val = init_val
         self.init_cov = init_cov
         self.cp_types = cp_types
@@ -78,15 +81,14 @@ class AmbiguityManager:
         self.amb_resolution_enable = config_dict.get("solver", "ambiguity_resolution", "enabled")
         self.amb_resolution_model = EnumLambdaMethod.init_model(config_dict.get("solver",
                                                                                 "ambiguity_resolution", "method"))
-        self.amb_resolution_p0 = config_dict.get("solver", "ambiguity_resolution", "P0")
-        self.amb_resolution_mu = config_dict.get("solver", "ambiguity_resolution", "mu")
+        self.config_P0_PAR = config_dict.get("solver", "ambiguity_resolution", "P0_PAR")
+        self.config_P0_RatioTest = config_dict.get("solver", "ambiguity_resolution", "P0_RatioTest")
 
         # Check if OSB products are enabled (AR is not possible with DCBs)
         if bias_enum is not None:
             if bias_enum != EnumSatelliteBias.OSB:
-                log = get_logger(GNSS_ALG_LOG)
-                log.warning(f"Ambiguity resolution is not possible with satellite biases as {bias_enum}. "
-                            f"OSB products are required for ambiguity resolution.")
+                self._log.warning(f"Ambiguity resolution is not possible with satellite biases as {bias_enum}. "
+                                  f"OSB products are required for ambiguity resolution.")
                 self.amb_resolution_enable = False
 
         for sat in sat_list:
@@ -231,21 +233,45 @@ class AmbiguityManager:
                 return dX, cov
 
             # Perform Ambiguity Resolution (call to LAMBDA)
+            p0 = None
+            if self.amb_resolution_model == EnumLambdaMethod.PAR:
+                p0 = self.config_P0_PAR
+            elif self.amb_resolution_model == EnumLambdaMethod.ILS_RATIO_TEST:
+                p0 = self.config_P0_RatioTest
             a_fixed, sq_norm, Ps, Qz_hat, Z, n_fixed, mu_out = LAMBDA.main(
-                np.array(ambiguities), amb_cov, self.amb_resolution_model.value, 2, self.amb_resolution_p0,
-                self.amb_resolution_mu)
+                np.array(ambiguities), amb_cov, ncands=2, method=self.amb_resolution_model.value, P0=p0)
+
+            if n_fixed == 0:
+                self._log.warning("No ambiguities were fixed during the resolution process (LAMBDA AR failed).")
+                return dX, cov
+            else:
+                pass
+
+            # get fixed integers
+            idx_fixed = np.where(a_fixed[:, 0] - a_fixed[:, 0].astype(int) == 0)
+            idx_fixed = idx_fixed[0]
+            n_fixed = len(idx_fixed)
+            if n_fixed == 0:
+                self._log.warning("No ambiguities were fixed during the resolution process (LAMBDA AR failed).")
+                return dX, cov
+            else:
+                pass
 
             # Perform acceptance test...
-            # TODO...
+            # TODO: consider adding an acceptance test here (later, after KF)
 
             # fix ambiguities in state space
             for sat, cp_types in index_map["ambiguity"].items():
                 if pivot_dict[sat.sat_system] != sat:
                     for cp_type in cp_types:
                         idx_amb = cp_types[cp_type]
-                        self[sat][cp_type].val = a_fixed[idx_amb - lowest_index, 0]
-                        self[sat][cp_type].cov = amb_cov[idx_amb - lowest_index, idx_amb - lowest_index]
-                        self[sat][cp_type].fixed = True
+                        if idx_amb - lowest_index in idx_fixed:
+                            self[sat][cp_type].val = a_fixed[idx_amb - lowest_index, 0]
+                            self[sat][cp_type].cov = amb_cov[idx_amb - lowest_index, idx_amb - lowest_index]
+                            self[sat][cp_type].fixed = True
+                            self._log.debug(f"Fixed ambiguity for satellite {sat}, type {cp_type}: "
+                                            f"{self[sat][cp_type].val} [cycles], "
+                                            f"cov = {self[sat][cp_type].cov} [cycles^2]")
 
             # Update the state vector and covariance with fixed ambiguities
             P_A_inv = np.linalg.inv(P_A)

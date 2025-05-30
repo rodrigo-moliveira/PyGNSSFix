@@ -43,7 +43,7 @@
          "_comment1": "Select first and last epochs in estimation arc in format YYYY-MM-DD hh:mm:ss",
          "_comment2": "Select false to deactivate fields",
          "first_epoch": "2024-03-30 11:00:00",
-         "last_epoch": "2024-03-30 11:01:00"
+         "last_epoch": "2024-03-30 11:00:59"
       },
 
       "_comment4": "Select the input data rate (in seconds). The rate must be consistent with the RINEX OBS rate. Select false to disable.",
@@ -72,7 +72,7 @@
       "cycle_slips":
       {
          "_comment": "Select `true` to detect cycle slip detection or `false` to disable it",
-         "enabled": true,
+         "enabled": false,
 
          "_comment1": "Select `true` to run the Melbourne-Wubbena Cycle Slip Detector (requires computation of narrow-lane, wide-lane and melbourne-wubbena combinations)",
          "melbourne_wubbena": true,
@@ -216,14 +216,14 @@
          "_comment1": "Select `true` to enable ambiguity resolution or `false` to disable it",
          "enabled": true,
 
-         "_comment2": "Select the ambiguity resolution method. Available methods are 'ILS', 'IR', 'BS', 'PAR'",
-         "method": "ILS",
+         "_comment2": "Select the ambiguity resolution method. Available methods are 'ILS', 'IR', 'BS', 'PAR', 'ILS + Ratio Test'",
+         "method": "PAR",
 
          "_comment3": "Select P0 value: minimum required success rate for method PAR",
-         "P0": 0.995,
+         "P0_PAR": 0.995,
 
-         "_comment4": "Select mu value: Fixed threshold value for Ratio Test (value must be between 0 and 1)",
-         "mu": 0.95
+         "_comment4": "Select P0 value: fixed failure rate for method ILS + Ratio Test",
+         "P0_RatioTest": 0.001
       },
 
       "_comment7": "Initial states and expected covariances for the initial state vector.",
@@ -231,7 +231,7 @@
       "initial_vel_cov": [0,0,0,1,1,1],
       "initial_clock_cov": [0,1e-17],
       "initial_isb_cov": [0,1E-16],
-      "initial_iono_cov": [0.0, 10],
+      "initial_iono_cov": [0.0, 100],
       "initial_tropo_cov": [0.0, 10],
       "initial_clock_rate_cov": [0.0, 1E-1],
       "initial_ambiguity_cov": [0.0, 100],

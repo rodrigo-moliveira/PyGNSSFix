@@ -548,15 +548,14 @@ class LSQ_Engine_Position(LSQ_Engine):
             state.cov_tropo_wet = cov[idx_tropo, idx_tropo]
 
         if "ambiguity" in index_map:
-            if not state.ambiguity.amb_resolution_enable:
-                pivot_dict = state.get_additional_info("pivot")
-                for sat, cp_types in index_map["ambiguity"].items():
-                    if pivot_dict[sat.sat_system] != sat:
-                        for cp_type in cp_types:
-                            idx_amb = cp_types[cp_type]
-                            if not state.ambiguity[sat][cp_type].fixed:
-                                state.ambiguity[sat][cp_type].val += dX[idx_amb]
-                                state.ambiguity[sat][cp_type].cov = cov[idx_amb, idx_amb]
+            pivot_dict = state.get_additional_info("pivot")
+            for sat, cp_types in index_map["ambiguity"].items():
+                if pivot_dict[sat.sat_system] != sat:
+                    for cp_type in cp_types:
+                        idx_amb = cp_types[cp_type]
+                        if not state.ambiguity[sat][cp_type].fixed:
+                            state.ambiguity[sat][cp_type].val += dX[idx_amb]
+                            state.ambiguity[sat][cp_type].cov = cov[idx_amb, idx_amb]
 
         if "phase_bias" in index_map:
             for const, cp_types in index_map["phase_bias"].items():

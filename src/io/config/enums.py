@@ -221,11 +221,13 @@ class EnumLambdaMethod(Enum):
         2 - Integer Rounding (IR)
         3 - Integer bootstrapping (BS)
         4 - Partial ambiguity resolution (PAR)
+        5 - ILS + Ratio Test
     """
     ILS = 1
     IR = 2
     BS = 3
     PAR = 4
+    ILS_RATIO_TEST = 5
 
     @classmethod
     def init_model(cls, model_str: str):
@@ -237,9 +239,11 @@ class EnumLambdaMethod(Enum):
             return EnumLambdaMethod.BS
         elif model_str.lower() == "par":
             return EnumLambdaMethod.PAR
+        elif model_str.lower() == "ils + ratio test":
+            return EnumLambdaMethod.ILS_RATIO_TEST
         else:
             raise EnumError(f"Unsupported Lambda Method {model_str}. Available options are {cls.show_options()}")
 
     @classmethod
     def show_options(cls):
-        return f"[ILS, IR, BS, PAR]"
+        return f"[ILS, IR, BS, PAR, ILS + Ratio Test]"

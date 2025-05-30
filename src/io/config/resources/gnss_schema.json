@@ -196,11 +196,11 @@
           "type": "object",
           "properties": {
             "enabled": {"type": "boolean"},
-            "method": {"type": "string", "enum": ["ILS", "IR", "BS", "PAR"]},
-            "P0": {"type": "number"},
-            "mu": {"type": "number"}
+            "method": {"type": "string", "enum": ["ILS", "IR", "BS", "PAR", "ILS + Ratio Test"]},
+            "P0_PAR": {"type": "number"},
+            "P0_RatioTest": {"type": "number"}
           },
-          "required": ["enabled", "method", "P0", "mu"]
+          "required": ["enabled", "method", "P0_PAR", "P0_RatioTest"]
         },
         "initial_pos_cov": {"type": "array", "items": {"type": "number"}},
         "initial_vel_cov": {"type": "array", "items": {"type": "number"}},
