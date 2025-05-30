@@ -200,6 +200,33 @@ class EpochData:
                 obj.set_observable(sat, obs.copy())
         return obj
 
+    def get_number_of_pr_observations(self):
+        """ Returns the number of pseudorange observations for this epoch """
+        count = 0
+        for sat, obs_list in self._data.items():
+            for obs in obs_list:
+                if DataType.is_code(obs.datatype):
+                    count += 1
+        return count
+
+    def get_number_of_observations(self, datatypes):
+        """ Returns the number of observations for this epoch for the provided datatype list
+
+        Args:
+            datatypes (list[DataType] or dict): either a list with DataType instances to be queried or a dict
+                with constellation as key and a list of DataType instances as value
+        """
+        count = 0
+        for sat, obs_list in self._data.items():
+            for obs in obs_list:
+                if isinstance(datatypes, list):
+                    if obs.datatype in datatypes:
+                        count += 1
+                elif isinstance(datatypes, dict):
+                    if obs.datatype in datatypes[sat.sat_system]:
+                        count += 1
+        return count
+
 
 class ObservationData:
     """
@@ -359,6 +386,10 @@ class ObservationData:
         """ Returns a list with all available epochs """
         return self._data.get_all_epochs()
 
+    def get_satellites(self) -> list[Satellite]:
+        """ Returns a list with all available satellites """
+        return self._satellites
+
     def get_types(self, constellation: src.data_types.gnss.Constellation) -> list[DataType]:
         """ Returns a list with all available datatypes for the provided constellation """
         return self._types[constellation]
@@ -368,6 +399,12 @@ class ObservationData:
         types = list(self.get_types(constellation))
         code_types = [x for x in types if DataType.is_code(x)]
         return code_types
+
+    def get_phase_types(self, constellation) -> list[DataType]:
+        """ Returns a list with all available carrier phase datatypes for the provided constellation """
+        types = list(self.get_types(constellation))
+        phase_types = [x for x in types if DataType.is_carrier(x)]
+        return phase_types
 
     def get_doppler_types(self, constellation) -> list[DataType]:
         """ Returns a list with all available doppler datatypes for the provided constellation """
@@ -456,6 +493,14 @@ class ObservationData:
         obj._data = self._data.copy()
 
         return obj
+
+    def is_empty(self):
+        """
+        Check if the observation data is empty
+        Returns:
+            bool: True if the observation data is empty
+        """
+        return self._data.is_empty()
 
     def to_csv_file(self):
         """

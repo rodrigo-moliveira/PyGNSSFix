@@ -3,7 +3,7 @@
 import spiceypy
 from src.data_types.date import Epoch
 from src.io.config import config_dict
-from src.models.frames import ITRF_Transformation, ITRFError
+from src.models.frames.itrf_transformations import ITRF_Transformation, ITRFError
 
 
 def compute_sun_pos(date, obs="EARTH"):

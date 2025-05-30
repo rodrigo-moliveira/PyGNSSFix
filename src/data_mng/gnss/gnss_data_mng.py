@@ -33,21 +33,31 @@ class GnssDataManager(Container):
         sat_bias(BiasManager): manager of satellite code and phase biases (precise or navigation bias)
         smooth_obs_data(ObservationData): processed smooth observation data
         iono_free_obs_data(ObservationData): processed iono-free observation data
+        narrow_lane_obs_data(ObservationData): processed narrow lane observation data
+        wide_lane_obs_data(ObservationData): processed wide lane observation data
+        melbourne_obs_data(ObservationData): processed Melbourne-Wubbena observation data
+        geometry_free_obs_data(ObservationData): processed geometry-free observation data
+        cycle_slips(dict): dictionary of cycle slips
         nav_solution(list): navigation solution, list of :py:class:`src.data_mng.gnss.state_space.GnssStateSpace`
             objects
 
     """
     __slots__ = [
-        "nav_data",            # Input
-        "obs_data",            # Input
-        "sat_clocks",          # Input
-        "sat_orbits",          # Input
-        "iono_gim",            # Input
-        "phase_center",        # Input
-        "sat_bias",            # Input
-        "smooth_obs_data",     # Internal data
-        "iono_free_obs_data",  # Internal data
-        "nav_solution"         # Output
+        "nav_data",                # Input
+        "obs_data",                # Input
+        "sat_clocks",              # Input
+        "sat_orbits",              # Input
+        "iono_gim",                # Input
+        "phase_center",            # Input
+        "sat_bias",                # Input
+        "smooth_obs_data",         # Internal data
+        "iono_free_obs_data",      # Internal data
+        "narrow_lane_obs_data",    # Internal data
+        "wide_lane_obs_data",      # Internal data
+        "melbourne_obs_data",      # Internal data
+        "geometry_free_obs_data",  # Internal data
+        "cycle_slips",             # Internal data
+        "nav_solution"             # Output
     ]
 
     def __init__(self):
@@ -63,6 +73,11 @@ class GnssDataManager(Container):
         self.sat_bias = BiasManager()  # Satellite Code and Phase Bias Manager
         self.sat_orbits = SatelliteOrbits()  # Satellite orbits manager (precise or navigation orbits)
         self.iono_free_obs_data = ObservationData()  # Iono Free Observation Data
+        self.narrow_lane_obs_data = ObservationData()
+        self.wide_lane_obs_data = ObservationData()
+        self.melbourne_obs_data = ObservationData()
+        self.geometry_free_obs_data = ObservationData()
+        self.cycle_slips = {}  # Cycle slips dictionary
         self.nav_solution = None  # Navigation solution
 
     def __str__(self):
@@ -166,7 +181,7 @@ class GnssDataManager(Container):
             log.info("Launching Satellite Code Bias Manager with BGD/TGD data from broadcast ephemerides.")
             self.sat_bias.init(self.get_data("nav_data"), None, EnumSatelliteBias.BROADCAST)
 
-        elif gnss_alg == EnumAlgorithmPNT.PR_PPP:
+        elif gnss_alg == EnumAlgorithmPNT.PR_PPP or gnss_alg == EnumAlgorithmPNT.CP_PPP:
             log.info("In PR-PPP Mode, GNSS orbits and clocks are provided from precise products (SP3 and CLK files).")
 
             clock_files = config_dict.get("inputs", "clk_files")
@@ -287,6 +302,20 @@ class GnssDataManager(Container):
         filename = f"{directory}\\{OUTPUT_FILENAME_MAP[ext]}"
         file_list[ext] = open(filename, "w")
         file_list[ext].write(f"{obs_data.to_csv_file()}")
+        log.info(f"creating output file {filename}")
+
+        # save melbourne-wubbena data
+        ext = 'mw_obs'
+        filename = f"{directory}\\{OUTPUT_FILENAME_MAP[ext]}"
+        file_list[ext] = open(filename, "w")
+        file_list[ext].write(f"{self.melbourne_obs_data.to_csv_file()}")
+        log.info(f"creating output file {filename}")
+
+        # save geometry-free data
+        ext = 'gf_obs'
+        filename = f"{directory}\\{OUTPUT_FILENAME_MAP[ext]}"
+        file_list[ext] = open(filename, "w")
+        file_list[ext].write(f"{self.geometry_free_obs_data.to_csv_file()}")
         log.info(f"creating output file {filename}")
 
         # close all files

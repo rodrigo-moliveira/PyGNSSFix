@@ -24,6 +24,7 @@ RINEX_OBS_TYPES_TO_READ = {"C",  # pseudo range
 
 RINEX_OBS_TYPES_UNITS = {
     "PR": "m",
+    "MW": "m",
     "SPR": "m",
     "CP": "m",  # carrier phase is converted internally from cycles to meters
     "D": "Hz",  # Doppler is provided in Hz

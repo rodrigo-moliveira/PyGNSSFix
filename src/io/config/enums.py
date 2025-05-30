@@ -27,6 +27,7 @@ class EnumAlgorithmPNT(Enum):
     """ Enumeration for the GNSS PNT algorithm (SPS, PR_PPP) """
     SPS = 0
     PR_PPP = 1
+    CP_PPP = 2
 
     @classmethod
     def init_model(cls, model_str: str):
@@ -34,8 +35,10 @@ class EnumAlgorithmPNT(Enum):
             return EnumAlgorithmPNT.SPS
         elif model_str.lower() == "pr-ppp":
             return EnumAlgorithmPNT.PR_PPP
+        elif model_str.lower() == "cp-ppp":
+            return EnumAlgorithmPNT.CP_PPP
         else:
-            raise EnumError(f"Unsupported algorithm {model_str}. Available options are 'SPS', 'PR-PPP'")
+            raise EnumError(f"Unsupported algorithm {model_str}. Available options are 'SPS', 'PR-PPP', 'CP-PPP'.")
 
     @classmethod
     def show_options(cls):
@@ -207,3 +210,40 @@ class EnumPCVModel(Enum):
     @classmethod
     def show_options(cls):
         return f"[0 - non-azimuth dependent, 1 - azimuth dependent]"
+
+
+class EnumLambdaMethod(Enum):
+    """
+    Enumeration for the Lambda Method used in the ambiguity resolution.
+
+    Available methods are:
+        1 - Integer Least Squares (ILS)
+        2 - Integer Rounding (IR)
+        3 - Integer bootstrapping (BS)
+        4 - Partial ambiguity resolution (PAR)
+        5 - ILS + Ratio Test
+    """
+    ILS = 1
+    IR = 2
+    BS = 3
+    PAR = 4
+    ILS_RATIO_TEST = 5
+
+    @classmethod
+    def init_model(cls, model_str: str):
+        if model_str.lower() == "ils":
+            return EnumLambdaMethod.ILS
+        elif model_str.lower() == "ir":
+            return EnumLambdaMethod.IR
+        elif model_str.lower() == "bs":
+            return EnumLambdaMethod.BS
+        elif model_str.lower() == "par":
+            return EnumLambdaMethod.PAR
+        elif model_str.lower() == "ils + ratio test":
+            return EnumLambdaMethod.ILS_RATIO_TEST
+        else:
+            raise EnumError(f"Unsupported Lambda Method {model_str}. Available options are {cls.show_options()}")
+
+    @classmethod
+    def show_options(cls):
+        return f"[ILS, IR, BS, PAR, ILS + Ratio Test]"

@@ -226,9 +226,17 @@ class BiasManager:
         """
         bias = 0
         if self.bias_enum == EnumSatelliteBias.BROADCAST:
+            # if the datatype is carrier, convert it to code
+            if DataType.is_carrier(datatype):
+                datatype = DataType.carrier_to_code(datatype)
+
             # no cache here -> always use the closest navigation message
             bias = self._bias_correction_broadcast(epoch, sat, datatype)
         elif self.bias_enum == EnumSatelliteBias.DCB:
+            # if the datatype is carrier, convert it to code
+            if DataType.is_carrier(datatype):
+                datatype = DataType.carrier_to_code(datatype)
+
             if (sat, datatype) not in self._cache["final_bias_for_datatype"]:
                 _bias = -self._bias_correction_dcb(sat, datatype)
                 self._cache["final_bias_for_datatype"][(sat, datatype)] = _bias
@@ -464,7 +472,12 @@ class BiasManager:
             raise ReconstructionError(
                 f"The provided datatype {datatype} does not match any user service: {user_services}. ")
 
-        return f"C{found_service}"
+        if DataType.is_code(datatype):
+            return f"C{found_service}"
+        elif DataType.is_carrier(datatype):
+            return f"L{found_service}"
+        else:
+            raise ReconstructionError(f"The provided datatype {datatype} is not a code or carrier type. ")
 
     @staticmethod
     def _check_service_lists(service_dcb: tuple[str, str], service_to_find: tuple[str, str]) -> bool:

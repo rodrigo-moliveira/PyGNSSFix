@@ -5,6 +5,7 @@ Depending on the user configurations, the Solver may execute different PNT algor
 Currently, the available algorithms are:
     * Single Point Positioning (SPS)
     * Pseudorange Precise Point Positioning (PR-PPP)
+    * Carrier Phase Precise Point Positioning (CP-PPP)
 
 To run `main_gnss.py` please do:
     $ python main_gnss.py <path_to_config>

@@ -9,6 +9,7 @@ from src.io.config import config_dict, EnumObservationModel
 from src.errors import PreprocessorError
 from .filter import *
 from .functor import *
+from .cycle_slips import CycleSlipDetector
 
 
 class PreprocessorManager:
@@ -26,6 +27,10 @@ class PreprocessorManager:
         * Creating Processed ObservationData:
                 - Compute IonoFree observation dataset (only if defined in the user configurations)
                 - Compute Smooth and IonoFree Smooth observation dataset (only if defined in the user configurations)
+                - Compute Narrow-Lane, Wide-Lane and Melbourne-Wubbena observation dataset
+                    (only if defined in the user configurations)
+
+        * Perform Cycle Slip Detection: detect cycle slips in the GNSS measurements
 
         * Write intermediate trace files for each operation
     """
@@ -129,6 +134,17 @@ class PreprocessorManager:
             except Exception as e:
                 raise PreprocessorError(f"Error computing Smooth Observation Data: {e}")
 
+        # Perform Cycle Slip Detection
+        cycle_slip = config_dict.get("preprocessor", "cycle_slips", "enabled")
+        try:
+            if cycle_slip:
+                self.log.info("Performing Cycle Slip Detection.")
+                self.cycle_slip(obs_data)
+            else:
+                self.log.info("Cycle Slip Detection is disabled.")
+        except Exception as e:
+            raise PreprocessorError(f"PreprocessorManager -> Error performing Cycle Slip Detection: {e}")
+
         # Saving Output Observation Data to File
         if self.write_trace:
             self.log.debug(
@@ -146,7 +162,7 @@ class PreprocessorManager:
         required_datatypes = {}
 
         keep_doppler = config_dict.get("model", "estimate_velocity")  # doppler only needed when velocity is estimated
-        keep_carrier = config_dict.get("preprocessor", "compute_smooth")  # carrier only needed for smoothing
+        keep_carrier = config_dict.keep_carrier()
 
         for constellation, services in self.services.items():
             required_datatypes[constellation] = []
@@ -253,6 +269,55 @@ class PreprocessorManager:
                                  f"for constellation {constellation} and services {services}. Please review"
                                  f" the input observation data and the configurations.")
 
+    def narrow_wide_lane(self, constellation, raw_data, nl_obs_data, wl_obs_data):
+        """ Compute Narrow and Wide Lane observation data """
+        services = self.services[constellation]["user_service"]
+        if len(services) != 2:
+            raise AttributeError(f"Problem getting base and second frequencies in NL and WL Computation for "
+                                 f"constellation {constellation}, observations provided are {services}. "
+                                 f"There should be 2 observation types defined, and not {len(services)}")
+        base_freq = get_freq_from_service(services[0], constellation)
+        second_freq = get_freq_from_service(services[1], constellation)
+        if base_freq is not None and second_freq is not None:
+            nl_functor = NLFunctor(constellation, base_freq, second_freq)
+            mapper = FunctorMapper(nl_functor)
+            mapper.apply(raw_data, nl_obs_data)
+
+            wl_functor = WLFunctor(constellation, base_freq, second_freq)
+            mapper = FunctorMapper(wl_functor)
+            mapper.apply(raw_data, wl_obs_data)
+        else:
+            raise AttributeError(f"Unable to fetch base ({base_freq}) and second ({second_freq}) frequencies "
+                                 f"for constellation {constellation} and services {services}. Please review"
+                                 f" the input observation data and the configurations.")
+
+    def geometry_free(self, constellation, raw_data, gf_obs_data):
+        """ Compute Geometry-Free observation data """
+        services = self.services[constellation]["user_service"]
+        if len(services) != 2:
+            raise AttributeError(f"Problem getting base and second frequencies in GF Computation for "
+                                 f"constellation {constellation}, observations provided are {services}. "
+                                 f"There should be 2 observation types defined, and not {len(services)}")
+        base_freq = get_freq_from_service(services[0], constellation)
+        second_freq = get_freq_from_service(services[1], constellation)
+        if base_freq is not None and second_freq is not None:
+            gf_functor = GeometryFreeFunctor(constellation, base_freq, second_freq)
+            mapper = FunctorMapper(gf_functor)
+            mapper.apply(raw_data, gf_obs_data)
+
+        else:
+            raise AttributeError(f"Unable to fetch base ({base_freq}) and second ({second_freq}) frequencies "
+                                 f"for constellation {constellation} and services {services}. Please review"
+                                 f" the input observation data and the configurations.")
+
+    def melbourne_wubbena(self, constellation, nl_obs_data, wl_obs_data, mw_obs_data):
+        """ Compute Melbourne Wubbena observation """
+        self.log.info(f"Computing Melbourne Wubbena data for constellation {constellation} with observations"
+                      f"{nl_obs_data.get_types(constellation)} and {wl_obs_data.get_types(constellation)}")
+        mw_functor = MWFunctor(constellation, nl_obs_data, wl_obs_data)
+        mapper = FunctorMapper(mw_functor)
+        mapper.apply(nl_obs_data, mw_obs_data)
+
     def smooth(self, data):
         """ Compute Smooth data """
         time_constant = config_dict.get("preprocessor", "smooth_time_constant_secs")
@@ -292,3 +357,61 @@ class PreprocessorManager:
 
                 # Write report to log
                 self.log.info(f"Rate Downgrade Filter Report: {mapper.report}")
+
+    def cycle_slip(self, obs_data):
+        compute_mw = config_dict.get("preprocessor", "cycle_slips", "melbourne_wubbena")
+        compute_gf = config_dict.get("preprocessor", "cycle_slips", "geometry_free")
+        self.log.info(f"Performing Cycle Slip Detection with the following detectors: "
+                      f"Melbourne-Wubbena Detector = {compute_mw}, Geometry-Free Detector = {compute_gf}")
+
+        nl_obs_data = self.data_manager.get_data("narrow_lane_obs_data")
+        wl_obs_data = self.data_manager.get_data("wide_lane_obs_data")
+        mw_obs_data = self.data_manager.get_data("melbourne_obs_data")
+        gf_obs_data = self.data_manager.get_data("geometry_free_obs_data")
+        for constellation in self.services.keys():
+            obs_list = config_dict.get("model", constellation, "observations")
+            n_obs = len(obs_list)
+            if n_obs != 2:
+                raise PreprocessorError(f"Unable to compute narrow-lane, wide-lane and geometry-free data for "
+                                        f"constellation {constellation} due to lack of data. Need 2 observations, "
+                                        f"but have {n_obs} ({obs_list})")
+            else:
+                if compute_mw:
+                    self.log.info(f"Computing narrow-lane and wide-lane data for constellation {constellation} with "
+                                  f"observations {obs_list}")
+                    # Getting Narrow-Lane, Wide-Lane and Melbourne-Wubbena data
+                    self.narrow_wide_lane(constellation, obs_data, nl_obs_data, wl_obs_data)
+                    self.melbourne_wubbena(constellation, nl_obs_data, wl_obs_data, mw_obs_data)
+
+                if compute_gf:
+                    self.geometry_free(constellation, obs_data, gf_obs_data)
+
+        # Perform Cycle Slip Detection
+        detector = CycleSlipDetector(mw_obs_data, gf_obs_data, self.write_trace, self.trace_path)
+        detector.compute()
+        self.data_manager.add_data("cycle_slips", detector.cycle_slips)
+
+        if self.write_trace:
+            self.log.debug(
+                "Writing Narrow-Lane, Wide-Lane, Melbourne-Wubbena and Geometry-Free Observation Data to trace files "
+                "{}, {}, {} and {}".format("NLObservationData.txt", "WLObservationData.txt", "MWObservationData.txt",
+                                           "GFObservationData.txt"))
+            f = open(self.trace_path + "/NLObservationData.txt", "w")
+            f.write(str(nl_obs_data))
+            f.close()
+
+            f = open(self.trace_path + "/WLObservationData.txt", "w")
+            f.write(str(wl_obs_data))
+            f.close()
+
+            f = open(self.trace_path + "/MWObservationData.txt", "w")
+            f.write(str(mw_obs_data))
+            f.close()
+
+            f = open(self.trace_path + "/GFObservationData.txt", "w")
+            f.write(str(gf_obs_data))
+            f.close()
+
+            f = open(self.trace_path + "/CycleSlips.txt", "w")
+            f.write(str(detector.cycle_slips))
+            f.close()

@@ -1,25 +1,28 @@
 # Release 1.1 (PR-PPP Mode)
     tasks for 2025:
-    [ ] phase center corrections
-        [ ] apply helmert transformation of sun ephemerides
+    [ ] float ambiguity carrier processing
+        - the only thing missing is clean up TODOs
+    [ ] Test and or tune the feedforward with CP-PPP
+    [ ] Computation of WL, NL and MW combinations (ver código do correia)
+    [ ] cycle slip detector (ver código do correia)
+    [ ] Adicionar Kalman filter com user dynamics
+    [ ] Adicionar Batch Least Squares
+        [ ] adicionar configuração com static/dynamic receiver que em vez de feedforward das covs da época anterior
+        aplica valores pre-determinados. No caso de cycle slip, a covariancia da ambiguidade é aumentada
+    [ ] Adicionar differential SPS/PPPP. D-GNSS para PR only
 
     [ ] BUGS and nice-to-haves:
         [ ] post_processing script not running well when velocity is not estimated
         [ ] tornar explicita a impossibilidade de correr vários datatypes para a mesma freq (diferentes atributos)
             por exemplo processar C1C e C1W.
+        [ ] para cp-ppp o tem de haver consitencia entre observações pr e cp
         [ ] adicionar um check para verificar se em combined, a primeira frequency é a base frequency
-
-    [ ] float carrier processing
-    [ ] Adicionar Kalman filter com user dynamics
-    [ ] Adicionar differential SPS/PPPP. D-GNSS para PR only
 
     [ ] Update Readme
     [ ] solve all TODOs
 
 # Release 1.2 PPP e PPP-AR
-    [ ] cycle slip detection
-        [ ] compute MW observations
-    [ ] PPP e PPP-AR com OSBs
+    [ ] Ambiguity Resolution (PPP-AR)
     [ ] other corrections
         [ ] phase windup (only applicable to carrier observations)
         [ ] site-displacement effects
@@ -27,6 +30,8 @@
             * Ocean loading
             * Polar tides
 
+[ ] check allan variance computation from SimLib / NAVIKA Repository
+maybe https://stash.deimos-space.com/projects/GNCCCKANAV/repos/navika/browse/tools/Attitude_Estimation_Control_Design_Analysis/code/genericGyroNoise.m
 
 nice to have, but not for now
     [ ] fazer cleanup ao theory notes

@@ -4,8 +4,10 @@ import numpy as np
 
 from src.data_mng import Container
 from src import constants
+from src.data_types.gnss.ambiguity_mng import AmbiguityManager
 from src.io.config import config_dict, EnumFrequencyModel
 from src.models.gnss_models import compute_ggto
+from src.common_log import get_logger, GNSS_ALG_LOG
 
 
 class GnssStateSpace(Container):
@@ -22,12 +24,19 @@ class GnssStateSpace(Container):
         * tropo_wet (float): estimated wet component of troposphere delay
         * isb (float): estimated inter system bias
         * clock_bias_rate (dict): dictionary with constellations as keys and clock bias rates as values
+        * ambiguity (dict): two-level dictionary with satellites as first keys and CP types as second keys
+            and estimated ambiguity values as values
+        * phase_bias (dict): two-level dictionary with constellations as first keys and CP types as second keys
+            and estimated phase bias values as values
 
     Additional parameters:
         * epoch (Epoch): Epoch object for this time instant
         * _info (dict): auxiliary information (see paragraph below)
         * initial_state (GnssStateSpace): initial state space object with the initial states and covariances
             for the iteration process of the GNSS solver
+        * index_map (dict): dictionary with the index of each state variable in the state vector. Map to be used
+            in the Normal Equations of the GNSS solver
+            (see :py:class:`src.modules.gnss.solver.lsq_engine.LSQ_Engine_Position`)
 
     Some auxiliary information is saved in the `_info` attribute dict, namely:
         * _info["states"] provides a list with all valid states to be estimated, depending on the configuration
@@ -42,11 +51,14 @@ class GnssStateSpace(Container):
         * pr_postfit_residuals
         * pr_rate_prefit_residuals
         * pr_rate_postfit_residuals
+        * sat_list
+        * pivot: satellites used as pivot for the ambiguity estimation (one per constellation).
     """
-    __states__ = ["position", "velocity", "clock_bias", "iono", "tropo_wet", "isb", "clock_bias_rate"]
+    __states__ = ["position", "velocity", "clock_bias", "iono", "tropo_wet", "isb", "clock_bias_rate", "ambiguity",
+                  "phase_bias"]
     __covs__ = ["cov_position", "cov_velocity", "cov_clock_bias", "cov_iono", "cov_tropo_wet", "cov_isb",
-                "cov_clock_bias_rate"]
-    __slots__ = __states__ + __covs__ + ["epoch", "_info", "initial_state"]
+                "cov_clock_bias_rate", "cov_phase_bias"]
+    __slots__ = __states__ + __covs__ + ["epoch", "_info", "initial_state", "index_map"]
 
     def __init__(self, metadata=None, epoch=None, sat_list=None):
         """
@@ -66,6 +78,7 @@ class GnssStateSpace(Container):
         # dict to store state information
         self._info = dict()
         self.initial_state = None
+        self.index_map = dict()
 
         # initialize state variables
         if metadata is not None and sat_list is not None:
@@ -109,6 +122,7 @@ class GnssStateSpace(Container):
                 state.clock_bias_rate[const] = self.clock_bias_rate[const]
                 state.cov_clock_bias_rate[const] = self.cov_clock_bias_rate[const]
 
+        state.add_additional_info("estimate_iono", self.get_additional_info("estimate_iono"))
         if "iono" in _states:
             state.iono = dict()
             state.cov_iono = dict()
@@ -124,9 +138,25 @@ class GnssStateSpace(Container):
             state.tropo_wet = self.tropo_wet
             state.cov_tropo_wet = self.cov_tropo_wet
 
+        if "ambiguity" in _states:
+            state.ambiguity = self.ambiguity.clone()
+
+        if "phase_bias" in _states:
+            state.phase_bias = dict()
+            state.cov_phase_bias = dict()
+            for const, cp_types in self.phase_bias.items():
+                if const not in state.phase_bias:
+                    state.phase_bias[const] = dict()
+                    state.cov_phase_bias[const] = dict()
+                for cp_type in cp_types:
+                    state.phase_bias[const][cp_type] = self.phase_bias[const][cp_type]
+                    state.cov_phase_bias[const][cp_type] = self.cov_phase_bias[const][cp_type]
+
         state.add_additional_info("states", _states)
         state.add_additional_info("clock_master", self.get_additional_info("clock_master"))
         state.add_additional_info("clock_slave", self.get_additional_info("clock_slave"))
+        state.add_additional_info("pivot", self.get_additional_info("pivot"))
+        state.add_additional_info("sat_list", self.get_additional_info("sat_list"))
 
         return state
 
@@ -163,19 +193,20 @@ class GnssStateSpace(Container):
         # iono dict (if dual-frequency mode is selected)
         self.iono = dict()
         self.cov_iono = dict()
+        estimate_iono = set()
         for constellation in metadata["CONSTELLATIONS"]:
             if metadata["MODEL"][constellation] == EnumFrequencyModel.DUAL_FREQ and \
                     metadata["IONO"][constellation].estimate_diono():
+                estimate_iono.add(constellation)
                 for sat in sat_list:
                     if sat.sat_system == constellation:
                         self.iono[sat] = list(metadata["INITIAL_STATES"].get("iono"))[0]
                         self.cov_iono[sat] = list(metadata["INITIAL_STATES"].get("iono"))[1]
         if len(self.iono) >= 1:
             _states.append("iono")
+        self.add_additional_info("estimate_iono", estimate_iono)
 
         # isb (optional -> in case there are 2 constellations)
-        self.isb = None
-        self.cov_isb = None
         if len(metadata["CONSTELLATIONS"]) > 1:
             # convert input units from seconds to meters
             self.isb = list(metadata["INITIAL_STATES"].get("isb"))[0] * constants.SPEED_OF_LIGHT
@@ -195,33 +226,180 @@ class GnssStateSpace(Container):
             self.cov_tropo_wet = list(metadata["INITIAL_STATES"].get("tropo"))[1]
             _states.append("tropo_wet")
 
-        self.add_additional_info("states", _states)
+        # ambiguity (optional -> in case algorithm is CP-based)
+        if metadata["CP_BASED"]:
+            cp_types = metadata["PHASES"]
+            self.ambiguity = AmbiguityManager(sat_list, metadata["INITIAL_STATES"]["ambiguity"][0],
+                                              metadata["INITIAL_STATES"]["ambiguity"][1], cp_types,
+                                              metadata["SAT_BIAS_ENUM"])
+            _states.append("ambiguity")
 
-    def update_sat_list(self, sat_list):
-        """ Update the satellite list of the internal iono state with the one provided as argument.
+            self.phase_bias = dict()
+            self.cov_phase_bias = dict()
+            for const, types in cp_types.items():
+                if const not in self.phase_bias:
+                    self.phase_bias[const] = dict()
+                    self.cov_phase_bias[const] = dict()
+                for cp_type in types:
+                    self.phase_bias[const][cp_type] = metadata["INITIAL_STATES"]["phase_bias"][0] * \
+                                                      constants.SPEED_OF_LIGHT
+                    self.cov_phase_bias[const][cp_type] = metadata["INITIAL_STATES"]["phase_bias"][1] * \
+                                                          constants.SPEED_OF_LIGHT ** 2
+            _states.append("phase_bias")
+
+        # Define Pivot Satellite
+        if metadata["CP_BASED"]:
+            pivot_dict = dict.fromkeys(metadata["CONSTELLATIONS"], None)
+
+            for sat in sat_list:
+                if pivot_dict[sat.sat_system] is None:
+                    pivot_dict[sat.sat_system] = sat
+        else:
+            pivot_dict = None
+
+        self.add_additional_info("pivot", pivot_dict)
+        self.add_additional_info("states", _states)
+        self.add_additional_info("sat_list", sat_list)
+
+    def _update_sat_list(self, new_sat_list):
+        """
+        Update the internal satellite list (used for the iono and ambiguity states) with the one provided as argument.
+
+        Args:
+            new_sat_list(list[src.data_types.gnss.Satellite]) : list of available satellites
+        """
+        prev_sat_list = self.get_additional_info("sat_list")
+        # add the new satellites to the internal data (new visible satellites)
+        for sat in new_sat_list:
+            if sat not in prev_sat_list:
+                self._add_sat(sat)
+
+        # remove satellites that are not in the new list (satellites that are not visible anymore)
+        _to_remove = []
+        for sat in prev_sat_list:
+            if sat not in new_sat_list:
+                _to_remove.append(sat)  # satellite to be removed
+        for sat in _to_remove:
+            self._remove_sat(sat)
+
+        self.add_additional_info("sat_list", new_sat_list)
+
+        # update pivot (in case the previous pivot satellite is not in the updated list)
+        pivot_dict = self.get_additional_info("pivot")
+        for pivot in pivot_dict.values():
+            if pivot not in new_sat_list:
+                for sat in new_sat_list:
+                    if sat.sat_system == pivot.sat_system:
+                        log = get_logger(GNSS_ALG_LOG)
+                        log.warning(f"Pivot satellite changed from satellite {pivot} to {sat} for {pivot.sat_system} "
+                                    f"constellation. All ambiguities for this constellation will be set unfixed.")
+                        pivot_dict[pivot.sat_system] = sat
+                        if "ambiguity" in self.get_additional_info("states"):
+                            self.ambiguity.unfix_ambiguities(pivot.sat_system)
+                        break
+        self.add_additional_info("pivot", pivot_dict)
+
+    def _add_sat(self, sat):
+        """ Add a new satellite to the state space. """
+        _states = self.get_additional_info("states")
+        if "iono" in _states:
+            self.iono[sat] = 0.0
+            self.cov_iono[sat] = 1.0
+            if sat not in self.initial_state.iono:
+                self.initial_state.iono[sat] = 0.0
+                self.initial_state.cov_iono[sat] = 1.0
+
+        if "ambiguity" in _states:
+            cp_types = self.phase_bias[sat.sat_system].keys()
+            for cp_type in cp_types:
+                self.ambiguity.add_ambiguity(sat, cp_type)
+            if sat not in self.initial_state.ambiguity:
+                for cp_type in cp_types:
+                    self.initial_state.ambiguity.add_ambiguity(sat, cp_type)
+
+    def _remove_sat(self, sat):
+        """ Remove a satellite from the state space. """
+        _states = self.get_additional_info("states")
+        if "iono" in _states:
+            if sat in self.iono:
+                self.iono.pop(sat)
+                self.cov_iono.pop(sat)
+        if "ambiguity" in _states:
+            if sat in self.ambiguity:
+                self.ambiguity.pop(sat)
+
+    def build_index_map(self, sat_list):
+        """
+        Builds the index map for the state vector. The index map is a dictionary with:
+            * keys - state names
+            * values - index of the state in the state vector
+
+        Available states:
+            * position (dimension 3)
+            * clock bias (dimension 1)
+            * ISB (dimension 1)
+            * iono (dimension 1 per satellite)
+            * tropo wet (dimension 1)
+            * ambiguity (dimension 1 per satellite and CP type, excluding the pivot satellite)
+            * phase bias (dimension 1 per constellation and CP type)
 
         Args:
             sat_list(list[src.data_types.gnss.Satellite]) : list of available satellites
         """
-        _states = self.get_additional_info("states")
-        if "iono" not in _states:
-            return
+        self._update_sat_list(sat_list)
 
-        for sat in sat_list:
-            if sat not in self.iono:
-                self.iono[sat] = 0.0
-                self.cov_iono[sat] = 1.0
-                if self.initial_state is not None and sat in self.initial_state.iono:
-                    self.iono[sat] = self.initial_state.iono[sat]
-                    self.cov_iono[sat] = self.initial_state.cov_iono[sat]
+        index_map = {}
+        state_counter = 0
+        states = self.get_additional_info("states")
 
-        _to_remove = []
-        for sat in self.iono:
-            if sat not in sat_list:
-                _to_remove.append(sat)  # satellite to be removed
-        for sat in _to_remove:
-            self.iono.pop(sat)
-            self.cov_iono.pop(sat)
+        # position index
+        if "position" in states:
+            index_map["position"] = state_counter
+            state_counter += 3
+
+        # clock index
+        if "clock_bias" in states:
+            index_map["clock_bias"] = state_counter
+            state_counter += 1
+
+        # check if ISB is present
+        if "isb" in states:
+            index_map["isb"] = state_counter
+            state_counter += 1
+
+        # add iono states
+        if "iono" in states:
+            index_map["iono"] = dict()
+            for sat in self.iono.keys():
+                index_map["iono"][sat] = state_counter
+                state_counter += 1
+
+        if "tropo_wet" in states:
+            index_map["tropo_wet"] = state_counter
+            state_counter += 1
+
+        if "ambiguity" in states:
+            pivot_dict = self.get_additional_info("pivot")
+            index_map["ambiguity"] = dict()
+            for sat, cp_types in self.ambiguity:
+                if pivot_dict[sat.sat_system] != sat:
+                    index_map["ambiguity"][sat] = dict()
+                    for cp_type, ambiguity in cp_types.items():
+                        if not self.ambiguity[sat][cp_type].fixed:
+                            index_map["ambiguity"][sat][cp_type] = state_counter
+                            state_counter += 1
+
+        if "phase_bias" in states:
+            index_map["phase_bias"] = dict()
+            for const, cp_types in self.phase_bias.items():
+                index_map["phase_bias"][const] = dict()
+                for cp_type in cp_types.keys():
+                    index_map["phase_bias"][const][cp_type] = state_counter
+                    state_counter += 1
+
+        index_map["total_states"] = state_counter
+
+        self.index_map = index_map
 
     def __str__(self):
         _states = self.get_additional_info("states")
@@ -237,6 +415,10 @@ class GnssStateSpace(Container):
             _str += f", tropo_wet = {self.tropo_wet}"
         if "clock_bias_rate" in _states:
             _str += f", clock_bias_rate = {self.clock_bias_rate}"
+        if "ambiguity" in _states:
+            _str += f", ambiguity = {self.ambiguity}"
+        if "phase_bias" in _states:
+            _str += f", phase_bias = {self.phase_bias}"
 
         return f'{type(self).__name__}[{str(self.epoch)}]({_str})'
 
@@ -336,12 +518,12 @@ class GnssStateSpace(Container):
             exportable_lst.append("dop_ecef")
         if "dop_local" in self._info:
             exportable_lst.append("dop_local")
-        if "pr_prefit_residuals" in self._info:
-            exportable_lst.append("pr_prefit_residuals")
-        if "pr_postfit_residuals" in self._info:
-            exportable_lst.append("pr_postfit_residuals")
-        if "pr_rate_prefit_residuals" in self._info:
-            exportable_lst.append("pr_rate_prefit_residuals")
-        if "pr_rate_postfit_residuals" in self._info:
-            exportable_lst.append("pr_rate_postfit_residuals")
+        if "pos_prefit_residuals" in self._info:
+            exportable_lst.append("pos_prefit_residuals")
+        if "pos_postfit_residuals" in self._info:
+            exportable_lst.append("pos_postfit_residuals")
+        if "vel_prefit_residuals" in self._info:
+            exportable_lst.append("vel_prefit_residuals")
+        if "vel_postfit_residuals" in self._info:
+            exportable_lst.append("vel_postfit_residuals")
         return exportable_lst

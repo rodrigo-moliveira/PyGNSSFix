@@ -267,7 +267,9 @@ class PerformanceManager:
         """ Plot (main function). """
         if config_dict.get("performance_evaluation", "plot_configs", "plot_observations"):
             self.log.info("Plotting observations and additional information (satellite availability and skyplot...")
-            self._plot_obs(plot_dir)
+            self._plot_obs(plot_dir, "obs")
+            self._plot_obs(plot_dir, "mw_obs")
+            self._plot_obs(plot_dir, "gf_obs")
             self._plot_sat_availability(plot_dir)
             self._skyplot(plot_dir)
 
@@ -287,6 +289,8 @@ class PerformanceManager:
             self._plot_clock_rate(plot_dir)
             self._plot_iono(plot_dir)
             self._plot_tropo(plot_dir)
+            self._plot_ambiguity(plot_dir)
+            self._plot_phase_bias(plot_dir)
 
         if config_dict.get("performance_evaluation", "plot_configs", "plot_dops"):
             self.log.info("Plotting DOPs...")
@@ -301,16 +305,17 @@ class PerformanceManager:
             self.log.info("Plotting Planimetric Maps...")
             self._plot_planimetric(plot_dir)
 
-    def _plot_obs(self, plot_dir):
+    def _plot_obs(self, plot_dir, obs_type):
         """ Plot the GNSS observables. """
         try:
-            observations = self.data_manager.get_data("obs")
+            observations = self.data_manager.get_data(obs_type)
             if observations.is_empty():
                 raise ValueError
         except ValueError:
             self.log.warning("Observations dataframe not found or is empty. Skipping plot_obs")
             return
         try:
+            self.log.info(f"Plotting Observations dataframe {observations.description}")
             ax_dict = plot_gnss.plot_observations(observations)
 
             for ax in ax_dict.values():
@@ -345,7 +350,7 @@ class PerformanceManager:
 
     def _plot_residuals(self, plot_dir):
         """ Plot the GNSS prefit and postfit residuals of the estimation process. """
-        ax1 = ax2 = ax3 = ax4 = None
+        ax1 = ax2 = ax3 = ax4 = ax5 = ax6 = None
         try:
             ax1 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("pr_rate_prefit_residuals"), "m/s")
         except Exception as e:
@@ -362,8 +367,16 @@ class PerformanceManager:
             ax4 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("pr_postfit_residuals"), "m")
         except Exception as e:
             self.log.warning(f"Error plotting Pseudorange Postfit Residuals in function plot_residuals: {e}")
+        try:
+            ax5 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("cp_prefit_residuals"), "m")
+        except Exception as e:
+            self.log.warning(f"Error plotting Carrier Phase Prefit Residuals in function plot_residuals: {e}")
+        try:
+            ax6 = plot_gnss.plot_estimation_residuals(self.data_manager.get_data("cp_postfit_residuals"), "m")
+        except Exception as e:
+            self.log.warning(f"Error plotting Carrier Phase Postfit Residuals in function plot_residuals: {e}")
 
-        for ax in [ax1, ax2, ax3, ax4]:
+        for ax in [ax1, ax2, ax3, ax4, ax5, ax6]:
             self._save_figure(plot_dir, ax)
 
     def _plot_clock_bias(self, plot_dir):
@@ -425,6 +438,38 @@ class PerformanceManager:
                 self._save_figure(plot_dir, ax)
         except Exception as e:
             self.log.error(f"Unexpected error when performing plot_iono function: {e}")
+
+    def _plot_ambiguity(self, plot_dir):
+        """ Plot Ambiguity estimated states for all available satellites. """
+        try:
+            ambiguity = self.data_manager.get_data("ambiguity")
+            if ambiguity.is_empty():
+                raise ValueError
+        except ValueError:
+            self.log.warning("Satellite Ambiguity dataframe not found or is empty. Skipping plot_ambiguity")
+            return
+        try:
+            ax_list = plot_gnss.plot_ambiguity_states(ambiguity)
+            for ax in ax_list:
+                self._save_figure(plot_dir, ax)
+        except Exception as e:
+            self.log.error(f"Unexpected error when performing plot_ambiguity function: {e}")
+
+    def _plot_phase_bias(self, plot_dir):
+        """ Plot Receiver Phase Bias estimated states for all available datatypes. """
+        try:
+            phase_bias = self.data_manager.get_data("phase_bias")
+            if phase_bias.is_empty():
+                raise ValueError
+        except ValueError:
+            self.log.warning("Receiver Phase Bias dataframe not found or is empty. Skipping _plot_phase_bias")
+            return
+        try:
+            ax_list = plot_gnss.plot_phase_bias_states(phase_bias)
+            for ax in ax_list:
+                self._save_figure(plot_dir, ax)
+        except Exception as e:
+            self.log.error(f"Unexpected error when performing _plot_phase_bias function: {e}")
 
     def _plot_tropo(self, plot_dir):
         """ Plot the estimated troposphere wet delay. """

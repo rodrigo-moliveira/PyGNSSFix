@@ -4,7 +4,6 @@ import os
 from src.data_mng.gnss.state_space import GnssStateSpace
 from src.data_types.gnss import DataType
 from src.modules.gnss.solver.lsq_engine import LSQ_Engine_Position, LSQ_Engine_Velocity
-from src.modules.gnss.solver.obs_reconstructor import PseudorangeReconstructor, RangeRateReconstructor
 from src.common_log import get_logger, GNSS_ALG_LOG
 from src.errors import SolverError, ConfigError
 from src.io.config import config_dict
@@ -122,6 +121,8 @@ class GnssSolver:
         INITIAL_IONO = config.get("solver", "initial_iono_cov")
         INITIAL_TROPO = config.get("solver", "initial_tropo_cov")
         INITIAL_CLOCK_RATE = config.get("solver", "initial_clock_rate_cov")
+        INITIAL_AMBIGUITY = config.get("solver", "initial_ambiguity_cov")
+        INITIAL_PHASE_BIAS = config.get("solver", "initial_phase_bias_cov")
         INITIAL_STATE = {
             "pos": INITIAL_POS,
             "vel": INITIAL_VEL,
@@ -129,7 +130,9 @@ class GnssSolver:
             "isb": INITIAL_ISB,
             "iono": INITIAL_IONO,
             "tropo": INITIAL_TROPO,
-            "clock_rate": INITIAL_CLOCK_RATE
+            "clock_rate": INITIAL_CLOCK_RATE,
+            "ambiguity": INITIAL_AMBIGUITY,
+            "phase_bias": INITIAL_PHASE_BIAS
         }
 
         TROPO = TropoManager()
@@ -138,7 +141,9 @@ class GnssSolver:
         IONO = {}
         MODEL = {}
         CODES = {}
+        PHASES = {}
         DOPPLER = {}
+        cp_based = config.get("gnss_alg") == EnumAlgorithmPNT.CP_PPP
 
         # Set up the user models for each active constellation
         for const in CONSTELLATIONS:
@@ -146,28 +151,58 @@ class GnssSolver:
 
             code_types = self.obs_data_for_pos.get_code_types(const)
             doppler_types = self.obs_data_for_vel.get_doppler_types(const)
+            if cp_based:
+                phase_types = self.obs_data_for_pos.get_phase_types(const)
+                if len(phase_types) != len(code_types):
+                    raise ConfigError(f"Number of phase and code observations do not match for constellation {const}. "
+                                      f"Code types: {code_types}, Phase types: {phase_types}")
+            else:
+                phase_types = []
 
             # check if the model is single frequency or dual frequency
             if len(code_types) == 2 and (obs_model == EnumObservationModel.UNCOMBINED):
                 # Dual-Frequency Uncombined Model
-                self.log.info(f"Selected model for {const} is Dual-Frequency Uncombined with observations {code_types}")
+                if not cp_based:
+                    self.log.info(f"Selected model for {const} is Dual-Frequency Uncombined with observations "
+                                  f"{code_types}")
+                else:
+                    self.log.info(f"Selected model for {const} is Dual-Frequency Uncombined with observations "
+                                  f"{code_types} and phase types {phase_types}")
                 MODEL[const] = EnumFrequencyModel.DUAL_FREQ
                 CODES[const] = [code_types[0], code_types[1]]  # setting main and second code type
+                PHASES[const] = [phase_types[0], phase_types[1]] if cp_based else []
             elif len(code_types) == 1 and obs_model == EnumObservationModel.COMBINED:
                 # Iono-Free Model
-                self.log.info(f"Selected model for {const} is Iono-Free with code observations {code_types}")
-                iono_code = code_types[0]
-                if not DataType.is_iono_free_code(iono_code) and not DataType.is_iono_free_smooth_code(iono_code):
+                if not cp_based:
+                    self.log.info(f"Selected model for {const} is Iono-Free with code observations {code_types}")
+                else:
+                    self.log.info(f"Selected model for {const} is Iono-Free with code observations {code_types} and "
+                                  f"phase types {phase_types}")
+
+                iono_pr = code_types[0]
+                iono_cp = phase_types[0] if cp_based else None
+                if not DataType.is_iono_free_code(iono_pr) and not DataType.is_iono_free_smooth_code(iono_pr):
                     raise ConfigError(f"Iono-Free Model is selected for constellation {const} but no iono-free code "
                                       f"observations are available. Available code observations: {code_types}")
+                if cp_based and not DataType.is_iono_free_carrier(iono_cp):
+                    raise ConfigError(f"Iono-Free Model is selected for constellation {const} but no iono-free "
+                                      f"phase observations are available. Available phase observations: "
+                                      f"{phase_types}")
                 MODEL[const] = EnumFrequencyModel.SINGLE_FREQ  # Iono-free is treated as single frequency in the LS
-                CODES[const] = [iono_code]
-                IONO[const].iono_model = EnumIonoModel.DISABLED  # disable Iono model in Iono-Free scenarios
+                CODES[const] = [iono_pr]
+                PHASES[const] = [iono_cp] if cp_based else []
+                IONO[const].disable()
             elif len(code_types) == 1:
                 # Single Frequency Model
-                self.log.info(f"Selected model for {const} is Single Frequency with code types {code_types[0]}")
+                if not cp_based:
+                    self.log.info(f"Selected model for {const} is Single Frequency with code types {code_types[0]}")
+                else:
+                    self.log.info(f"Selected model for {const} is Single Frequency with code types "
+                                  f"{code_types[0]} and phase types {phase_types[0]}")
                 MODEL[const] = EnumFrequencyModel.SINGLE_FREQ
                 CODES[const] = [code_types[0]]
+                PHASES[const] = [phase_types[0]] if cp_based else []
+                IONO[const].disable_diono()
             else:
                 raise ConfigError(f"Unable to initialize GNSS Solver Model for constellation {const}. Check configs.")
 
@@ -191,12 +226,15 @@ class GnssSolver:
             "IONO": IONO,
             "MODEL": MODEL,
             "CODES": CODES,
+            "CP_BASED": cp_based,
+            "PHASES": PHASES,
             "DOPPLER": DOPPLER,
             "REL_CORRECTION": REL_CORRECTION,
             "TX_TIME_ALG": TX_TIME_ALG,
             "INITIAL_STATES": INITIAL_STATE,
             "ELEVATION_FILTER": ELEVATION_FILTER,
-            "VELOCITY_EST": VELOCITY_EST
+            "VELOCITY_EST": VELOCITY_EST,
+            "SAT_BIAS_ENUM": self.sat_bias.bias_enum
         }
 
     def solve(self) -> None:
@@ -282,7 +320,7 @@ class GnssSolver:
         sats_for_epoch = obs_data.get_satellites()
 
         # build system geometry for this epoch
-        system_geometry = SystemGeometry(obs_data, self.sat_clocks, self.sat_orbits, self.phase_center)
+        system_geometry = SystemGeometry(obs_data, self.sat_clocks, self.sat_orbits, self.phase_center, self.sat_bias)
 
         self.log.debug(f"Available Satellites: {sats_for_epoch}")
 
@@ -293,6 +331,7 @@ class GnssSolver:
 
             # solve the Least Squares
             try:
+                self.log.info(f"Solving LSQ for {str(epoch)} on iteration {iteration}")
                 prefit_residuals, postfit_residuals, dop_matrix, rms = \
                     self._iterate_pos(str(iteration), system_geometry, obs_data, state, epoch)
             except SolverError as e:
@@ -332,8 +371,8 @@ class GnssSolver:
 
         # save other iteration data to state variable
         state.add_additional_info("geometry", system_geometry)
-        state.add_additional_info("pr_prefit_residuals", prefit_residuals)
-        state.add_additional_info("pr_postfit_residuals", postfit_residuals)
+        state.add_additional_info("pos_prefit_residuals", prefit_residuals)
+        state.add_additional_info("pos_postfit_residuals", postfit_residuals)
         state.add_additional_info("rms", rms)
         state.add_additional_info("dop_matrix", dop_matrix)
 
@@ -342,21 +381,17 @@ class GnssSolver:
     def _iterate_pos(self, iteration, system_geometry, obs_data, state, epoch):
         """ Low-level function to solve a single iteration of the position estimation iterative process """
         self._check_model_availability(system_geometry, epoch)
+        state.build_index_map(system_geometry.get_satellites())
+        self.log.info(f"Selected Pivot Satellites for Ambiguity (Per constellation): "
+                      f"{state.get_additional_info('pivot')}")
 
-        satellite_list = system_geometry.get_satellites()
-        state.update_sat_list(satellite_list)
-
-        if self.trace_dir is not None:
-            trace_file = f"{self.trace_dir}\\PseudorangeReconstructionIter_{iteration}.txt"
-        else:
-            trace_file = None
-        reconstructor = PseudorangeReconstructor(system_geometry, self._metadata, state, self.sat_bias, trace_file)
+        trace_data = (self.trace_dir, iteration) if self.trace_dir is not None else None
 
         # build LSQ Engine matrices for all satellites
-        lsq_engine = LSQ_Engine_Position(satellite_list, self._metadata, epoch, obs_data, reconstructor)
+        lsq_engine = LSQ_Engine_Position(system_geometry, self._metadata, epoch, obs_data, state, trace_data)
 
         # solve LS problem
-        return lsq_engine.solve_ls(state)
+        return lsq_engine.solve_ls(state, self._metadata["APRIORI_CONSTRAIN"] == EnumOnOff.ENABLED)
 
     def _check_model_availability(self, system_geometry, epoch) -> None:
         """
@@ -400,18 +435,10 @@ class GnssSolver:
 
     def _iterate_vel(self, system_geometry, obs_data, state, epoch):
         """ Low-level function to solve a single iteration of the velocity estimation process """
-        satellite_list = system_geometry.get_satellites()
-
-        if self.trace_dir is not None:
-            trace_file = f"{self.trace_dir}\\RangeRateReconstructor.txt"
-        else:
-            trace_file = None
-        reconstructor = RangeRateReconstructor(system_geometry,
-                                               self._metadata,
-                                               state, trace_file)
+        trace_data = (self.trace_dir, 0) if self.trace_dir is not None else None
 
         # build LSQ Engine matrices for all satellites
-        lsq_engine = LSQ_Engine_Velocity(satellite_list, self._metadata, epoch, obs_data, reconstructor)
+        lsq_engine = LSQ_Engine_Velocity(system_geometry, self._metadata, epoch, obs_data, state, trace_data)
 
         # solve LS problem
         return lsq_engine.solve_ls(state)
@@ -444,8 +471,8 @@ class GnssSolver:
             return False
 
         # save other iteration data to state variable
-        state.add_additional_info("pr_rate_prefit_residuals", prefit_residuals)
-        state.add_additional_info("pr_rate_postfit_residuals", postfit_residuals)
+        state.add_additional_info("vel_prefit_residuals", prefit_residuals)
+        state.add_additional_info("vel_postfit_residuals", postfit_residuals)
         state.add_additional_info("vel_rms", rms)
 
         return True

@@ -323,6 +323,111 @@ def plot_iono_states(iono: CSVData):
     return ax_list
 
 
+def plot_ambiguity_states(ambiguity: CSVData):
+    """
+    Plot the estimated ambiguity states for each satellite.
+
+    Args:
+        ambiguity(CSVData): input CSVData object with the estimated states for all available satellites
+    Returns:
+        list[matplotlib.pyplot.Axes]: returns a list of Axes objects for each available satellite ambiguity state
+    """
+    grouped = ambiguity.data.groupby(['sat'])
+    ax_list = []
+
+    # Define color mapping for datatypes
+    color_map = {
+        0: ('blue', 'lightblue'),
+        1: ('red', 'lightcoral'),  # light red
+        # Add more datatype-color mappings as needed
+    }
+
+    # Plot for each constellation
+    for sat, group in grouped:
+        ax = None  # Keep one plot per satellite
+
+        # Now group by datatype within this satellite
+        for iType, (datatype, subgroup) in enumerate(group.groupby('datatype')):
+            sow_array = subgroup.iloc[:, 1].values
+            week_array = subgroup.iloc[:, 0].values
+            ambiguity_array = subgroup.iloc[:, 4].values
+
+            sigma_array = np.sqrt(subgroup.iloc[:, 5].values)
+            time_array = [Epoch.from_gnss_time(week, sow, scale="GPST") for (sow, week) in zip(sow_array, week_array)]
+
+            color, sigma_color = color_map.get(iType, ('black', 'gray'))
+
+            ax = plot_1D(time_array, ambiguity_array, ax=ax, label=f"{datatype}", linewidth=2.0, linestyle="solid",
+                         color=color)
+            plot_1D(time_array, ambiguity_array + sigma_array, ax=ax, linewidth=1.0, linestyle="dashed",
+                    color=sigma_color)
+            plot_1D(time_array, ambiguity_array - sigma_array, ax=ax, label=f"sigma", linewidth=1.0, linestyle="dashed",
+                    color=sigma_color)
+            ax.fill_between(time_array, ambiguity_array - sigma_array, ambiguity_array + sigma_array,
+                            color=sigma_color, alpha=0.3)
+
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Ambiguity [m]")
+        ax.set_title(f"{ambiguity.title} for {sat[0]}")
+        ax.legend()
+        ax_list.append(ax)
+    return ax_list
+
+
+def plot_phase_bias_states(phase_bias: CSVData):
+    """
+    Plot the estimated receiver phase bias states for each datatype.
+
+    Args:
+        phase_bias(CSVData): input CSVData object with the estimated states for all available datatypes
+    Returns:
+        list[matplotlib.pyplot.Axes]: returns a list of Axes objects for each available datatype
+    """
+    # Group only by constellation
+    grouped = phase_bias.data.groupby(['constellation'])
+    ax_list = []
+
+    # Define color mapping for datatypes
+    color_map = {
+        0: ('blue', 'lightblue'),
+        1: ('red', 'lightcoral'),  # light red
+        # Add more datatype-color mappings as needed
+    }
+
+    # Plot for each constellation
+    for constellation, group in grouped:
+        ax = None  # Keep one plot per constellation
+
+        # Now group by datatype within this constellation
+        for iType, (datatype, subgroup) in enumerate(group.groupby('datatype')):
+            sow_array = subgroup.iloc[:, 1].values
+            week_array = subgroup.iloc[:, 0].values
+            phase_bias_array = subgroup.iloc[:, 4].values
+            sigma_array = np.sqrt(subgroup.iloc[:, 5].values)
+
+            time_array = [Epoch.from_gnss_time(week, sow, scale="GPST")
+                          for sow, week in zip(sow_array, week_array)]
+
+            color, sigma_color = color_map.get(iType, ('black', 'gray'))
+
+            ax = plot_1D(time_array, phase_bias_array, ax=ax, label=f"{datatype}",
+                         linewidth=2.0, linestyle="solid", color=color)
+            plot_1D(time_array, phase_bias_array + sigma_array, ax=ax,
+                    linewidth=1.0, linestyle="dashed", color=sigma_color)
+            plot_1D(time_array, phase_bias_array - sigma_array, ax=ax,
+                    linewidth=1.0, linestyle="dashed", color=sigma_color)
+            ax.fill_between(time_array, phase_bias_array - sigma_array, phase_bias_array + sigma_array,
+                            color=sigma_color, alpha=0.3)
+
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Phase Bias [s]")
+        ax.set_title(f"{phase_bias.title} for {constellation[0]}")
+        ax.legend()
+        ax_list.append(ax)
+
+    return ax_list
+
+
 def plot_satellite_availability(residuals: CSVData, obs_time):
     """
     Plot the satellite availability.
