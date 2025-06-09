@@ -4,6 +4,7 @@ import numpy as np
 from src import constants
 from src.constants import SPEED_OF_LIGHT
 from src.errors import SolverError
+from src.io.config import EnumSolver
 from src.modules.estimators.weighted_ls import WeightedLeastSquares
 from src.modules.gnss.solver import PseudorangeReconstructor, RangeRateReconstructor, CarrierPhaseReconstructor
 from src.data_types.gnss import DataType
@@ -43,7 +44,7 @@ class LSQ_Engine:
         sat_list(dict): dict with available constellations as keys and available satellites to be used as values
     """
 
-    def __init__(self, datatypes, satellite_list, epoch, obs_data, state):
+    def __init__(self, datatypes, satellite_list, epoch, obs_data, state, solver_enum):
         """
         Constructor of the LSQ_Engine instance.
 
@@ -54,6 +55,7 @@ class LSQ_Engine:
             obs_data (src.data_mng.gnss.observation_data.EpochData) : instance of `EpochData` (GNSS observable database
                 for a single epoch)
             state(src.data_mng.gnss.state_space.GnssStateSpace): GNSS state vector object
+            solver_enum(src.io.config.enums.EnumSolver): enumeration for the type of solver (LS or WLS)
         """
         self.datatypes = datatypes
 
@@ -68,7 +70,7 @@ class LSQ_Engine:
             self.sat_list[sat.sat_system].append(sat)
 
         self._initialize_matrices(state, obs_data.get_number_of_observations(datatypes))
-        self._build_lsq(epoch, obs_data, state)
+        self._build_lsq(epoch, obs_data, state, solver_enum)
 
     def _initialize_matrices(self, state, n_obs):
         """
@@ -85,7 +87,7 @@ class LSQ_Engine:
         """
         pass
 
-    def _build_lsq(self, epoch, obs_data, state):
+    def _build_lsq(self, epoch, obs_data, state, solver_enum):
         """
         Fills the observation vector y (attribute `y_vec`), the state matrix G (attribute `design_mat`) and the weight
         matrix W (attribute `weight_mat`) with the appropriate data.
@@ -95,6 +97,7 @@ class LSQ_Engine:
             obs_data (src.data_mng.gnss.observation_data.EpochData) : instance of `EpochData` (GNSS observable database
                 for a single epoch)
             state(src.data_mng.gnss.state_space.GnssStateSpace): GNSS state vector object
+            solver_enum(src.io.config.enums.EnumSolver): enumeration for the type of solver (LS or WLS)
         """
         pass
 
@@ -295,7 +298,7 @@ class LSQ_Engine_Position(LSQ_Engine):
             self.reconstructor["CP"] = CarrierPhaseReconstructor(system_geometry, metadata, state, trace_data)
         else:
             datatypes = pr_datatypes
-        super().__init__(datatypes, system_geometry.get_satellites(), epoch, obs_data, state)
+        super().__init__(datatypes, system_geometry.get_satellites(), epoch, obs_data, state, metadata["SOLVER"])
 
     def _initialize_matrices(self, state, n_obs):
         """
@@ -440,7 +443,7 @@ class LSQ_Engine_Position(LSQ_Engine):
 
         return X0 - X0_prev, np.linalg.inv(P0)
 
-    def _build_lsq(self, epoch, obs_data, state):
+    def _build_lsq(self, epoch, obs_data, state, solver_enum):
         obs_offset = 0
         index_map = state.index_map
 
@@ -506,10 +509,11 @@ class LSQ_Engine_Position(LSQ_Engine):
                             self.design_mat[obs_offset + iSat, idx_phase_bias] = 1.0
 
                     # Weight matrix -> as 1/(obs_std^2)
-                    std = reconstructor.get_obs_std(sat, datatype)
-                    obs_data.get_observable(sat, datatype).set_std(std)
-                    self.weight_mat[obs_offset + iSat, obs_offset + iSat] = \
-                        1 / (std ** 2)
+                    if solver_enum == EnumSolver.WLS:
+                        std = reconstructor.get_obs_std(sat, datatype)
+                        obs_data.get_observable(sat, datatype).set_std(std)
+                        self.weight_mat[obs_offset + iSat, obs_offset + iSat] = \
+                            1 / (std ** 2)
 
                 obs_offset += n_sats
 
@@ -614,7 +618,7 @@ class LSQ_Engine_Velocity(LSQ_Engine):
         for key in datatypes:
             datatypes[key] = datatypes[key][:1]
         self.reconstructor = RangeRateReconstructor(system_geometry, metadata, state, trace_data)
-        super().__init__(datatypes, system_geometry.get_satellites(), epoch, obs_data, state)
+        super().__init__(datatypes, system_geometry.get_satellites(), epoch, obs_data, state, metadata["SOLVER"])
 
     def _initialize_matrices(self, state, n_obs):
         """
@@ -665,7 +669,7 @@ class LSQ_Engine_Velocity(LSQ_Engine):
 
         return prefit_residuals, los
 
-    def _build_lsq(self, epoch, obs_data, state):
+    def _build_lsq(self, epoch, obs_data, state, solver_enum):
         obs_offset = 0
         const_offset = 0
         for iConst, const in enumerate(self.sat_list.keys()):
@@ -681,11 +685,12 @@ class LSQ_Engine_Velocity(LSQ_Engine):
                 self.design_mat[obs_offset + iSat][0:3] = -los  # velocity
                 self.design_mat[obs_offset + iSat][3 + const_offset] = 1
 
-                # Weight matrix -> as 1/(obs_std^2)
-                std = self.reconstructor.get_obs_std(sat, datatype)
-                obs_data.get_observable(sat, datatype).set_std(std)
-                self.weight_mat[obs_offset + iSat, obs_offset + iSat] = \
-                    1 / (std ** 2)
+                if solver_enum == EnumSolver.WLS:
+                    # Weight matrix -> as 1/(obs_std^2)
+                    std = self.reconstructor.get_obs_std(sat, datatype)
+                    obs_data.get_observable(sat, datatype).set_std(std)
+                    self.weight_mat[obs_offset + iSat, obs_offset + iSat] = \
+                        1 / (std ** 2)
 
             obs_offset += n_sats
             const_offset += 1

@@ -286,18 +286,19 @@ class GnssStateSpace(Container):
 
         # update pivot (in case the previous pivot satellite is not in the updated list)
         pivot_dict = self.get_additional_info("pivot")
-        for pivot in pivot_dict.values():
-            if pivot not in new_sat_list:
-                for sat in new_sat_list:
-                    if sat.sat_system == pivot.sat_system:
-                        log = get_logger(GNSS_ALG_LOG)
-                        log.warning(f"Pivot satellite changed from satellite {pivot} to {sat} for {pivot.sat_system} "
-                                    f"constellation. All ambiguities for this constellation will be set unfixed.")
-                        pivot_dict[pivot.sat_system] = sat
-                        if "ambiguity" in self.get_additional_info("states"):
-                            self.ambiguity.unfix_ambiguities(pivot.sat_system)
-                        break
-        self.add_additional_info("pivot", pivot_dict)
+        if pivot_dict is not None:
+            for pivot in pivot_dict.values():
+                if pivot not in new_sat_list:
+                    for sat in new_sat_list:
+                        if sat.sat_system == pivot.sat_system:
+                            log = get_logger(GNSS_ALG_LOG)
+                            log.warning(f"Pivot satellite changed from satellite {pivot} to {sat} for {pivot.sat_system} "
+                                        f"constellation. All ambiguities for this constellation will be set unfixed.")
+                            pivot_dict[pivot.sat_system] = sat
+                            if "ambiguity" in self.get_additional_info("states"):
+                                self.ambiguity.unfix_ambiguities(pivot.sat_system)
+                            break
+            self.add_additional_info("pivot", pivot_dict)
 
     def _add_sat(self, sat):
         """ Add a new satellite to the state space. """

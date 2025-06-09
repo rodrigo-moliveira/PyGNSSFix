@@ -8,10 +8,11 @@ class EnumSolver(Enum):
     """ Enumeration for the type of solver (Least-Squares or Weighted Least-Squares) """
     LS = 0
     WLS = 1
+    EKF = 2
 
     @classmethod
     def show_options(cls):
-        return f"[ LS, WSL ]"
+        return f"[ LS, WSL, EKF ]"
 
     @classmethod
     def init_model(cls, model_str: str):
@@ -19,6 +20,8 @@ class EnumSolver(Enum):
             return EnumSolver.WLS
         elif model_str.lower() == "ls":
             return EnumSolver.LS
+        elif model_str.lower() == "ekf":
+            return EnumSolver.EKF
         else:
             raise EnumError(f"Unsupported Solver Model {model_str}. Available options are {cls.show_options()}")
 

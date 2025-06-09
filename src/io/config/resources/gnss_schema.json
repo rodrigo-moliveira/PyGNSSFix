@@ -184,7 +184,7 @@
       "type": "object",
       "properties": {
         "trace_files": {"type": "boolean"},
-        "algorithm": {"type": "string", "enum": ["WSL"]},
+        "algorithm": {"type": "string", "enum": ["LS", "WLS", "EKF"]},
         "a_priori_constrain": {"type": "boolean"},
         "feedforward_solution": {"type": "boolean"},
         "n_iteration": {"type": "integer", "minimum": 1},

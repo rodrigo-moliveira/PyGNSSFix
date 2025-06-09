@@ -3,6 +3,7 @@ import os
 
 from src.data_mng.gnss.state_space import GnssStateSpace
 from src.data_types.gnss import DataType
+from src.modules.gnss.solver.ekf_engine import EKF_Engine
 from src.modules.gnss.solver.lsq_engine import LSQ_Engine_Position, LSQ_Engine_Velocity
 from src.common_log import get_logger, GNSS_ALG_LOG
 from src.errors import SolverError, ConfigError
@@ -238,7 +239,28 @@ class GnssSolver:
         }
 
     def solve(self) -> None:
-        """ Launch GNSS Solver algorithm (main function) """
+        """
+        Launch GNSS Solver algorithm (main function)
+
+        This function processes all available epochs, estimates the receiver position and clock bias for each epoch,
+        and optionally estimates the receiver velocity if configured.
+        """
+        # check if the metadata is set
+        solver = self._metadata['SOLVER']
+        self.log.info(f"Solver selected: {solver}")
+
+        if solver == EnumSolver.LS or solver == EnumSolver.WLS:
+            # start solving process for Least Squares
+            self._solve_lsq()
+
+        elif solver == EnumSolver.EKF:
+            # start solving process for Extended Kalman Filter
+            self._solve_ekf()
+
+        self.log.info("Successfully executed main function of GNSS Solver algorithm.")
+
+    def _solve_lsq(self) -> None:
+        """ Execute Least Squares Solver """
         # available epochs
         epochs = self.obs_data_for_pos.get_epochs()
 
@@ -327,6 +349,7 @@ class GnssSolver:
         # Iterated Least-Squares algorithm
         while iteration < self._metadata["MAX_ITER"]:
             # compute geometry-related data for each satellite link
+            # TODO: what happens if geometry.compute() removes a satellite? force this and test...
             system_geometry.compute(epoch, state, self._metadata)
 
             # solve the Least Squares
@@ -476,6 +499,50 @@ class GnssSolver:
         state.add_additional_info("vel_rms", rms)
 
         return True
+
+    def _solve_ekf(self) -> None:
+        """ Execute EKF Solver """
+        # initial epoch and state and covariance
+        epochs = self.obs_data_for_pos.get_epochs()
+        init_epoch = epochs[0]
+        sat_list = self.obs_data_for_pos.get_epoch_data(init_epoch).get_satellites()
+        state = self._init_state(init_epoch, sat_list)
+        apply_elevation_filter = False if self._metadata["ELEVATION_FILTER"] == -1 else True
+
+        # create EKF Engine
+        engine = EKF_Engine(init_epoch, state, self._metadata)
+
+        # iterate over all available epochs
+        for epoch in epochs:
+            self.log.info(f"processing epoch {epoch}...")
+            # fetch observation data for this epoch
+            obs_for_epoch = self.obs_data_for_pos.get_epoch_data(epoch)
+
+            # build system geometry for this epoch
+            system_geometry = SystemGeometry(obs_for_epoch, self.sat_clocks, self.sat_orbits, self.phase_center,
+                                             self.sat_bias)
+
+            # TODO: what happens if geometry.compute() removes a satellite? force this and test...
+            # compute geometry-related data for each satellite link
+            system_geometry.compute(epoch, state, self._metadata)
+
+            self.log.debug(f"Available Satellites: {system_geometry.get_satellites()}")
+
+            # self._check_model_availability(system_geometry, epoch)
+
+            #self.log.info(f"Selected Pivot Satellites for Ambiguity (Per constellation): "
+            #              f"{state.get_additional_info('pivot')}")
+
+            # trace_data = (self.trace_dir, iteration) if self.trace_dir is not None else None
+
+            # call EKF solver for this epoch
+            engine.estimate(epoch, system_geometry, obs_for_epoch)
+
+            state = engine.state
+            state.epoch = epoch
+            self.solution.append(state.clone())
+
+        self.log.info("Successfully ending module GNSS Positioning Solver...")
 
     @staticmethod
     def _stop(rms_old, rms_new, stop_criteria):

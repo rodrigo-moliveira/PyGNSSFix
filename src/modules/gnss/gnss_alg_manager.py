@@ -89,6 +89,10 @@ class GnssAlgorithmManager:
         for state in sol:
             dop_matrix = state.get_additional_info("dop_matrix")  # DOP matrix
 
+            if dop_matrix is None:
+                self.main_log.warn(f"No DOP Matrix available for epoch {state.epoch}")
+                continue
+
             # DOPs
             geometry_dop = np.sqrt(dop_matrix[0, 0] + dop_matrix[1, 1] + dop_matrix[2, 2] + dop_matrix[3, 3])
             position_dop = np.sqrt(dop_matrix[0, 0] + dop_matrix[1, 1] + dop_matrix[2, 2])
