@@ -16,7 +16,7 @@ class EnumSolver(Enum):
 
     @classmethod
     def init_model(cls, model_str: str):
-        if model_str.lower() == "wsl":
+        if model_str.lower() == "wls":
             return EnumSolver.WLS
         elif model_str.lower() == "ls":
             return EnumSolver.LS

@@ -524,6 +524,7 @@ class GnssSolver:
 
             # TODO: what happens if geometry.compute() removes a satellite? force this and test...
             # compute geometry-related data for each satellite link
+            # TODO: a geometria é computada com a época anterior?
             system_geometry.compute(epoch, state, self._metadata)
 
             self.log.debug(f"Available Satellites: {system_geometry.get_satellites()}")
@@ -539,7 +540,6 @@ class GnssSolver:
             engine.estimate(epoch, system_geometry, obs_for_epoch)
 
             state = engine.state
-            state.epoch = epoch
             self.solution.append(state.clone())
 
         self.log.info("Successfully ending module GNSS Positioning Solver...")

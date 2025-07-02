@@ -10,6 +10,40 @@ from src.models.gnss_models import compute_ggto
 from src.common_log import get_logger, GNSS_ALG_LOG
 
 
+def delete_cov_state(P, index):
+    """
+    Delete the state at the given index from covariance matrix P.
+    Removes both the corresponding row and column.
+    """
+    P_new = np.delete(P, index, axis=0)  # Delete row
+    P_new = np.delete(P_new, index, axis=1)  # Delete column
+    return P_new
+
+
+def add_cov_state(P, index, new_var):
+    """
+    Add a new state at the given index to covariance matrix P.
+    The new state has variance new_var (on the diagonal) and zero cross-correlation.
+    """
+    n = P.shape[0]
+    P_new = np.zeros((n + 1, n + 1))
+
+    # Copy upper-left block
+    P_new[:index, :index] = P[:index, :index]
+
+    # Copy upper-right and lower-left blocks
+    P_new[:index, index+1:] = P[:index, index:]
+    P_new[index+1:, :index] = P[index:, :index]
+
+    # Copy lower-right block
+    P_new[index+1:, index+1:] = P[index:, index:]
+
+    # Set the new diagonal element
+    P_new[index, index] = new_var
+
+    return P_new
+
+
 class GnssStateSpace(Container):
     """
     This class contains the state space vector with all variables to be estimated in a GNSS run,
@@ -157,6 +191,7 @@ class GnssStateSpace(Container):
         state.add_additional_info("clock_slave", self.get_additional_info("clock_slave"))
         state.add_additional_info("pivot", self.get_additional_info("pivot"))
         state.add_additional_info("sat_list", self.get_additional_info("sat_list"))
+        state.index_map = self.index_map.copy()
 
         return state
 
@@ -260,6 +295,7 @@ class GnssStateSpace(Container):
         self.add_additional_info("pivot", pivot_dict)
         self.add_additional_info("states", _states)
         self.add_additional_info("sat_list", sat_list)
+        self.build_index_map()
 
     def _update_sat_list(self, new_sat_list):
         """
@@ -269,18 +305,23 @@ class GnssStateSpace(Container):
             new_sat_list(list[src.data_types.gnss.Satellite]) : list of available satellites
         """
         prev_sat_list = self.get_additional_info("sat_list")
+        update = False
+        added_sats = []
+        removed_sats = []
         # add the new satellites to the internal data (new visible satellites)
         for sat in new_sat_list:
             if sat not in prev_sat_list:
                 self._add_sat(sat)
+                added_sats.append(sat)
+                update = True
 
         # remove satellites that are not in the new list (satellites that are not visible anymore)
-        _to_remove = []
         for sat in prev_sat_list:
             if sat not in new_sat_list:
-                _to_remove.append(sat)  # satellite to be removed
-        for sat in _to_remove:
+                removed_sats.append(sat)  # satellite to be removed
+        for sat in removed_sats:
             self._remove_sat(sat)
+            update = True
 
         self.add_additional_info("sat_list", new_sat_list)
 
@@ -292,19 +333,22 @@ class GnssStateSpace(Container):
                     for sat in new_sat_list:
                         if sat.sat_system == pivot.sat_system:
                             log = get_logger(GNSS_ALG_LOG)
-                            log.warning(f"Pivot satellite changed from satellite {pivot} to {sat} for {pivot.sat_system} "
-                                        f"constellation. All ambiguities for this constellation will be set unfixed.")
+                            log.warning(f"Pivot satellite changed from satellite {pivot} to {sat} for "
+                                        f"{pivot.sat_system} constellation. All ambiguities for this constellation "
+                                        f"will be set unfixed.")
                             pivot_dict[pivot.sat_system] = sat
                             if "ambiguity" in self.get_additional_info("states"):
                                 self.ambiguity.unfix_ambiguities(pivot.sat_system)
                             break
             self.add_additional_info("pivot", pivot_dict)
+        return update, added_sats, removed_sats
 
     def _add_sat(self, sat):
         """ Add a new satellite to the state space. """
         _states = self.get_additional_info("states")
         if "iono" in _states:
             self.iono[sat] = 0.0
+            # TODO: fetch the cov iono?
             self.cov_iono[sat] = 1.0
             if sat not in self.initial_state.iono:
                 self.initial_state.iono[sat] = 0.0
@@ -329,7 +373,7 @@ class GnssStateSpace(Container):
             if sat in self.ambiguity:
                 self.ambiguity.pop(sat)
 
-    def build_index_map(self, sat_list):
+    def build_index_map(self, sat_list=None):
         """
         Builds the index map for the state vector. The index map is a dictionary with:
             * keys - state names
@@ -347,7 +391,12 @@ class GnssStateSpace(Container):
         Args:
             sat_list(list[src.data_types.gnss.Satellite]) : list of available satellites
         """
-        self._update_sat_list(sat_list)
+        added_sats, removed_sats = [], []
+        update = False
+        if sat_list is not None:
+            update, added_sats, removed_sats = self._update_sat_list(sat_list)
+            if not update:
+                return
 
         index_map = {}
         state_counter = 0
@@ -400,6 +449,21 @@ class GnssStateSpace(Container):
 
         index_map["total_states"] = state_counter
 
+        # update covariance
+        # if update:
+        #   P = self.get_additional_info("P")
+        #    # TODO: check if P is None
+        #    for sat in added_sats:
+        #        if "iono" in states:
+        #            idx = index_map["iono"][sat]
+        #            P = add_cov_state(P, idx, 100)
+        #        # TODO: add ambiguity as well
+
+        #    for sat in removed_sats:
+        #        if "iono" in states:
+        #            idx = self.index_map["iono"][sat]
+        #            P = delete_cov_state(P, idx)
+        #    self.add_additional_info("P", P)
         self.index_map = index_map
 
     def __str__(self):

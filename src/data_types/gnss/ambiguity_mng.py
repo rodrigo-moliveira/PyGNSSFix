@@ -28,10 +28,10 @@ class Ambiguity:
         self.cov = cov
         self.fixed = fixed
 
-    def reset(self):
+    def reset(self, cov):
         """ Resets the ambiguity to its initial state. """
         self.val = 0.0
-        self.cov = 0.0
+        self.cov = cov
         self.fixed = False
 
     def clone(self):
@@ -169,7 +169,7 @@ class AmbiguityManager:
         for sat in self.ambiguities:
             if sat.sat_system == constellation:
                 for cp_type in self.ambiguities[sat]:
-                    self.ambiguities[sat][cp_type].reset()
+                    self.ambiguities[sat][cp_type].reset(cov=self.init_cov)
 
     def main_fix(self, index_map, state, dX, cov):
         """

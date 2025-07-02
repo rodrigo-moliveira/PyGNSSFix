@@ -7,12 +7,61 @@ from src.modules.estimators.EKF import EKF
 from src.modules.gnss.solver import PseudorangeReconstructor, CarrierPhaseReconstructor
 
 
+def delete_state(x, P, index):
+    """
+    Delete the state at the given index from covariance matrix P.
+    Removes both the corresponding row and column.
+    """
+    x_new = np.delete(x, index)
+    P_new = np.delete(P, index, axis=0)  # Delete row
+    P_new = np.delete(P_new, index, axis=1)  # Delete column
+    return x_new, P_new
+
+
+def add_state(x, P, index, new_x, new_var):
+    """
+    Add a new state value at the given index in state vector x and covariance matrix P.
+    The new state is assumed uncorrelated with existing ones.
+
+    Parameters:
+        x       : state vector, shape (n,)
+        P       : covariance matrix, shape (n, n)
+        index   : position to insert the new state
+        new_x   : value of the new state
+        new_var : variance of the new state (scalar)
+
+    Returns:
+        x_out   : extended state vector, shape (n+1,)
+        P_out   : extended covariance matrix, shape (n+1, n+1)
+    """
+    # Insert new value in state vector
+    x_out = np.insert(x, index, new_x)
+
+    # Create new covariance matrix with zeros
+    n = P.shape[0]
+    P_out = np.zeros((n + 1, n + 1))
+
+    # Copy existing blocks
+    P_out[:index, :index] = P[:index, :index]
+    P_out[:index, index+1:] = P[:index, index:]
+    P_out[index+1:, :index] = P[index:, :index]
+    P_out[index+1:, index+1:] = P[index:, index:]
+
+    # Set the variance of the new state
+    P_out[index, index] = new_var
+
+    return x_out, P_out
+
 class EKF_Engine:
     def __init__(self, init_epoch, init_state, metadata):
         self._solver = EKF()
-        self._epoch = init_epoch
+        # self._epoch = init_epoch
         self._state = init_state
+        self._state.epoch = init_epoch
         self._init = False
+
+        self._x = None
+        self._P = None
 
         self.cp_based = metadata["CP_BASED"]
         self.pr_datatypes = metadata["CODES"]
@@ -23,7 +72,7 @@ class EKF_Engine:
 
     @property
     def epoch(self):
-        return self._epoch
+        return self.state.epoch
 
     @property
     def state(self):
@@ -88,6 +137,81 @@ class EKF_Engine:
                     X0[idx_phase_bias] = self._state.phase_bias[const][cp_type]
 
         return X0, P0
+
+    def _build_state_cov(self, new_index_map, prev_index_map):
+        x_out = self._x
+        P_out = self._P
+
+        if new_index_map["total_states"] != prev_index_map["total_states"]:
+            # need to update the internal state and covariance dimensions (new states)
+
+            # iono
+            if "iono" in new_index_map:
+
+                for sat in new_index_map["iono"]:
+                    if sat not in prev_index_map["iono"]:
+                        # add a new satellite (new available)
+                        idx = new_index_map["iono"][sat]
+                        x_out, P_out = add_state(x_out, P_out, idx, 0, 100)
+
+                # update state and cov for removed satellites
+                for sat in prev_index_map["iono"]:
+                    if sat not in new_index_map["iono"]:
+                        # remove this satellite (no longer available)
+                        idx = prev_index_map["iono"][sat]
+                        x_out, P_out = delete_state(x_out, P_out, idx)
+
+        return x_out, P_out
+
+    def _build_state_cov_2(self, sat_list, new_index_map, prev_index_map):
+        # master_constellation = self._state.get_additional_info("clock_master")
+        slave_constellation = self._state.get_additional_info("clock_slave")
+        n_states = new_index_map["total_states"]
+
+        X = np.zeros(n_states)
+        P = self._state.get_additional_info("P")
+
+        # position
+        idx_pos = new_index_map["position"]
+        X[idx_pos:idx_pos+3] = self._state.position
+
+        # clock bias (in meters)
+        idx_clock = new_index_map["clock_bias"]
+        X[idx_clock] = self._state.clock_bias
+
+        # tropo
+        if "tropo_wet" in new_index_map:
+            idx_tropo = new_index_map["tropo_wet"]
+            X[idx_tropo] = self._state.tropo_wet
+
+        # iono
+        if "iono" in new_index_map:
+            for sat in sat_list:
+                if sat in new_index_map["iono"]:
+                    idx_iono = new_index_map["iono"][sat]
+                    X[idx_iono] = self._state.iono[sat]
+
+        # ISB
+        if slave_constellation is not None and "isb" in new_index_map:
+            idx_isb = new_index_map["isb"]
+            X[idx_isb] = self._state.isb
+
+        if "ambiguity" in new_index_map:
+            pivot_dict = self._state.get_additional_info("pivot")
+            for sat, cp_types in new_index_map["ambiguity"].items():
+                if pivot_dict[sat.sat_system] != sat:
+                    for cp_type in cp_types:
+                        if not self._state.ambiguity[sat][cp_type].fixed:
+                            idx_amb = cp_types[cp_type]
+                            X[idx_amb] = self._state.ambiguity[sat][cp_type].val
+
+        if "phase_bias" in new_index_map:
+            for const, cp_types in new_index_map["phase_bias"].items():
+                for cp_type in cp_types:
+                    idx_phase_bias = cp_types[cp_type]
+                    X[idx_phase_bias] = self._state.phase_bias[const][cp_type]
+
+        return X
 
     def _build_stm_process_noise(self, sat_list):
         # master_constellation = self._state.get_additional_info("clock_master")
@@ -335,16 +459,22 @@ class EKF_Engine:
             datatypes = self.pr_datatypes
 
         sat_list = system_geometry.get_satellites()
-        self._state.build_index_map(sat_list)
+
         if self._init is False:
+            self._state.build_index_map(sat_list)
             x_in, P_in = self._build_init_state_cov(sat_list)
             self._init = True
+            #self._x = x_in
+            #self._P = P_in
         else:
-            x_in, _ = self._build_init_state_cov(sat_list)
-            P_in = self._state.get_additional_info("P")
+            prev_index_map = self._state.index_map
+            self._state.build_index_map(sat_list)
+            new_index_map = self._state.index_map
+            x_in, P_in = self._build_state_cov(new_index_map, prev_index_map)
+            # P_in = self._state.get_additional_info("P")
 
         # build state vector and covariance matrix (the dimension may be variable)
-        time_step = (epoch - self._epoch).total_seconds()
+        time_step = (epoch - self.epoch).total_seconds()
         F, Q_c = self._build_stm_process_noise(sat_list)
         R, H, obs_vector = self._build_obs_matrix(epoch, obs_for_epoch, datatypes, self._state, reconstructor, sat_list)
 
@@ -356,7 +486,11 @@ class EKF_Engine:
 
         # update the state vector object with x^hat
         self._update_state(x_out, P_out, sat_list)
-        self._state.add_additional_info("P", P_out)
+
+        self._x = x_out
+        self._P = P_out
+        # self._state.add_additional_info("P", P_out)
+        self._state.epoch = epoch
 
         # build the postfit residuals vector
         #post_fit = self.y_vec - self.design_mat @ x_hat
