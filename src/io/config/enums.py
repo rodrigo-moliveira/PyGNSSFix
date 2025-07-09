@@ -250,3 +250,36 @@ class EnumLambdaMethod(Enum):
     @classmethod
     def show_options(cls):
         return f"[ILS, IR, BS, PAR, ILS + Ratio Test]"
+
+
+class EnumNoiseProcess(Enum):
+    """
+    Enumeration for the process noise models.
+
+    Available process noise models are:
+        1 - Random Constant
+        2 - White Noise
+        3 - Random Walk
+        4 - Gauss-Markov
+    """
+    RANDOM_CONSTANT = 1
+    WHITE_NOISE = 2
+    RANDOM_WALK = 3
+    GAUSS_MARKOV = 4
+
+    @classmethod
+    def init_model(cls, model_str: str):
+        if model_str.lower() == "random_constant":
+            return EnumNoiseProcess.RANDOM_CONSTANT
+        elif model_str.lower() == "white_noise":
+            return EnumNoiseProcess.WHITE_NOISE
+        elif model_str.lower() == "random_walk":
+            return EnumNoiseProcess.RANDOM_WALK
+        elif model_str.lower() == "gauss_markov":
+            return EnumNoiseProcess.GAUSS_MARKOV
+        else:
+            raise EnumError(f"Unsupported Process Noise Model {model_str}. Available options are {cls.show_options()}")
+
+    @classmethod
+    def show_options(cls):
+        return f"[random_constant, white_noise, random_walk, gauss_markov]"

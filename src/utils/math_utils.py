@@ -139,3 +139,59 @@ def require_len_matrix(arr: np.ndarray, nrows=3, ncols=3):
     if rows != nrows or cols != ncols:
         raise ArraySizeError(f"Invalid shape of matrix {arr}: should be of dimension {nrows}x{ncols} but it is "
                              f"a {rows}x{cols} matrix")
+
+
+def delete_state(x_in, P_in, index):
+    """
+    Delete the state at the given index from state vector `x_in` and covariance matrix `P_in`.
+    Removes both the corresponding row and column on the covariance matrix.
+
+    Args:
+        x_in(numpy.ndarray): state vector of size n
+        P_in(numpy.ndarray): covariance matrix of size (nxn)
+        index(int): index of the state to be removed
+
+    Returns:
+        tuple[numpy.ndarray, numpy.ndarray]: returns the new state vector and covariance matrix without the deleted
+            state (size n-1).
+    """
+    x_out = np.delete(x_in, index)
+    P_out = np.delete(P_in, index, axis=0)  # Delete row
+    P_out = np.delete(P_out, index, axis=1)  # Delete column
+    return x_out, P_out
+
+
+def add_state(x_in, P_in, index, new_state, new_var):
+    """
+    Add a new state value at the given index in state vector `x_in` and covariance matrix `P_in`.
+    The new state is assumed uncorrelated with existing ones.
+
+    Args:
+        x_in(numpy.ndarray): state vector, shape (n,)
+        P_in(numpy.ndarray): covariance matrix, shape (n, n)
+        index(int): position to insert the new state
+        new_state(float): value of the new state (scalar)
+        new_var(float) : variance of the new state (scalar)
+
+    Returns:
+        tuple[numpy.ndarray, numpy.ndarray]: tuple with:
+            * x_out : extended state vector, shape (n+1,)
+            * P_out : extended covariance matrix, shape (n+1, n+1)
+    """
+    # Insert new value in state vector
+    x_out = np.insert(x_in, index, new_state)
+
+    # Create new covariance matrix with zeros
+    n = P_in.shape[0]
+    P_out = np.zeros((n + 1, n + 1))
+
+    # Copy existing blocks
+    P_out[:index, :index] = P_in[:index, :index]
+    P_out[:index, index+1:] = P_in[:index, index:]
+    P_out[index+1:, :index] = P_in[index:, :index]
+    P_out[index+1:, index+1:] = P_in[index:, index:]
+
+    # Set the variance of the new state
+    P_out[index, index] = new_var
+
+    return x_out, P_out

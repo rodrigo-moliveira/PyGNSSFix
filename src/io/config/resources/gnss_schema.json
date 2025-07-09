@@ -210,7 +210,51 @@
         "initial_tropo_cov": {"type": "array", "items": {"type": "number"}},
         "initial_clock_rate_cov": {"type": "array", "items": {"type": "number"}},
         "initial_ambiguity_cov": {"type": "array", "items": {"type": "number"}},
-        "initial_phase_bias_cov": {"type": "array", "items": {"type": "number"}}
+        "initial_phase_bias_cov": {"type": "array", "items": {"type": "number"}},
+        "noise_model": {
+          "type": "object",
+          "properties": {
+            "comment": {
+              "type": "string"
+            }
+          },
+          "patternProperties": {
+            "^(position|velocity|clock_bias|clock_drift|isb|iono|tropo|ambiguity|phase_bias)$": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["white_noise", "constant", "random_walk", "gauss_markov"]
+                },
+                "process_noise": {
+                  "anyOf": [
+                    { "type": "number" },
+                    {
+                      "type": "array",
+                      "items": { "type": "number" },
+                      "minItems": 3,
+                      "maxItems": 3
+                    }
+                  ]
+                }
+              },
+              "required": ["type", "process_noise"],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "position",
+            "velocity",
+            "clock_bias",
+            "clock_drift",
+            "isb",
+            "iono",
+            "tropo",
+            "ambiguity",
+            "phase_bias"
+          ],
+          "additionalProperties": false
+        }
       },
       "required": ["trace_files","algorithm", "a_priori_constrain", "feedforward_solution", "n_iterations", "stop_criteria", "transmission_time_alg", "relativistic_corrections",
       "elevation_filter", "ambiguity_resolution", "initial_pos_cov", "initial_vel_cov", "initial_clock_cov", "initial_isb_cov", "initial_iono_cov", "initial_tropo_cov", "initial_clock_rate_cov",

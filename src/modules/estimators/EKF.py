@@ -3,16 +3,42 @@
 import numpy as np
 
 
-# TODO: add docstring
-# NOTE: this EKF performs the predict step based on a linearized state transition function F
-# (suitable for GNSS static/kinematic applications). The algorithm must be improved if a proper state function
-# and jacobian are required
-# the same goes for the observation function and its jacobian
-#
 class EKF:
+    """
+    A simplified implementation of the Extended Kalman Filter (EKF) for discrete-time systems.
+
+    Unlike the typical EKF formulation, this version does not take in non-linear state transition (f)
+    and observation (h) functions. Instead, it assumes that the user provides the *state transition Jacobian*
+    and *measurement Jacobian* directly, along with the respective covariance matrices.
+
+    This class is intended for cases where the user has already linearized the system, or is working with
+    systems where the state transition and observation models are already linear or approximately linear.
+
+    Methods:
+    --------
+    predict(x_in, P_in, time_step, F, Q_c):
+        Performs the prediction step of the EKF given the state transition Jacobian F and continuous-time
+        process noise covariance Q_c.
+
+    update(obs_vector, P_in, x_in, H, R):
+        Performs the update step of the EKF using the measurement Jacobian H and measurement noise covariance R.
+    """
 
     @staticmethod
     def predict(x_in, P_in, time_step, F, Q_c):
+        """
+        EKF prediction step using the provided linearized state transition matrix.
+
+        Args:
+            x_in (np.ndarray): Prior state estimate (n x 1).
+            P_in (np.ndarray): Prior error covariance matrix (n x n).
+            time_step (float): Time step between predictions.
+            F (np.ndarray): State transition Jacobian matrix (n x n).
+            Q_c (np.ndarray): Continuous-time process noise covariance matrix (n x n).
+
+        Returns:
+            tuple[np.ndarray, np.ndarray]: tuple with predicted state estimate and predicted error covariance matrix.
+        """
         # discretization of Q
         Q_d = F @ Q_c @ F.T * time_step
 
@@ -24,6 +50,19 @@ class EKF:
 
     @staticmethod
     def update(obs_vector, P_in, x_in, H, R):
+        """
+        EKF update step using the provided linearized measurement model.
+
+        Args:
+            obs_vector (np.ndarray): Innovation vector (measured - predicted observation), shape (m x 1).
+            P_in (np.ndarray): Prior error covariance matrix (n x n).
+            x_in (np.ndarray): Prior state estimate (n x 1).
+            H (np.ndarray): Measurement Jacobian matrix (m x n).
+            R (np.ndarray): Measurement noise covariance matrix (m x m).
+
+        Returns:
+            tuple [np.ndarray, np.ndarray]: tuple with updated state estimate and predicted error covariance matrix.
+        """
         # kalman gain
         invS = np.linalg.inv(H @ P_in @ H.T + R)
         K = P_in @ H.T @ invS

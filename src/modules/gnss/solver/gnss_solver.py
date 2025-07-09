@@ -3,6 +3,7 @@ import os
 
 from src.data_mng.gnss.state_space import GnssStateSpace
 from src.data_types.gnss import DataType
+from src.models.noise.noise_manager import GNSSNoiseManager
 from src.modules.gnss.solver.ekf_engine import EKF_Engine
 from src.modules.gnss.solver.lsq_engine import LSQ_Engine_Position, LSQ_Engine_Velocity
 from src.common_log import get_logger, GNSS_ALG_LOG
@@ -135,6 +136,7 @@ class GnssSolver:
             "ambiguity": INITIAL_AMBIGUITY,
             "phase_bias": INITIAL_PHASE_BIAS
         }
+        ERROR_MODEL = GNSSNoiseManager(config["solver"]["noise_model"])
 
         TROPO = TropoManager()
         obs_model = config_dict.get("obs_model")
@@ -233,6 +235,7 @@ class GnssSolver:
             "REL_CORRECTION": REL_CORRECTION,
             "TX_TIME_ALG": TX_TIME_ALG,
             "INITIAL_STATES": INITIAL_STATE,
+            "ERROR_MODEL": ERROR_MODEL,
             "ELEVATION_FILTER": ELEVATION_FILTER,
             "VELOCITY_EST": VELOCITY_EST,
             "SAT_BIAS_ENUM": self.sat_bias.bias_enum
@@ -508,9 +511,10 @@ class GnssSolver:
         sat_list = self.obs_data_for_pos.get_epoch_data(init_epoch).get_satellites()
         state = self._init_state(init_epoch, sat_list)
         apply_elevation_filter = False if self._metadata["ELEVATION_FILTER"] == -1 else True
+        trace_data = (self.trace_dir, 1) if self.trace_dir is not None else None
 
         # create EKF Engine
-        engine = EKF_Engine(init_epoch, state, self._metadata)
+        engine = EKF_Engine(init_epoch, state, self._metadata, trace_data)
 
         # iterate over all available epochs
         for epoch in epochs:
@@ -524,7 +528,6 @@ class GnssSolver:
 
             # TODO: what happens if geometry.compute() removes a satellite? force this and test...
             # compute geometry-related data for each satellite link
-            # TODO: a geometria é computada com a época anterior?
             system_geometry.compute(epoch, state, self._metadata)
 
             self.log.debug(f"Available Satellites: {system_geometry.get_satellites()}")
