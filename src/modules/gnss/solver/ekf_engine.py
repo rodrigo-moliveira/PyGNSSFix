@@ -185,46 +185,36 @@ class EKF_Engine:
         F = np.zeros((n_states, n_states))  # State Transition Matrix
         Q_c = np.zeros((n_states, n_states))  # Continuous-Time Process Noise Covariance Matrix
 
-        # TODO: make configuration for random walk, white noise or gauss markov process
-
-        process_pos = 100
-        process_clock = 100
-        process_iono = 100
-        process_tropo = 100
-        process_ambiguity = 100
-        process_phase_bias = 100
-        process_isb = 100
-
         # position
         idx_pos = index_map["position"]
         for i in range(3):
-            Q_c[idx_pos + i, idx_pos + i] = process_pos
-            F[idx_pos + i, idx_pos + i] = 1
+            Q_c[idx_pos + i, idx_pos + i] = self._noise_manager.position.get_process_noise()[i]
+            F[idx_pos + i, idx_pos + i] = self._noise_manager.position.get_stm_entry()
 
         # clock bias (in meters)
         idx_clock = index_map["clock_bias"]
-        Q_c[idx_clock, idx_clock] = process_clock
-        F[idx_clock, idx_clock] = 1
+        Q_c[idx_clock, idx_clock] = self._noise_manager.clock_bias.get_process_noise()
+        F[idx_clock, idx_clock] = self._noise_manager.clock_bias.get_stm_entry()
 
         # tropo
         if "tropo_wet" in index_map:
             idx_tropo = index_map["tropo_wet"]
-            Q_c[idx_tropo, idx_tropo] = process_tropo
-            F[idx_tropo, idx_tropo] = 1
+            Q_c[idx_tropo, idx_tropo] = self._noise_manager.tropo.get_process_noise()
+            F[idx_tropo, idx_tropo] = self._noise_manager.tropo.get_stm_entry()
 
         # iono
         if "iono" in index_map:
             for sat in sat_list:
                 if sat in index_map["iono"]:
                     idx_iono = index_map["iono"][sat]
-                    Q_c[idx_iono, idx_iono] = process_iono
-                    F[idx_iono, idx_iono] = 1
+                    Q_c[idx_iono, idx_iono] = self._noise_manager.iono.get_process_noise()
+                    F[idx_iono, idx_iono] = self._noise_manager.iono.get_stm_entry()
 
         # ISB
         if slave_constellation is not None and "isb" in index_map:
             idx_isb = index_map["isb"]
-            Q_c[idx_isb, idx_isb] = process_isb
-            F[idx_isb, idx_isb] = 1
+            Q_c[idx_isb, idx_isb] = self._noise_manager.isb.get_process_noise()
+            F[idx_isb, idx_isb] = self._noise_manager.isb.get_stm_entry()
 
         if "ambiguity" in index_map:
             pivot_dict = self._state.get_additional_info("pivot")
@@ -233,15 +223,15 @@ class EKF_Engine:
                     for cp_type in cp_types:
                         if not self._state.ambiguity[sat][cp_type].fixed:
                             idx_amb = cp_types[cp_type]
-                            Q_c[idx_amb, idx_amb] = process_ambiguity
-                            F[idx_amb, idx_amb] = 1
+                            Q_c[idx_amb, idx_amb] = self._noise_manager.ambiguity.get_process_noise()
+                            F[idx_amb, idx_amb] = self._noise_manager.ambiguity.get_stm_entry()
 
         if "phase_bias" in index_map:
             for const, cp_types in index_map["phase_bias"].items():
                 for cp_type in cp_types:
                     idx_phase_bias = cp_types[cp_type]
-                    Q_c[idx_phase_bias, idx_phase_bias] = process_phase_bias
-                    F[idx_phase_bias, idx_phase_bias] = 1
+                    Q_c[idx_phase_bias, idx_phase_bias] = self._noise_manager.phase_bias.get_process_noise()
+                    F[idx_phase_bias, idx_phase_bias] = self._noise_manager.phase_bias.get_stm_entry()
         return F, Q_c
 
     def compute_residual_los(self, sat, epoch, datatype, obs_data, reconstructor):
@@ -324,7 +314,6 @@ class EKF_Engine:
                             design_mat[obs_offset + iSat, idx_iono] = 1.0 * factor  # iono
 
                     # ISB
-
                     if "isb" in index_map and sat.sat_system == slave_constellation:
                         idx_isb = index_map["isb"]
                         design_mat[obs_offset + iSat, idx_isb] = 1.0
