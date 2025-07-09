@@ -27,5 +27,5 @@ class NoiseModel:
     def get_stm_entry(self):
         return 1
 
-    def get_process_noise(self):
+    def get_process_noise(self, time_step):
         return self.process_noise

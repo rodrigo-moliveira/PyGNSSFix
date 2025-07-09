@@ -25,7 +25,7 @@ class EKF:
     """
 
     @staticmethod
-    def predict(x_in, P_in, time_step, F, Q_c):
+    def predict(x_in, P_in, time_step, F, Q, continuous=False):
         """
         EKF prediction step using the provided linearized state transition matrix.
 
@@ -34,13 +34,21 @@ class EKF:
             P_in (np.ndarray): Prior error covariance matrix (n x n).
             time_step (float): Time step between predictions.
             F (np.ndarray): State transition Jacobian matrix (n x n).
-            Q_c (np.ndarray): Continuous-time process noise covariance matrix (n x n).
+            Q (np.ndarray): Process noise covariance matrix (n x n).
+            continuous(bool): if True then Q is continuous-time process noise, and is discretized
+                if False, then Q is already the discrete-time covariance
 
         Returns:
             tuple[np.ndarray, np.ndarray]: tuple with predicted state estimate and predicted error covariance matrix.
         """
-        # discretization of Q
-        Q_d = F @ Q_c @ F.T * time_step
+        if continuous:
+            # discretization of Q
+            Q_d = F @ Q @ F.T * time_step
+        else:
+            # Q_d is constructed manually for each state based on its noise model
+            # e.g., Q_d[i, i] = sigma_i**2 * delta_t   (for random walk)
+            # or    Q_d[i, i] = sigma_i**2 * (1 - alpha**2)  (for Gauss-Markov)
+            Q_d = Q
 
         # state and covariance prediction
         x_out = F @ x_in

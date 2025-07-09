@@ -173,7 +173,7 @@ class EKF_Engine:
 
         return x_out, P_out
 
-    def _build_stm_process_noise(self, sat_list: list) -> tuple[np.ndarray, np.ndarray]:
+    def _build_stm_process_noise(self, sat_list: list, time_step: float) -> tuple[np.ndarray, np.ndarray]:
         """
         This method builds the State Transition Matrix (STM) and the Process Noise Covariance matrix according to the
         user definitions.
@@ -185,21 +185,23 @@ class EKF_Engine:
         F = np.zeros((n_states, n_states))  # State Transition Matrix
         Q_c = np.zeros((n_states, n_states))  # Continuous-Time Process Noise Covariance Matrix
 
+        # TODO: convert for each state the process noise accordingly
+
         # position
         idx_pos = index_map["position"]
         for i in range(3):
-            Q_c[idx_pos + i, idx_pos + i] = self._noise_manager.position.get_process_noise()[i]
+            Q_c[idx_pos + i, idx_pos + i] = self._noise_manager.position.get_process_noise(time_step)[i]
             F[idx_pos + i, idx_pos + i] = self._noise_manager.position.get_stm_entry()
 
         # clock bias (in meters)
         idx_clock = index_map["clock_bias"]
-        Q_c[idx_clock, idx_clock] = self._noise_manager.clock_bias.get_process_noise()
+        Q_c[idx_clock, idx_clock] = self._noise_manager.clock_bias.get_process_noise(time_step)
         F[idx_clock, idx_clock] = self._noise_manager.clock_bias.get_stm_entry()
 
         # tropo
         if "tropo_wet" in index_map:
             idx_tropo = index_map["tropo_wet"]
-            Q_c[idx_tropo, idx_tropo] = self._noise_manager.tropo.get_process_noise()
+            Q_c[idx_tropo, idx_tropo] = self._noise_manager.tropo.get_process_noise(time_step)
             F[idx_tropo, idx_tropo] = self._noise_manager.tropo.get_stm_entry()
 
         # iono
@@ -207,13 +209,13 @@ class EKF_Engine:
             for sat in sat_list:
                 if sat in index_map["iono"]:
                     idx_iono = index_map["iono"][sat]
-                    Q_c[idx_iono, idx_iono] = self._noise_manager.iono.get_process_noise()
+                    Q_c[idx_iono, idx_iono] = self._noise_manager.iono.get_process_noise(time_step)
                     F[idx_iono, idx_iono] = self._noise_manager.iono.get_stm_entry()
 
         # ISB
         if slave_constellation is not None and "isb" in index_map:
             idx_isb = index_map["isb"]
-            Q_c[idx_isb, idx_isb] = self._noise_manager.isb.get_process_noise()
+            Q_c[idx_isb, idx_isb] = self._noise_manager.isb.get_process_noise(time_step)
             F[idx_isb, idx_isb] = self._noise_manager.isb.get_stm_entry()
 
         if "ambiguity" in index_map:
@@ -223,14 +225,14 @@ class EKF_Engine:
                     for cp_type in cp_types:
                         if not self._state.ambiguity[sat][cp_type].fixed:
                             idx_amb = cp_types[cp_type]
-                            Q_c[idx_amb, idx_amb] = self._noise_manager.ambiguity.get_process_noise()
+                            Q_c[idx_amb, idx_amb] = self._noise_manager.ambiguity.get_process_noise(time_step)
                             F[idx_amb, idx_amb] = self._noise_manager.ambiguity.get_stm_entry()
 
         if "phase_bias" in index_map:
             for const, cp_types in index_map["phase_bias"].items():
                 for cp_type in cp_types:
                     idx_phase_bias = cp_types[cp_type]
-                    Q_c[idx_phase_bias, idx_phase_bias] = self._noise_manager.phase_bias.get_process_noise()
+                    Q_c[idx_phase_bias, idx_phase_bias] = self._noise_manager.phase_bias.get_process_noise(time_step)
                     F[idx_phase_bias, idx_phase_bias] = self._noise_manager.phase_bias.get_stm_entry()
         return F, Q_c
 
@@ -442,13 +444,13 @@ class EKF_Engine:
             x_in, P_in = self._build_state_cov(new_index_map, prev_index_map)
 
         # build state transition matrix and process noise matrices
-        F, Q_c = self._build_stm_process_noise(sat_list)
+        F, Q_d = self._build_stm_process_noise(sat_list, time_step)
 
         # build observation covariance matrix, observation Jacobian and observation residuals
         R, H, obs_vector = self._build_obs_matrix(epoch, obs_for_epoch, datatypes, self._state, reconstructor, sat_list)
 
         # perform predict step
-        x_pred, P_pred = self._solver.predict(x_in, P_in, time_step, F, Q_c)
+        x_pred, P_pred = self._solver.predict(x_in, P_in, 0, F, Q_d, continuous=False)
 
         # perform update step
         x_out, P_out = self._solver.update(obs_vector, P_pred, x_pred, H, R)
