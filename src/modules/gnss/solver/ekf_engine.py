@@ -236,7 +236,8 @@ class EKF_Engine:
                     F[idx_phase_bias, idx_phase_bias] = self._noise_manager.phase_bias.get_stm_entry(time_step)
         return F, Q_d
 
-    def compute_residual_los(self, sat, epoch, datatype, obs_data, reconstructor):
+    @staticmethod
+    def compute_residual_los(sat, epoch, datatype, obs_data, reconstructor):
         """
         Computes the prefit residuals (observed minus computed observation) and the line of sight vector w.r.t.
         ECEF frame.
@@ -247,6 +248,8 @@ class EKF_Engine:
             datatype(src.data_types.gnss.DataType): datatype (frequency band) to compute the residual
             obs_data (src.data_mng.gnss.observation_data.EpochData) : instance of `EpochData` (GNSS observable database
                 for a single epoch)
+            reconstructor (src.modules.gnss.solver.obs_reconstructor.ObservationReconstructor) : reconstructor
+                of GNSS measurements (PR, CP or RangeRate)
         """
         # get observable and compute predicted observable
         obs = float(obs_data.get_observable(sat, datatype))
@@ -261,7 +264,12 @@ class EKF_Engine:
 
         return prefit_residuals, line_sight
 
-    def _build_obs_matrix(self, epoch, obs_data, datatypes, state, reconstructor_dict, sat_list):
+    def _build_obs_matrix(self, epoch, obs_data, datatypes, state, reconstructor_dict, sat_list) -> \
+            tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        This method builds the observation covariance matrix R, design matrix H and observation residuals y_res
+        to be used in the update step of the Kalman Filter
+        """
         obs_offset = 0
         index_map = self._state.index_map
         slave_constellation = self._state.get_additional_info("clock_slave")
@@ -341,13 +349,17 @@ class EKF_Engine:
                     R[obs_offset + iSat, obs_offset + iSat] = std ** 2
 
                     iSat += 1
-                obs_offset += iSat  # TODO check + or - here
+                obs_offset += iSat
         return R, design_mat, y_vec
 
     def _update_state(self, x_out, P_out, sat_list):
-
+        """
+        This method updates the internal state vector object (`self._state`) with the estimated state and covariance
+        for the current EKF step.
+        """
         index_map = self._state.index_map
 
+        # TODO: add ambiguity
         # Perform Ambiguity Resolution (if enabled)
         # if "ambiguity" in index_map and self._state.ambiguity.amb_resolution_enable:
         #    dX, cov = self._state.ambiguity.main_fix(index_map, self._state, dX, cov)
@@ -426,6 +438,7 @@ class EKF_Engine:
             obs_for_epoch (src.data_mng.gnss.observation_data.EpochData) : instance of `EpochData` (GNSS observable
             database for the current epoch).
         """
+        # TODO: raise SolverError on failure
         reconstructor, datatypes = self._build_obs_reconstructor(system_geometry)
         sat_list = system_geometry.get_satellites()
         time_step = (epoch - self.epoch).total_seconds()
@@ -447,13 +460,14 @@ class EKF_Engine:
         F, Q_d = self._build_stm_process_noise(sat_list, time_step)
 
         # build observation covariance matrix, observation Jacobian and observation residuals
-        R, H, obs_vector = self._build_obs_matrix(epoch, obs_for_epoch, datatypes, self._state, reconstructor, sat_list)
+        R, H, residuals_vector = self._build_obs_matrix(epoch, obs_for_epoch, datatypes, self._state,
+                                                        reconstructor, sat_list)
 
         # perform predict step
         x_pred, P_pred = self._solver.predict(x_in, P_in, 0, F, Q_d, continuous=False)
 
         # perform update step
-        x_out, P_out = self._solver.update(obs_vector, P_pred, x_pred, H, R)
+        x_out, P_out = self._solver.update(residuals_vector, P_pred, x_pred, H, R)
 
         # update the state vector object with x_out and P_out
         self._update_state(x_out, P_out, sat_list)
@@ -464,9 +478,74 @@ class EKF_Engine:
         self._state.epoch = epoch
 
         # build the postfit residuals vector
-        # post_fit = self.y_vec - self.design_mat @ x_hat
-        # norm = np.linalg.norm(post_fit)
+        post_fit = self.get_postfit_residuals(epoch, obs_for_epoch, datatypes, reconstructor, sat_list)
+        norm = np.linalg.norm(post_fit)
+        dop_matrix = np.linalg.inv(H.T @ H)
 
         # build prefit and postfit residual dicts for output
-        # pre_fit_dict = self.get_residuals(self.y_vec)
-        # post_fit_dict = self.get_residuals(post_fit)
+        pre_fit_dict = self.get_residuals(residuals_vector, sat_list, datatypes)
+        post_fit_dict = self.get_residuals(post_fit, sat_list, datatypes)
+        return pre_fit_dict, post_fit_dict, dop_matrix, norm
+
+    @staticmethod
+    def get_residuals(residual_vec, sat_list, datatypes):
+        """
+        Rearrange the residual vector (from a numpy.ndarray vector) into a more readable format.
+
+        The output is a dictionary keyed by constellation, satellite, and datatype, such that:
+            res_dict[constellation][sat][datatype] = residual
+
+        Args:
+            residual_vec (numpy.ndarray): The input residual vector to be rearranged.
+            sat_list (list): List with available satellites for this epoch
+            datatypes(dict): dict with constellations as keys and available datatypes as values
+
+        Returns:
+            dict: A dictionary with the rearranged residuals.
+        """
+
+        res_dict = dict()
+        for const in datatypes.keys():
+            n_sats = 0
+            for sat in sat_list:
+                if sat.sat_system == const:
+                    n_sats += 1
+
+            res_dict[const] = dict()
+            iSat = 0
+            for sat in sat_list:
+                if sat.sat_system == const:
+                    res_dict[const][sat] = dict()
+
+                    for iFreq, datatype in enumerate(datatypes[const]):
+                        res_dict[const][sat][datatype] = residual_vec[iFreq * n_sats + iSat]
+                    iSat += 1
+        return res_dict
+
+    def get_postfit_residuals(self, epoch, obs_data, datatypes, reconstructor_dict, sat_list):
+        obs_offset = 0
+        n_obs = obs_data.get_number_of_observations(datatypes)
+        postfit_residuals = np.zeros(n_obs)
+
+        for const in datatypes.keys():
+            for datatype in datatypes[const]:
+
+                if DataType.is_code(datatype):
+                    reconstructor = reconstructor_dict["PR"]
+                elif DataType.is_carrier(datatype):
+                    reconstructor = reconstructor_dict["CP"]
+                else:
+                    raise SolverError(f"Unknown datatype {datatype} at epoch {epoch}.")
+
+                iSat = 0
+                for sat in sat_list:
+                    if sat.sat_system != const:
+                        continue
+
+                    r, _ = self.compute_residual_los(sat, epoch, datatype, obs_data, reconstructor)
+
+                    # filling the LS matrices
+                    postfit_residuals[obs_offset + iSat] = r
+                    iSat += 1
+                obs_offset += iSat
+        return postfit_residuals

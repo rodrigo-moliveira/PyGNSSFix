@@ -532,18 +532,30 @@ class GnssSolver:
 
             self.log.debug(f"Available Satellites: {system_geometry.get_satellites()}")
 
-            # self._check_model_availability(system_geometry, epoch)
-
-            #self.log.info(f"Selected Pivot Satellites for Ambiguity (Per constellation): "
-            #              f"{state.get_additional_info('pivot')}")
-
-            # trace_data = (self.trace_dir, iteration) if self.trace_dir is not None else None
+            self.log.info(f"Selected Pivot Satellites for Ambiguity (Per constellation): "
+                          f"{state.get_additional_info('pivot')}")
 
             # call EKF solver for this epoch
-            engine.estimate(epoch, system_geometry, obs_for_epoch)
+            try:
+                prefit_residuals, postfit_residuals, dop_matrix, rms = \
+                    engine.estimate(epoch, system_geometry, obs_for_epoch)
+            except SolverError as e:
+                # TODO: check what to do here.
+                self.log.warning(f"Extended Kalman Filter failed for {str(epoch)}. Reason: {e}. "
+                                 f"No solution computed for this epoch.")
+                continue
 
-            state = engine.state
-            self.solution.append(state.clone())
+            self.log.info(f"Successfully solved positioning for epoch {str(epoch)} with "
+                          f"RMS = {rms} [m]")
+
+            state = engine.state.clone()
+            state.add_additional_info("geometry", system_geometry)
+            state.add_additional_info("pos_prefit_residuals", prefit_residuals)
+            state.add_additional_info("pos_postfit_residuals", postfit_residuals)
+            state.add_additional_info("rms", rms)
+            state.add_additional_info("dop_matrix", dop_matrix)
+
+            self.solution.append(state)
 
         self.log.info("Successfully ending module GNSS Positioning Solver...")
 
