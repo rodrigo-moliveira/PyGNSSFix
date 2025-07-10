@@ -1,7 +1,7 @@
 """ Module with the EKF engine for the GNSS PVT estimation. """
 import numpy as np
 
-from src import constants
+from src.constants import SPEED_OF_LIGHT
 from src.data_types.gnss import DataType
 from src.errors import SolverError
 from src.modules.estimators.EKF import EKF
@@ -183,40 +183,39 @@ class EKF_Engine:
         n_states = index_map["total_states"]
 
         F = np.zeros((n_states, n_states))  # State Transition Matrix
-        Q_c = np.zeros((n_states, n_states))  # Continuous-Time Process Noise Covariance Matrix
-
-        # TODO: convert for each state the process noise accordingly
+        Q_d = np.zeros((n_states, n_states))  # Continuous-Time Process Noise Covariance Matrix
 
         # position
         idx_pos = index_map["position"]
+        process_noise = self._noise_manager.position.get_process_noise(time_step)
         for i in range(3):
-            Q_c[idx_pos + i, idx_pos + i] = self._noise_manager.position.get_process_noise(time_step)[i]
-            F[idx_pos + i, idx_pos + i] = self._noise_manager.position.get_stm_entry()
+            Q_d[idx_pos + i, idx_pos + i] = process_noise[i]
+            F[idx_pos + i, idx_pos + i] = self._noise_manager.position.get_stm_entry(time_step)
 
         # clock bias (in meters)
         idx_clock = index_map["clock_bias"]
-        Q_c[idx_clock, idx_clock] = self._noise_manager.clock_bias.get_process_noise(time_step)
-        F[idx_clock, idx_clock] = self._noise_manager.clock_bias.get_stm_entry()
+        Q_d[idx_clock, idx_clock] = self._noise_manager.clock_bias.get_process_noise(time_step) * SPEED_OF_LIGHT**2
+        F[idx_clock, idx_clock] = self._noise_manager.clock_bias.get_stm_entry(time_step)
 
         # tropo
         if "tropo_wet" in index_map:
             idx_tropo = index_map["tropo_wet"]
-            Q_c[idx_tropo, idx_tropo] = self._noise_manager.tropo.get_process_noise(time_step)
-            F[idx_tropo, idx_tropo] = self._noise_manager.tropo.get_stm_entry()
+            Q_d[idx_tropo, idx_tropo] = self._noise_manager.tropo.get_process_noise(time_step)
+            F[idx_tropo, idx_tropo] = self._noise_manager.tropo.get_stm_entry(time_step)
 
         # iono
         if "iono" in index_map:
             for sat in sat_list:
                 if sat in index_map["iono"]:
                     idx_iono = index_map["iono"][sat]
-                    Q_c[idx_iono, idx_iono] = self._noise_manager.iono.get_process_noise(time_step)
-                    F[idx_iono, idx_iono] = self._noise_manager.iono.get_stm_entry()
+                    Q_d[idx_iono, idx_iono] = self._noise_manager.iono.get_process_noise(time_step)
+                    F[idx_iono, idx_iono] = self._noise_manager.iono.get_stm_entry(time_step)
 
         # ISB
         if slave_constellation is not None and "isb" in index_map:
             idx_isb = index_map["isb"]
-            Q_c[idx_isb, idx_isb] = self._noise_manager.isb.get_process_noise(time_step)
-            F[idx_isb, idx_isb] = self._noise_manager.isb.get_stm_entry()
+            Q_d[idx_isb, idx_isb] = self._noise_manager.isb.get_process_noise(time_step) * SPEED_OF_LIGHT**2
+            F[idx_isb, idx_isb] = self._noise_manager.isb.get_stm_entry(time_step)
 
         if "ambiguity" in index_map:
             pivot_dict = self._state.get_additional_info("pivot")
@@ -225,16 +224,17 @@ class EKF_Engine:
                     for cp_type in cp_types:
                         if not self._state.ambiguity[sat][cp_type].fixed:
                             idx_amb = cp_types[cp_type]
-                            Q_c[idx_amb, idx_amb] = self._noise_manager.ambiguity.get_process_noise(time_step)
-                            F[idx_amb, idx_amb] = self._noise_manager.ambiguity.get_stm_entry()
+                            Q_d[idx_amb, idx_amb] = self._noise_manager.ambiguity.get_process_noise(time_step)
+                            F[idx_amb, idx_amb] = self._noise_manager.ambiguity.get_stm_entry(time_step)
 
         if "phase_bias" in index_map:
             for const, cp_types in index_map["phase_bias"].items():
                 for cp_type in cp_types:
                     idx_phase_bias = cp_types[cp_type]
-                    Q_c[idx_phase_bias, idx_phase_bias] = self._noise_manager.phase_bias.get_process_noise(time_step)
-                    F[idx_phase_bias, idx_phase_bias] = self._noise_manager.phase_bias.get_stm_entry()
-        return F, Q_c
+                    Q_d[idx_phase_bias, idx_phase_bias] = self._noise_manager.phase_bias.get_process_noise(time_step) \
+                                                          * SPEED_OF_LIGHT**2
+                    F[idx_phase_bias, idx_phase_bias] = self._noise_manager.phase_bias.get_stm_entry(time_step)
+        return F, Q_d
 
     def compute_residual_los(self, sat, epoch, datatype, obs_data, reconstructor):
         """
@@ -327,7 +327,7 @@ class EKF_Engine:
                             if pivot_dict[sat.sat_system] != sat:
                                 if not state.ambiguity[sat][datatype].fixed:
                                     idx_amb = index_map["ambiguity"][sat][datatype]
-                                    wavelength = constants.SPEED_OF_LIGHT / datatype.freq.freq_value
+                                    wavelength = SPEED_OF_LIGHT / datatype.freq.freq_value
                                     design_mat[obs_offset + iSat, idx_amb] = wavelength
 
                         # phase bias

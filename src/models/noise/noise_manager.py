@@ -5,20 +5,30 @@ from src.models.noise.noise_configuration import NoiseModel
 
 class GNSSNoiseManager(Container):
     # TODO: missing docstrings
-    __slots__ = ["position", "velocity", "clock_bias", "clock_drift", "isb", "iono", "tropo", "ambiguity", "phase_bias"]
+    __slots__ = ["position", "clock_bias", "isb", "iono", "tropo", "ambiguity", "phase_bias"]
 
     def __init__(self, config_dict):
         super().__init__()
 
-        for arg in GNSSNoiseManager.__slots__:
-            model = config_dict.get(arg, None)
-            if model:
-                type_str = model.get("type", None)
-                process_noise = model.get("process_noise", None)
-                if type_str and process_noise:
-                    self.__setattr__(arg, NoiseModel(arg, type_str, process_noise))
-                else:
-                    raise ConfigError(f"Configuration file has missing information for process noise {arg}: "
-                                      f"missing fields 'type' or 'process_noise'. ")
+        for state in GNSSNoiseManager.__slots__:
+            type_str = config_dict.get("solver", "noise_model", state, "type")
+            if type_str == "white_noise" or type_str == "random_walk":
+                process_noise = config_dict.get("solver", "noise_model", state, "white_noise_random_walk",
+                                                "process_noise_std")
+                noise_model = NoiseModel(state, type_str, process_noise=process_noise)
+            elif type_str == "gauss_markov":
+                process_noise = config_dict.get("solver", "noise_model", state, "gauss_markov",
+                                                "process_noise_std")
+                correlation_time = config_dict.get("solver", "noise_model", state, "gauss_markov",
+                                                   "correlation_time")
+                noise_model = NoiseModel(state, type_str, process_noise=process_noise,
+                                         correlation_time=correlation_time)
             else:
-                raise ConfigError(f"Configuration file does not contain the process noise {arg}.")
+                raise ConfigError(f"Unknown process noise type {type_str} for state {state}."
+                                  f"Available options are white_noise, random_walk or gauss_markov.")
+
+            if noise_model:
+                self.__setattr__(state, noise_model)
+            else:
+                raise ConfigError(f"Configuration file has missing information for process noise {state}. "
+                                  f"Please review it.")

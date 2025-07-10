@@ -136,7 +136,7 @@ class GnssSolver:
             "ambiguity": INITIAL_AMBIGUITY,
             "phase_bias": INITIAL_PHASE_BIAS
         }
-        ERROR_MODEL = GNSSNoiseManager(config["solver"]["noise_model"])
+        ERROR_MODEL = GNSSNoiseManager(config)
 
         TROPO = TropoManager()
         obs_model = config_dict.get("obs_model")
