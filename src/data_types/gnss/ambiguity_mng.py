@@ -59,13 +59,14 @@ class AmbiguityManager:
         amb_resolution_model (EnumLambdaMethod): The model used for ambiguity resolution.
         config_P0_PAR (float): The minimum required success rate for method PAR.
         config_P0_RatioTest (float): The fixed failure rate for method ILS + Ratio Test.
+        pivot(dict): satellites used as pivot for the ambiguity estimation (one per constellation).
     """
 
     def __init__(self, sat_list, init_val, init_cov, cp_types, bias_enum=None):
         """ Constructor for the AmbiguityManager class.
 
         Args:
-            sat_list (list): List of satellites for which ambiguities are managed.
+            sat_list (list[src.data_types.gnss.Satellite]): List of satellites for which ambiguities are managed.
             init_val (float): Initial value for ambiguities (in cycles).
             init_cov (float): Initial covariance for ambiguities (in cycles^2).
             cp_types (dict): Dictionary mapping satellite systems to their carrier phase types.
@@ -76,6 +77,7 @@ class AmbiguityManager:
         self.init_val = init_val
         self.init_cov = init_cov
         self.cp_types = cp_types
+        self.pivot = dict()
 
         # user configurations
         self.amb_resolution_enable = config_dict.get("solver", "ambiguity_resolution", "enabled")
@@ -96,6 +98,11 @@ class AmbiguityManager:
             self.ambiguities[sat] = dict()
             for cp_type in cp_types[sat.sat_system]:
                 self.ambiguities[sat][cp_type] = Ambiguity(init_val, init_cov)
+
+        # define pivot satellites
+        for sat in sat_list:
+            if sat.sat_system not in self.pivot:
+                self.pivot[sat.sat_system] = sat
 
     def copy(self):
         """ Creates a shallow copy of the AmbiguityManager object.
@@ -118,10 +125,36 @@ class AmbiguityManager:
             cp_types=self.cp_types
         )
         obj.amb_resolution_enable = self.amb_resolution_enable
+        obj.pivot = self.pivot
         for sat in self.ambiguities:
             for cp_type in self.ambiguities[sat]:
                 obj.ambiguities[sat][cp_type] = self.ambiguities[sat][cp_type].clone()
         return obj
+
+    def check_pivot(self, new_sat_list):
+        """ Update the pivot information in case the previous pivot satellite is not in the new satellite list
+
+        Args:
+            new_sat_list(list[src.data_types.gnss.Satellite]): updated satellite list
+
+        Returns:
+            bool: True if the satellite status has changes for either one of the available constellations
+        """
+        update_pivot = False
+        for pivot in self.pivot.values():
+            if pivot not in new_sat_list:
+                # pivot satellite just became unavailable -> need to update for a new one
+                for sat in new_sat_list:
+                    if sat.sat_system == pivot.sat_system:
+                        log = get_logger(GNSS_ALG_LOG)
+                        log.warning(f"Pivot satellite changed from satellite {pivot} to {sat} for "
+                                    f"{pivot.sat_system} constellation. All ambiguities for this constellation "
+                                    f"will be set unfixed.")
+                        update_pivot = True
+                        self.pivot[pivot.sat_system] = sat
+                        self.reset_ambiguities(pivot.sat_system)
+                        break
+        return update_pivot
 
     def add_ambiguity(self, sat, cp_type, other_ambiguity=None):
         """ Adds an ambiguity for a given satellite and carrier phase type.

@@ -125,9 +125,8 @@ class EKF_Engine:
             X0[idx_isb] = self._state.isb
 
         if "ambiguity" in index_map:
-            pivot_dict = self._state.get_additional_info("pivot")
             for sat, cp_types in index_map["ambiguity"].items():
-                if pivot_dict[sat.sat_system] != sat:
+                if self._state.ambiguity.pivot[sat.sat_system] != sat:
                     for cp_type in cp_types:
                         if not self._state.ambiguity[sat][cp_type].fixed:
                             idx_amb = cp_types[cp_type]
@@ -164,9 +163,7 @@ class EKF_Engine:
                     x_out, P_out = add_state(x_out, P_out, idx, self.state.iono[sat], self.state.cov_iono[sat])
 
                 if "ambiguity" in new_index_map:
-                    pivot_dict = self._state.get_additional_info("pivot")
-                    # TODO: check what happens if it's the pivot changing.
-                    if pivot_dict[sat.sat_system] != sat:
+                    if self._state.ambiguity.pivot[sat.sat_system] != sat:
                         cp_types = new_index_map["ambiguity"][sat]
                         for cp_type in cp_types:
                             if not self.state.ambiguity[sat][cp_type].fixed:
@@ -184,9 +181,7 @@ class EKF_Engine:
                     idx_to_remove.append(idx)
 
                 if "ambiguity" in new_index_map:
-                    pivot_dict = self._state.get_additional_info("pivot")
-                    # TODO: check what happens if it's the pivot changing.
-                    if pivot_dict[sat.sat_system] != sat:
+                    if self._state.ambiguity.pivot[sat.sat_system] != sat:
                         cp_types = prev_index_map["ambiguity"][sat]
                         for cp_type in cp_types:
                             # if not self.state.ambiguity[sat][cp_type].fixed:
@@ -245,9 +240,8 @@ class EKF_Engine:
             F[idx_isb, idx_isb] = self._noise_manager.isb.get_stm_entry(time_step)
 
         if "ambiguity" in index_map:
-            pivot_dict = self._state.get_additional_info("pivot")
             for sat, cp_types in index_map["ambiguity"].items():
-                if pivot_dict[sat.sat_system] != sat:
+                if self._state.ambiguity.pivot[sat.sat_system] != sat:
                     for cp_type in cp_types:
                         if not self._state.ambiguity[sat][cp_type].fixed:
                             idx_amb = cp_types[cp_type]
@@ -358,8 +352,7 @@ class EKF_Engine:
                     if DataType.is_carrier(datatype):
                         # ambiguity
                         if "ambiguity" in index_map and sat in index_map["ambiguity"]:
-                            pivot_dict = state.get_additional_info("pivot")
-                            if pivot_dict[sat.sat_system] != sat:
+                            if self._state.ambiguity.pivot[sat.sat_system] != sat:
                                 if not state.ambiguity[sat][datatype].fixed:
                                     idx_amb = index_map["ambiguity"][sat][datatype]
                                     wavelength = SPEED_OF_LIGHT / datatype.freq.freq_value
@@ -417,9 +410,8 @@ class EKF_Engine:
             self._state.cov_tropo_wet = P_out[idx_tropo, idx_tropo]
 
         if "ambiguity" in index_map:
-            pivot_dict = self._state.get_additional_info("pivot")
             for sat, cp_types in index_map["ambiguity"].items():
-                if pivot_dict[sat.sat_system] != sat:
+                if self._state.ambiguity.pivot[sat.sat_system] != sat:
                     for cp_type in cp_types:
                         idx_amb = cp_types[cp_type]
                         if not self._state.ambiguity[sat][cp_type].fixed:

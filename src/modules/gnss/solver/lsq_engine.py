@@ -425,9 +425,8 @@ class LSQ_Engine_Position(LSQ_Engine):
                 X0_prev[idx_isb] = state.isb
 
         if "ambiguity" in index_map:
-            pivot_dict = state.get_additional_info("pivot")
             for sat, cp_types in index_map["ambiguity"].items():
-                if pivot_dict[sat.sat_system] != sat:
+                if state.ambiguity.pivot[sat.sat_system] != sat:
                     for cp_type in cp_types:
                         if not initial_state.ambiguity[sat][cp_type].fixed:
                             idx_amb = cp_types[cp_type]
@@ -498,8 +497,7 @@ class LSQ_Engine_Position(LSQ_Engine):
                     if DataType.is_carrier(datatype):
                         # ambiguity
                         if "ambiguity" in index_map and sat in index_map["ambiguity"]:
-                            pivot_dict = state.get_additional_info("pivot")
-                            if pivot_dict[sat.sat_system] != sat:
+                            if state.ambiguity.pivot[sat.sat_system] != sat:
                                 if not state.ambiguity[sat][datatype].fixed:
                                     idx_amb = index_map["ambiguity"][sat][datatype]
                                     wavelength = constants.SPEED_OF_LIGHT / datatype.freq.freq_value
@@ -554,9 +552,8 @@ class LSQ_Engine_Position(LSQ_Engine):
             state.cov_tropo_wet = cov[idx_tropo, idx_tropo]
 
         if "ambiguity" in index_map:
-            pivot_dict = state.get_additional_info("pivot")
             for sat, cp_types in index_map["ambiguity"].items():
-                if pivot_dict[sat.sat_system] != sat:
+                if state.ambiguity.pivot[sat.sat_system] != sat:
                     for cp_type in cp_types:
                         idx_amb = cp_types[cp_type]
                         if not state.ambiguity[sat][cp_type].fixed:
