@@ -32,8 +32,6 @@ class GnssStateSpace(Container):
     Additional parameters:
         * epoch (Epoch): Epoch object for this time instant
         * _info (dict): auxiliary information (see paragraph below)
-        * initial_state (GnssStateSpace): initial state space object with the initial states and covariances
-            for the iteration process of the GNSS solver
         * index_map (dict): dictionary with the index of each state variable in the state vector. Map to be used
             in the Normal Equations of the GNSS solver
             (see :py:class:`src.modules.gnss.solver.lsq_engine.LSQ_Engine_Position`)
@@ -58,7 +56,7 @@ class GnssStateSpace(Container):
                   "phase_bias"]
     __covs__ = ["cov_position", "cov_velocity", "cov_clock_bias", "cov_iono", "cov_tropo_wet", "cov_isb",
                 "cov_clock_bias_rate", "cov_phase_bias"]
-    __slots__ = __states__ + __covs__ + ["epoch", "_info", "initial_state", "index_map"]
+    __slots__ = __states__ + __covs__ + ["epoch", "_info", "index_map"]
 
     def __init__(self, metadata=None, epoch=None, sat_list=None):
         """
@@ -77,7 +75,6 @@ class GnssStateSpace(Container):
 
         # dict to store state information
         self._info = dict()
-        self.initial_state = None
         self.index_map = dict()
 
         # initialize state variables
@@ -296,6 +293,7 @@ class GnssStateSpace(Container):
         if pivot_dict is not None:
             for pivot in pivot_dict.values():
                 if pivot not in new_sat_list:
+                    # pivot satellite just became unavailable -> need to update for a new one
                     for sat in new_sat_list:
                         if sat.sat_system == pivot.sat_system:
                             log = get_logger(GNSS_ALG_LOG)
@@ -304,6 +302,7 @@ class GnssStateSpace(Container):
                                         f"will be set unfixed.")
                             pivot_dict[pivot.sat_system] = sat
                             if "ambiguity" in self.get_additional_info("states"):
+                                # TODO: this needs to be communicated to the EKF Engine in order to reset the values
                                 self.ambiguity.unfix_ambiguities(pivot.sat_system)
                             break
             self.add_additional_info("pivot", pivot_dict)
@@ -318,17 +317,11 @@ class GnssStateSpace(Container):
                 initial_iono = [0, 10]
             self.iono[sat] = initial_iono[0]
             self.cov_iono[sat] = initial_iono[1]
-            if sat not in self.initial_state.iono:
-                self.initial_state.iono[sat] = initial_iono[0]
-                self.initial_state.cov_iono[sat] = initial_iono[1]
 
         if "ambiguity" in _states:
             cp_types = self.phase_bias[sat.sat_system].keys()
             for cp_type in cp_types:
                 self.ambiguity.add_ambiguity(sat, cp_type)
-            if sat not in self.initial_state.ambiguity:
-                for cp_type in cp_types:
-                    self.initial_state.ambiguity.add_ambiguity(sat, cp_type)
 
     def _remove_sat(self, sat):
         """ Remove a satellite from the state space. """

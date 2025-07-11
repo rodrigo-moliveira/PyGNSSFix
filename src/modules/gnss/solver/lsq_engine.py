@@ -159,7 +159,7 @@ class LSQ_Engine:
             solver = WeightedLeastSquares(self.y_vec, self.design_mat, W=self.weight_mat, P0_inv=P0_inv,
                                           X0=X0)
             solver.solve()
-            dop_matrix = np.linalg.inv(self.design_mat.T @ self.design_mat)
+            dop_matrix = np.linalg.inv(self.design_mat.T @ self.weight_mat @ self.design_mat)
 
         except (AttributeError, np.linalg.LinAlgError) as e:
             # failed to solve the LS: solution not possible
@@ -282,10 +282,12 @@ class LSQ_Engine_Position(LSQ_Engine):
     observations.
     """
 
-    def __init__(self, system_geometry, metadata, epoch, obs_data, state, trace_data):
+    def __init__(self, system_geometry, metadata, epoch, obs_data, state, init_state, trace_data):
         self.cp_based = metadata["CP_BASED"]
         pr_datatypes = metadata["CODES"]
         cp_datatypes = metadata["PHASES"]
+        self._initial_state = init_state.clone()
+        self._initial_state.build_index_map(system_geometry.get_satellites())  # this updates potential new sat states
 
         self.reconstructor = dict()
         self.reconstructor["PR"] = PseudorangeReconstructor(system_geometry, metadata, state, trace_data)
@@ -379,7 +381,7 @@ class LSQ_Engine_Position(LSQ_Engine):
         n_observables, n_states = np.shape(self.design_mat)
         index_map = state.index_map
 
-        initial_state = state.initial_state
+        initial_state = self._initial_state
         P0 = np.zeros((n_states, n_states))
         X0 = np.zeros(n_states)
         X0_prev = np.zeros(n_states)
@@ -708,7 +710,6 @@ class LSQ_Engine_Velocity(LSQ_Engine):
     def _build_init_state_cov(self, state):
         n_observables, n_states = np.shape(self.design_mat)
 
-        # initial_state = state.initial_state
         P0 = np.zeros((n_states, n_states))
         X0 = np.zeros(n_states)
 

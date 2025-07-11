@@ -94,7 +94,7 @@
       "constellations": ["GPS", "GAL"],
 
       "_comment": "Select the GNSS PNT algorithm. The available algorithms are SPS, PR-PPP, CP-PPP",
-      "algorithm": "PR-PPP",
+      "algorithm": "CP-PPP",
 
       "_comment1": "Select the observation model. The available models are combined, uncombined. The combined model requires 2 observations.",
       "obs_model": "uncombined",
@@ -214,7 +214,7 @@
 
       "ambiguity_resolution": {
          "_comment1": "Select `true` to enable ambiguity resolution or `false` to disable it",
-         "enabled": true,
+         "enabled": false,
 
          "_comment2": "Select the ambiguity resolution method. Available methods are 'ILS', 'IR', 'BS', 'PAR', 'ILS + Ratio Test'",
          "method": "ILS + Ratio Test",

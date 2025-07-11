@@ -262,10 +262,13 @@ class GnssSolver:
 
         self.log.info("Successfully executed main function of GNSS Solver algorithm.")
 
-    def _solve_lsq(self) -> None:
+    def _solve_lsq(self, init_KF=False) -> None:
         """ Execute Least Squares Solver """
         # available epochs
         epochs = self.obs_data_for_pos.get_epochs()
+
+        if init_KF:
+            epochs = [epochs[0]]
 
         # iterate over all available epochs
         for epoch in epochs:
@@ -314,13 +317,11 @@ class GnssSolver:
         feedforward = self._metadata["FEEDFORWARD"]
         if len(self.solution) == 0 or feedforward == EnumOnOff.DISABLED:
             state = GnssStateSpace(self._metadata, epoch, sat_list)
-            state.initial_state = state.clone()
         else:
             # initialize from previous state
             prev_state = self.solution[-1]
             state = prev_state.clone()  # deep copy
             state.epoch = epoch
-            state.initial_state = state.clone()
         return state
 
     def _estimate_position(self, epoch, obs_data, state):
@@ -343,6 +344,7 @@ class GnssSolver:
         prefit_residuals = postfit_residuals = dop_matrix = None
         apply_elevation_filter = False if self._metadata["ELEVATION_FILTER"] == -1 else True
         sats_for_epoch = obs_data.get_satellites()
+        init_state = state.clone()
 
         # build system geometry for this epoch
         system_geometry = SystemGeometry(obs_data, self.sat_clocks, self.sat_orbits, self.phase_center, self.sat_bias)
@@ -359,7 +361,7 @@ class GnssSolver:
             try:
                 self.log.info(f"Solving LSQ for {str(epoch)} on iteration {iteration}")
                 prefit_residuals, postfit_residuals, dop_matrix, rms = \
-                    self._iterate_pos(str(iteration), system_geometry, obs_data, state, epoch)
+                    self._iterate_pos(str(iteration), system_geometry, obs_data, state, epoch, init_state)
             except SolverError as e:
                 self.log.warning(f"Least Squares failed for {str(epoch)} on iteration {iteration}."
                                  f"Reason: {e}")
@@ -389,7 +391,7 @@ class GnssSolver:
             # solve the Least Squares
             try:
                 prefit_residuals, postfit_residuals, dop_matrix, rms = \
-                    self._iterate_pos("final", system_geometry, obs_data, state, epoch)
+                    self._iterate_pos("final", system_geometry, obs_data, state, epoch, init_state)
             except SolverError as e:
                 self.log.warning(f"Least Squares failed for {str(epoch)} on additional iteration "
                                  f"(after elevation filter). Reason: {e}")
@@ -404,7 +406,7 @@ class GnssSolver:
 
         return True
 
-    def _iterate_pos(self, iteration, system_geometry, obs_data, state, epoch):
+    def _iterate_pos(self, iteration, system_geometry, obs_data, state, epoch, init_state):
         """ Low-level function to solve a single iteration of the position estimation iterative process """
         self._check_model_availability(system_geometry, epoch)
         state.build_index_map(system_geometry.get_satellites())
@@ -414,7 +416,7 @@ class GnssSolver:
         trace_data = (self.trace_dir, iteration) if self.trace_dir is not None else None
 
         # build LSQ Engine matrices for all satellites
-        lsq_engine = LSQ_Engine_Position(system_geometry, self._metadata, epoch, obs_data, state, trace_data)
+        lsq_engine = LSQ_Engine_Position(system_geometry, self._metadata, epoch, obs_data, state, init_state, trace_data)
 
         # solve LS problem
         return lsq_engine.solve_ls(state, self._metadata["APRIORI_CONSTRAIN"] == EnumOnOff.ENABLED)
@@ -506,15 +508,20 @@ class GnssSolver:
     def _solve_ekf(self) -> None:
         """ Execute EKF Solver """
         # initial epoch and state and covariance
-        epochs = self.obs_data_for_pos.get_epochs()
-        init_epoch = epochs[0]
-        sat_list = self.obs_data_for_pos.get_epoch_data(init_epoch).get_satellites()
-        state = self._init_state(init_epoch, sat_list)
-        apply_elevation_filter = False if self._metadata["ELEVATION_FILTER"] == -1 else True
+
+        self._solve_lsq(init_KF=True)
+        state = self.solution[0].clone()
+        epochs = self.obs_data_for_pos.get_epochs()[1:]
+        # init_epoch = epochs[0]
+        # sat_list = self.obs_data_for_pos.get_epoch_data(state.epoch).get_satellites()
+        # state = self._init_state(init_epoch, sat_list)
+        # apply_elevation_filter = False if self._metadata["ELEVATION_FILTER"] == -1 else True
         trace_data = (self.trace_dir, 1) if self.trace_dir is not None else None
 
+        # TODO: solve first epoch with LSQ. Then start KF
+
         # create EKF Engine
-        engine = EKF_Engine(init_epoch, state, self._metadata, trace_data)
+        engine = EKF_Engine(state, self._metadata, trace_data)
 
         # iterate over all available epochs
         for epoch in epochs:
