@@ -28,9 +28,9 @@ class Ambiguity:
         self.cov = cov
         self.fixed = fixed
 
-    def reset(self, cov):
+    def reset(self, val=0.0, cov=0.0):
         """ Resets the ambiguity to its initial state. """
-        self.val = 0.0
+        self.val = val
         self.cov = cov
         self.fixed = False
 
@@ -164,12 +164,12 @@ class AmbiguityManager:
         """ Removes and returns an ambiguity for a given key. """
         return self.ambiguities.pop(key, default)
 
-    def unfix_ambiguities(self, constellation: str):
-        """ Unfix ambiguities for all available satellites in the given constellation."""
+    def reset_ambiguities(self, constellation: str):
+        """ Reset ambiguities for all available satellites in the given constellation."""
         for sat in self.ambiguities:
             if sat.sat_system == constellation:
                 for cp_type in self.ambiguities[sat]:
-                    self.ambiguities[sat][cp_type].reset(cov=self.init_cov)
+                    self.ambiguities[sat][cp_type].reset(val=self.init_val, cov=self.init_cov)
 
     def main_fix(self, index_map, state, dX, cov):
         """

@@ -171,7 +171,8 @@ class EKF_Engine:
                         for cp_type in cp_types:
                             if not self.state.ambiguity[sat][cp_type].fixed:
                                 idx = cp_types[cp_type]
-                                x_out, P_out = add_state(x_out, P_out, idx, self.state.ambiguity[sat][cp_type].val, self.state.ambiguity[sat][cp_type].cov)
+                                x_out, P_out = add_state(x_out, P_out, idx, self.state.ambiguity[sat][cp_type].val,
+                                                         self.state.ambiguity[sat][cp_type].cov)
 
             removed_sats = prev_set - new_set
             idx_to_remove = []
@@ -463,6 +464,9 @@ class EKF_Engine:
                 reconstruction models, geometry data for the current estimation state.
             obs_for_epoch (src.data_mng.gnss.observation_data.EpochData) : instance of `EpochData` (GNSS observable
             database for the current epoch).
+
+        TODO:
+            add returns and raises
         """
         # TODO: raise SolverError on failure
         reconstructor, datatypes = self._build_obs_reconstructor(system_geometry)
@@ -470,6 +474,7 @@ class EKF_Engine:
         time_step = (epoch - self.epoch).total_seconds()
 
         # prepare state and covariance for the current cycle
+        # TODO: move this into a function
         if self._init is False:
             # initialization
             self._state.build_index_map(sat_list)
@@ -478,9 +483,12 @@ class EKF_Engine:
         else:
             # update the state and covariance for new or deleted states
             prev_index_map = self._state.index_map
-            self._state.build_index_map(sat_list)
-            new_index_map = self._state.index_map
-            x_in, P_in = self._build_state_cov(new_index_map, prev_index_map, sat_list)
+            update_pivot = self._state.build_index_map(sat_list)
+            if update_pivot:
+                x_in, P_in = self._build_init_state_cov(sat_list)
+            else:
+                new_index_map = self._state.index_map
+                x_in, P_in = self._build_state_cov(new_index_map, prev_index_map, sat_list)
 
         # build state transition matrix and process noise matrices
         F, Q_d = self._build_stm_process_noise(sat_list, time_step)

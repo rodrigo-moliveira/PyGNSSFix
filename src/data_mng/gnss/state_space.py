@@ -10,6 +10,11 @@ from src.models.gnss_models import compute_ggto
 from src.common_log import get_logger, GNSS_ALG_LOG
 
 
+# save satellite state to be re-initialized in case it re-enters
+__iono_container__ = {}
+__amb_container__ = {}
+
+
 class GnssStateSpace(Container):
     """
     This class contains the state space vector with all variables to be estimated in a GNSS run,
@@ -290,6 +295,7 @@ class GnssStateSpace(Container):
 
         # update pivot (in case the previous pivot satellite is not in the updated list)
         pivot_dict = self.get_additional_info("pivot")
+        update_pivot = False
         if pivot_dict is not None:
             for pivot in pivot_dict.values():
                 if pivot not in new_sat_list:
@@ -300,39 +306,51 @@ class GnssStateSpace(Container):
                             log.warning(f"Pivot satellite changed from satellite {pivot} to {sat} for "
                                         f"{pivot.sat_system} constellation. All ambiguities for this constellation "
                                         f"will be set unfixed.")
+                            update_pivot = True
                             pivot_dict[pivot.sat_system] = sat
                             if "ambiguity" in self.get_additional_info("states"):
-                                # TODO: this needs to be communicated to the EKF Engine in order to reset the values
-                                self.ambiguity.unfix_ambiguities(pivot.sat_system)
+                                self.ambiguity.reset_ambiguities(pivot.sat_system)
                             break
             self.add_additional_info("pivot", pivot_dict)
-        return update
+        return update, update_pivot
 
     def _add_sat(self, sat):
         """ Add a new satellite to the state space. """
         _states = self.get_additional_info("states")
         if "iono" in _states:
-            initial_iono = self.get_additional_info("initial_iono")
-            if initial_iono is None:
-                initial_iono = [0, 10]
+            if sat in __iono_container__:
+                initial_iono = __iono_container__[sat]
+                initial_iono[1] *= 10  # TODO: consider making this configurable
+            else:
+                initial_iono = self.get_additional_info("initial_iono")
+                if initial_iono is None:
+                    initial_iono = [0, 10]
             self.iono[sat] = initial_iono[0]
             self.cov_iono[sat] = initial_iono[1]
 
         if "ambiguity" in _states:
-            cp_types = self.phase_bias[sat.sat_system].keys()
-            for cp_type in cp_types:
-                self.ambiguity.add_ambiguity(sat, cp_type)
+            if sat in __amb_container__:
+                initial_amb = __amb_container__[sat]
+                for cp_type, amb in initial_amb.items():
+                    amb.fixed = False
+                    amb.cov *= 10  # TODO: consider making this configurable
+                    self.ambiguity.add_ambiguity(sat, cp_type, other_ambiguity=amb)
+            else:
+                cp_types = self.phase_bias[sat.sat_system].keys()
+                for cp_type in cp_types:
+                    self.ambiguity.add_ambiguity(sat, cp_type)
 
     def _remove_sat(self, sat):
         """ Remove a satellite from the state space. """
         _states = self.get_additional_info("states")
         if "iono" in _states:
             if sat in self.iono:
-                self.iono.pop(sat)
-                self.cov_iono.pop(sat)
+                iono = self.iono.pop(sat)
+                cov = self.cov_iono.pop(sat)
+                __iono_container__[sat] = [iono, cov]
         if "ambiguity" in _states:
             if sat in self.ambiguity:
-                self.ambiguity.pop(sat)
+                __amb_container__[sat] = self.ambiguity.pop(sat)
 
     def build_index_map(self, sat_list=None):
         """
@@ -352,10 +370,11 @@ class GnssStateSpace(Container):
         Args:
             sat_list(list[src.data_types.gnss.Satellite]) : list of available satellites
         """
+        update_pivot = False
         if sat_list is not None:
-            update = self._update_sat_list(sat_list)
+            update, update_pivot = self._update_sat_list(sat_list)
             if not update:
-                return
+                return update_pivot
 
         index_map = {}
         state_counter = 0
@@ -408,6 +427,7 @@ class GnssStateSpace(Container):
 
         index_map["total_states"] = state_counter
         self.index_map = index_map
+        return update_pivot
 
     def __str__(self):
         _states = self.get_additional_info("states")

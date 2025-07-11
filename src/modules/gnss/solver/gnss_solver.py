@@ -354,7 +354,6 @@ class GnssSolver:
         # Iterated Least-Squares algorithm
         while iteration < self._metadata["MAX_ITER"]:
             # compute geometry-related data for each satellite link
-            # TODO: what happens if geometry.compute() removes a satellite? force this and test...
             system_geometry.compute(epoch, state, self._metadata)
 
             # solve the Least Squares
@@ -416,7 +415,8 @@ class GnssSolver:
         trace_data = (self.trace_dir, iteration) if self.trace_dir is not None else None
 
         # build LSQ Engine matrices for all satellites
-        lsq_engine = LSQ_Engine_Position(system_geometry, self._metadata, epoch, obs_data, state, init_state, trace_data)
+        lsq_engine = LSQ_Engine_Position(system_geometry, self._metadata, epoch, obs_data, state, init_state,
+                                         trace_data)
 
         # solve LS problem
         return lsq_engine.solve_ls(state, self._metadata["APRIORI_CONSTRAIN"] == EnumOnOff.ENABLED)
@@ -507,18 +507,13 @@ class GnssSolver:
 
     def _solve_ekf(self) -> None:
         """ Execute EKF Solver """
-        # initial epoch and state and covariance
+        trace_data = (self.trace_dir, 1) if self.trace_dir is not None else None
 
+        # initialize KF with one epoch of LSQ
         self._solve_lsq(init_KF=True)
         state = self.solution[0].clone()
         epochs = self.obs_data_for_pos.get_epochs()[1:]
-        # init_epoch = epochs[0]
-        # sat_list = self.obs_data_for_pos.get_epoch_data(state.epoch).get_satellites()
-        # state = self._init_state(init_epoch, sat_list)
         # apply_elevation_filter = False if self._metadata["ELEVATION_FILTER"] == -1 else True
-        trace_data = (self.trace_dir, 1) if self.trace_dir is not None else None
-
-        # TODO: solve first epoch with LSQ. Then start KF
 
         # create EKF Engine
         engine = EKF_Engine(state, self._metadata, trace_data)
@@ -533,7 +528,13 @@ class GnssSolver:
             system_geometry = SystemGeometry(obs_for_epoch, self.sat_clocks, self.sat_orbits, self.phase_center,
                                              self.sat_bias)
 
-            # TODO: what happens if geometry.compute() removes a satellite? force this and test...
+            ########################################################
+            #              DEV HACK - Remove Pivot Sat             #
+            # slip_epoch = Epoch(2024, 3, 30, 11, 0, 25, scale="GPST")
+            # if epoch == slip_epoch:
+            #    system_geometry.remove(get_satellite("G04"))
+            ########################################################
+
             # compute geometry-related data for each satellite link
             system_geometry.compute(epoch, state, self._metadata)
 
