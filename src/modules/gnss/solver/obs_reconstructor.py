@@ -367,8 +367,7 @@ class CarrierPhaseReconstructor(ObservationReconstructor):
                                               f"{epoch}, datatype {datatype} and sat {str(sat)}: {e}")
 
         # ambiguity
-        pivot_dict = self._state.get_additional_info("pivot")
-        if sat is not pivot_dict[sat.sat_system]:
+        if sat is not self._state.ambiguity.pivot[sat.sat_system]:
             N = self._state.ambiguity[sat][datatype].val
             wavelength = constants.SPEED_OF_LIGHT / datatype.freq.freq_value
         else:
