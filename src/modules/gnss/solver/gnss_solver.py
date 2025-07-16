@@ -279,6 +279,9 @@ class GnssSolver:
             # initialize solve-for variables (receiver position and bias) for the present epoch
             state = self._init_state(epoch, obs_for_epoch.get_satellites())
 
+            if init_KF and "ambiguity" in state.get_additional_info("states"):
+                state.ambiguity.disable_ambiguity_resolution()
+
             # call lower level of position estimation
             success = self._estimate_position(epoch, obs_for_epoch, state)
 
@@ -409,7 +412,7 @@ class GnssSolver:
         """ Low-level function to solve a single iteration of the position estimation iterative process """
         self._check_model_availability(system_geometry, epoch)
         state.build_index_map(system_geometry.get_satellites())
-        if state.ambiguity is not None:
+        if "ambiguity" in state.get_additional_info("states"):
             self.log.info(f"Selected Pivot Satellites for Ambiguity (Per constellation): "
                           f"{state.ambiguity.pivot}")
 
@@ -514,6 +517,10 @@ class GnssSolver:
         self._solve_lsq(init_KF=True)
         state = self.solution[0].clone()
         epochs = self.obs_data_for_pos.get_epochs()[1:]
+
+        if "ambiguity" in state.get_additional_info("states"):
+            state.ambiguity.enable_ambiguity_resolution()
+
         # apply_elevation_filter = False if self._metadata["ELEVATION_FILTER"] == -1 else True
 
         # create EKF Engine
@@ -541,7 +548,7 @@ class GnssSolver:
 
             self.log.debug(f"Available Satellites: {system_geometry.get_satellites()}")
 
-            if state.ambiguity is not None:
+            if "ambiguity" in state.get_additional_info("states"):
                 self.log.info(f"Selected Pivot Satellites for Ambiguity (Per constellation): "
                               f"{state.ambiguity.pivot}")
 

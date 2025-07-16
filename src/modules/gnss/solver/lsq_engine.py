@@ -523,7 +523,7 @@ class LSQ_Engine_Position(LSQ_Engine):
 
         # Perform Ambiguity Resolution (if enabled)
         if "ambiguity" in index_map and state.ambiguity.amb_resolution_enable:
-            dX, cov = state.ambiguity.main_fix(index_map, state, dX, cov)
+            dX, cov, _ = state.ambiguity.main_fix(index_map, dX, cov, state_type="correction")
         idx_pos = index_map["position"]
         idx_clock = index_map["clock_bias"]
 

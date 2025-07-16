@@ -60,6 +60,7 @@ class EKF_Engine:
         self._trace_data = trace_data
         self._noise_manager = metadata["ERROR_MODEL"]
         self._prev_sat_list = None
+        self._amb_fixed = False
 
         # scenario configurations
         self.cp_based = metadata["CP_BASED"]
@@ -142,7 +143,7 @@ class EKF_Engine:
 
         return X0, P0
 
-    def _build_state_cov(self, new_index_map, prev_index_map, sat_list) -> tuple[np.ndarray, np.ndarray]:
+    def _build_state_cov2(self, new_index_map, prev_index_map, sat_list) -> tuple[np.ndarray, np.ndarray]:
         """ Updates the internal state vector and covariance matrix for a change in the GNSS state vector.
         For instance, when a new satellite is introduced or deleted, the size of the state and covariances objects
         (iono or ambiguity variables) must be updated accordingly.
@@ -192,6 +193,66 @@ class EKF_Engine:
                 idx_to_remove = sorted(idx_to_remove, reverse=True)
                 for idx in idx_to_remove:
                     x_out, P_out = delete_state(x_out, P_out, idx)
+
+        return x_out, P_out
+
+    def _build_state_cov(self, new_index_map, prev_index_map, sat_list) -> tuple[np.ndarray, np.ndarray]:
+        """ Updates the internal state vector and covariance matrix for a change in the GNSS state vector.
+        For instance, when a new satellite is introduced or deleted, the size of the state and covariances objects
+        (iono or ambiguity variables) must be updated accordingly.
+        """
+        x_out = self._x
+        P_out = self._P
+
+        # TODO: what happens when ambiguities are fixed?
+        # TODO: what happens when some states are added and some are removed?
+        #   EX: one sat is added and one sat is removed
+        if new_index_map != prev_index_map:
+            # Update satellite-based states
+            idx_to_remove = []
+            if "iono" in new_index_map and "iono" in prev_index_map:
+                new_sats = set(new_index_map["iono"].keys()) - set(prev_index_map["iono"].keys())
+                for sat in new_sats:
+                    idx = new_index_map["iono"][sat]
+                    x_out, P_out = add_state(x_out, P_out, idx, self.state.iono[sat], self.state.cov_iono[sat])
+
+                removed_sats = set(prev_index_map["iono"].keys()) - set(new_index_map["iono"].keys())
+
+                for sat in removed_sats:
+                    # update state and cov for removed satellites
+                    idx = prev_index_map["iono"][sat]
+                    idx_to_remove.append(idx)
+
+            if len(idx_to_remove) > 0:
+                idx_to_remove = sorted(idx_to_remove, reverse=True)
+                for idx in idx_to_remove:
+                    x_out, P_out = delete_state(x_out, P_out, idx)
+
+            #new_sats = new_set - prev_set
+            # for sat in new_sats:
+                # add a new satellite (now in line of sight)
+
+                # TODO: no caso das ambiguidades, a verificação nao pode ser com os sets, porque o fix pode
+                #   ser para apenas uma das bandas
+                # if "ambiguity" in new_index_map:
+                #     if self._state.ambiguity.pivot[sat.sat_system] != sat:
+                #        cp_types = new_index_map["ambiguity"][sat]
+                #        for cp_type in cp_types:
+                #            if not self.state.ambiguity[sat][cp_type].fixed:
+                #                idx = cp_types[cp_type]
+                #                x_out, P_out = add_state(x_out, P_out, idx, self.state.ambiguity[sat][cp_type].val,
+                #                                         self.state.ambiguity[sat][cp_type].cov)
+
+
+
+                #if "ambiguity" in new_index_map:
+                #    if self._state.ambiguity.pivot[sat.sat_system] != sat:
+                #        cp_types = prev_index_map["ambiguity"][sat]
+                #        for cp_type in cp_types:
+                #            # if not self.state.ambiguity[sat][cp_type].fixed:
+                #            # Nota: este sat já não existe na AmbiguityManager
+                #            idx = cp_types[cp_type]
+                #            idx_to_remove.append(idx)
 
         return x_out, P_out
 
@@ -379,10 +440,11 @@ class EKF_Engine:
         """
         index_map = self._state.index_map
 
-        # TODO: add ambiguity
         # Perform Ambiguity Resolution (if enabled)
-        # if "ambiguity" in index_map and self._state.ambiguity.amb_resolution_enable:
-        #    dX, cov = self._state.ambiguity.main_fix(index_map, self._state, dX, cov)
+        if "ambiguity" in index_map and self._state.ambiguity.amb_resolution_enable:
+            x_out, P_out, amb_fixed = self._state.ambiguity.main_fix(index_map, x_out, P_out, state_type="full")
+            self._amb_fixed = amb_fixed
+
         idx_pos = index_map["position"]
         idx_clock = index_map["clock_bias"]
 
@@ -446,6 +508,29 @@ class EKF_Engine:
             datatypes = self.pr_datatypes
         return reconstructor, datatypes
 
+    def _init_states(self, sat_list):
+        """ Manages the initialization of state and covariance for the current epoch.
+        Fetches the state and covariance from the initialization data or from the previous epoch.
+        """
+        if self._init is False:
+            # initialization
+            self._state.build_index_map(sat_list)
+            x_in, P_in = self._build_init_state_cov(sat_list)
+            self._init = True
+        else:
+            # update the state and covariance for new or deleted states
+            prev_index_map = self._state.index_map
+            update_pivot = self._state.build_index_map(sat_list, amb_fixed=self._amb_fixed)
+            self._amb_fixed = False
+
+            # TODO: improve this: when update pivot we only need to re-change the ambiguity states (and reset the sub cov)
+            if update_pivot:
+                x_in, P_in = self._build_init_state_cov(sat_list)
+            else:
+                new_index_map = self._state.index_map
+                x_in, P_in = self._build_state_cov(new_index_map, prev_index_map, sat_list)
+        return x_in, P_in
+
     def estimate(self, epoch, system_geometry, obs_for_epoch):
         """
         Main function of the class. Performs the estimation cycle (predict + update steps) for the provided epoch.
@@ -466,21 +551,7 @@ class EKF_Engine:
         time_step = (epoch - self.epoch).total_seconds()
 
         # prepare state and covariance for the current cycle
-        # TODO: move this into a function
-        if self._init is False:
-            # initialization
-            self._state.build_index_map(sat_list)
-            x_in, P_in = self._build_init_state_cov(sat_list)
-            self._init = True
-        else:
-            # update the state and covariance for new or deleted states
-            prev_index_map = self._state.index_map
-            update_pivot = self._state.build_index_map(sat_list)
-            if update_pivot:
-                x_in, P_in = self._build_init_state_cov(sat_list)
-            else:
-                new_index_map = self._state.index_map
-                x_in, P_in = self._build_state_cov(new_index_map, prev_index_map, sat_list)
+        x_in, P_in = self._init_states(sat_list)
 
         # build state transition matrix and process noise matrices
         F, Q_d = self._build_stm_process_noise(sat_list, time_step)

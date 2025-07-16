@@ -104,6 +104,14 @@ class AmbiguityManager:
             if sat.sat_system not in self.pivot:
                 self.pivot[sat.sat_system] = sat
 
+    def disable_ambiguity_resolution(self):
+        """ Disable the ambiguity resolution step (for initialization purposes) """
+        self.amb_resolution_enable = False
+
+    def enable_ambiguity_resolution(self):
+        """ Re-enable ambiguity resolution step (if user configuration is active) """
+        self.amb_resolution_enable = config_dict.get("solver", "ambiguity_resolution", "enabled")
+
     def copy(self):
         """ Creates a shallow copy of the AmbiguityManager object.
 
@@ -204,7 +212,7 @@ class AmbiguityManager:
                 for cp_type in self.ambiguities[sat]:
                     self.ambiguities[sat][cp_type].reset(val=self.init_val, cov=self.init_cov)
 
-    def main_fix(self, index_map, state, dX, cov):
+    def main_fix(self, index_map, dX, cov, state_type="correction"):
         """
         Main function to perform ambiguity resolution using the LAMBDA algorithm.
 
@@ -219,21 +227,35 @@ class AmbiguityManager:
 
         Args:
             index_map (dict): Dictionary mapping satellites to their ambiguity indices.
-            state (src.data_mng.gnss.state_space.GnssStateSpace): The current state containing additional information.
             dX (np.ndarray): The estimated GNSS state vector.
             cov (np.ndarray): The covariance matrix of the estimated state vector.
+            state_type(str): Type of state provided. Available options are "correction" or "full"
 
         Returns:
-            tuple[np.ndarray, np.ndarray]: Updated state vector and covariance matrix after ambiguity resolution.
+            tuple[np.ndarray, np.ndarray, bool]:
+                * Updated state vector
+                * covariance matrix after ambiguity resolution
+                * boolean set to True if any ambiguity was fixed and False otherwise
+
+        Raises:
+            ValueError: this exception is raise if argument `state_type` does not have a legal value.
+
+        If `state_type` is set to "correction", then the input `dX` state is interpreted as a correction state
+        (iterative LSQ). If it is set to "full" it is interpreted as a full state. This is important to properly
+        build the ambiguity vector.
 
         If any error occurs during the process, the original state vector and covariance are returned without changes.
         """
+        amb_fixed = False
         if not self.amb_resolution_enable:
             # If ambiguity resolution is disabled, return the original state vector and covariance
-            return dX, cov
+            return dX, cov, amb_fixed
+
+        if state_type not in ("correction", "full"):
+            raise ValueError(f"`state_type` argument should either be set to correction or full.")
 
         try:
-            pivot_dict = state.get_additional_info("pivot")
+            pivot_dict = self.pivot
             lowest_index = -1
             highest_index = -1
             ambiguities = []
@@ -247,7 +269,12 @@ class AmbiguityManager:
                             lowest_index = idx_amb
                         if idx_amb > highest_index:
                             highest_index = idx_amb
-                        ambiguities.append(self[sat][cp_type].val + dX[idx_amb])
+
+                        # Fill `ambiguities` vector
+                        if state_type == "full":
+                            ambiguities.append(dX[idx_amb])
+                        else:
+                            ambiguities.append(self[sat][cp_type].val + dX[idx_amb])
 
             # Create reduced state vector and covariance
             b_indices = list(range(0, lowest_index)) + list(range(highest_index + 1, len(dX)))
@@ -263,7 +290,7 @@ class AmbiguityManager:
 
             # check if there are ambiguities to resolve
             if len(ambiguities) == 0:
-                return dX, cov
+                return dX, cov, amb_fixed
 
             # Perform Ambiguity Resolution (call to LAMBDA)
             p0 = None
@@ -277,8 +304,6 @@ class AmbiguityManager:
             if n_fixed == 0:
                 self._log.warning("No ambiguities were fixed during the resolution process (LAMBDA AR failed).")
                 return dX, cov
-            else:
-                pass
 
             # get fixed integers
             idx_fixed = np.where(a_fixed[:, 0] - a_fixed[:, 0].astype(int) == 0)
@@ -286,9 +311,7 @@ class AmbiguityManager:
             n_fixed = len(idx_fixed)
             if n_fixed == 0:
                 self._log.warning("No ambiguities were fixed during the resolution process (LAMBDA AR failed).")
-                return dX, cov
-            else:
-                pass
+                return dX, cov, amb_fixed
 
             # Perform acceptance test...
             # TODO: consider adding an acceptance test here (later, after KF)
@@ -302,6 +325,7 @@ class AmbiguityManager:
                             self[sat][cp_type].val = a_fixed[idx_amb - lowest_index, 0]
                             self[sat][cp_type].cov = amb_cov[idx_amb - lowest_index, idx_amb - lowest_index]
                             self[sat][cp_type].fixed = True
+                            amb_fixed = True
                             self._log.debug(f"Fixed ambiguity for satellite {sat}, type {cp_type}: "
                                             f"{self[sat][cp_type].val} [cycles], "
                                             f"cov = {self[sat][cp_type].cov} [cycles^2]")
@@ -318,7 +342,6 @@ class AmbiguityManager:
             dX_updated[a_indices] = a_fixed[:, 0]
 
         except (Exception, SystemExit) as e:
-            log = get_logger(GNSS_ALG_LOG)
-            log.warning(f"Error in ambiguity resolution: {e}. Not fixing ambiguities in this epoch.")
-            return dX, cov
-        return dX_updated, cov_updated
+            self._log.warning(f"Error in ambiguity resolution: {e}. Not fixing ambiguities in this epoch.")
+            return dX, cov, False
+        return dX_updated, cov_updated, amb_fixed

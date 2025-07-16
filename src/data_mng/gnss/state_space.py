@@ -7,7 +7,6 @@ from src import constants
 from src.data_types.gnss.ambiguity_mng import AmbiguityManager
 from src.io.config import config_dict, EnumFrequencyModel
 from src.models.gnss_models import compute_ggto
-from src.common_log import get_logger, GNSS_ALG_LOG
 
 
 # save satellite state to be re-initialized in case it re-enters
@@ -281,7 +280,7 @@ class GnssStateSpace(Container):
 
         self.add_additional_info("sat_list", new_sat_list)
 
-        if self.ambiguity is not None:
+        if "ambiguity" in self.get_additional_info("states"):
             update_pivot = self.ambiguity.check_pivot(new_sat_list)
 
         return update, update_pivot
@@ -324,7 +323,7 @@ class GnssStateSpace(Container):
             if sat in self.ambiguity:
                 __amb_container__[sat] = self.ambiguity.pop(sat)
 
-    def build_index_map(self, sat_list=None):
+    def build_index_map(self, sat_list=None, amb_fixed=False):
         """
         Builds the index map for the state vector. The index map is a dictionary with:
             * keys - state names
@@ -341,6 +340,7 @@ class GnssStateSpace(Container):
 
         Args:
             sat_list(list[src.data_types.gnss.Satellite]) : list of available satellites
+            amb_fixed(bool): True if some ambiguity state was fixed (need to re-build the index map)
 
         Returns:
             bool: True if the pivot has changes for any of the available constellations
@@ -348,7 +348,7 @@ class GnssStateSpace(Container):
         update_pivot = False
         if sat_list is not None:
             update, update_pivot = self._update_sat_list(sat_list)
-            if not update:
+            if not amb_fixed and not update:
                 return update_pivot
 
         index_map = {}
@@ -390,6 +390,9 @@ class GnssStateSpace(Container):
                         if not self.ambiguity[sat][cp_type].fixed:
                             index_map["ambiguity"][sat][cp_type] = state_counter
                             state_counter += 1
+                    # TODO: to be tested (what if one band is fixed and the other not?)
+                    if len(index_map["ambiguity"][sat]) == 0:
+                        index_map["ambiguity"].pop(sat)
 
         if "phase_bias" in states:
             index_map["phase_bias"] = dict()
