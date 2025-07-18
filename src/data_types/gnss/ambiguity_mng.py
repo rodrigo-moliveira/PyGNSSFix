@@ -303,7 +303,7 @@ class AmbiguityManager:
 
             if n_fixed == 0:
                 self._log.warning("No ambiguities were fixed during the resolution process (LAMBDA AR failed).")
-                return dX, cov
+                return dX, cov, amb_fixed
 
             # get fixed integers
             idx_fixed = np.where(a_fixed[:, 0] - a_fixed[:, 0].astype(int) == 0)

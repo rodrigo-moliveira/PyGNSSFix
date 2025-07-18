@@ -214,16 +214,16 @@
 
       "ambiguity_resolution": {
          "_comment1": "Select `true` to enable ambiguity resolution or `false` to disable it",
-         "enabled": false,
+         "enabled": true,
 
          "_comment2": "Select the ambiguity resolution method. Available methods are 'ILS', 'IR', 'BS', 'PAR', 'ILS + Ratio Test'",
          "method": "ILS + Ratio Test",
 
          "_comment3": "Select P0 value: minimum required success rate for method PAR",
-         "P0_PAR": 0.995,
+         "P0_PAR": 0.95,
 
          "_comment4": "Select P0 value: fixed failure rate for method ILS + Ratio Test",
-         "P0_RatioTest": 0.001
+         "P0_RatioTest": 0.010
       },
 
       "_comment7": "Initial states and expected covariances for the initial state vector.",
@@ -287,7 +287,7 @@
             "type": "random_walk",
             "white_noise_random_walk": {
                "comment": "Configurations for White Noise and Random Walk. Process noise units (continuous-time) are in [m/sqrt(s)]",
-               "process_noise_std": 0.1
+               "process_noise_std": 0.01
             },
             "gauss_markov":
             {
@@ -315,7 +315,7 @@
             "type": "random_walk",
             "white_noise_random_walk": {
                "comment": "Configurations for White Noise and Random Walk. Process noise units (continuous-time) are in [cycles/sqrt(s)]",
-               "process_noise_std": 0.1
+               "process_noise_std": 0.001
             },
             "gauss_markov":
             {

@@ -1,14 +1,33 @@
 # Release 1.1 (PR-PPP Mode)
     tasks for 2025:
-    [ ] float ambiguity carrier processing
-        - the only thing missing is clean up TODOs
-    [ ] Test and or tune the feedforward with CP-PPP
-    [ ] Computation of WL, NL and MW combinations (ver código do correia)
-    [ ] cycle slip detector (ver código do correia)
-    [ ] Adicionar Kalman filter com user dynamics
+
+    High priority:
+        [X] quando perdo um satélite, pode ser boa ideia dar freeze da iono e ambiguidade
+        [X] adicionar melhor inicialização das ambiguidades..
+        [X] move pivot information to Ambiguity Manager
+        [X] add ambiguity fix management to EKF Engine
+
+        [ ] o que acontece ao EKF Engine quando há alteração de pivot? Deve haver uma re-inicialização das ambiguidades
+
+        [ ] Manage cycle slips: No caso de cycle slip, a covariancia da ambiguidade é aumentada
+            eu estou a dar unfix à ambiguidade se houver um data gap, e nota que há um filtro no cycle slip
+            detection. Portanto tenho que retirar o unfix hardcoded no código, e apenas usar as cycle slips
+
+        [ ] Review RW, GM equations from literature
+
+        [ ] testar o post processing com o EKF
+
+        [ ] comparar uma corrida do NEXA
+
+    [ ] add DOP computation in the frame of EKF (sequential DOP)
+        see https://www.researchgate.net/publication/315796027_Effect_of_PDOP_on_performance_of_Kalman_Filters_for_GNSS-based_space_vehicle_position_estimation
+
     [ ] Adicionar Batch Least Squares
-        [ ] adicionar configuração com static/dynamic receiver que em vez de feedforward das covs da época anterior
-        aplica valores pre-determinados. No caso de cycle slip, a covariancia da ambiguidade é aumentada
+        [ ] adicionar configuração com static/dynamic receiver que em vez de feedforward das covs da época anterior aplica valores pre-determinados.
+
+    [ ] Ambiguity Resolution (PPP-AR)
+        [ ] only thing missing is acceptance test.
+
     [ ] Adicionar differential SPS/PPPP. D-GNSS para PR only
 
     [ ] BUGS and nice-to-haves:
@@ -22,7 +41,7 @@
     [ ] solve all TODOs
 
 # Release 1.2 PPP e PPP-AR
-    [ ] Ambiguity Resolution (PPP-AR)
+
     [ ] other corrections
         [ ] phase windup (only applicable to carrier observations)
         [ ] site-displacement effects
