@@ -60,6 +60,8 @@ class AmbiguityManager:
         config_P0_PAR (float): The minimum required success rate for method PAR.
         config_P0_RatioTest (float): The fixed failure rate for method ILS + Ratio Test.
         pivot(dict): satellites used as pivot for the ambiguity estimation (one per constellation).
+        pivot_unfix_behaviour(str): string to select the behaviour when there is a pivot change:
+            options are `all` or `constellation`
     """
 
     def __init__(self, sat_list, init_val, init_cov, cp_types, bias_enum=None):
@@ -85,6 +87,7 @@ class AmbiguityManager:
                                                                                 "ambiguity_resolution", "method"))
         self.config_P0_PAR = config_dict.get("solver", "ambiguity_resolution", "P0_PAR")
         self.config_P0_RatioTest = config_dict.get("solver", "ambiguity_resolution", "P0_RatioTest")
+        self.pivot_unfix_behaviour = config_dict.get("solver", "ambiguity_resolution", "pivot_unfix_behaviour")
 
         # Check if OSB products are enabled (AR is not possible with DCBs)
         if bias_enum is not None:
@@ -155,9 +158,14 @@ class AmbiguityManager:
                 for sat in new_sat_list:
                     if sat.sat_system == pivot.sat_system:
                         log = get_logger(GNSS_ALG_LOG)
-                        log.warning(f"Pivot satellite changed from satellite {pivot} to {sat} for "
-                                    f"{pivot.sat_system} constellation. All ambiguities for this constellation "
-                                    f"will be set unfixed.")
+                        if self.pivot_unfix_behaviour == "constellation":
+                            log.warning(f"Pivot satellite changed from satellite {pivot} to {sat} for "
+                                        f"{pivot.sat_system} constellation. All ambiguities for this constellation "
+                                        f"will be set unfixed.")
+                        elif self.pivot_unfix_behaviour == "all":
+                            log.warning(f"Pivot satellite changed from satellite {pivot} to {sat} for "
+                                        f"{pivot.sat_system} constellation. All satellite ambiguities in the system  "
+                                        f"will be set unfixed.")
                         update_pivot = True
                         self.pivot[pivot.sat_system] = sat
                         self.reset_ambiguities(pivot.sat_system)
@@ -206,9 +214,16 @@ class AmbiguityManager:
         return self.ambiguities.pop(key, default)
 
     def reset_ambiguities(self, constellation: str):
-        """ Reset ambiguities for all available satellites in the given constellation."""
+        """
+        Reset ambiguities for all available satellites in the given constellation.
+
+        When there is a change in the pivot, the configuration variable `self.pivot_unfix_behaviour` defines what to do:
+            * if set to `all` then the satellite ambiguities of all available satellites are reset
+            * if set to `constellation` then only the satellite ambiguities for the given constellation are reset
+        """
         for sat in self.ambiguities:
-            if sat.sat_system == constellation:
+            if (self.pivot_unfix_behaviour == "constellation" and sat.sat_system == constellation) or \
+                    (self.pivot_unfix_behaviour == "all"):
                 for cp_type in self.ambiguities[sat]:
                     self.ambiguities[sat][cp_type].reset(val=self.init_val, cov=self.init_cov)
 

@@ -165,11 +165,10 @@ class EKF_Engine:
             if "ambiguity" in new_index_map:
                 removed_sats = set(prev_index_map["ambiguity"].keys()) - set(new_index_map["ambiguity"].keys())
                 for sat in removed_sats:
-                    if self._state.ambiguity.pivot[sat.sat_system] != sat:
-                        cp_types = prev_index_map["ambiguity"][sat]
-                        for cp_type in cp_types:
-                            idx = cp_types[cp_type]
-                            idx_to_remove.append(idx)
+                    cp_types = prev_index_map["ambiguity"][sat]
+                    for cp_type in cp_types:
+                        idx = cp_types[cp_type]
+                        idx_to_remove.append(idx)
             # then, update state and cov for removed satellites
             if len(idx_to_remove) > 0:
                 # remove from highest to lowest index
@@ -198,6 +197,7 @@ class EKF_Engine:
                 idx_to_add = sorted(idx_to_add)
                 for idx in idx_to_add:
                     args = new_states[idx]
+                    # TODO: consider moving the covariance increase to here
                     if args[0] == "iono":
                         x_out, P_out = add_state(x_out, P_out, idx, self.state.iono[args[1]],
                                                  self.state.cov_iono[args[1]])
@@ -206,6 +206,50 @@ class EKF_Engine:
                                                  self.state.ambiguity[args[1]][args[2]].cov)
 
         return x_out, P_out
+
+    def _relax_cov_pivot_change(self, P_in):
+        """
+        When there is a change in pivot, all the other states get affected. This function increases their covariance
+        to allow a better re-convergence of the cross-affected states.
+        """
+        index_map = self._state.index_map
+        P_out = P_in.copy()
+
+        # TODO: add config parameters here.
+
+        # position
+        idx_pos = index_map["position"]
+        for i in range(3):
+            P_out[idx_pos + i, idx_pos + i] = P_in[idx_pos + i, idx_pos + i] * 100
+
+        # clock bias (in meters)
+        idx_clock = index_map["clock_bias"]
+        P_out[idx_clock, idx_clock] = P_in[idx_clock, idx_clock] * 100
+
+        # tropo
+        if "tropo_wet" in index_map:
+            idx_tropo = index_map["tropo_wet"]
+            P_out[idx_tropo, idx_tropo] = P_in[idx_tropo, idx_tropo] * 100
+
+        # iono
+        if "iono" in index_map:
+            for sat in index_map["iono"].keys():
+                idx_iono = index_map["iono"][sat]
+                P_out[idx_iono, idx_iono] = P_in[idx_iono, idx_iono] * 100
+
+        # ISB
+        if "isb" in index_map:
+            idx_isb = index_map["isb"]
+            P_out[idx_isb, idx_isb] = P_in[idx_isb, idx_isb] * 100
+
+        # Phase Bias
+        if "phase_bias" in index_map:
+            for const, cp_types in index_map["phase_bias"].items():
+                for cp_type in cp_types:
+                    idx_phase_bias = cp_types[cp_type]
+                    P_out[idx_phase_bias, idx_phase_bias] = P_in[idx_phase_bias, idx_phase_bias] * 1000
+
+        return P_out
 
     def _build_stm_process_noise(self, sat_list: list, time_step: float) -> tuple[np.ndarray, np.ndarray]:
         """
@@ -476,15 +520,10 @@ class EKF_Engine:
             prev_index_map = self._state.index_map
             update_pivot = self._state.build_index_map(sat_list, amb_fixed=self._amb_fixed)
             self._amb_fixed = False
-
-            # TODO: improve this: when update pivot we only need to re-change the ambiguity states (and reset the sub cov)
+            new_index_map = self._state.index_map
+            x_in, P_in = self._build_state_cov(new_index_map, prev_index_map)
             if update_pivot:
-                print("PIVOT CHANGED!!")
-                exit()
-                #x_in, P_in = self._build_init_state_cov(sat_list)
-            else:
-                new_index_map = self._state.index_map
-                x_in, P_in = self._build_state_cov(new_index_map, prev_index_map)
+                P_in = self._relax_cov_pivot_change(P_in)
         return x_in, P_in
 
     def estimate(self, epoch, system_geometry, obs_for_epoch):

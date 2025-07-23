@@ -9,7 +9,8 @@ from src.io.config import config_dict, EnumFrequencyModel
 from src.models.gnss_models import compute_ggto
 
 
-# save satellite state to be re-initialized in case it re-enters
+# save satellite states (iono and ambiguity) to help in the re-initialization in case the satellite
+# becomes available again
 __iono_container__ = {}
 __amb_container__ = {}
 
@@ -291,6 +292,7 @@ class GnssStateSpace(Container):
         if "iono" in _states:
             if sat in __iono_container__:
                 initial_iono = __iono_container__[sat]
+                # NOTE: This is to allow the iono state to re-converge better
                 initial_iono[1] *= 10  # TODO: consider making this configurable
             else:
                 initial_iono = self.get_additional_info("initial_iono")
@@ -304,6 +306,7 @@ class GnssStateSpace(Container):
                 initial_amb = __amb_container__[sat]
                 for cp_type, amb in initial_amb.items():
                     amb.fixed = False
+                    # NOTE: This is to allow the ambiguity state to re-converge better
                     amb.cov *= 10  # TODO: consider making this configurable
                     self.ambiguity.add_ambiguity(sat, cp_type, other_ambiguity=amb)
             else:
@@ -390,7 +393,6 @@ class GnssStateSpace(Container):
                         if not self.ambiguity[sat][cp_type].fixed:
                             index_map["ambiguity"][sat][cp_type] = state_counter
                             state_counter += 1
-                    # TODO: to be tested (what if one band is fixed and the other not?)
                     if len(index_map["ambiguity"][sat]) == 0:
                         index_map["ambiguity"].pop(sat)
 

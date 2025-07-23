@@ -214,16 +214,20 @@
 
       "ambiguity_resolution": {
          "_comment1": "Select `true` to enable ambiguity resolution or `false` to disable it",
-         "enabled": true,
+         "enabled": false,
 
          "_comment2": "Select the ambiguity resolution method. Available methods are 'ILS', 'IR', 'BS', 'PAR', 'ILS + Ratio Test'",
-         "method": "ILS + Ratio Test",
+         "method": "ILS",
 
          "_comment3": "Select P0 value: minimum required success rate for method PAR",
          "P0_PAR": 0.95,
 
          "_comment4": "Select P0 value: fixed failure rate for method ILS + Ratio Test",
-         "P0_RatioTest": 0.010
+         "P0_RatioTest": 0.010,
+
+         "_comment5": "When the pivot changes the ambiguities are unfixed. Options are 'all' (to unfix all satellites) or 'constellation' (to unfix only satellites for the given constellation) ",
+         "pivot_unfix_behaviour": "all"
+
       },
 
       "_comment7": "Initial states and expected covariances for the initial state vector.",
@@ -234,7 +238,7 @@
       "initial_iono_cov": [0.0, 10],
       "initial_tropo_cov": [0.0, 10],
       "initial_clock_rate_cov": [0.0, 1E-1],
-      "initial_ambiguity_cov": [0.0, 100],
+      "initial_ambiguity_cov": [0.0, 1000],
       "initial_phase_bias_cov": [0.0, 1e-16],
 
       "noise_model":

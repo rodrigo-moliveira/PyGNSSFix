@@ -611,6 +611,13 @@
             },
             "P0_RatioTest": {
               "type": "number"
+            },
+            "pivot_unfix_behaviour": {
+              "type": "string",
+              "enum": [
+                "constellation",
+                "all"
+              ]
             }
           },
           "required": [
