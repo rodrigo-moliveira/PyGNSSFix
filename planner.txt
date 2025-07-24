@@ -6,14 +6,20 @@
         [X] adicionar melhor inicialização das ambiguidades..
         [X] move pivot information to Ambiguity Manager
         [X] add ambiguity fix management to EKF Engine
+        [X] o que acontece ao EKF Engine quando há alteração de pivot? Deve haver uma re-inicialização das ambiguidades
+        [X] Review RW, GM equations from literature
 
-        [ ] o que acontece ao EKF Engine quando há alteração de pivot? Deve haver uma re-inicialização das ambiguidades
+        [ ] fix post processing script exceptions.
+            [ ] add possibility of computing RMS performances only after convergence.
+
+        [ ] Add velocity estimation:
+            * PV method
+            * PVA method
+            * Doppler measurements
 
         [ ] Manage cycle slips: No caso de cycle slip, a covariancia da ambiguidade é aumentada
             eu estou a dar unfix à ambiguidade se houver um data gap, e nota que há um filtro no cycle slip
             detection. Portanto tenho que retirar o unfix hardcoded no código, e apenas usar as cycle slips
-
-        [ ] Review RW, GM equations from literature
 
         [ ] testar o post processing com o EKF
 

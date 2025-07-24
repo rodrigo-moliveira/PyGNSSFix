@@ -197,6 +197,7 @@ This matches the **rate parameter** used in a **random walk** process noise:
 `σ_RW` has units `[unit / √s]`
 
 These unit relationships are important when tuning noise levels from physical models or sensor specs.
+
 ---
 
 ## 📌 3. Random Walk Model

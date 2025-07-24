@@ -536,13 +536,6 @@ class GnssSolver:
             system_geometry = SystemGeometry(obs_for_epoch, self.sat_clocks, self.sat_orbits, self.phase_center,
                                              self.sat_bias)
 
-            ########################################################
-            #              DEV HACK - Remove Pivot Sat             #
-            # slip_epoch = Epoch(2024, 3, 30, 11, 0, 25, scale="GPST")
-            # if epoch == slip_epoch:
-            #    system_geometry.remove(get_satellite("G04"))
-            ########################################################
-
             # compute geometry-related data for each satellite link
             system_geometry.compute(epoch, state, self._metadata)
 
