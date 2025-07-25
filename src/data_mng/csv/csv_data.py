@@ -95,7 +95,7 @@ class CSVData:
 
     def is_empty(self) -> bool:
         """ Returns True if the dataset is empty """
-        return self.data is None
+        return self.data is None or len(self.data) == 0
 
     def to_data_array(self) -> pd.DataFrame:
         """ Returns a dataframe with the data columns only """

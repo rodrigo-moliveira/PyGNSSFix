@@ -47,6 +47,10 @@
     "error_configs": {
       "_comment1":"select static or dynamic reference trajectory (coordinates with respect to ECEF frame [meters])",
       "static": true,
+
+      "_comment2": "select time to reach convergence in seconds. Error performances are only computed after this time",
+      "convergence_time": 0,
+
       "true_static_position2": [
         4027881.628,
         306998.537,

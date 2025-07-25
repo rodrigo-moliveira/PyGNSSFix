@@ -1,6 +1,7 @@
 """ Module with the Performance Manager class definition """
 
 import os
+import datetime
 import numpy as np
 import pandas as pd
 
@@ -136,18 +137,32 @@ class PerformanceManager:
         else:
             raise NotImplementedError(f"Dynamic error computation not yet implemented...")
 
-        rms_pos_ecef = error.compute_rms_error(self.pos_error["error_ecef"])
-        rms_pos_enu = error.compute_rms_error(self.pos_error["error_enu"])
+        # get first epoch after convergence
+        conv_time = config_dict.get("performance_evaluation", "error_configs", "convergence_time")
+        time = self.data_manager.get_data("time")
+        sow_array = time.data.iloc[:, 1].values
+        week_array = time.data.iloc[:, 0].values
+        time_array = [Epoch.from_gnss_time(week, sow, scale="GPST") for (sow, week) in zip(sow_array, week_array)]
+        time_array_conv = [x for x in time_array if x >= (time_array[0] + datetime.timedelta(seconds=conv_time))]
+        conv_epoch = time_array_conv[0]
+        try:
+            conv_index = time_array.index(conv_epoch)
+        except ValueError:
+            conv_index = 0
+            conv_epoch = time_array[0]
+
+        rms_pos_ecef = error.compute_rms_error(self.pos_error["error_ecef"], conv_index)
+        rms_pos_enu = error.compute_rms_error(self.pos_error["error_enu"], conv_index)
         if velocity is not None:
-            rms_vel_ecef = error.compute_rms_error(self.vel_error["error_ecef"])
-            rms_vel_enu = error.compute_rms_error(self.vel_error["error_enu"])
+            rms_vel_ecef = error.compute_rms_error(self.vel_error["error_ecef"], conv_index)
+            rms_vel_enu = error.compute_rms_error(self.vel_error["error_enu"], conv_index)
         else:
             rms_vel_ecef = rms_vel_enu = {'x': 0, 'y': 0, 'z': 0}
 
         # save computed errors to files
-        self._write_outputs(post_proc_dir, rms_pos_ecef, rms_pos_enu, rms_vel_ecef, rms_vel_enu)
+        self._write_outputs(post_proc_dir, rms_pos_ecef, rms_pos_enu, rms_vel_ecef, rms_vel_enu, conv_epoch)
 
-    def _write_outputs(self, output_dir, rms_pos_ecef, rms_pos_enu, rms_vel_ecef, rms_vel_enu):
+    def _write_outputs(self, output_dir, rms_pos_ecef, rms_pos_enu, rms_vel_ecef, rms_vel_enu, conv_epoch):
         """ Saves the error statistics to output files. """
         self.log.info("Saving computed errors to files...")
 
@@ -172,6 +187,7 @@ class PerformanceManager:
 
         # Overall Estimation Stats
         stats = "Root Mean Square Error:\n" \
+                f"\tFirst Epoch Considered (after convergence): {str(conv_epoch)}\n" \
                 "\tECEF frame\n" \
                 f"\t\tx = {rms_pos_ecef['x']} [m]\n" \
                 f"\t\ty = {rms_pos_ecef['y']} [m]\n" \
@@ -240,6 +256,11 @@ class PerformanceManager:
             shapiro_alpha = config_dict.get("performance_evaluation", "residual_configs", "shapiro_test",
                                             "significance_level")
 
+            if len(residuals.data.iloc[:, 1].unique()) < 3:
+                self.log.warning(f"Skipping residuals test for residuals {data_name} "
+                                 f"because less than 3 time step residuals are available")
+                continue
+
             self.log.info(f"Chi-Squared test for {data_name} observables: significance_level={chi_sq_alpha}, "
                           f"number of states={df}. Results are stored in {os.path.basename(chi_sq_file.name)}")
             self.log.info(f"Shapiro test for {data_name} observables: significance_level={shapiro_alpha}. "
@@ -248,6 +269,10 @@ class PerformanceManager:
             # Perform the tests for each satellite and data type combination
             for (sat, data_type), group in grouped:
                 residual_array = group.iloc[:, 5].values
+                if len(residual_array) < 3:
+                    self.log.warning(f"Skipping residuals test for satellite {sat} and datatype {data_type} "
+                                     f"because less than 3 time step residuals are available")
+                    continue
                 mean = np.mean(residual_array)
                 std = np.std(residual_array)
 

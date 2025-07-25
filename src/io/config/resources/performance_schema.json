@@ -62,9 +62,10 @@
           "type": "object",
           "properties": {
             "static": {"type": "boolean"},
+            "convergence_time": {"type": "number", "minimum": 0},
             "true_static_position": {"type": "array", "items": {"type": "number"}}
           },
-          "required": ["static", "true_static_position"]
+          "required": ["static", "true_static_position", "convergence_time"]
         }
       },
       "required": ["run_folder", "run_error_computation", "run_residual_analysis",

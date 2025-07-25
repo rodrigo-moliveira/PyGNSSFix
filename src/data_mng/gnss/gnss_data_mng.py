@@ -305,18 +305,24 @@ class GnssDataManager(Container):
         log.info(f"creating output file {filename}")
 
         # save melbourne-wubbena data
-        ext = 'mw_obs'
-        filename = f"{directory}\\{OUTPUT_FILENAME_MAP[ext]}"
-        file_list[ext] = open(filename, "w")
-        file_list[ext].write(f"{self.melbourne_obs_data.to_csv_file()}")
-        log.info(f"creating output file {filename}")
+        if not self.melbourne_obs_data.is_empty():
+            ext = 'mw_obs'
+            filename = f"{directory}\\{OUTPUT_FILENAME_MAP[ext]}"
+            file_list[ext] = open(filename, "w")
+            file_list[ext].write(f"{self.melbourne_obs_data.to_csv_file()}")
+            log.info(f"creating output file {filename}")
+        else:
+            log.info(f"Melbourne-Wubbena data not saved because it was not computed.")
 
         # save geometry-free data
-        ext = 'gf_obs'
-        filename = f"{directory}\\{OUTPUT_FILENAME_MAP[ext]}"
-        file_list[ext] = open(filename, "w")
-        file_list[ext].write(f"{self.geometry_free_obs_data.to_csv_file()}")
-        log.info(f"creating output file {filename}")
+        if not self.geometry_free_obs_data.is_empty():
+            ext = 'gf_obs'
+            filename = f"{directory}\\{OUTPUT_FILENAME_MAP[ext]}"
+            file_list[ext] = open(filename, "w")
+            file_list[ext].write(f"{self.geometry_free_obs_data.to_csv_file()}")
+            log.info(f"creating output file {filename}")
+        else:
+            log.info(f"Geometry-Free data not saved because it was not computed.")
 
         # close all files
         for ext in file_list.keys():

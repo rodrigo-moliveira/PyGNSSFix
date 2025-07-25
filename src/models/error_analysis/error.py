@@ -60,11 +60,12 @@ def compute_error_static(est_data, true_data, true_pos, local="ENU"):
     return error_matrix_ecef, error_matrix_local, list(cov_ecef), list(cov_local)
 
 
-def compute_rms_error(error_matrix):
+def compute_rms_error(error_matrix, start_index=0):
     """
     Computes the Root Mean Square (RMS) Error for the provided error matrix time series.
     The RMS error is calculated for each component (x, y, z), as well as for the 2D (x, y) and 3D (x, y, z)
     vectors.
+    The `start_index` allows to skip the first rows of `error_matrix` (to skip the convergence period).
 
     The RMS error for a component `c` is computed as:
         RMS_c = sqrt(1/N * sum((error_c[i])^2 for i in range(N)))
@@ -74,6 +75,7 @@ def compute_rms_error(error_matrix):
         error_matrix (numpy.ndarray): An Nx3 array representing the estimation error for each epoch, where N is
                                       the number of estimation epochs. Each row corresponds to the error in the
                                       x, y, and z components for a single epoch.
+        start_index(int): first index (row) to perform the computation
     Returns:
         dict: A dictionary containing the computed RMS errors with the following keys:
 
@@ -86,7 +88,8 @@ def compute_rms_error(error_matrix):
 
     accum_x = accum_y = accum_z = accum_2d = accum_3d = 0
 
-    for error in error_matrix:
+    _error_matrix = error_matrix[start_index:, :]
+    for error in _error_matrix:
         accum_x += error[0] * error[0]
         accum_y += error[1] * error[1]
         accum_z += error[2] * error[2]
@@ -95,15 +98,15 @@ def compute_rms_error(error_matrix):
         accum_3d += error[0] * error[0] + error[1] * error[1] + error[2] * error[2]
 
     # 1D RMS stats
-    rms_x = np.sqrt(1 / len(error_matrix) * accum_x)
-    rms_y = np.sqrt(1 / len(error_matrix) * accum_y)
-    rms_z = np.sqrt(1 / len(error_matrix) * accum_z)
+    rms_x = np.sqrt(1 / len(_error_matrix) * accum_x)
+    rms_y = np.sqrt(1 / len(_error_matrix) * accum_y)
+    rms_z = np.sqrt(1 / len(_error_matrix) * accum_z)
 
     # 2D RMS stats
-    rms_2d = np.sqrt(1 / len(error_matrix) * accum_2d)
+    rms_2d = np.sqrt(1 / len(_error_matrix) * accum_2d)
 
     # 3D RMS stats
-    rms_3d = np.sqrt(1 / len(error_matrix) * accum_3d)
+    rms_3d = np.sqrt(1 / len(_error_matrix) * accum_3d)
 
     return {"x": rms_x,
             "y": rms_y,
