@@ -1,136 +1,197 @@
-# EKF Variants with Pseudorange and Range Rate
+
+# EKF Formulation for GNSS PPP
+
+This document summarizes the Extended Kalman Filter (EKF) implementation for Precise Point Positioning (PPP) using GNSS measurements, particularly Pseudorange (PR) and Range Rate observations. It discusses the predict and update steps for different state models and measurement types.
+
+---
 
 ## State Vector
 
-\[
-\mathbf{x} =
-\begin{bmatrix}
-\mathbf{p} \\
-\mathbf{v} \\
-c \cdot dt \\
-c \cdot \dot{dt}
-\end{bmatrix}
-\]
+The state vector includes:
+
+```
+x = [
+  p_x, p_y, p_z,         # receiver position (m)
+  v_x, v_y, v_z,         # receiver velocity (m/s)
+  c_dt,                  # receiver clock bias (m)
+  c_dt_dot               # receiver clock drift (m/s)
+]
+```
 
 ---
 
-## Case 1: EKF with PV Model (PR only)
+## EKF with PV Model (using only PR measurements)
 
-**Prediction Step**:
+### Predict Step
 
-\[
-F =
-\begin{bmatrix}
-I & \Delta t \cdot I & 0 & 0 \\
-0 & I & 0 & 0 \\
-0 & 0 & 1 & \Delta t \\
-0 & 0 & 0 & 1
-\end{bmatrix}
-,\quad
-\mathbf{x}_{k|k-1} = F \cdot \mathbf{x}_{k-1|k-1}
-\]
+```
+x_k = F * x_{k-1}
 
-**Update Step**:
+p(t+dt) = p(t) + v(t)·dt
+v(t+dt) = v(t) + w(t)
 
-Pseudorange measurement model:
+F = [
+  [I, Δt·I,  0,     0 ],
+  [0,  I,    0,     0 ],
+  [0,  0,    1,  Δt   ],
+  [0,  0,    0,   1   ]
+]
+```
 
-\[
-z_{\text{PR}} = \|\mathbf{p}^{\text{sat}} - \mathbf{p}\| + c \cdot dt
-\]
+The full process noise matrix `Q_k` has the following block-diagonal structure
 
-Jacobian \( H \):
+```
+Q_k = [
+  Q_pv,        0
+    0,     Q_clock
+]
 
-\[
-H =
-\begin{bmatrix}
-\frac{\partial \rho}{\partial \mathbf{p}} & 0 & 1 & 0
-\end{bmatrix}
-\]
+```
+
+Then the velocity evolves with a random walk process noise, and the standard integrated RW covariance is:
+
+```
+Q_pv = σ² * [
+  [Δt³/3 · I,  Δt²/2 · I],
+  [Δt²/2 · I,     Δt · I]
+]
+```
+Here, σ² is the power spectral density (PSD) of the velocity noise. The units of σ²: [m²/s³] (since v is in m/s)
+
+For the clock part, see the last section.
+
+### Update Step
+
+Measurement model (pseudorange):
+
+```
+PR = ||x - x_sat|| + c*(dt - dt_sat)
+```
+
+Design matrix H (w.r.t. state x):
+
+```
+H = [los_vector, 0_3, 1, 0]
+```
 
 ---
 
-## Case 2: EKF with PV Model (PR + Range Rate)
+## EKF with PV Model (using PR + Range Rate)
 
-**Prediction Step**:
+### Predict Step
 
 Same as above.
 
-**Update Step**:
+### Update Step
 
-Pseudorange: same as Case 1.
+Pseudorange measurement model (same as above).
 
-Range Rate measurement:
+Range rate measurement model:
 
-\[
-z_{\text{RR}} = \left( \mathbf{v}^{\text{sat}} - \mathbf{v} \right) \cdot \hat{\boldsymbol{\rho}} + c \cdot \left( \dot{dt}^{\text{rec}} - \dot{dt}^{\text{sat}} - \text{rel}_{\text{sat}} \right)
-\]
+```
+RR = (v_sat - v_rec) • los + c*(dt_dot - dt_dot_sat - rel_clock_rate_sat)
+```
 
-Jacobian \( H \):
+Design matrix H for range rate:
 
-\[
-H =
-\begin{bmatrix}
-\frac{\partial \rho}{\partial \mathbf{p}} & 0 & 1 & 0 \\
-0 & -\hat{\boldsymbol{\rho}}^T & 0 & 1
-\end{bmatrix}
-\]
-
-Where \( \hat{\boldsymbol{\rho}} = \frac{\mathbf{p}^{\text{sat}} - \mathbf{p}}{\|\mathbf{p}^{\text{sat}} - \mathbf{p}\|} \) is the line-of-sight unit vector.
+```
+H = [0_3, -los_vector, 0, 1]
+```
 
 ---
 
-## Case 3: EKF with Random Walk (PR + Range Rate)
+## EKF with Random Walk Model (using PR + Range Rate)
 
-**Prediction Step**:
+### Predict Step
 
-\[
+Assuming all states are random walks:
+
+```
+x_k = x_{k-1}
 F = I
-,\quad
-\mathbf{x}_{k|k-1} = \mathbf{x}_{k-1|k-1}
-\]
+```
 
-**Update Step**:
+and respectively, the covariance follow the typical random walk diagonal matrix.
 
-Use same pseudorange and range rate equations as in Case 2.
+### Update Step
+
+Same pseudorange and range rate models as above.
+
+H matrix (same):
+
+```
+PR:        H = [los_vector, 0_3, 1, 0]
+RangeRate: H = [0_3, -los_vector, 0, 1]
+```
 
 ---
 
-## Clock Bias and Drift Model
+## Clock Model Discussion
 
-State:
+Clock states typically follow a linear dynamic model due to oscillator behavior:
 
-\[
-\begin{bmatrix}
-c \cdot dt \\
-c \cdot \dot{dt}
-\end{bmatrix}
-\]
+```
+x = [
+  c_dt,                  # receiver clock bias (m)
+  c_dt_dot               # receiver clock drift (m/s)
+]
+```
 
-**Prediction**:
+The clock model prediction is the following (assuming random walk for both clock bias and clock drift):
 
-\[
-\begin{bmatrix}
-c \cdot dt \\
-c \cdot \dot{dt}
-\end{bmatrix}_{k|k-1}
-=
-\begin{bmatrix}
-1 & \Delta t \\
-0 & 1
-\end{bmatrix}
-\cdot
-\begin{bmatrix}
-c \cdot dt \\
-c \cdot \dot{dt}
-\end{bmatrix}_{k-1|k-1}
-\]
+```
+c_dt_k     = c_dt_{k-1}     + dt * c_dt_dot_{k-1} + w_bias
+c_dt_dot_k = c_dt_dot_{k-1}                       + w_drift
+```
 
-**Process Noise Covariance**:
+or in matrix form
 
-\[
-Q_{\text{clock}} = \sigma^2
-\begin{bmatrix}
-\frac{\Delta t^3}{3} & \frac{\Delta t^2}{2} \\
-\frac{\Delta t^2}{2} & \Delta t
-\end{bmatrix}
-\]
+```
+[c_dt    ]        = [1  Δt] * [c_dt    ]
+[c_dt_dot]_(k+1)    [0  1 ]   [c_dt_dot]_(k)
+
+```
+
+### Covariance Model
+
+The process noise covariance matrix `Q` models the stochastic behavior of clock bias and drift. It accounts for two types of noise:
+
+    S_f: Power Spectral Density (PSD) of the clock bias noise (units: m²/s)
+
+    S_s: PSD of the clock drift noise (units: m²/s³)
+
+Using these, the discrete-time covariance matrix for the state becomes:
+```
+Q_clock = [
+    [ S_f·Δt + S_s·Δt^3/3 ,   S_s·Δt^2/2 ],
+    [ S_s·Δt^2/2          ,   S_s·Δt     ]
+]
+```
+
+This naturally leads to correlated evolution between clock bias and drift.
+
+- The process noise for `c_dt_dot` often drives the uncertainty in `c_dt`.
+- This model aligns with the PV model's dynamics.
+
+### Key Observations
+
+* The clock bias uncertainty grows due to both its own noise (`S_f`) and the integration of clock drift noise (`S_s`).
+
+* The clock bias and drift are modeled as random walks.
+
+* The off-diagonal terms reflect that clock bias and drift are statistically correlated due to the integration of drift into bias.
+
+* This model aligns conceptually with the position-velocity (PV) model often used in Kalman filters.
+
+For the clock modelling see the reference:
+
+    Brown & Hwang – Introduction to Random Signals and Applied Kalman Filtering, Chapter 11 (GNSS clock modeling).
+
+---
+
+## Summary
+
+- Use PV model if you want physical consistency between position and velocity.
+- Use random walk model for loosely coupled states or in simpler implementations.
+- Range Rate is a valid alternative to Doppler (nearly equivalent), but make sure the measurement model reflects your actual observable.
+- Clock bias and drift should be correlated in most realistic filters.
