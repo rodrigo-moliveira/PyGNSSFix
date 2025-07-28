@@ -67,6 +67,7 @@ class EKF_Engine:
         self.pr_datatypes = metadata["CODES"]
         self.cp_datatypes = metadata["PHASES"]
         self.metadata = metadata
+        self.estimate_vel = metadata["VELOCITY_EST"]
 
     @property
     def epoch(self):
@@ -140,6 +141,7 @@ class EKF_Engine:
                     idx_phase_bias = cp_types[cp_type]
                     P0[idx_phase_bias, idx_phase_bias] = self._state.cov_phase_bias[const][cp_type]
                     X0[idx_phase_bias] = self._state.phase_bias[const][cp_type]
+        # TODO: add vel
 
         return X0, P0
 
@@ -255,6 +257,8 @@ class EKF_Engine:
                     idx_phase_bias = cp_types[cp_type]
                     P_out[idx_phase_bias, idx_phase_bias] = P_in[idx_phase_bias, idx_phase_bias] * relative_re_param
 
+        # TODO: add vel
+
         return P_out
 
     def _build_stm_process_noise(self, sat_list: list, time_step: float) -> tuple[np.ndarray, np.ndarray]:
@@ -317,6 +321,8 @@ class EKF_Engine:
                     Q_d[idx_phase_bias, idx_phase_bias] = self._noise_manager.phase_bias.get_process_noise(time_step) \
                                                           * SPEED_OF_LIGHT**2
                     F[idx_phase_bias, idx_phase_bias] = self._noise_manager.phase_bias.get_stm_entry(time_step)
+
+        # TODO: add vel
         return F, Q_d
 
     @staticmethod
@@ -347,6 +353,7 @@ class EKF_Engine:
 
         return prefit_residuals, line_sight
 
+    # TODO: build_obs_matrix_doppler
     def _build_obs_matrix(self, epoch, obs_data, datatypes, state, reconstructor_dict, sat_list) -> \
             tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
@@ -488,6 +495,8 @@ class EKF_Engine:
                     idx_phase_bias = cp_types[cp_type]
                     self._state.phase_bias[const][cp_type] = x_out[idx_phase_bias]
                     self._state.cov_phase_bias[const][cp_type] = P_out[idx_phase_bias, idx_phase_bias]
+
+        # TODO: add vel
 
         # unpack covariance matrices
         self._state.cov_position = np.array(P_out[idx_pos:idx_pos + 3, idx_pos:idx_pos + 3])

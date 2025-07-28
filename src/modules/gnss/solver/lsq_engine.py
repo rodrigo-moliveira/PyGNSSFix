@@ -341,7 +341,7 @@ class LSQ_Engine_Position(LSQ_Engine):
             [1] Springer Handbook of Global Navigation Satellite Systems, Peter J.G. Teunissen, Oliver Montenbruck,
                 Springer Cham, 2017
         """
-        n_states = state.index_map["total_states"]
+        n_states = state.index_map["total_states"] - state.index_map["total_states_vel"]
 
         self.y_vec = np.zeros(n_obs)
         self.design_mat = np.zeros((n_obs, n_states))

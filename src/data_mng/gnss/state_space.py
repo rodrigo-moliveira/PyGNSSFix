@@ -400,6 +400,23 @@ class GnssStateSpace(Container):
                     index_map["phase_bias"][const][cp_type] = state_counter
                     state_counter += 1
 
+        # Velocity-related
+        if "velocity" in states:
+            total_states_vel = 0
+            index_map["velocity"] = state_counter
+            state_counter += 3
+            total_states_vel += 3
+
+            index_map["clock_bias_rate"] = dict()
+            for constellation in self.clock_bias_rate.keys():
+                index_map["clock_bias_rate"][constellation] = state_counter
+                state_counter += 1
+                total_states_vel += 1
+
+            index_map["total_states_vel"] = total_states_vel
+        else:
+            index_map["total_states_vel"] = 0
+
         index_map["total_states"] = state_counter
         self.index_map = index_map
         return update_pivot
