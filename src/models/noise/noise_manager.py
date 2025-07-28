@@ -54,6 +54,9 @@ class GNSSNoiseManager(Container):
 
         for state in GNSSNoiseManager.__slots__:
             type_str = config_dict.get("solver", "noise_model", state, "type")
+
+            relative_re_param = config_dict.get("solver", "noise_model", state, "relative_re-parameterization")
+
             if type_str == "white_noise" or type_str == "random_walk":
                 process_noise = config_dict.get("solver", "noise_model", state, "white_noise_random_walk",
                                                 "process_noise_std")
@@ -70,6 +73,7 @@ class GNSSNoiseManager(Container):
                                   f"Available options are white_noise, random_walk or gauss_markov.")
 
             if noise_model:
+                noise_model.relative_re_param = relative_re_param
                 self.__setattr__(state, noise_model)
             else:
                 raise ConfigError(f"Configuration file has missing information for process noise {state}. "

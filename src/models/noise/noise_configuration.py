@@ -19,6 +19,8 @@ class NoiseModel:
         process_gen (object): Instance of the specific process model class (used for future extensions).
         process_noise (float): Standard deviation input (see constructor documentation).
         correlation_time (float): Correlation time tau in seconds for Gauss-Markov models.
+        relative_re_param(float): relative increase in covariance when there is a state re-parametrization
+            (example: pivot change or satellite re-enters the state)
 
     Methods:
         gen():
@@ -58,6 +60,7 @@ class NoiseModel:
         # internal variables
         self.process_noise = process_noise  # units of std (RW/WN - [units/sqrt(s)] or GM[units])
         self.correlation_time = correlation_time  # in [s]
+        self.relative_re_param = 1.0
 
     def gen(self):
         """ Placeholder method for generating noise samples (currently not implemented). """

@@ -550,7 +550,6 @@ class GnssSolver:
                 prefit_residuals, postfit_residuals, dop_matrix, rms = \
                     engine.estimate(epoch, system_geometry, obs_for_epoch)
             except SolverError as e:
-                # TODO: check what to do here.
                 self.log.warning(f"Extended Kalman Filter failed for {str(epoch)}. Reason: {e}. "
                                  f"No solution computed for this epoch.")
                 continue

@@ -191,19 +191,21 @@ class EKF_Engine:
                             if not self.state.ambiguity[sat][cp_type].fixed:
                                 idx = cp_types[cp_type]
                                 new_states[idx] = ("ambiguity", sat, cp_type)
+
             # finally, insert the new states to the state vector and covariance matrix
             idx_to_add = list(new_states.keys())
             if len(idx_to_add) > 0:
                 idx_to_add = sorted(idx_to_add)
                 for idx in idx_to_add:
                     args = new_states[idx]
-                    # TODO: consider moving the covariance increase to here
                     if args[0] == "iono":
+                        rel_increase = self._noise_manager.iono.relative_re_param
                         x_out, P_out = add_state(x_out, P_out, idx, self.state.iono[args[1]],
-                                                 self.state.cov_iono[args[1]])
+                                                 self.state.cov_iono[args[1]] * rel_increase)
                     elif args[0] == "ambiguity":
+                        rel_increase = self._noise_manager.ambiguity.relative_re_param
                         x_out, P_out = add_state(x_out, P_out, idx, self.state.ambiguity[args[1]][args[2]].val,
-                                                 self.state.ambiguity[args[1]][args[2]].cov)
+                                                 self.state.ambiguity[args[1]][args[2]].cov * rel_increase)
 
         return x_out, P_out
 
@@ -215,39 +217,43 @@ class EKF_Engine:
         index_map = self._state.index_map
         P_out = P_in.copy()
 
-        # TODO: add config parameters here.
-
         # position
         idx_pos = index_map["position"]
+        relative_re_param = self._noise_manager.position.relative_re_param
         for i in range(3):
-            P_out[idx_pos + i, idx_pos + i] = P_in[idx_pos + i, idx_pos + i] * 100
+            P_out[idx_pos + i, idx_pos + i] = P_in[idx_pos + i, idx_pos + i] * relative_re_param
 
         # clock bias (in meters)
         idx_clock = index_map["clock_bias"]
-        P_out[idx_clock, idx_clock] = P_in[idx_clock, idx_clock] * 100
+        relative_re_param = self._noise_manager.clock_bias.relative_re_param
+        P_out[idx_clock, idx_clock] = P_in[idx_clock, idx_clock] * relative_re_param
 
         # tropo
         if "tropo_wet" in index_map:
             idx_tropo = index_map["tropo_wet"]
-            P_out[idx_tropo, idx_tropo] = P_in[idx_tropo, idx_tropo] * 100
+            relative_re_param = self._noise_manager.tropo.relative_re_param
+            P_out[idx_tropo, idx_tropo] = P_in[idx_tropo, idx_tropo] * relative_re_param
 
         # iono
         if "iono" in index_map:
             for sat in index_map["iono"].keys():
                 idx_iono = index_map["iono"][sat]
-                P_out[idx_iono, idx_iono] = P_in[idx_iono, idx_iono] * 100
+                relative_re_param = self._noise_manager.iono.relative_re_param
+                P_out[idx_iono, idx_iono] = P_in[idx_iono, idx_iono] * relative_re_param
 
         # ISB
         if "isb" in index_map:
             idx_isb = index_map["isb"]
-            P_out[idx_isb, idx_isb] = P_in[idx_isb, idx_isb] * 100
+            relative_re_param = self._noise_manager.isb.relative_re_param
+            P_out[idx_isb, idx_isb] = P_in[idx_isb, idx_isb] * relative_re_param
 
         # Phase Bias
         if "phase_bias" in index_map:
+            relative_re_param = self._noise_manager.phase_bias.relative_re_param
             for const, cp_types in index_map["phase_bias"].items():
                 for cp_type in cp_types:
                     idx_phase_bias = cp_types[cp_type]
-                    P_out[idx_phase_bias, idx_phase_bias] = P_in[idx_phase_bias, idx_phase_bias] * 1000
+                    P_out[idx_phase_bias, idx_phase_bias] = P_in[idx_phase_bias, idx_phase_bias] * relative_re_param
 
         return P_out
 
@@ -535,51 +541,61 @@ class EKF_Engine:
             system_geometry (src.data_mng.gnss.geometry.SystemGeometry): instance of `SystemGeometry` to be used in the
                 reconstruction models, geometry data for the current estimation state.
             obs_for_epoch (src.data_mng.gnss.observation_data.EpochData) : instance of `EpochData` (GNSS observable
-            database for the current epoch).
+                database for the current epoch).
 
-        TODO:
-            add returns and raises
+        Returns:
+            tuple[dict, dict, numpy.ndarray, float]:
+                * first element is a dict with the prefit residuals (indexed by constellation, satellite and datatype)
+                * second element is a dict with the postfit residuals (indexed by constellation, satellite and datatype)
+                * third element is a numpy array object with the DOP matrix, DOP = (G.T * G)^-1
+                * fourth element is the norm of the postfit residuals vector
+
+        Raises:
+            SolverError: an exception is raised if the EKF problem fails to be solved for this epoch
         """
-        # TODO: raise SolverError on failure
-        reconstructor, datatypes = self._build_obs_reconstructor(system_geometry)
-        sat_list = system_geometry.get_satellites()
-        time_step = (epoch - self.epoch).total_seconds()
+        try:
+            reconstructor, datatypes = self._build_obs_reconstructor(system_geometry)
+            sat_list = system_geometry.get_satellites()
+            time_step = (epoch - self.epoch).total_seconds()
 
-        # prepare state and covariance for the current cycle
-        x_in, P_in = self._init_states(sat_list)
+            # prepare state and covariance for the current cycle
+            x_in, P_in = self._init_states(sat_list)
 
-        # build state transition matrix and process noise matrices
-        F, Q_d = self._build_stm_process_noise(sat_list, time_step)
+            # build state transition matrix and process noise matrices
+            F, Q_d = self._build_stm_process_noise(sat_list, time_step)
 
-        # build observation covariance matrix, observation Jacobian and observation residuals
-        R, H, residuals_vector = self._build_obs_matrix(epoch, obs_for_epoch, datatypes, self._state,
-                                                        reconstructor, sat_list)
+            # build observation covariance matrix, observation Jacobian and observation residuals
+            R, H, residuals_vector = self._build_obs_matrix(epoch, obs_for_epoch, datatypes, self._state,
+                                                            reconstructor, sat_list)
 
-        # perform predict step
-        x_pred, P_pred = self._solver.predict(x_in, P_in, 0, F, Q_d, continuous=False)
+            # perform predict step
+            x_pred, P_pred = self._solver.predict(x_in, P_in, 0, F, Q_d, continuous=False)
 
-        # perform update step
-        x_out, P_out = self._solver.update(residuals_vector, P_pred, x_pred, H, R)
+            # perform update step
+            x_out, P_out = self._solver.update(residuals_vector, P_pred, x_pred, H, R)
 
-        # update the state vector object with x_out and P_out
-        x_out, P_out = self._update_state(x_out, P_out, sat_list)
+            # update the state vector object with x_out and P_out
+            x_out, P_out = self._update_state(x_out, P_out, sat_list)
 
-        # save internal variables
-        self._x = x_out
-        self._P = P_out
-        self._state.epoch = epoch
-        self._prev_sat_list = sat_list
+            # save internal variables
+            self._x = x_out
+            self._P = P_out
+            self._state.epoch = epoch
+            self._prev_sat_list = sat_list
 
-        # build the postfit residuals vector
-        post_fit = self.get_postfit_residuals(epoch, obs_for_epoch, datatypes, reconstructor, sat_list)
-        norm = np.linalg.norm(post_fit)
-        R_inv = np.diag(1.0 / np.diag(R))
-        dop_matrix = np.linalg.inv(H.T @ R_inv @ H)
+            # build the postfit residuals vector
+            post_fit = self.get_postfit_residuals(epoch, obs_for_epoch, datatypes, reconstructor, sat_list)
+            norm = np.linalg.norm(post_fit)
+            R_inv = np.diag(1.0 / np.diag(R))
+            dop_matrix = np.linalg.inv(H.T @ R_inv @ H)
 
-        # build prefit and postfit residual dicts for output
-        pre_fit_dict = self.get_residuals(residuals_vector, sat_list, datatypes)
-        post_fit_dict = self.get_residuals(post_fit, sat_list, datatypes)
-        return pre_fit_dict, post_fit_dict, dop_matrix, norm
+            # build prefit and postfit residual dicts for output
+            pre_fit_dict = self.get_residuals(residuals_vector, sat_list, datatypes)
+            post_fit_dict = self.get_residuals(post_fit, sat_list, datatypes)
+            return pre_fit_dict, post_fit_dict, dop_matrix, norm
+
+        except Exception as e:
+            raise SolverError(str(e))
 
     @staticmethod
     def get_residuals(residual_vec, sat_list, datatypes):

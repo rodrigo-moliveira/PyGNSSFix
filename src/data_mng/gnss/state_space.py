@@ -292,8 +292,6 @@ class GnssStateSpace(Container):
         if "iono" in _states:
             if sat in __iono_container__:
                 initial_iono = __iono_container__[sat]
-                # NOTE: This is to allow the iono state to re-converge better
-                initial_iono[1] *= 10  # TODO: consider making this configurable
             else:
                 initial_iono = self.get_additional_info("initial_iono")
                 if initial_iono is None:
@@ -306,8 +304,6 @@ class GnssStateSpace(Container):
                 initial_amb = __amb_container__[sat]
                 for cp_type, amb in initial_amb.items():
                     amb.fixed = False
-                    # NOTE: This is to allow the ambiguity state to re-converge better
-                    amb.cov *= 10  # TODO: consider making this configurable
                     self.ambiguity.add_ambiguity(sat, cp_type, other_ambiguity=amb)
             else:
                 cp_types = self.phase_bias[sat.sat_system].keys()

@@ -767,9 +767,12 @@
             "correlation_time": { "type": "number" }
           },
           "required": ["process_noise_std", "correlation_time"]
+        },
+        "relative_re-parameterization": {
+          "type": "number"
         }
       },
-      "required": ["type", "white_noise_random_walk", "gauss_markov"]
+      "required": ["type", "white_noise_random_walk", "gauss_markov", "relative_re-parameterization"]
     }
   }
 }
