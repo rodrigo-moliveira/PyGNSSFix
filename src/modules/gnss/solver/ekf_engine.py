@@ -5,7 +5,7 @@ from src.constants import SPEED_OF_LIGHT
 from src.data_types.gnss import DataType
 from src.errors import SolverError
 from src.modules.estimators.EKF import EKF
-from src.modules.gnss.solver import PseudorangeReconstructor, CarrierPhaseReconstructor
+from src.modules.gnss.solver import PseudorangeReconstructor, CarrierPhaseReconstructor, RangeRateReconstructor
 from src.utils.math_utils import add_state, delete_state
 
 
@@ -68,6 +68,9 @@ class EKF_Engine:
         self.cp_datatypes = metadata["PHASES"]
         self.metadata = metadata
         self.estimate_vel = metadata["VELOCITY_EST"]
+        self.rr_datatypes = None
+        if self.estimate_vel:
+            self.rr_datatypes = metadata["DOPPLER"]
 
     @property
     def epoch(self):
@@ -97,7 +100,7 @@ class EKF_Engine:
         # position
         idx_pos = index_map["position"]
         for i in range(3):
-            P0[idx_pos + i, idx_pos + i] = self._state.cov_position[idx_pos + i, idx_pos + i]
+            P0[idx_pos + i, idx_pos + i] = self._state.cov_position[i, i]
         X0[idx_pos:idx_pos + 3] = self._state.position
 
         # clock bias (in meters)
@@ -141,7 +144,18 @@ class EKF_Engine:
                     idx_phase_bias = cp_types[cp_type]
                     P0[idx_phase_bias, idx_phase_bias] = self._state.cov_phase_bias[const][cp_type]
                     X0[idx_phase_bias] = self._state.phase_bias[const][cp_type]
-        # TODO: add vel
+
+        if "velocity" in index_map:
+            idx_vel = index_map["velocity"]
+            for i in range(3):
+                P0[idx_vel + i, idx_vel + i] = self._state.cov_velocity[i, i]
+            X0[idx_vel:idx_vel + 3] = self._state.velocity
+
+        if "clock_bias_rate" in index_map:
+            # clock bias rate (in m/s)
+            for const, idx_clock_rate in index_map["clock_bias_rate"].items():
+                P0[idx_clock_rate, idx_clock_rate] = self._state.cov_clock_bias_rate[const]
+                X0[idx_clock_rate] = self._state.clock_bias_rate[const]
 
         return X0, P0
 
@@ -322,7 +336,19 @@ class EKF_Engine:
                                                           * SPEED_OF_LIGHT**2
                     F[idx_phase_bias, idx_phase_bias] = self._noise_manager.phase_bias.get_stm_entry(time_step)
 
-        # TODO: add vel
+        if "velocity" in index_map:
+            idx_vel = index_map["velocity"]
+            process_noise = self._noise_manager.velocity.get_process_noise(time_step)
+            for i in range(3):
+                Q_d[idx_vel + i, idx_vel + i] = process_noise[i]
+                F[idx_vel + i, idx_vel + i] = self._noise_manager.velocity.get_stm_entry(time_step)
+
+        if "clock_bias_rate" in index_map:
+            for const, idx_clock_rate in index_map["clock_bias_rate"].items():
+                Q_d[idx_clock_rate, idx_clock_rate] = self._noise_manager.clock_drift.get_process_noise(time_step) * \
+                                                      SPEED_OF_LIGHT**2
+                F[idx_clock_rate, idx_clock_rate] = self._noise_manager.clock_drift.get_stm_entry(time_step)
+
         return F, Q_d
 
     @staticmethod
@@ -506,6 +532,7 @@ class EKF_Engine:
 
     def _build_obs_reconstructor(self, system_geometry) -> tuple[dict, dict]:
         """ Builds the reconstructor and datatypes dictionaries for internal processing procedures. """
+        # TODO: add doppler reconstructor
         reconstructor = dict()
         reconstructor["PR"] = PseudorangeReconstructor(system_geometry, self.metadata, self._state,
                                                        self._trace_data)
@@ -513,12 +540,19 @@ class EKF_Engine:
         if self.cp_based:
             datatypes = dict()
             for const in self.pr_datatypes.keys():
-                datatypes[const] = dict()
+                datatypes[const] = list()
                 datatypes[const] = self.pr_datatypes[const] + self.cp_datatypes[const]
             reconstructor["CP"] = CarrierPhaseReconstructor(system_geometry, self.metadata, self._state,
                                                             self._trace_data)
         else:
             datatypes = self.pr_datatypes
+
+        if self.estimate_vel:
+            for const in self.rr_datatypes.keys():
+                datatypes[const] = datatypes[const] + self.rr_datatypes[const]
+            reconstructor["RR"] = RangeRateReconstructor(system_geometry, self.metadata, self._state,
+                                                         self._trace_data)
+
         return reconstructor, datatypes
 
     def _init_states(self, sat_list):

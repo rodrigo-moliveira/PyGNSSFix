@@ -17,7 +17,9 @@ class GNSSNoiseManager(Container):
 
     Attributes:
         position (NoiseModel): Noise model for receiver position (typically random walk).
+        velocity (NoiseModel): Noise model for receiver velocity (typically random walk).
         clock_bias (NoiseModel): Noise model for receiver clock bias (typically random walk).
+        clock_drift (NoiseModel): Noise model for receiver clock bias rate (typically random walk).
         isb (NoiseModel): Inter-system bias model.
         iono (NoiseModel): Ionospheric delay model (e.g., Gauss-Markov or random walk).
         tropo (NoiseModel): Tropospheric delay model (e.g., Gauss-Markov or random walk).
@@ -25,7 +27,8 @@ class GNSSNoiseManager(Container):
         phase_bias (NoiseModel): Phase bias model (usually fixed or random walk).
     """
 
-    __slots__ = ["position", "clock_bias", "isb", "iono", "tropo", "ambiguity", "phase_bias"]
+    __slots__ = ["position", "velocity", "clock_bias", "clock_drift", "isb", "iono", "tropo", "ambiguity",
+                 "phase_bias"]
 
     def __init__(self, config_dict):
         """
@@ -45,7 +48,9 @@ class GNSSNoiseManager(Container):
         """
         super().__init__()
         self.position = None
+        self.velocity = None
         self.clock_bias = None
+        self.clock_drift = None
         self.isb = None
         self.tropo = None
         self.iono = None

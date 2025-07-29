@@ -259,6 +259,21 @@
             },
             "relative_re-parameterization": 100
          },
+         "velocity":
+         {
+            "type": "random_walk",
+            "white_noise_random_walk": {
+               "comment": "Configurations for White Noise and Random Walk. Process noise units (continuous-time) are in [m/s/sqrt(s)]",
+               "process_noise_std": [0.001, 0.001, 0.001]
+            },
+            "gauss_markov":
+            {
+               "comment": "Configurations for Gauss Markov. Process noise units are in [m/s]. Correlation time in [s].",
+               "process_noise_std": [0.001, 0.001, 0.001],
+               "correlation_time": 1000
+            },
+            "relative_re-parameterization": 100
+         },
          "clock_bias":
          {
             "type": "random_walk",
@@ -269,6 +284,21 @@
             "gauss_markov":
             {
                "comment": "Configurations for Gauss Markov. Process noise units are in [s]. Correlation time in [s].",
+               "process_noise_std": 3.3E-9,
+               "correlation_time": 1
+            },
+            "relative_re-parameterization": 100
+         },
+         "clock_drift":
+         {
+            "type": "random_walk",
+            "white_noise_random_walk": {
+               "comment": "Configurations for White Noise and Random Walk. Process noise units (continuous-time) are in [s/s/sqrt(s)]",
+               "process_noise_std": 3.3E-9
+            },
+            "gauss_markov":
+            {
+               "comment": "Configurations for Gauss Markov. Process noise units are in [s/s]. Correlation time in [s].",
                "process_noise_std": 3.3E-9,
                "correlation_time": 1
             },
