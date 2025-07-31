@@ -409,8 +409,8 @@ class ObservationData:
     def get_doppler_types(self, constellation) -> list[DataType]:
         """ Returns a list with all available doppler datatypes for the provided constellation """
         types = list(self.get_types(constellation))
-        code_types = [x for x in types if DataType.is_doppler(x)]
-        return code_types
+        doppler_types = [x for x in types if DataType.is_doppler(x)]
+        return doppler_types
 
     def get_rate(self) -> float:
         """ Returns the rate between observations in seconds

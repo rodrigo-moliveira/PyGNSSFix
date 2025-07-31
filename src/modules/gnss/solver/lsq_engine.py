@@ -3,6 +3,7 @@ import numpy as np
 
 from src import constants
 from src.constants import SPEED_OF_LIGHT
+from src.data_types.gnss.data_type import get_base_freq
 from src.errors import SolverError
 from src.io.config import EnumSolver
 from src.modules.estimators.weighted_ls import WeightedLeastSquares
@@ -482,7 +483,8 @@ class LSQ_Engine_Position(LSQ_Engine):
 
                     # iono
                     if "iono" in index_map and sat in index_map["iono"]:
-                        factor = (self.datatypes[const][0].freq.freq_value / datatype.freq.freq_value) ** 2
+                        # factor = (self.datatypes[const][0].freq.freq_value / datatype.freq.freq_value) ** 2
+                        factor = (get_base_freq(const).freq_value / datatype.freq.freq_value) ** 2
                         idx_iono = index_map["iono"][sat]
                         if DataType.is_carrier(datatype):
                             self.design_mat[obs_offset + iSat, idx_iono] = -1.0 * factor  # iono
@@ -614,8 +616,8 @@ class LSQ_Engine_Velocity(LSQ_Engine):
     def __init__(self, system_geometry, metadata, epoch, obs_data, state, trace_data):
         # currently we always use one observation per constellation (dual-frequency is not possible)
         datatypes = metadata["DOPPLER"]
-        for key in datatypes:
-            datatypes[key] = datatypes[key][:1]
+        # for key in datatypes:
+        #    datatypes[key] = datatypes[key][:1]
         self.reconstructor = RangeRateReconstructor(system_geometry, metadata, state, trace_data)
         super().__init__(datatypes, system_geometry.get_satellites(), epoch, obs_data, state, metadata["SOLVER"])
 
@@ -695,13 +697,13 @@ class LSQ_Engine_Velocity(LSQ_Engine):
             const_offset += 1
 
     def _update_state(self, state, dX, cov):
-        vel = np.array(dX[0:3]) - np.cross(constants.EARTH_ANGULAR_RATE, state.position)
+        vel = state.velocity + np.array(dX[0:3])  # - np.cross(constants.EARTH_ANGULAR_RATE, state.position)
         state.velocity = vel  # in m/s
         state.cov_velocity = cov[0:3, 0:3]  # in (m/s)^2
 
         for iConst, const in enumerate(self.sat_list.keys()):
             # receiver clock drift [m/m]
-            state.clock_bias_rate[const] = dX[iConst + 3]
+            state.clock_bias_rate[const] += dX[iConst + 3]
             state.cov_clock_bias_rate[const] = float(cov[iConst + 3, iConst + 3])
 
     def _build_init_state_cov(self, state):

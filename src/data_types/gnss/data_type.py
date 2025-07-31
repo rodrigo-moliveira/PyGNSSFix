@@ -1004,3 +1004,22 @@ def data_type_from_rinex(data_type: str, constellation: str):
     elif constellation == "GAL":
         return cGALObsSignals[data_type[0]][data_type[1]]
     return UN
+
+
+def get_base_freq(constellation: str):
+    """
+    Gets the base frequency for the provided constellation.
+    The base frequency is the primary frequency:
+        * GPS: L1 frequency
+        * GAL: E1 frequency
+
+    Args:
+        constellation (str): constellation associated with the base frequency
+    Returns:
+        DataType : returns the corresponding base frequency datatype instance
+    """
+    if constellation.upper() == "GPS":
+        return L1
+    elif constellation.upper() == "GAL":
+        return E1
+    return UN

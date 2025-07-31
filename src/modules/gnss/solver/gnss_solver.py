@@ -215,7 +215,7 @@ class GnssSolver:
                               f"{const} are {doppler_types}")
                 if len(doppler_types) == 0:
                     self.log.error(f"No Doppler observations for constellation {const} are available")
-                DOPPLER[const] = doppler_types
+                DOPPLER[const] = doppler_types[:1]
 
         # fill info dict
         self._metadata = {

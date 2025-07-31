@@ -445,6 +445,7 @@ class RangeRateReconstructor(ObservationReconstructor):
         Note that since the pseudorange rate equation is linear with respect to `v_rec`, no linearization is required,
         hence the LS procedure estimates the complete `v_rec` and not a corrective (delta) quantity.
         """
+        # TODO: update docstrings
         sat_clocks = self._system_geometry.sat_clocks
         time_emission = self._system_geometry.get("time_emission", sat)
 
@@ -458,14 +459,15 @@ class RangeRateReconstructor(ObservationReconstructor):
             rel_clock_rate_sat = self._system_geometry.get("drift_rel_correction", sat)
 
         # fetch user velocity and clock drift
-        # v_rec = self._state.velocity + np.cross(constants.EARTH_ANGULAR_RATE, self._state.position)
-        # clock_rate_rec = self._state.clock_bias_rate
+        v_rec = self._state.velocity + np.cross(constants.EARTH_ANGULAR_RATE, self._state.position)
+        clock_rate_rec = self._state.clock_bias_rate
 
         # get corrected line of sight. See Eq. (21.28) of [1]
         los = self.get_unit_line_of_sight(sat)
         los_cor = -1 * los / (1 + np.dot(v_sat, los) / constants.SPEED_OF_LIGHT)
 
-        pr_rate = np.dot(v_sat, los_cor) + constants.SPEED_OF_LIGHT * (-clock_rate_sat - rel_clock_rate_sat)
+        # pr_rate = np.dot(v_sat, los_cor) + constants.SPEED_OF_LIGHT * (-clock_rate_sat - rel_clock_rate_sat)
+        pr_rate = np.dot(v_sat - v_rec, los_cor) + constants.SPEED_OF_LIGHT * (-clock_rate_sat - rel_clock_rate_sat) + clock_rate_rec[sat.sat_system]
 
         if self._write_trace:
             self._trace_handler.write(f"{epoch},{sat},{datatype},{pr_rate},{np.dot(v_sat, los_cor)},"

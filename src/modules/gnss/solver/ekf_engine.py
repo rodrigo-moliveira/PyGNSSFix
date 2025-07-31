@@ -3,6 +3,7 @@ import numpy as np
 
 from src.constants import SPEED_OF_LIGHT
 from src.data_types.gnss import DataType
+from src.data_types.gnss.data_type import get_base_freq
 from src.errors import SolverError
 from src.modules.estimators.EKF import EKF
 from src.modules.gnss.solver import PseudorangeReconstructor, CarrierPhaseReconstructor, RangeRateReconstructor
@@ -296,7 +297,7 @@ class EKF_Engine:
 
         # clock bias (in meters)
         idx_clock = index_map["clock_bias"]
-        Q_d[idx_clock, idx_clock] = self._noise_manager.clock_bias.get_process_noise(time_step) * SPEED_OF_LIGHT**2
+        Q_d[idx_clock, idx_clock] = self._noise_manager.clock_bias.get_process_noise(time_step) * SPEED_OF_LIGHT ** 2
         F[idx_clock, idx_clock] = self._noise_manager.clock_bias.get_stm_entry(time_step)
 
         # tropo
@@ -316,7 +317,7 @@ class EKF_Engine:
         # ISB
         if slave_constellation is not None and "isb" in index_map:
             idx_isb = index_map["isb"]
-            Q_d[idx_isb, idx_isb] = self._noise_manager.isb.get_process_noise(time_step) * SPEED_OF_LIGHT**2
+            Q_d[idx_isb, idx_isb] = self._noise_manager.isb.get_process_noise(time_step) * SPEED_OF_LIGHT ** 2
             F[idx_isb, idx_isb] = self._noise_manager.isb.get_stm_entry(time_step)
 
         if "ambiguity" in index_map:
@@ -333,7 +334,7 @@ class EKF_Engine:
                 for cp_type in cp_types:
                     idx_phase_bias = cp_types[cp_type]
                     Q_d[idx_phase_bias, idx_phase_bias] = self._noise_manager.phase_bias.get_process_noise(time_step) \
-                                                          * SPEED_OF_LIGHT**2
+                                                          * SPEED_OF_LIGHT ** 2
                     F[idx_phase_bias, idx_phase_bias] = self._noise_manager.phase_bias.get_stm_entry(time_step)
 
         if "velocity" in index_map:
@@ -346,7 +347,7 @@ class EKF_Engine:
         if "clock_bias_rate" in index_map:
             for const, idx_clock_rate in index_map["clock_bias_rate"].items():
                 Q_d[idx_clock_rate, idx_clock_rate] = self._noise_manager.clock_drift.get_process_noise(time_step) * \
-                                                      SPEED_OF_LIGHT**2
+                                                      SPEED_OF_LIGHT ** 2
                 F[idx_clock_rate, idx_clock_rate] = self._noise_manager.clock_drift.get_stm_entry(time_step)
 
         return F, Q_d
@@ -379,8 +380,128 @@ class EKF_Engine:
 
         return prefit_residuals, line_sight
 
-    # TODO: build_obs_matrix_doppler
-    def _build_obs_matrix(self, epoch, obs_data, datatypes, state, reconstructor_dict, sat_list) -> \
+    @staticmethod
+    def compute_residual_los_rr(sat, epoch, datatype, obs_data, reconstructor):
+
+        # get observable and compute predicted observable
+        obs = float(obs_data.get_observable(sat, datatype))  # in Hz
+
+        # transform Doppler to pseudorange rate
+        wavelength = SPEED_OF_LIGHT / datatype.freq_value  # in meters
+        obs_range_rate = -wavelength * obs  # in m/s
+
+        predicted_obs = reconstructor.compute(sat, epoch, datatype)
+
+        # prefit residuals (observed minus computed)
+        prefit_residuals = obs_range_rate - predicted_obs
+
+        los = -reconstructor.get_unit_line_of_sight(sat)
+
+        return prefit_residuals, los
+
+    def _build_obs_matrix_rr(self, obs_offset, sat_list, epoch, datatype, obs_data, reconstructor,
+                                y_vec, R, design_mat):
+        index_map = self._state.index_map
+        const = datatype.constellation
+
+        iSat = 0
+        for sat in sat_list:
+            if sat.sat_system != const:
+                continue
+
+            residual, los = self.compute_residual_los_rr(sat, epoch, datatype, obs_data, reconstructor)
+
+            # filling the LS matrices
+            y_vec[obs_offset + iSat] = residual
+
+            # velocity
+            idx_vel = index_map["velocity"]
+            design_mat[obs_offset + iSat][idx_vel:idx_vel + 3] = -los
+
+            # clock
+            idx_clock = index_map["clock_bias_rate"][sat.sat_system]
+            design_mat[obs_offset + iSat, idx_clock] = 1.0
+
+            # Weight matrix -> as 1/(obs_std^2)
+            std = reconstructor.get_obs_std(sat, datatype)
+            obs_data.get_observable(sat, datatype).set_std(std)
+            R[obs_offset + iSat, obs_offset + iSat] = std ** 2
+
+            iSat += 1
+
+        obs_offset += iSat
+        return obs_offset
+
+    def _build_obs_matrix_pr_cp(self, obs_offset, sat_list, epoch, datatype, obs_data, reconstructor,
+                                y_vec, R, design_mat):
+
+        slave_constellation = self._state.get_additional_info("clock_slave")
+        index_map = self._state.index_map
+        const = datatype.constellation
+
+        iSat = 0
+        for sat in sat_list:
+            if sat.sat_system != const:
+                continue
+
+            residual, los = self.compute_residual_los(sat, epoch, datatype, obs_data, reconstructor)
+
+            # filling the LS matrices
+            y_vec[obs_offset + iSat] = residual
+
+            # position
+            idx_pos = index_map["position"]
+            design_mat[obs_offset + iSat][idx_pos:idx_pos + 3] = los
+
+            # clock
+            idx_clock = index_map["clock_bias"]
+            design_mat[obs_offset + iSat, idx_clock] = 1.0
+
+            # tropo
+            if "tropo_wet" in index_map:
+                map_wet = reconstructor._system_geometry.get("tropo_map_wet", sat)
+                idx_tropo = index_map["tropo_wet"]
+                design_mat[obs_offset + iSat, idx_tropo] = map_wet
+
+            # iono
+            if "iono" in index_map and sat in index_map["iono"]:
+                # factor = (datatypes[const][0].freq.freq_value / datatype.freq.freq_value) ** 2
+                factor = (get_base_freq(const).freq_value / datatype.freq.freq_value) ** 2
+                idx_iono = index_map["iono"][sat]
+                if DataType.is_carrier(datatype):
+                    design_mat[obs_offset + iSat, idx_iono] = -1.0 * factor  # iono
+                else:
+                    design_mat[obs_offset + iSat, idx_iono] = 1.0 * factor  # iono
+
+            # ISB
+            if "isb" in index_map and sat.sat_system == slave_constellation:
+                idx_isb = index_map["isb"]
+                design_mat[obs_offset + iSat, idx_isb] = 1.0
+
+            if DataType.is_carrier(datatype):
+                # ambiguity
+                if "ambiguity" in index_map and sat in index_map["ambiguity"]:
+                    if self._state.ambiguity.pivot[sat.sat_system] != sat:
+                        if not self._state.ambiguity[sat][datatype].fixed:
+                            idx_amb = index_map["ambiguity"][sat][datatype]
+                            wavelength = SPEED_OF_LIGHT / datatype.freq.freq_value
+                            design_mat[obs_offset + iSat, idx_amb] = wavelength
+
+                # phase bias
+                if "phase_bias" in index_map and const in index_map["phase_bias"]:
+                    idx_phase_bias = index_map["phase_bias"][const][datatype]
+                    design_mat[obs_offset + iSat, idx_phase_bias] = 1.0
+
+            # Weight matrix -> as 1/(obs_std^2)
+            std = reconstructor.get_obs_std(sat, datatype)
+            obs_data.get_observable(sat, datatype).set_std(std)
+            R[obs_offset + iSat, obs_offset + iSat] = std ** 2
+
+            iSat += 1
+        obs_offset += iSat
+        return obs_offset
+
+    def _build_obs_matrix(self, epoch, obs_data, datatypes, reconstructor_dict, sat_list) -> \
             tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         This method builds the observation covariance matrix R, design matrix H and observation residuals y_res
@@ -388,7 +509,7 @@ class EKF_Engine:
         """
         obs_offset = 0
         index_map = self._state.index_map
-        slave_constellation = self._state.get_additional_info("clock_slave")
+
         n_states = index_map["total_states"]
         n_obs = obs_data.get_number_of_observations(datatypes)
 
@@ -403,68 +524,18 @@ class EKF_Engine:
                     reconstructor = reconstructor_dict["PR"]
                 elif DataType.is_carrier(datatype):
                     reconstructor = reconstructor_dict["CP"]
+                elif DataType.is_doppler(datatype):
+                    reconstructor = reconstructor_dict["RR"]
                 else:
                     raise SolverError(f"Unknown datatype {datatype} at epoch {epoch}.")
 
-                iSat = 0
-                for sat in sat_list:
-                    if sat.sat_system != const:
-                        continue
+                if DataType.is_code(datatype) or DataType.is_carrier(datatype):
+                    obs_offset = self._build_obs_matrix_pr_cp(obs_offset, sat_list, epoch, datatype, obs_data,
+                                                              reconstructor, y_vec, R, design_mat)
+                elif DataType.is_doppler(datatype):
+                    obs_offset = self._build_obs_matrix_rr(obs_offset, sat_list, epoch, datatype, obs_data,
+                                                              reconstructor, y_vec, R, design_mat)
 
-                    residual, los = self.compute_residual_los(sat, epoch, datatype, obs_data, reconstructor)
-
-                    # filling the LS matrices
-                    y_vec[obs_offset + iSat] = residual
-
-                    # position
-                    idx_pos = index_map["position"]
-                    design_mat[obs_offset + iSat][idx_pos:idx_pos + 3] = los
-
-                    # clock
-                    idx_clock = index_map["clock_bias"]
-                    design_mat[obs_offset + iSat, idx_clock] = 1.0
-
-                    # tropo
-                    if "tropo_wet" in index_map:
-                        map_wet = reconstructor._system_geometry.get("tropo_map_wet", sat)
-                        idx_tropo = index_map["tropo_wet"]
-                        design_mat[obs_offset + iSat, idx_tropo] = map_wet
-
-                    # iono
-                    if "iono" in index_map and sat in index_map["iono"]:
-                        factor = (datatypes[const][0].freq.freq_value / datatype.freq.freq_value) ** 2
-                        idx_iono = index_map["iono"][sat]
-                        if DataType.is_carrier(datatype):
-                            design_mat[obs_offset + iSat, idx_iono] = -1.0 * factor  # iono
-                        else:
-                            design_mat[obs_offset + iSat, idx_iono] = 1.0 * factor  # iono
-
-                    # ISB
-                    if "isb" in index_map and sat.sat_system == slave_constellation:
-                        idx_isb = index_map["isb"]
-                        design_mat[obs_offset + iSat, idx_isb] = 1.0
-
-                    if DataType.is_carrier(datatype):
-                        # ambiguity
-                        if "ambiguity" in index_map and sat in index_map["ambiguity"]:
-                            if self._state.ambiguity.pivot[sat.sat_system] != sat:
-                                if not state.ambiguity[sat][datatype].fixed:
-                                    idx_amb = index_map["ambiguity"][sat][datatype]
-                                    wavelength = SPEED_OF_LIGHT / datatype.freq.freq_value
-                                    design_mat[obs_offset + iSat, idx_amb] = wavelength
-
-                        # phase bias
-                        if "phase_bias" in index_map and const in index_map["phase_bias"]:
-                            idx_phase_bias = index_map["phase_bias"][const][datatype]
-                            design_mat[obs_offset + iSat, idx_phase_bias] = 1.0
-
-                    # Weight matrix -> as 1/(obs_std^2)
-                    std = reconstructor.get_obs_std(sat, datatype)
-                    obs_data.get_observable(sat, datatype).set_std(std)
-                    R[obs_offset + iSat, obs_offset + iSat] = std ** 2
-
-                    iSat += 1
-                obs_offset += iSat
         return R, design_mat, y_vec
 
     def _update_state(self, x_out, P_out, sat_list):
@@ -522,7 +593,18 @@ class EKF_Engine:
                     self._state.phase_bias[const][cp_type] = x_out[idx_phase_bias]
                     self._state.cov_phase_bias[const][cp_type] = P_out[idx_phase_bias, idx_phase_bias]
 
-        # TODO: add vel
+        if "velocity" in index_map:
+            idx_vel = index_map["velocity"]
+            # velocity with respect to ECEF frame
+            vel = x_out[idx_vel:idx_vel + 3]
+            self._state.velocity = vel  # in [m/s]
+            self._state.cov_velocity = np.array(P_out[idx_vel:idx_vel + 3, idx_vel:idx_vel + 3])
+
+        if "clock_bias_rate" in index_map:
+            for const, idx_clock_rate in index_map["clock_bias_rate"].items():
+                # receiver clock drift [m/m]
+                self._state.clock_bias_rate[const] = x_out[idx_clock_rate]
+                self._state.cov_clock_bias_rate[const] = float(P_out[idx_clock_rate, idx_clock_rate])
 
         # unpack covariance matrices
         self._state.cov_position = np.array(P_out[idx_pos:idx_pos + 3, idx_pos:idx_pos + 3])
@@ -532,7 +614,6 @@ class EKF_Engine:
 
     def _build_obs_reconstructor(self, system_geometry) -> tuple[dict, dict]:
         """ Builds the reconstructor and datatypes dictionaries for internal processing procedures. """
-        # TODO: add doppler reconstructor
         reconstructor = dict()
         reconstructor["PR"] = PseudorangeReconstructor(system_geometry, self.metadata, self._state,
                                                        self._trace_data)
@@ -545,11 +626,11 @@ class EKF_Engine:
             reconstructor["CP"] = CarrierPhaseReconstructor(system_geometry, self.metadata, self._state,
                                                             self._trace_data)
         else:
-            datatypes = self.pr_datatypes
+            datatypes = self.pr_datatypes.copy()
 
         if self.estimate_vel:
             for const in self.rr_datatypes.keys():
-                datatypes[const] = datatypes[const] + self.rr_datatypes[const]
+                datatypes[const] = datatypes[const] + self.rr_datatypes[const].copy()
             reconstructor["RR"] = RangeRateReconstructor(system_geometry, self.metadata, self._state,
                                                          self._trace_data)
 
@@ -608,7 +689,7 @@ class EKF_Engine:
             F, Q_d = self._build_stm_process_noise(sat_list, time_step)
 
             # build observation covariance matrix, observation Jacobian and observation residuals
-            R, H, residuals_vector = self._build_obs_matrix(epoch, obs_for_epoch, datatypes, self._state,
+            R, H, residuals_vector = self._build_obs_matrix(epoch, obs_for_epoch, datatypes,
                                                             reconstructor, sat_list)
 
             # perform predict step
@@ -688,7 +769,8 @@ class EKF_Engine:
                 elif DataType.is_carrier(datatype):
                     reconstructor = reconstructor_dict["CP"]
                 else:
-                    raise SolverError(f"Unknown datatype {datatype} at epoch {epoch}.")
+                    continue
+                    # raise SolverError(f"Unknown datatype {datatype} at epoch {epoch}.")
 
                 iSat = 0
                 for sat in sat_list:
