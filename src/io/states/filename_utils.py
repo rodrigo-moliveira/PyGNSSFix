@@ -9,6 +9,8 @@ DOP_ECEF = "DOP_ECEF.txt"
 DOP_LOCAL = "DOP_ENU.txt"
 POS_PRE_RESIDUALS = "pos_prefit_residuals.txt"
 POS_POST_RESIDUALS = "pos_postfit_residuals.txt"
+PRE_RESIDUALS = "prefit_residuals.txt"
+POST_RESIDUALS = "postfit_residuals.txt"
 VEL_PRE_RESIDUALS = "vel_prefit_residuals.txt"
 VEL_POST_RESIDUALS = "vel_postfit_residuals.txt"
 POSITION = "position.txt"
@@ -29,14 +31,16 @@ OUTPUT_FILENAME_MAP = {
     "dop_local": DOP_LOCAL,
     "pos_prefit_residuals": POS_PRE_RESIDUALS,
     "pos_postfit_residuals": POS_POST_RESIDUALS,
-    "pr_prefit_residuals": POS_PRE_RESIDUALS,
-    "pr_postfit_residuals": POS_POST_RESIDUALS,
-    "cp_prefit_residuals": POS_PRE_RESIDUALS,
-    "cp_postfit_residuals": POS_POST_RESIDUALS,
+    "prefit_residuals": PRE_RESIDUALS,
+    "postfit_residuals": POST_RESIDUALS,
+    # "pr_prefit_residuals": POS_PRE_RESIDUALS,
+    # "pr_postfit_residuals": POS_POST_RESIDUALS,
+    # "cp_prefit_residuals": POS_PRE_RESIDUALS,
+    # "cp_postfit_residuals": POS_POST_RESIDUALS,
     "vel_prefit_residuals": VEL_PRE_RESIDUALS,
     "vel_postfit_residuals": VEL_POST_RESIDUALS,
-    "pr_rate_prefit_residuals": VEL_PRE_RESIDUALS,
-    "pr_rate_postfit_residuals": VEL_POST_RESIDUALS,
+    # "pr_rate_prefit_residuals": VEL_PRE_RESIDUALS,
+    # "pr_rate_postfit_residuals": VEL_POST_RESIDUALS,
     "position": POSITION,
     "clock_bias": CLOCK,
     "time": TIME,

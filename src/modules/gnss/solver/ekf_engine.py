@@ -272,7 +272,16 @@ class EKF_Engine:
                     idx_phase_bias = cp_types[cp_type]
                     P_out[idx_phase_bias, idx_phase_bias] = P_in[idx_phase_bias, idx_phase_bias] * relative_re_param
 
-        # TODO: add vel
+        if "velocity" in index_map:
+            idx_vel = index_map["velocity"]
+            relative_re_param = self._noise_manager.velocity.relative_re_param
+            for i in range(3):
+                P_out[idx_vel + i, idx_vel + i] = P_in[idx_vel + i, idx_vel + i] * relative_re_param
+
+        if "clock_bias_rate" in index_map:
+            relative_re_param = self._noise_manager.clock_drift.relative_re_param
+            for const, idx_clock_rate in index_map["clock_bias_rate"].items():
+                P_out[idx_clock_rate, idx_clock_rate] = P_in[idx_clock_rate, idx_clock_rate] * relative_re_param
 
         return P_out
 
@@ -757,6 +766,19 @@ class EKF_Engine:
         return res_dict
 
     def get_postfit_residuals(self, epoch, obs_data, datatypes, reconstructor_dict, sat_list):
+        """
+        Compute the postfit residuals after the estimated state has been updated for this epoch
+
+        Args:
+            epoch (src.data_types.date.Epoch): current epoch of estimation
+            sat_list (list): List with available satellites for this epoch
+            datatypes(dict): dict with constellations as keys and available datatypes as values
+            reconstructor_dict(dict): internal dict with the objects for the observation re-constructors
+            obs_data (src.data_mng.gnss.observation_data.EpochData) : instance of `EpochData` (GNSS observable
+                database for the current epoch).
+        Returns:
+            dict: the postfit residuals dict is returned.
+        """
         obs_offset = 0
         n_obs = obs_data.get_number_of_observations(datatypes)
         postfit_residuals = np.zeros(n_obs)
@@ -768,16 +790,20 @@ class EKF_Engine:
                     reconstructor = reconstructor_dict["PR"]
                 elif DataType.is_carrier(datatype):
                     reconstructor = reconstructor_dict["CP"]
+                elif DataType.is_doppler(datatype):
+                    reconstructor = reconstructor_dict["RR"]
                 else:
-                    continue
-                    # raise SolverError(f"Unknown datatype {datatype} at epoch {epoch}.")
+                    raise SolverError(f"Unknown datatype {datatype} at epoch {epoch}.")
 
                 iSat = 0
                 for sat in sat_list:
                     if sat.sat_system != const:
                         continue
 
-                    r, _ = self.compute_residual_los(sat, epoch, datatype, obs_data, reconstructor)
+                    if DataType.is_code(datatype) or DataType.is_carrier(datatype):
+                        r, _ = self.compute_residual_los(sat, epoch, datatype, obs_data, reconstructor)
+                    else:
+                        r, _ = self.compute_residual_los_rr(sat, epoch, datatype, obs_data, reconstructor)
 
                     # filling the LS matrices
                     postfit_residuals[obs_offset + iSat] = r

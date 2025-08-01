@@ -540,8 +540,12 @@ class GnssStateSpace(Container):
             exportable_lst.append("dop_local")
         if "pos_prefit_residuals" in self._info:
             exportable_lst.append("pos_prefit_residuals")
+        if "prefit_residuals" in self._info:
+            exportable_lst.append("prefit_residuals")
         if "pos_postfit_residuals" in self._info:
             exportable_lst.append("pos_postfit_residuals")
+        if "postfit_residuals" in self._info:
+            exportable_lst.append("postfit_residuals")
         if "vel_prefit_residuals" in self._info:
             exportable_lst.append("vel_prefit_residuals")
         if "vel_postfit_residuals" in self._info:

@@ -511,7 +511,7 @@ class GnssSolver:
 
     def _solve_ekf(self) -> None:
         """ Execute EKF Solver """
-        trace_data = (self.trace_dir, 1) if self.trace_dir is not None else None
+        trace_data = (self.trace_dir, "EKF_") if self.trace_dir is not None else None
 
         # initialize KF with one epoch of LSQ
         self._solve_lsq(init_KF=True)
@@ -559,8 +559,8 @@ class GnssSolver:
 
             state = engine.state.clone()
             state.add_additional_info("geometry", system_geometry)
-            state.add_additional_info("pos_prefit_residuals", prefit_residuals)
-            state.add_additional_info("pos_postfit_residuals", postfit_residuals)
+            state.add_additional_info("prefit_residuals", prefit_residuals)
+            state.add_additional_info("postfit_residuals", postfit_residuals)
             state.add_additional_info("rms", rms)
             state.add_additional_info("dop_matrix", dop_matrix)
 
