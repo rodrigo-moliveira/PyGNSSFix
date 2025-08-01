@@ -150,14 +150,16 @@ class GnssRunStorageManager(Container):
                                                 description="Pseudorange Rate Prefit Residuals",
                                                 title="Pseudorange Rate Prefit Residuals",
                                                 time_cols=(0, 1),
-                                                data_cols=(2, 3, 4, 5))
+                                                data_cols=(2, 3, 4, 5),
+                                                func_filter=lambda df: df[df["data_type"].str.contains("D")])
 
         # pr rate postfit residuals
         self.pr_rate_postfit_residuals = CSVData(name="pr_rate_postfit_residuals",
                                                  description="Pseudorange Rate Postfit Residuals",
                                                  title="Pseudorange Rate Postfit Residuals",
                                                  time_cols=(0, 1),
-                                                 data_cols=(2, 3, 4, 5))
+                                                 data_cols=(2, 3, 4, 5),
+                                                 func_filter=lambda df: df[df["data_type"].str.contains("D")])
 
         # satellite azimuth elevation
         self.satellite_azel = CSVData(name="satellite_azel",

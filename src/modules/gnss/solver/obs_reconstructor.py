@@ -445,7 +445,7 @@ class RangeRateReconstructor(ObservationReconstructor):
         Note that since the pseudorange rate equation is linear with respect to `v_rec`, no linearization is required,
         hence the LS procedure estimates the complete `v_rec` and not a corrective (delta) quantity.
         """
-        # TODO: update docstrings
+        # TODO: update docstrings. We now implement the full observation
         sat_clocks = self._system_geometry.sat_clocks
         time_emission = self._system_geometry.get("time_emission", sat)
 
@@ -467,7 +467,8 @@ class RangeRateReconstructor(ObservationReconstructor):
         los_cor = -1 * los / (1 + np.dot(v_sat, los) / constants.SPEED_OF_LIGHT)
 
         # pr_rate = np.dot(v_sat, los_cor) + constants.SPEED_OF_LIGHT * (-clock_rate_sat - rel_clock_rate_sat)
-        pr_rate = np.dot(v_sat - v_rec, los_cor) + constants.SPEED_OF_LIGHT * (-clock_rate_sat - rel_clock_rate_sat) + clock_rate_rec[sat.sat_system]
+        pr_rate = np.dot(v_sat - v_rec, los_cor) + constants.SPEED_OF_LIGHT * (-clock_rate_sat - rel_clock_rate_sat) \
+                  + clock_rate_rec[sat.sat_system]
 
         if self._write_trace:
             self._trace_handler.write(f"{epoch},{sat},{datatype},{pr_rate},{np.dot(v_sat, los_cor)},"

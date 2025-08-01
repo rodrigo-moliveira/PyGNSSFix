@@ -520,6 +520,13 @@ class GnssStateSpace(Container):
             return self._info[arg]
         return None
 
+    def append_residuals(self, name, residuals):
+        data = self.get_additional_info(name)
+        for const, sat_dict in data.items():
+            for sat in sat_dict.keys():
+                for new_type, new_res in residuals[const][sat].items():
+                    sat_dict[sat][new_type] = new_res
+
     def get_exportable_lst(self):
         """
         Returns:
@@ -538,16 +545,16 @@ class GnssStateSpace(Container):
             exportable_lst.append("dop_ecef")
         if "dop_local" in self._info:
             exportable_lst.append("dop_local")
-        if "pos_prefit_residuals" in self._info:
-            exportable_lst.append("pos_prefit_residuals")
+        # if "pos_prefit_residuals" in self._info:
+        #    exportable_lst.append("pos_prefit_residuals")
         if "prefit_residuals" in self._info:
             exportable_lst.append("prefit_residuals")
-        if "pos_postfit_residuals" in self._info:
-            exportable_lst.append("pos_postfit_residuals")
+        # if "pos_postfit_residuals" in self._info:
+        #    exportable_lst.append("pos_postfit_residuals")
         if "postfit_residuals" in self._info:
             exportable_lst.append("postfit_residuals")
-        if "vel_prefit_residuals" in self._info:
-            exportable_lst.append("vel_prefit_residuals")
-        if "vel_postfit_residuals" in self._info:
-            exportable_lst.append("vel_postfit_residuals")
+        # if "vel_prefit_residuals" in self._info:
+        #    exportable_lst.append("vel_prefit_residuals")
+        # if "vel_postfit_residuals" in self._info:
+        #    exportable_lst.append("vel_postfit_residuals")
         return exportable_lst
