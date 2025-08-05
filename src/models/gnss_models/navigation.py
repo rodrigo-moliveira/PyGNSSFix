@@ -494,24 +494,30 @@ def compute_nav_sat_eph(nav_message, epoch):
 
     # true anomaly
     v = E2v(eccentricity, E)
-    v_dot = sin(E) * E_dot * (1.0 + eccentricity * cos(v)) / (sin(v) * (1.0 - eccentricity * cos(E)))
+    # Note: this is similar to the actual equation in GPS ICD:
+    # v_dot = E_dot * sqrt(1.0 - eccentricity**2) / (1.0 - eccentricity * cos(E))
 
     # argument of latitude
-    u = v + omega
+    # u = v + omega
+    phi = v + omega
 
     # corrections
-    u_correction = cuc * cos(2 * u) + cus * sin(2 * u)
-    radius_correction = crc * cos(2 * u) + crs * sin(2 * u)
-    inclination_correction = cic * cos(2 * u) + cis * sin(2 * u)
+    u_correction = cuc * cos(2 * phi) + cus * sin(2 * phi)
+    radius_correction = crc * cos(2 * phi) + crs * sin(2 * phi)
+    inclination_correction = cic * cos(2 * phi) + cis * sin(2 * phi)
 
     # apply corrections
-    u = u + u_correction
+    u = phi + u_correction
     radius = A * (1 - eccentricity * cos(E)) + radius_correction
     i = i0 + inclination_correction + iDot * dt
-    u_k_dot = v_dot + 2.0 * (cus * cos(2.0 * u) - cuc * sin(2.0 * u)) * v_dot
-    r_k_dot = A * eccentricity * sin(E) * n / (1.0 - eccentricity * cos(E)) + 2.0 * (crs * cos(2.0 * u) - crc *
-                                                                                     sin(2.0 * u)) * v_dot
-    i_k_dot = iDot + (cis * cos(2.0 * u) - cic * sin(2.0 * u)) * 2.0 * v_dot
+
+    # derivative corrections
+    v_dot = sin(E) * E_dot * (1.0 + eccentricity * cos(v)) / (sin(v) * (1.0 - eccentricity * cos(E)))
+    u_k_dot = v_dot + 2.0 * (cus * cos(2.0 * phi) - cuc * sin(2.0 * phi)) * v_dot
+    # r_k_dot = A * eccentricity * sin(E) * n / (1.0 - eccentricity * cos(E)) + 2.0 * (crs * cos(2.0 * u) - crc *
+    #                                                                                 sin(2.0 * u)) * v_dot
+    r_k_dot = eccentricity * A * E_dot * sin(E) + 2.0 * (crs * cos(2.0 * phi) - crc * sin(2.0 * phi)) * v_dot
+    i_k_dot = iDot + (cis * cos(2.0 * phi) - cic * sin(2.0 * phi)) * 2.0 * v_dot
 
     # SV position in orbital plane
     x_orbital = radius * cos(u)
