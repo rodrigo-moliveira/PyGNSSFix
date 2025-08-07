@@ -18,6 +18,7 @@ ISB = "isb.txt"
 TROPO = "tropo.txt"
 CLOCK_BIAS_RATE = "clock_bias_rate.txt"
 OBSERVATIONS = "observations.txt"
+RAW_OBSERVATIONS = "raw_observations.txt"
 MW_OBSERVATIONS = "melbourne_wubbena_obs.txt"
 GF_OBSERVATIONS = "geometry_free_obs.txt"
 
@@ -42,6 +43,7 @@ OUTPUT_FILENAME_MAP = {
     "velocity": VELOCITY,
     "clock_bias_rate": CLOCK_BIAS_RATE,
     "obs": OBSERVATIONS,
+    "raw_obs": RAW_OBSERVATIONS,
     "mw_obs": MW_OBSERVATIONS,
     "gf_obs": GF_OBSERVATIONS,
     "ambiguity": AMBIGUITY,

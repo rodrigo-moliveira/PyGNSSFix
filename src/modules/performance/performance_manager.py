@@ -157,7 +157,7 @@ class PerformanceManager:
             rms_vel_ecef = error.compute_rms_error(self.vel_error["error_ecef"], conv_index)
             rms_vel_enu = error.compute_rms_error(self.vel_error["error_enu"], conv_index)
         else:
-            rms_vel_ecef = rms_vel_enu = {'x': 0, 'y': 0, 'z': 0}
+            rms_vel_ecef = rms_vel_enu = {'x': 0, 'y': 0, 'z': 0, '2D': 0, '3D': 0}
 
         # save computed errors to files
         self._write_outputs(post_proc_dir, rms_pos_ecef, rms_pos_enu, rms_vel_ecef, rms_vel_enu, conv_epoch)
@@ -293,6 +293,7 @@ class PerformanceManager:
         if config_dict.get("performance_evaluation", "plot_configs", "plot_observations"):
             self.log.info("Plotting observations and additional information (satellite availability and skyplot...")
             self._plot_obs(plot_dir, "obs")
+            self._plot_obs(plot_dir, "raw_obs")
             self._plot_obs(plot_dir, "mw_obs")
             self._plot_obs(plot_dir, "gf_obs")
             self._plot_sat_availability(plot_dir)
@@ -356,20 +357,26 @@ class PerformanceManager:
             week_array = time.data.iloc[:, 0].values
             time_array = [Epoch.from_gnss_time(week, sow, scale="GPST") for (sow, week) in zip(sow_array, week_array)]
 
-            ax1 = plot_gnss.plot_estimation_errors(time_array, self.vel_error["error_ecef"], self.vel_error["cov_ecef"],
-                                                   "Velocity Estimation Error in ECEF", "Velocity Error [m/s]", "X",
-                                                   "Y", "Z")
-            ax2 = plot_gnss.plot_estimation_errors(time_array, self.vel_error["error_enu"], self.vel_error["cov_enu"],
-                                                   "Velocity Estimation Error in ENU", "Velocity Error [m/s]", "East",
-                                                   "North", "Up")
-            ax3 = plot_gnss.plot_estimation_errors(time_array, self.pos_error["error_ecef"], self.pos_error["cov_ecef"],
-                                                   "Position Estimation Error in ECEF", "Position Error [m]", "X", "Y",
-                                                   "Z")
-            ax4 = plot_gnss.plot_estimation_errors(time_array, self.pos_error["error_enu"], self.pos_error["cov_enu"],
-                                                   "Position Estimation Error in ENU", "Position Error [m]", "East",
-                                                   "North", "Up")
+            ax1 = ax2 = ax3 = ax4 = None
+            if self.vel_error["error_ecef"] is not None:
+                ax1 = plot_gnss.plot_estimation_errors(time_array, self.vel_error["error_ecef"], self.vel_error["cov_ecef"],
+                                                       "Velocity Estimation Error in ECEF", "Velocity Error [m/s]", "X",
+                                                       "Y", "Z")
+            if self.vel_error["error_enu"] is not None:
+                ax2 = plot_gnss.plot_estimation_errors(time_array, self.vel_error["error_enu"], self.vel_error["cov_enu"],
+                                                       "Velocity Estimation Error in ENU", "Velocity Error [m/s]", "East",
+                                                       "North", "Up")
+            if self.pos_error["error_ecef"] is not None:
+                ax3 = plot_gnss.plot_estimation_errors(time_array, self.pos_error["error_ecef"], self.pos_error["cov_ecef"],
+                                                       "Position Estimation Error in ECEF", "Position Error [m]", "X", "Y",
+                                                       "Z")
+            if self.pos_error["error_enu"] is not None:
+                ax4 = plot_gnss.plot_estimation_errors(time_array, self.pos_error["error_enu"], self.pos_error["cov_enu"],
+                                                       "Position Estimation Error in ENU", "Position Error [m]", "East",
+                                                       "North", "Up")
             for ax in [ax1, ax2, ax3, ax4]:
-                self._save_figure(plot_dir, ax)
+                if ax is not None:
+                    self._save_figure(plot_dir, ax)
         except Exception as e:
             self.log.error(f"Unexpected error when performing plot_errors function: {e}")
 
@@ -670,5 +677,8 @@ class PerformanceManager:
         if config_dict.get("performance_evaluation", "plot_configs", "save_plots") and ax is not None:
             plot_name = f"{replace_whitespace_with_underscore(ax.get_title())}.png"
             plot_path = plot_dir / plot_name
-            self.log.info(f"Saving figure {plot_path}")
-            ax.figure.savefig(plot_path, format='png')
+            if not os.path.isfile(plot_path):
+                self.log.info(f"Saving figure {plot_path}")
+                ax.figure.savefig(plot_path, format='png')
+            else:
+                self.log.warning(f"File {plot_path} already exists.")

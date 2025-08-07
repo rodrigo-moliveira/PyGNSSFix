@@ -529,10 +529,11 @@ class GnssSolver:
         for epoch in epochs:
             self.log.info(f"processing epoch {epoch}...")
             # fetch observation data for this epoch
-            obs_for_epoch = self.obs_data_for_pos.get_epoch_data(epoch)
+            pr_cp_obs_for_epoch = self.obs_data_for_pos.get_epoch_data(epoch)
+            rr_obs_for_epoch = self.obs_data_for_vel.get_epoch_data(epoch)
 
             # build system geometry for this epoch
-            system_geometry = SystemGeometry(obs_for_epoch, self.sat_clocks, self.sat_orbits, self.phase_center,
+            system_geometry = SystemGeometry(pr_cp_obs_for_epoch, self.sat_clocks, self.sat_orbits, self.phase_center,
                                              self.sat_bias)
 
             # compute geometry-related data for each satellite link
@@ -547,7 +548,7 @@ class GnssSolver:
             # call EKF solver for this epoch
             try:
                 prefit_residuals, postfit_residuals, dop_matrix, rms = \
-                    engine.estimate(epoch, system_geometry, obs_for_epoch)
+                    engine.estimate(epoch, system_geometry, pr_cp_obs_for_epoch, rr_obs_for_epoch)
             except SolverError as e:
                 self.log.warning(f"Extended Kalman Filter failed for {str(epoch)}. Reason: {e}. "
                                  f"No solution computed for this epoch.")

@@ -587,8 +587,8 @@ class EKF_Engine:
         obs_offset += iSat
         return obs_offset
 
-    def _build_obs_matrix(self, epoch, obs_data, datatypes, reconstructor_dict, sat_list) -> \
-            tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _build_obs_matrix(self, epoch, pr_cp_obs_data, rr_obs_data, datatypes, reconstructor_dict,
+                          sat_list) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         This method builds the observation covariance matrix R, design matrix H and observation residuals y_res
         to be used in the update step of the Kalman Filter
@@ -597,7 +597,9 @@ class EKF_Engine:
         index_map = self._state.index_map
 
         n_states = index_map["total_states"]
-        n_obs = obs_data.get_number_of_observations(datatypes)
+        n_obs_pr_cp = pr_cp_obs_data.get_number_of_pr_cp_observations(datatypes)
+        n_obs_rr = rr_obs_data.get_number_of_doppler_observations(datatypes)
+        n_obs = n_obs_pr_cp + n_obs_rr
 
         y_vec = np.zeros(n_obs)
         design_mat = np.zeros((n_obs, n_states))
@@ -616,10 +618,10 @@ class EKF_Engine:
                     raise SolverError(f"Unknown datatype {datatype} at epoch {epoch}.")
 
                 if DataType.is_code(datatype) or DataType.is_carrier(datatype):
-                    obs_offset = self._build_obs_matrix_pr_cp(obs_offset, sat_list, epoch, datatype, obs_data,
+                    obs_offset = self._build_obs_matrix_pr_cp(obs_offset, sat_list, epoch, datatype, pr_cp_obs_data,
                                                               reconstructor, y_vec, R, design_mat)
                 elif DataType.is_doppler(datatype):
-                    obs_offset = self._build_obs_matrix_rr(obs_offset, sat_list, epoch, datatype, obs_data,
+                    obs_offset = self._build_obs_matrix_rr(obs_offset, sat_list, epoch, datatype, rr_obs_data,
                                                               reconstructor, y_vec, R, design_mat)
 
         return R, design_mat, y_vec
@@ -742,7 +744,7 @@ class EKF_Engine:
                 P_in = self._relax_cov_pivot_change(P_in)
         return x_in, P_in
 
-    def estimate(self, epoch, system_geometry, obs_for_epoch):
+    def estimate(self, epoch, system_geometry, pr_cp_obs_for_epoch, rr_obs_for_epoch):
         """
         Main function of the class. Performs the estimation cycle (predict + update steps) for the provided epoch.
 
@@ -750,8 +752,10 @@ class EKF_Engine:
             epoch (src.data_types.date.Epoch): current epoch of estimation
             system_geometry (src.data_mng.gnss.geometry.SystemGeometry): instance of `SystemGeometry` to be used in the
                 reconstruction models, geometry data for the current estimation state.
-            obs_for_epoch (src.data_mng.gnss.observation_data.EpochData) : instance of `EpochData` (GNSS observable
-                database for the current epoch).
+            pr_cp_obs_for_epoch (src.data_mng.gnss.observation_data.EpochData) : instance of `EpochData` (GNSS
+                observable database for the current epoch containing Pseudorange and Carrier phase measurements).
+            rr_obs_for_epoch (src.data_mng.gnss.observation_data.EpochData) : instance of `EpochData` (GNSS
+                observable database for the current epoch containing Range Rate measurements).
 
         Returns:
             tuple[dict, dict, numpy.ndarray, float]:
@@ -775,7 +779,7 @@ class EKF_Engine:
             F, Q_d = self._build_stm_process_noise(sat_list, time_step)
 
             # build observation covariance matrix, observation Jacobian and observation residuals
-            R, H, residuals_vector = self._build_obs_matrix(epoch, obs_for_epoch, datatypes,
+            R, H, residuals_vector = self._build_obs_matrix(epoch, pr_cp_obs_for_epoch, rr_obs_for_epoch, datatypes,
                                                             reconstructor, sat_list)
 
             # perform predict step
@@ -794,7 +798,8 @@ class EKF_Engine:
             self._prev_sat_list = sat_list
 
             # build the postfit residuals vector
-            post_fit = self.get_postfit_residuals(epoch, obs_for_epoch, datatypes, reconstructor, sat_list)
+            post_fit = self.get_postfit_residuals(epoch, pr_cp_obs_for_epoch, rr_obs_for_epoch, datatypes,
+                                                  reconstructor, sat_list)
             norm = np.linalg.norm(post_fit)
             R_inv = np.diag(1.0 / np.diag(R))
             dop_matrix = np.linalg.inv(H.T @ R_inv @ H)
@@ -842,7 +847,8 @@ class EKF_Engine:
                     iSat += 1
         return res_dict
 
-    def get_postfit_residuals(self, epoch, obs_data, datatypes, reconstructor_dict, sat_list):
+    def get_postfit_residuals(self, epoch, pr_cp_obs_data, rr_obs_data,
+                              datatypes, reconstructor_dict, sat_list):
         """
         Compute the postfit residuals after the estimated state has been updated for this epoch
 
@@ -851,13 +857,18 @@ class EKF_Engine:
             sat_list (list): List with available satellites for this epoch
             datatypes(dict): dict with constellations as keys and available datatypes as values
             reconstructor_dict(dict): internal dict with the objects for the observation re-constructors
-            obs_data (src.data_mng.gnss.observation_data.EpochData) : instance of `EpochData` (GNSS observable
-                database for the current epoch).
+            pr_cp_obs_data (src.data_mng.gnss.observation_data.EpochData) : instance of `EpochData` (GNSS observable
+                database for the current epoch containing PR and CP measurements).
+            rr_obs_data (src.data_mng.gnss.observation_data.EpochData) : instance of `EpochData` (GNSS observable
+                database for the current epoch containing Doppler measurements).
         Returns:
             dict: the postfit residuals dict is returned.
         """
         obs_offset = 0
-        n_obs = obs_data.get_number_of_observations(datatypes)
+        n_obs_pr_cp = pr_cp_obs_data.get_number_of_pr_cp_observations(datatypes)
+        n_obs_rr = rr_obs_data.get_number_of_doppler_observations(datatypes)
+        n_obs = n_obs_pr_cp + n_obs_rr
+
         postfit_residuals = np.zeros(n_obs)
 
         for const in datatypes.keys():
@@ -878,9 +889,9 @@ class EKF_Engine:
                         continue
 
                     if DataType.is_code(datatype) or DataType.is_carrier(datatype):
-                        r, _ = self.compute_residual_los(sat, epoch, datatype, obs_data, reconstructor)
+                        r, _ = self.compute_residual_los(sat, epoch, datatype, pr_cp_obs_data, reconstructor)
                     else:
-                        r, _ = self.compute_residual_los_rr(sat, epoch, datatype, obs_data, reconstructor)
+                        r, _ = self.compute_residual_los_rr(sat, epoch, datatype, rr_obs_data, reconstructor)
 
                     # filling the LS matrices
                     postfit_residuals[obs_offset + iSat] = r

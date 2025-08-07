@@ -308,6 +308,14 @@ class GnssDataManager(Container):
         file_list[ext].write(f"{obs_data.to_csv_file()}")
         log.info(f"creating output file {filename}")
 
+        # save raw observation data
+        obs_data = self.get_raw_obs_data()
+        ext = 'raw_obs'
+        filename = f"{directory}\\{OUTPUT_FILENAME_MAP[ext]}"
+        file_list[ext] = open(filename, "w")
+        file_list[ext].write(f"{obs_data.to_csv_file()}")
+        log.info(f"creating output file {filename}")
+
         # save melbourne-wubbena data
         if not self.melbourne_obs_data.is_empty():
             ext = 'mw_obs'

@@ -5,7 +5,7 @@ from datetime import timedelta
 import numpy as np
 
 from src.constants import SPEED_OF_LIGHT
-from src.io.config import EnumTransmissionTime, config_dict
+from src.io.config import EnumTransmissionTime, config_dict, EnumAlgorithmPNT
 from src.models.frames import enu2azel, ecef2enu, cartesian2geodetic, dcm_e_i
 from src.data_mng import Container
 from src.common_log import MODEL_LOG, get_logger
@@ -131,32 +131,39 @@ class SatelliteGeometry(Container):
         nadir_sat = None
         azimuth_sat = None
         if config_dict.get("inputs", "cspice_kernels", "enable"):
-            try:
-                # GNSS Attitude: rotation matrix from satellite body-fixed frame to ECEF frame at RX time
-                _R = dcm_e_i(-transit)
-                sun_pos_tx = compute_sun_pos(time_emission)
-                dcm_tx = gnss_attitude.gnss_attitude(r_sat_tx, sun_pos_tx)
-                dcm_b_e = _R @ dcm_tx
-
-                # compute satellite nadir and azimuth angles (in the satellite body frame)
-                los_body = dcm_b_e.T @ los  # los in satellite body-fixed frame
-                azimuth_sat = np.arctan2(los_body[0], los_body[1])
-                if azimuth_sat < 0:
-                    azimuth_sat += 2 * np.pi  # Ensure range [0, 2pi]
-                e_z = -p_sat / np.linalg.norm(p_sat)
-                nadir_sat = np.arccos(np.dot(los, e_z) / np.linalg.norm(los))
-                # NOTE: The azimuth angle of the receiver as seen from the satellite is the angle between the
-                # projected LOS vector in the XY-plane and the +Y-axis, measured clockwise toward +X when looking in
-                # the direction of -Z (toward deep space).
-            except Exception as e:
-                if sat not in _warning_cache:
+            pvt_alg = config_dict.get("gnss_alg")
+            if pvt_alg == EnumAlgorithmPNT.SPS:
+                if "sps" not in _warning_cache:
                     log = get_logger(MODEL_LOG)
-                    log.warning(f"Failed to compute satellite attitude for sat {sat} due to: {e}")
-                    _warning_cache.add(sat)
+                    log.warning(f"Skipping GNSS Attitude computation in SPS Mode.")
+                    _warning_cache.add("sps")
+            else:
+                try:
+                    # GNSS Attitude: rotation matrix from satellite body-fixed frame to ECEF frame at RX time
+                    _R = dcm_e_i(-transit)
+                    sun_pos_tx = compute_sun_pos(time_emission)
+                    dcm_tx = gnss_attitude.gnss_attitude(r_sat_tx, sun_pos_tx)
+                    dcm_b_e = _R @ dcm_tx
+
+                    # compute satellite nadir and azimuth angles (in the satellite body frame)
+                    los_body = dcm_b_e.T @ los  # los in satellite body-fixed frame
+                    azimuth_sat = np.arctan2(los_body[0], los_body[1])
+                    if azimuth_sat < 0:
+                        azimuth_sat += 2 * np.pi  # Ensure range [0, 2pi]
+                    e_z = -p_sat / np.linalg.norm(p_sat)
+                    nadir_sat = np.arccos(np.dot(los, e_z) / np.linalg.norm(los))
+                    # NOTE: The azimuth angle of the receiver as seen from the satellite is the angle between the
+                    # projected LOS vector in the XY-plane and the +Y-axis, measured clockwise toward +X when looking in
+                    # the direction of -Z (toward deep space).
+                except Exception as e:
+                    if sat not in _warning_cache:
+                        log = get_logger(MODEL_LOG)
+                        log.warning(f"Failed to compute satellite attitude for sat {sat} due to: {e}")
+                        _warning_cache.add(sat)
         else:
             if sat not in _warning_cache:
                 log = get_logger(MODEL_LOG)
-                log.warning(f"Not computing satellite attitude for sat {sat} because CSpice is disabled.")
+                log.info(f"Not computing satellite attitude for sat {sat} because CSpice is disabled.")
                 _warning_cache.add(sat)
 
         # save results in container
