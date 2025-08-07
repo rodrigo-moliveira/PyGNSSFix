@@ -243,18 +243,21 @@
 
       "noise_model":
       {
+         "PV_Model_Enabled": true,
+         "Clock_Model_Enabled": true,
+
          "comment": "available types are white_noise, random_walk or gauss_markov",
          "position":
          {
             "type": "random_walk",
             "white_noise_random_walk": {
                "comment": "Configurations for White Noise and Random Walk. Process noise units (continuous-time) are in [m/sqrt(s)]",
-               "process_noise_std": [0.001, 0.001, 0.001]
+               "process_noise_std": 0.000
             },
             "gauss_markov":
             {
                "comment": "Configurations for Gauss Markov. Process noise units are in [m]. Correlation time in [s].",
-               "process_noise_std": [0.001, 0.001, 0.001],
+               "process_noise_std": 0.001,
                "correlation_time": 1000
             },
             "relative_re-parameterization": 100
@@ -264,12 +267,12 @@
             "type": "random_walk",
             "white_noise_random_walk": {
                "comment": "Configurations for White Noise and Random Walk. Process noise units (continuous-time) are in [m/s/sqrt(s)]",
-               "process_noise_std": [0.001, 0.001, 0.001]
+               "process_noise_std": 0.001
             },
             "gauss_markov":
             {
                "comment": "Configurations for Gauss Markov. Process noise units are in [m/s]. Correlation time in [s].",
-               "process_noise_std": [0.001, 0.001, 0.001],
+               "process_noise_std": 0.001,
                "correlation_time": 1000
             },
             "relative_re-parameterization": 100

@@ -685,6 +685,12 @@
           "type": "object",
           "description": "Defines the process noise models for various states",
           "properties": {
+            "PV_Model_Enabled":{
+              "type": "boolean"
+            },
+            "Clock_Model_Enabled": {
+              "type": "boolean"
+            },
             "position": { "$ref": "#/definitions/state_noise_model" },
             "velocity": { "$ref": "#/definitions/state_noise_model" },
             "clock_bias": { "$ref": "#/definitions/state_noise_model" },
@@ -694,7 +700,8 @@
             "tropo": { "$ref": "#/definitions/state_noise_model" },
             "ambiguity": { "$ref": "#/definitions/state_noise_model" },
             "phase_bias": { "$ref": "#/definitions/state_noise_model" }
-          }
+          },
+          "required": ["PV_Model_Enabled", "Clock_Model_Enabled", "position", "velocity", "clock_bias", "clock_drift", "isb", "iono", "tropo", "ambiguity", "phase_bias"]
         }
       },
       "required": ["trace_files", "algorithm", "a_priori_constrain", "feedforward_solution", "n_iterations", "stop_criteria", "transmission_time_alg","relativistic_corrections","elevation_filter","ambiguity_resolution",

@@ -158,15 +158,20 @@ The process noise covariance matrix `Q` models the stochastic behavior of clock 
 
     S_f: Power Spectral Density (PSD) of the clock bias noise (units: m²/s)
 
-    S_s: PSD of the clock drift noise (units: m²/s³)
+    S_g: PSD of the clock drift noise (units: m²/s³)
 
 Using these, the discrete-time covariance matrix for the state becomes:
 ```
 Q_clock = [
-    [ S_f·Δt + S_s·Δt^3/3 ,   S_s·Δt^2/2 ],
-    [ S_s·Δt^2/2          ,   S_s·Δt     ]
+    [ S_f·Δt + S_g·Δt^3/3 ,   S_g·Δt^2/2 ],
+    [ S_g·Δt^2/2          ,   S_g·Δt     ]
 ]
 ```
+
+Values of S_f and S_g (from Allan Variance parameters):
+
+![img.png](img.png)
+
 
 This naturally leads to correlated evolution between clock bias and drift.
 
@@ -175,7 +180,7 @@ This naturally leads to correlated evolution between clock bias and drift.
 
 ### Key Observations
 
-* The clock bias uncertainty grows due to both its own noise (`S_f`) and the integration of clock drift noise (`S_s`).
+* The clock bias uncertainty grows due to both its own noise (`S_f`) and the integration of clock drift noise (`S_g`).
 
 * The clock bias and drift are modeled as random walks.
 

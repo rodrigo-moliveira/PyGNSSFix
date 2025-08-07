@@ -1,6 +1,7 @@
 """ Module to manage the use of stochastic processes. """
 from src.data_mng import Container
 from src.errors import ConfigError
+from src.io.config import EnumNoiseProcess
 from src.models.noise.noise_configuration import NoiseModel
 
 
@@ -25,10 +26,12 @@ class GNSSNoiseManager(Container):
         tropo (NoiseModel): Tropospheric delay model (e.g., Gauss-Markov or random walk).
         ambiguity (NoiseModel): Carrier-phase ambiguity model (typically random walk).
         phase_bias (NoiseModel): Phase bias model (usually fixed or random walk).
+        b_pv_model(bool): boolean to enable the PV Model (position and velocity correlated)
+        b_clock_model(bool): boolean to enable the Clock Model (clock bias and drift correlated)
     """
 
     __slots__ = ["position", "velocity", "clock_bias", "clock_drift", "isb", "iono", "tropo", "ambiguity",
-                 "phase_bias"]
+                 "phase_bias", "b_pv_model", "b_clock_model"]
 
     def __init__(self, config_dict):
         """
@@ -57,7 +60,12 @@ class GNSSNoiseManager(Container):
         self.ambiguity = None
         self.phase_bias = None
 
+        self.b_pv_model = config_dict.get("solver", "noise_model", "PV_Model_Enabled")
+        self.b_clock_model = config_dict.get("solver", "noise_model", "Clock_Model_Enabled")
+
         for state in GNSSNoiseManager.__slots__:
+            if state in ["b_pv_model", "b_clock_model"]:
+                continue
             type_str = config_dict.get("solver", "noise_model", state, "type")
 
             relative_re_param = config_dict.get("solver", "noise_model", state, "relative_re-parameterization")
@@ -83,3 +91,26 @@ class GNSSNoiseManager(Container):
             else:
                 raise ConfigError(f"Configuration file has missing information for process noise {state}. "
                                   f"Please review it.")
+
+        # validate model
+        # In PV Model the Position and Velocity must be Random Walks
+        if self.b_pv_model and getattr(self, "velocity").process_enum != EnumNoiseProcess.RANDOM_WALK:
+            raise ConfigError(f"When the PV Model is active, the velocity model must be set to Random Walk. "
+                              f"Please revise the configurations (position model = "
+                              f"{getattr(self, 'position').process_enum}). ")
+
+        if self.b_pv_model and getattr(self, "position").process_enum != EnumNoiseProcess.RANDOM_WALK:
+            raise ConfigError(f"When the PV Model is active, the position model must be set to Random Walk. "
+                              f"Please revise the configurations (position model = "
+                              f"{getattr(self, 'position').process_enum}). ")
+
+        # In Clock Model the clock bias and clock drift must be Random Walks
+        if self.b_clock_model and getattr(self, "clock_bias").process_enum != EnumNoiseProcess.RANDOM_WALK:
+            raise ConfigError(f"When the Clock Model is active, the clock bias model must be set to Random Walk. "
+                              f"Please revise the configurations (clock bias model = "
+                              f"{getattr(self, 'clock_bias').process_enum}). ")
+
+        if self.b_clock_model and getattr(self, "clock_drift").process_enum != EnumNoiseProcess.RANDOM_WALK:
+            raise ConfigError(f"When the Clock Model is active, the clock drift model must be set to Random Walk. "
+                              f"Please revise the configurations (clock drift model = "
+                              f"{getattr(self, 'clock_drift').process_enum}). ")

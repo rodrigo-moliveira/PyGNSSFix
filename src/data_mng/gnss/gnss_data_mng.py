@@ -5,6 +5,7 @@ import os
 from src.io.states import OUTPUT_FILENAME_MAP, get_file_header, export_to_file
 from src.io.config import config_dict, EnumObservationModel, EnumAlgorithmPNT, EnumSatelliteBias
 from src.io.rinex_parser import RinexNavReader, RinexObsReader, AntexReader
+from src.models.noise.noise_manager import GNSSNoiseManager
 from src.data_mng import Container
 from src.common_log import IO_LOG, get_logger
 from .navigation_data import NavigationData
@@ -36,6 +37,7 @@ class GnssDataManager(Container):
         narrow_lane_obs_data(ObservationData): processed narrow lane observation data
         wide_lane_obs_data(ObservationData): processed wide lane observation data
         melbourne_obs_data(ObservationData): processed Melbourne-Wubbena observation data
+        noise_manager(GNSSNoiseManager): manage the noise models for GNSS Kalman Filter states
         geometry_free_obs_data(ObservationData): processed geometry-free observation data
         cycle_slips(dict): dictionary of cycle slips
         nav_solution(list): navigation solution, list of :py:class:`src.data_mng.gnss.state_space.GnssStateSpace`
@@ -57,6 +59,7 @@ class GnssDataManager(Container):
         "melbourne_obs_data",      # Internal data
         "geometry_free_obs_data",  # Internal data
         "cycle_slips",             # Internal data
+        "noise_manager",           # Internal data
         "nav_solution"             # Output
     ]
 
@@ -77,6 +80,7 @@ class GnssDataManager(Container):
         self.wide_lane_obs_data = ObservationData()
         self.melbourne_obs_data = ObservationData()
         self.geometry_free_obs_data = ObservationData()
+        self.noise_manager = GNSSNoiseManager(config_dict)
         self.cycle_slips = {}  # Cycle slips dictionary
         self.nav_solution = None  # Navigation solution
 

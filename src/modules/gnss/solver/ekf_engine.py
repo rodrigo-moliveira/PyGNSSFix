@@ -290,32 +290,99 @@ class EKF_Engine:
         This method builds the State Transition Matrix (STM) and the Process Noise Covariance matrix according to the
         user definitions.
         """
+        PV_Model = self.metadata.get("ERROR_MODEL").b_pv_model
+        Clock_Model = self.metadata.get("ERROR_MODEL").b_clock_model
         slave_constellation = self._state.get_additional_info("clock_slave")
         index_map = self._state.index_map
         n_states = index_map["total_states"]
 
         F = np.zeros((n_states, n_states))  # State Transition Matrix
-        Q_d = np.zeros((n_states, n_states))  # Continuous-Time Process Noise Covariance Matrix
+        Q_d = np.zeros((n_states, n_states))  # Discrete-Time Process Noise Covariance Matrix
 
-        # position
-        idx_pos = index_map["position"]
-        process_noise = self._noise_manager.position.get_process_noise(time_step)
-        for i in range(3):
-            Q_d[idx_pos + i, idx_pos + i] = process_noise[i]
-            F[idx_pos + i, idx_pos + i] = self._noise_manager.position.get_stm_entry(time_step)
+        if PV_Model and "velocity" in index_map:
+            # Apply PV Model (pos-vel correlated)
+            idx_pos = index_map["position"]
+            idx_vel = index_map["velocity"]
+            pos_noise = self._noise_manager.position.get_process_noise(time_step)  # in m^2
+            vel_noise = self._noise_manager.velocity.get_process_noise(time_step)  # in m^2/s^2
+            stm_pos = self._noise_manager.position.get_stm_entry(time_step)
+            stm_vel = self._noise_manager.velocity.get_stm_entry(time_step)
 
-        # clock bias (in meters)
-        idx_clock = index_map["clock_bias"]
-        Q_d[idx_clock, idx_clock] = self._noise_manager.clock_bias.get_process_noise(time_step) * SPEED_OF_LIGHT ** 2
-        F[idx_clock, idx_clock] = self._noise_manager.clock_bias.get_stm_entry(time_step)
+            Q_d[idx_pos:idx_pos + 3, idx_pos:idx_pos + 3] = np.eye(3) * (pos_noise + vel_noise*time_step**2/3)
+            Q_d[idx_pos:idx_pos + 3, idx_vel:idx_vel + 3] = np.eye(3) * (vel_noise * time_step / 2)
+            Q_d[idx_vel:idx_vel + 3, idx_pos:idx_pos + 3] = np.eye(3) * (vel_noise * time_step / 2)
+            Q_d[idx_vel:idx_vel + 3, idx_vel:idx_vel + 3] = np.eye(3) * vel_noise
 
-        # tropo
+            F[idx_pos:idx_pos + 3, idx_pos:idx_pos + 3] = np.eye(3) * stm_pos
+            F[idx_vel:idx_vel + 3, idx_vel:idx_vel + 3] = np.eye(3) * stm_vel
+            F[idx_pos:idx_pos + 3, idx_vel:idx_vel + 3] = np.eye(3) * time_step
+
+        else:
+            # apply uncorrelated position and velocity states
+            # position (m)
+            idx_pos = index_map["position"]
+            process_noise = self._noise_manager.position.get_process_noise(time_step)
+            Q_d[idx_pos:idx_pos+3, idx_pos:idx_pos+3] = np.eye(3) * process_noise
+            F[idx_pos:idx_pos + 3, idx_pos:idx_pos + 3] = np.eye(3) * self._noise_manager.position.get_stm_entry(
+                time_step)
+
+            # velocity (m/s)
+            if "velocity" in index_map:
+                idx_vel = index_map["velocity"]
+                process_noise = self._noise_manager.velocity.get_process_noise(time_step)
+
+                Q_d[idx_vel:idx_vel + 3, idx_vel:idx_vel + 3] = np.eye(3) * process_noise
+                F[idx_vel:idx_vel + 3, idx_vel:idx_vel + 3] = np.eye(3) * self._noise_manager.velocity.get_stm_entry(
+                    time_step)
+
+        if Clock_Model and "clock_bias_rate" in index_map:
+            # Apply Clock Model (clock bias and drift correlated)
+            idx_clock = index_map["clock_bias"]
+            master_constellation = self._state.get_additional_info("clock_master")
+            idx_clock_rate_master = index_map["clock_bias_rate"][master_constellation]
+            clock_noise = self._noise_manager.clock_bias.get_process_noise(time_step) * SPEED_OF_LIGHT ** 2
+            drift_noise = self._noise_manager.clock_drift.get_process_noise(time_step) * SPEED_OF_LIGHT ** 2
+            stm_bias = self._noise_manager.clock_bias.get_stm_entry(time_step)
+            stm_drift = self._noise_manager.clock_drift.get_stm_entry(time_step)
+
+            # master clock bias model
+            Q_d[idx_clock, idx_clock] = clock_noise + drift_noise * time_step ** 2 / 3
+            Q_d[idx_clock, idx_clock_rate_master] = drift_noise * time_step / 2
+            Q_d[idx_clock_rate_master, idx_clock] = drift_noise * time_step / 2
+            Q_d[idx_clock_rate_master, idx_clock_rate_master] = drift_noise
+
+            F[idx_clock, idx_clock] = stm_bias
+            F[idx_clock_rate_master, idx_clock_rate_master] = stm_drift
+            F[idx_clock, idx_clock_rate_master] = time_step
+
+            # slave clock bias drift (uncorrelated)
+            for const, idx_clock_rate in index_map["clock_bias_rate"].items():
+                if const == master_constellation:
+                    continue
+                Q_d[idx_clock_rate, idx_clock_rate] = drift_noise
+                F[idx_clock_rate, idx_clock_rate] = self._noise_manager.clock_drift.get_stm_entry(time_step)
+
+        else:
+            # clock bias (in meters)
+            idx_clock = index_map["clock_bias"]
+            Q_d[idx_clock, idx_clock] = self._noise_manager.clock_bias.get_process_noise(
+                time_step) * SPEED_OF_LIGHT ** 2
+            F[idx_clock, idx_clock] = self._noise_manager.clock_bias.get_stm_entry(time_step)
+
+            # clock bias rate (m/s)
+            if "clock_bias_rate" in index_map:
+                for const, idx_clock_rate in index_map["clock_bias_rate"].items():
+                    Q_d[idx_clock_rate, idx_clock_rate] = self._noise_manager.clock_drift.get_process_noise(
+                        time_step) * SPEED_OF_LIGHT ** 2
+                    F[idx_clock_rate, idx_clock_rate] = self._noise_manager.clock_drift.get_stm_entry(time_step)
+
+        # tropo (m)
         if "tropo_wet" in index_map:
             idx_tropo = index_map["tropo_wet"]
             Q_d[idx_tropo, idx_tropo] = self._noise_manager.tropo.get_process_noise(time_step)
             F[idx_tropo, idx_tropo] = self._noise_manager.tropo.get_stm_entry(time_step)
 
-        # iono
+        # iono (m)
         if "iono" in index_map:
             for sat in sat_list:
                 if sat in index_map["iono"]:
@@ -323,12 +390,13 @@ class EKF_Engine:
                     Q_d[idx_iono, idx_iono] = self._noise_manager.iono.get_process_noise(time_step)
                     F[idx_iono, idx_iono] = self._noise_manager.iono.get_stm_entry(time_step)
 
-        # ISB
+        # ISB (m)
         if slave_constellation is not None and "isb" in index_map:
             idx_isb = index_map["isb"]
             Q_d[idx_isb, idx_isb] = self._noise_manager.isb.get_process_noise(time_step) * SPEED_OF_LIGHT ** 2
             F[idx_isb, idx_isb] = self._noise_manager.isb.get_stm_entry(time_step)
 
+        # ambiguity (cycles)
         if "ambiguity" in index_map:
             for sat, cp_types in index_map["ambiguity"].items():
                 if self._state.ambiguity.pivot[sat.sat_system] != sat:
@@ -338,6 +406,7 @@ class EKF_Engine:
                             Q_d[idx_amb, idx_amb] = self._noise_manager.ambiguity.get_process_noise(time_step)
                             F[idx_amb, idx_amb] = self._noise_manager.ambiguity.get_stm_entry(time_step)
 
+        # phase bias (m)
         if "phase_bias" in index_map:
             for const, cp_types in index_map["phase_bias"].items():
                 for cp_type in cp_types:
@@ -346,26 +415,13 @@ class EKF_Engine:
                                                           * SPEED_OF_LIGHT ** 2
                     F[idx_phase_bias, idx_phase_bias] = self._noise_manager.phase_bias.get_stm_entry(time_step)
 
-        if "velocity" in index_map:
-            idx_vel = index_map["velocity"]
-            process_noise = self._noise_manager.velocity.get_process_noise(time_step)
-            for i in range(3):
-                Q_d[idx_vel + i, idx_vel + i] = process_noise[i]
-                F[idx_vel + i, idx_vel + i] = self._noise_manager.velocity.get_stm_entry(time_step)
-
-        if "clock_bias_rate" in index_map:
-            for const, idx_clock_rate in index_map["clock_bias_rate"].items():
-                Q_d[idx_clock_rate, idx_clock_rate] = self._noise_manager.clock_drift.get_process_noise(time_step) * \
-                                                      SPEED_OF_LIGHT ** 2
-                F[idx_clock_rate, idx_clock_rate] = self._noise_manager.clock_drift.get_stm_entry(time_step)
-
         return F, Q_d
 
     @staticmethod
     def compute_residual_los(sat, epoch, datatype, obs_data, reconstructor):
         """
         Computes the prefit residuals (observed minus computed observation) and the line of sight vector w.r.t.
-        ECEF frame.
+        ECEF frame for the pseudorange / carrier phase measurements
 
         Args:
             sat(src.data_types.gnss.Satellite): satellite to compute the residual and LOS
@@ -374,7 +430,7 @@ class EKF_Engine:
             obs_data (src.data_mng.gnss.observation_data.EpochData) : instance of `EpochData` (GNSS observable database
                 for a single epoch)
             reconstructor (src.modules.gnss.solver.obs_reconstructor.ObservationReconstructor) : reconstructor
-                of GNSS measurements (PR, CP or RangeRate)
+                of GNSS measurements (PR, CP)
         """
         # get observable and compute predicted observable
         obs = float(obs_data.get_observable(sat, datatype))
@@ -391,6 +447,19 @@ class EKF_Engine:
 
     @staticmethod
     def compute_residual_los_rr(sat, epoch, datatype, obs_data, reconstructor):
+        """
+        Computes the prefit residuals (observed minus computed observation) and the line of sight vector w.r.t.
+        ECEF frame for the range rate measurements
+
+        Args:
+            sat(src.data_types.gnss.Satellite): satellite to compute the residual and LOS
+            epoch(src.data_types.date.Epoch): epoch to make the computation
+            datatype(src.data_types.gnss.DataType): datatype (frequency band) to compute the residual
+            obs_data (src.data_mng.gnss.observation_data.EpochData) : instance of `EpochData` (GNSS observable database
+                for a single epoch)
+            reconstructor (src.modules.gnss.solver.obs_reconstructor.ObservationReconstructor) : reconstructor
+                of GNSS measurements (RangeRate)
+        """
 
         # get observable and compute predicted observable
         obs = float(obs_data.get_observable(sat, datatype))  # in Hz
@@ -410,6 +479,10 @@ class EKF_Engine:
 
     def _build_obs_matrix_rr(self, obs_offset, sat_list, epoch, datatype, obs_data, reconstructor,
                                 y_vec, R, design_mat):
+        """
+        This method builds the observation covariance matrix R, design matrix H and observation residuals y_vec
+        for the range rate measurements.
+        """
         index_map = self._state.index_map
         const = datatype.constellation
 
@@ -443,6 +516,10 @@ class EKF_Engine:
 
     def _build_obs_matrix_pr_cp(self, obs_offset, sat_list, epoch, datatype, obs_data, reconstructor,
                                 y_vec, R, design_mat):
+        """
+        This method builds the observation covariance matrix R, design matrix H and observation residuals y_vec
+        for the pseudorange and carrier phase measurements.
+        """
 
         slave_constellation = self._state.get_additional_info("clock_slave")
         index_map = self._state.index_map

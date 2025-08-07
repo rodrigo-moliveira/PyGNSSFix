@@ -3,7 +3,6 @@ import os
 
 from src.data_mng.gnss.state_space import GnssStateSpace
 from src.data_types.gnss import DataType
-from src.models.noise.noise_manager import GNSSNoiseManager
 from src.modules.gnss.solver.ekf_engine import EKF_Engine
 from src.modules.gnss.solver.lsq_engine import LSQ_Engine_Position, LSQ_Engine_Velocity
 from src.common_log import get_logger, GNSS_ALG_LOG
@@ -136,7 +135,7 @@ class GnssSolver:
             "ambiguity": INITIAL_AMBIGUITY,
             "phase_bias": INITIAL_PHASE_BIAS
         }
-        ERROR_MODEL = GNSSNoiseManager(config)
+        ERROR_MODEL = data_manager.noise_manager
 
         TROPO = TropoManager()
         obs_model = config_dict.get("obs_model")

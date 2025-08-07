@@ -112,7 +112,7 @@ class NoiseModel:
             process_noise = 0
 
         elif self.process_enum == EnumNoiseProcess.RANDOM_WALK:
-            # continuous-time sigma^2 of RW noise in [unit^2 / s]
+            # sigma_sq is the continuous-time sigma^2 of RW noise in [unit^2 / s]
             sigma_sq = np.multiply(self.process_noise, self.process_noise)
             process_noise = sigma_sq * time_step
 
