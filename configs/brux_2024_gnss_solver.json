@@ -25,7 +25,7 @@
 
       "leap_file": "geo_time_data/eop/tai-utc.dat",
       "finals_file": "geo_time_data/eop/finals1980.all",
-      "tropo_file": "geo_time_data/eop/gpt3_5.grd",
+      "tropo_file": "geo_time_data/tropo/gpt3_5.grd",
 
       "cspice_kernels": {
          "enable": true,
@@ -43,7 +43,7 @@
          "_comment1": "Select first and last epochs in estimation arc in format YYYY-MM-DD hh:mm:ss",
          "_comment2": "Select false to deactivate fields",
          "first_epoch": "2024-03-30 11:00:00",
-         "last_epoch": "2024-03-30 11:00:59"
+         "last_epoch": "2024-03-30 11:14:59"
       },
 
       "_comment4": "Select the input data rate (in seconds). The rate must be consistent with the RINEX OBS rate. Select false to disable.",
@@ -94,7 +94,7 @@
       "constellations": ["GPS", "GAL"],
 
       "_comment": "Select the GNSS PNT algorithm. The available algorithms are SPS, PR-PPP, CP-PPP",
-      "algorithm": "PR-PPP",
+      "algorithm": "CP-PPP",
 
       "_comment1": "Select the observation model. The available models are combined, uncombined. The combined model requires 2 observations.",
       "obs_model": "uncombined",
@@ -113,10 +113,10 @@
          "model": "Saastamoinen",
 
          "_comment2": "Select Tropospheric map function for model GPT3. Available maps are 'Saastamoinen', 'GMF', 'VMF1', 'VMF3'",
-         "map": "Saastamoinen",
+         "map": "VMF3",
 
          "_comment3": "Select `true` to estimate tropospheric wet delay or `false` to disable tropo estimation",
-         "estimate_tropo_wet": true
+         "estimate_tropo_wet": false
       },
 
       "phase_center_corrections": {
@@ -214,10 +214,10 @@
 
       "ambiguity_resolution": {
          "_comment1": "Select `true` to enable ambiguity resolution or `false` to disable it",
-         "enabled": false,
+         "enabled": true,
 
          "_comment2": "Select the ambiguity resolution method. Available methods are 'ILS', 'IR', 'BS', 'PAR', 'ILS + Ratio Test'",
-         "method": "ILS",
+         "method": "PAR",
 
          "_comment3": "Select P0 value: minimum required success rate for method PAR",
          "P0_PAR": 0.95,
@@ -252,7 +252,7 @@
             "type": "random_walk",
             "white_noise_random_walk": {
                "comment": "Configurations for White Noise and Random Walk. Process noise units (continuous-time) are in [m/sqrt(s)]",
-               "process_noise_std": 0.000
+               "process_noise_std": 0.0001
             },
             "gauss_markov":
             {
@@ -267,7 +267,7 @@
             "type": "random_walk",
             "white_noise_random_walk": {
                "comment": "Configurations for White Noise and Random Walk. Process noise units (continuous-time) are in [m/s/sqrt(s)]",
-               "process_noise_std": 0.001
+               "process_noise_std": 0.00001
             },
             "gauss_markov":
             {
@@ -287,32 +287,32 @@
             "gauss_markov":
             {
                "comment": "Configurations for Gauss Markov. Process noise units are in [s]. Correlation time in [s].",
-               "process_noise_std": 3.3E-9,
+               "process_noise_std": 3.3E-11,
                "correlation_time": 1
             },
-            "relative_re-parameterization": 100
+            "relative_re-parameterization": 1000
          },
          "clock_drift":
          {
             "type": "random_walk",
             "white_noise_random_walk": {
                "comment": "Configurations for White Noise and Random Walk. Process noise units (continuous-time) are in [s/s/sqrt(s)]",
-               "process_noise_std": 3.3E-9
+               "process_noise_std": 1.1844e-9
             },
             "gauss_markov":
             {
                "comment": "Configurations for Gauss Markov. Process noise units are in [s/s]. Correlation time in [s].",
-               "process_noise_std": 3.3E-9,
+               "process_noise_std": 1.1844e-10,
                "correlation_time": 1
             },
-            "relative_re-parameterization": 100
+            "relative_re-parameterization": 1000
          },
          "isb":
          {
             "type": "random_walk",
             "white_noise_random_walk": {
                "comment": "Configurations for White Noise and Random Walk. Process noise units (continuous-time) are in [s/sqrt(s)]",
-               "process_noise_std": 3.3E-11
+               "process_noise_std": 3.3E-10
             },
             "gauss_markov":
             {
@@ -320,22 +320,22 @@
                "process_noise_std": 3.3E-11,
                "correlation_time": 1000
             },
-            "relative_re-parameterization": 100
+            "relative_re-parameterization": 1000
          },
          "iono":
          {
             "type": "gauss_markov",
             "white_noise_random_walk": {
                "comment": "Configurations for White Noise and Random Walk. Process noise units (continuous-time) are in [m/sqrt(s)]",
-               "process_noise_std": 0.01
+               "process_noise_std": 0.0001
             },
             "gauss_markov":
             {
                "comment": "Configurations for Gauss Markov. Process noise units are in [m]. Correlation time in [s].",
-               "process_noise_std": 2,
+               "process_noise_std": 1,
                "correlation_time": 1800
             },
-            "relative_re-parameterization": 100
+            "relative_re-parameterization": 1000
          },
          "tropo":
          {
@@ -350,14 +350,14 @@
                "process_noise_std": 0.05,
                "correlation_time": 10800
             },
-            "relative_re-parameterization": 100
+            "relative_re-parameterization": 1000
          },
          "ambiguity":
          {
             "type": "random_walk",
             "white_noise_random_walk": {
                "comment": "Configurations for White Noise and Random Walk. Process noise units (continuous-time) are in [cycles/sqrt(s)]",
-               "process_noise_std": 0.001
+               "process_noise_std": 0.01
             },
             "gauss_markov":
             {
@@ -365,7 +365,7 @@
                "process_noise_std": 0.1,
                "correlation_time": 10000
             },
-            "relative_re-parameterization": 100
+            "relative_re-parameterization": 1000
          },
          "phase_bias":
          {
