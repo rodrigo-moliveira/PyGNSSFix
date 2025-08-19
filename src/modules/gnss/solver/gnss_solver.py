@@ -282,7 +282,7 @@ class GnssSolver:
                 state.ambiguity.disable_ambiguity_resolution()
 
             # call lower level of position estimation
-            success = self._estimate_position(epoch, obs_for_epoch, state)
+            success = self._estimate_position(epoch, obs_for_epoch, state, init_KF)
 
             if success:
                 # add solution to Output timeseries
@@ -326,7 +326,7 @@ class GnssSolver:
             state.epoch = epoch
         return state
 
-    def _estimate_position(self, epoch, obs_data, state):
+    def _estimate_position(self, epoch, obs_data, state, init_KF=False):
         """
         Sub function to launch the position estimation procedure
 
@@ -335,6 +335,7 @@ class GnssSolver:
             obs_data (src.data_mng.gnss.observation_data.EpochData) : instance of `EpochData` (GNSS observable database
                 for a single epoch)
             state(GnssStateSpace) : state vector to process
+            init_KF(bool): boolean set to True if this function is called during the initialization of the EKF
 
         Returns:
             bool : True if the process succeeds and False if it fails. In that case debug information is written in the
@@ -344,7 +345,9 @@ class GnssSolver:
         iteration = 0
         rms = rms_prev = 1
         prefit_residuals = postfit_residuals = dop_matrix = None
-        apply_elevation_filter = False if self._metadata["ELEVATION_FILTER"] == -1 else True
+        apply_elevation_filter = False if self._metadata["ELEVATION_FILTER"] <= 0 else True
+        if init_KF:
+            apply_elevation_filter = False
         sats_for_epoch = obs_data.get_satellites()
         init_state = state.clone()
 
@@ -520,7 +523,7 @@ class GnssSolver:
         if "ambiguity" in state.get_additional_info("states"):
             state.ambiguity.enable_ambiguity_resolution()
 
-        # apply_elevation_filter = False if self._metadata["ELEVATION_FILTER"] == -1 else True
+        apply_elevation_filter = False if self._metadata["ELEVATION_FILTER"] <= 0 else True
 
         # create EKF Engine
         engine = EKF_Engine(state, self._metadata, trace_data)
@@ -540,6 +543,12 @@ class GnssSolver:
             system_geometry.compute(epoch, state, self._metadata)
 
             self.log.debug(f"Available Satellites: {system_geometry.get_satellites()}")
+
+            # perform additional iteration after elevation filter
+            if apply_elevation_filter:
+                self.log.info(f"Applying elevation filter with threshold {self._metadata['ELEVATION_FILTER']} [deg].")
+                self._elevation_filter(system_geometry, self._metadata["ELEVATION_FILTER"])
+                self.log.debug(f"Available Satellites after elevation filter: {system_geometry.get_satellites()}")
 
             if "ambiguity" in state.get_additional_info("states"):
                 self.log.info(f"Selected Pivot Satellites for Ambiguity (Per constellation): "

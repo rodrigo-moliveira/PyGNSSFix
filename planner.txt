@@ -1,18 +1,28 @@
 # Release 1.1
     New features:
-        [ ] Add velocity estimation:
-            [ ] PV method
+        [X] Add velocity estimation:
+            [X] PV method
+                [X] if PV is enabled force P and V states to RW
             [X] Doppler measurements
+
+        [X] After this, do all the modes still work? Remember to check IF and single frequency as well.
+            [X] LSQ: SPS / PR-PPP / CP-PPP with 1 freq, 2 freqs, IF, 1 const and 2 consts
+            [X] EKF: SPS / PR-PPP / CP-PPP with 1 freq, 2 freqs, IF, 1 const and 2 consts
+
+        [X] Clean EKF Engine no GNSS Solver (Elevation Filter)
 
         [ ] Manage cycle slips: No caso de cycle slip, a covariancia da ambiguidade é aumentada
             eu estou a dar unfix à ambiguidade se houver um data gap, e nota que há um filtro no cycle slip
             detection. Portanto tenho que retirar o unfix hardcoded no código, e apenas usar as cycle slips
 
-        [ ] PPP Test Long Run with Ambiguity Resolution
+        [X] PPP Test Long Run with Ambiguity Resolution
             [ ] add acceptance test
+            [X] Add warning: lost fix of satellite ...
+
+        [X] Tune the BRUX scenario
 
         [ ] Bugfixes:
-            [ ] Check warnings related to CSpice when in SPS mode (sv attitude)
+            [X] Check warnings related to CSpice when in SPS mode (sv attitude)
             [ ] tornar explicita a impossibilidade de correr vários datatypes para a mesma freq (diferentes atributos)
                 por exemplo processar C1C e C1W.
             [ ] para cp-ppp o tem de haver consitencia entre observações pr e cp

@@ -43,7 +43,7 @@
          "_comment1": "Select first and last epochs in estimation arc in format YYYY-MM-DD hh:mm:ss",
          "_comment2": "Select false to deactivate fields",
          "first_epoch": "2024-03-30 11:00:00",
-         "last_epoch": "2024-03-30 11:14:59"
+         "last_epoch": "2024-03-30 11:01:00"
       },
 
       "_comment4": "Select the input data rate (in seconds). The rate must be consistent with the RINEX OBS rate. Select false to disable.",
@@ -210,7 +210,7 @@
       "relativistic_corrections": 1,
 
       "_comment5": "Elevation filter. Select the value of minimum elevation angle to consider, in degree. Select -1 to turn off",
-      "elevation_filter": -1,
+      "elevation_filter": 5,
 
       "ambiguity_resolution": {
          "_comment1": "Select `true` to enable ambiguity resolution or `false` to disable it",
