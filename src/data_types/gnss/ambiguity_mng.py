@@ -211,6 +211,7 @@ class AmbiguityManager:
 
     def pop(self, key, default=None):
         """ Removes and returns an ambiguity for a given key. """
+        self._log.warning(f"Removing ambiguity state for satellite {key}.")
         return self.ambiguities.pop(key, default)
 
     def reset_ambiguities(self, constellation: str):
@@ -225,6 +226,8 @@ class AmbiguityManager:
             if (self.pivot_unfix_behaviour == "constellation" and sat.sat_system == constellation) or \
                     (self.pivot_unfix_behaviour == "all"):
                 for cp_type in self.ambiguities[sat]:
+                    if self.ambiguities[sat][cp_type].fixed:
+                        self._log.warning(f"Removing fixed ambiguity {cp_type} for sat {sat}.")
                     self.ambiguities[sat][cp_type].reset(val=self.init_val, cov=self.init_cov)
 
     def main_fix(self, index_map, dX, cov, state_type="correction"):
