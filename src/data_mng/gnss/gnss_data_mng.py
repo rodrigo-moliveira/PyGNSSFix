@@ -15,6 +15,7 @@ from .sat_clock_data import SatelliteClocks
 from .sat_orbit_data import SatelliteOrbits
 from .bias_manager import BiasManager
 from .global_iono_map import GlobalIonoMap
+from src.fault.fault_mng import FaultInjector
 
 __all__ = ["GnssDataManager"]
 
@@ -42,6 +43,7 @@ class GnssDataManager(Container):
         cycle_slips(dict): dictionary of cycle slips
         nav_solution(list): navigation solution, list of :py:class:`src.data_mng.gnss.state_space.GnssStateSpace`
             objects
+        fault_injector(FaultInjector): fault injector manager
 
     """
     __slots__ = [
@@ -60,6 +62,7 @@ class GnssDataManager(Container):
         "geometry_free_obs_data",  # Internal data
         "cycle_slips",             # Internal data
         "noise_manager",           # Internal data
+        "fault_injector",          # Internal data
         "nav_solution"             # Output
     ]
 
@@ -81,6 +84,7 @@ class GnssDataManager(Container):
         self.melbourne_obs_data = ObservationData()
         self.geometry_free_obs_data = ObservationData()
         self.noise_manager = GNSSNoiseManager(config_dict)
+        self.fault_injector = FaultInjector(config_dict)
         self.cycle_slips = {}  # Cycle slips dictionary
         self.nav_solution = None  # Navigation solution
 
@@ -265,6 +269,8 @@ class GnssDataManager(Container):
                 file.write(str(self.get_data("iono_gim")))
             with open(f"{inputs_dir}\\PhaseCenterVariations.txt", "w") as file:
                 file.write(str(self.get_data("phase_center")))
+        with open(f"{inputs_dir}\\FaultInjections.txt", "w") as file:
+            file.write(str(self.get_data("fault_injector")))
 
     def save_data(self, directory):
         """ Saves the navigation solution (contained in the `nav_solution` attribute) to the output file """
@@ -335,6 +341,16 @@ class GnssDataManager(Container):
             log.info(f"creating output file {filename}")
         else:
             log.info(f"Geometry-Free data not saved because it was not computed.")
+
+        # save cycle slips
+        if len(self.cycle_slips) > 0:
+            ext = 'cycle_slips'
+            filename = f"{directory}\\{OUTPUT_FILENAME_MAP[ext]}"
+            file_list[ext] = open(filename, "w")
+            file_list[ext].write(f"{str(self.cycle_slips)}")
+            log.info(f"creating output file {filename}")
+        else:
+            log.info(f"Cycle Slips not computed or no cycle slip detected.")
 
         # close all files
         for ext in file_list.keys():

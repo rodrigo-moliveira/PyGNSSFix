@@ -6,6 +6,12 @@
       "minimum_level": "DEBUG"
    },
 
+   "fault_injector":
+   {
+      "enabled": true,
+      "fault_file": "faults/test_fault_config.csv"
+   },
+
    "inputs": {
       "trace_files": true,
 
@@ -72,7 +78,7 @@
       "cycle_slips":
       {
          "_comment": "Select `true` to detect cycle slip detection or `false` to disable it",
-         "enabled": false,
+         "enabled": true,
 
          "_comment1": "Select `true` to run the Melbourne-Wubbena Cycle Slip Detector (requires computation of narrow-lane, wide-lane and melbourne-wubbena combinations)",
          "melbourne_wubbena": true,
@@ -84,7 +90,7 @@
          "gf_threshold": -1,
 
          "_comment4": "Select maximum number of missing observations to be considered as cycle slip",
-         "max_gap": 5
+         "max_gap": 1
       },
       "compute_smooth": false,
       "smooth_time_constant_secs": 300

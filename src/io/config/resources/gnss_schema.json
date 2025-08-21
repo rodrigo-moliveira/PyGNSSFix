@@ -20,6 +20,20 @@
         "minimum_level"
       ]
     },
+    "fault_injector": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "fault_file": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "enabled", "fault_file"
+      ]
+    },
     "inputs": {
       "type": "object",
       "properties": {
@@ -721,6 +735,7 @@
     },
     "required": [
       "log",
+      "fault_injector",
       "inputs",
       "model",
       "preprocessor",

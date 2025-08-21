@@ -1,0 +1,4 @@
+# FaultID, parameters...
+CYCLE_SLIP, sat_id=E01, freq=L1, epoch_start=100, epoch_end=120, val=0.5
+CYCLE_SLIP, sat_id=E02, freq=L1, epoch_start=150, epoch_end=150, val=1.0
+FILTER_RESET, epoch=200
