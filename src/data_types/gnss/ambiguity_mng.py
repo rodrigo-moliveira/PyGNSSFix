@@ -62,6 +62,7 @@ class AmbiguityManager:
         pivot(dict): satellites used as pivot for the ambiguity estimation (one per constellation).
         pivot_unfix_behaviour(str): string to select the behaviour when there is a pivot change:
             options are `all` or `constellation`
+        cycle_slips(dict): dictionary of cycle slips
     """
 
     def __init__(self, sat_list, init_val, init_cov, cp_types, bias_enum=None):
@@ -80,6 +81,7 @@ class AmbiguityManager:
         self.init_cov = init_cov
         self.cp_types = cp_types
         self.pivot = dict()
+        self.cycle_slips = None
 
         # user configurations
         self.amb_resolution_enable = config_dict.get("solver", "ambiguity_resolution", "enabled")
@@ -164,7 +166,7 @@ class AmbiguityManager:
                                         f"will be set unfixed.")
                         elif self.pivot_unfix_behaviour == "all":
                             log.warning(f"Pivot satellite changed from satellite {pivot} to {sat} for "
-                                        f"{pivot.sat_system} constellation. All satellite ambiguities in the system  "
+                                        f"{pivot.sat_system} constellation. All satellite ambiguities in the system "
                                         f"will be set unfixed.")
                         update_pivot = True
                         self.pivot[pivot.sat_system] = sat
@@ -229,6 +231,29 @@ class AmbiguityManager:
                     if self.ambiguities[sat][cp_type].fixed:
                         self._log.warning(f"Removing fixed ambiguity {cp_type} for sat {sat}.")
                     self.ambiguities[sat][cp_type].reset(val=self.init_val, cov=self.init_cov)
+
+    def check_cycle_slips(self, epoch):
+        """
+        Checks if there was any detected cycle slip for this epoch and updates the ambiguity states accordingly.
+
+        Args:
+            epoch(src.data_types.date.date.Epoch): current epoch
+        Returns:
+            list: list of satellites with cycle slips for this epoch
+        """
+        sat_list = list()
+        for sat, cycle_slips in self.cycle_slips.items():
+            if cycle_slips.has_epoch(epoch):
+                if sat in self.ambiguities:
+                    self._log.info(f"Cycle slip detected for {sat} and {epoch}. Resetting the ambiguity states for "
+                                   f"this satellite.")
+                    sat_list.append(sat)
+                    for cp_type in self.ambiguities[sat]:
+                        self.ambiguities[sat][cp_type].reset(val=self.init_val, cov=self.init_cov)
+                else:
+                    self._log.debug(f"Cycle slip detected for {sat} and {epoch}, but this satellite has already been "
+                                    f"removed from the processing.")
+        return sat_list
 
     def main_fix(self, index_map, dX, cov, state_type="correction"):
         """

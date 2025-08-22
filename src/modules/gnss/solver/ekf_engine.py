@@ -160,7 +160,7 @@ class EKF_Engine:
 
         return X0, P0
 
-    def _build_state_cov(self, new_index_map, prev_index_map) -> tuple[np.ndarray, np.ndarray]:
+    def _build_state_cov(self, new_index_map, prev_index_map, epoch) -> tuple[np.ndarray, np.ndarray]:
         """ Updates the internal state vector and covariance matrix for a change in the GNSS state vector.
         For instance, when a new satellite is introduced or deleted, the size of the state and covariances objects
         (iono or ambiguity variables) must be updated accordingly.
@@ -224,15 +224,47 @@ class EKF_Engine:
                         x_out, P_out = add_state(x_out, P_out, idx, self.state.ambiguity[args[1]][args[2]].val,
                                                  self.state.ambiguity[args[1]][args[2]].cov * rel_increase)
 
+        # check for cycle slips
+        if "ambiguity" in new_index_map:
+            x_out, P_out = self._check_cycle_slips(epoch, new_index_map, x_out, P_out)
+
         return x_out, P_out
 
-    def _relax_cov_pivot_change(self, P_in):
+    def _check_cycle_slips(self, epoch, index_map, x, P) -> tuple[np.ndarray, np.ndarray]:
+        """ Checks if there was any detected cycle slip for this epoch and updates the ambiguity states accordingly. """
+        sat_list = self._state.ambiguity.check_cycle_slips(epoch)
+        for sat in sat_list:
+            # update ambiguity states and covariances for the detected cycle slip ambiguity
+            if self._state.ambiguity.pivot[sat.sat_system] != sat:
+                cp_types = index_map["ambiguity"][sat]
+                for cp_type in cp_types:
+                    idx_amb = cp_types[cp_type]
+                    P[:, idx_amb] = 0
+                    P[idx_amb, :] = 0
+                    P[idx_amb, idx_amb] = self._state.ambiguity[sat][cp_type].cov
+                    x[idx_amb] = self._state.ambiguity[sat][cp_type].val
+
+        return x, P
+
+    def _relax_cov_pivot_change(self, x_in, P_in):
         """
         When there is a change in pivot, all the other states get affected. This function increases their covariance
         to allow a better re-convergence of the cross-affected states.
         """
         index_map = self._state.index_map
         P_out = P_in.copy()
+        x_out = x_in.copy()
+
+        # update ambiguity states and covariances
+        if "ambiguity" in index_map:
+            for sat, cp_types in index_map["ambiguity"].items():
+                if self._state.ambiguity.pivot[sat.sat_system] != sat:
+                    for cp_type in cp_types:
+                        idx_amb = cp_types[cp_type]
+                        P_out[:, idx_amb] = 0
+                        P_out[idx_amb, :] = 0
+                        P_out[idx_amb, idx_amb] = self._state.ambiguity[sat][cp_type].cov
+                        x_out[idx_amb] = self._state.ambiguity[sat][cp_type].val
 
         # position
         idx_pos = index_map["position"]
@@ -283,7 +315,7 @@ class EKF_Engine:
             for const, idx_clock_rate in index_map["clock_bias_rate"].items():
                 P_out[idx_clock_rate, idx_clock_rate] = P_in[idx_clock_rate, idx_clock_rate] * relative_re_param
 
-        return P_out
+        return x_out, P_out
 
     def _build_stm_process_noise(self, sat_list: list, time_step: float) -> tuple[np.ndarray, np.ndarray]:
         """
@@ -724,7 +756,7 @@ class EKF_Engine:
 
         return reconstructor, datatypes
 
-    def _init_states(self, sat_list):
+    def _init_states(self, sat_list, epoch):
         """ Manages the initialization of state and covariance for the current epoch.
         Fetches the state and covariance from the initialization data or from the previous epoch.
         """
@@ -739,9 +771,9 @@ class EKF_Engine:
             update_pivot = self._state.build_index_map(sat_list, amb_fixed=self._amb_fixed)
             self._amb_fixed = False
             new_index_map = self._state.index_map
-            x_in, P_in = self._build_state_cov(new_index_map, prev_index_map)
+            x_in, P_in = self._build_state_cov(new_index_map, prev_index_map, epoch)
             if update_pivot:
-                P_in = self._relax_cov_pivot_change(P_in)
+                x_in, P_in = self._relax_cov_pivot_change(x_in, P_in)
         return x_in, P_in
 
     def estimate(self, epoch, system_geometry, pr_cp_obs_for_epoch, rr_obs_for_epoch):
@@ -773,7 +805,7 @@ class EKF_Engine:
             time_step = (epoch - self.epoch).total_seconds()
 
             # prepare state and covariance for the current cycle
-            x_in, P_in = self._init_states(sat_list)
+            x_in, P_in = self._init_states(sat_list, epoch)
 
             # build state transition matrix and process noise matrices
             F, Q_d = self._build_stm_process_noise(sat_list, time_step)

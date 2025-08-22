@@ -54,6 +54,7 @@ class GnssSolver:
         trace_dir(str): path to store the trace files
         log(logging.Logger): logger instance
         solution(list[GnssStateSpace]): a list with the solved PNT states for each epoch (output)
+        cycle_slips(dict): dictionary of cycle slips
     """
 
     def __init__(self, data_manager, trace_dir):
@@ -71,6 +72,7 @@ class GnssSolver:
         self.sat_orbits = data_manager.get_data("sat_orbits")
         self.sat_clocks = data_manager.get_data("sat_clocks")
         self.sat_bias = data_manager.get_data("sat_bias")
+        self.cycle_slips = data_manager.get_data("cycle_slips")
         self.phase_center = data_manager.get_data("phase_center")
         self.write_trace = config_dict.get("solver", "trace_files")
         if self.write_trace:
@@ -522,6 +524,9 @@ class GnssSolver:
 
         if "ambiguity" in state.get_additional_info("states"):
             state.ambiguity.enable_ambiguity_resolution()
+
+            # also update the cycle slips
+            state.ambiguity.cycle_slips = self.cycle_slips
 
         apply_elevation_filter = False if self._metadata["ELEVATION_FILTER"] <= 0 else True
 
