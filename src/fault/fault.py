@@ -2,6 +2,10 @@
 import abc
 from typing import Dict, Any
 
+from src.data_types.date import Epoch
+
+
+# TODO: class cleanup
 
 class Fault(abc.ABC):
     """Abstract base class for all faults."""
@@ -16,17 +20,12 @@ class Fault(abc.ABC):
         self.params = params
 
     @abc.abstractmethod
-    def apply(self, state: Dict[str, Any], epoch: int) -> Dict[str, Any]:
-        """
-        Apply the fault to the system state or measurements.
+    def apply(self, state_in):
+        return state_in
 
-        Args:
-            state(dict): System state or measurement set at current epoch.
-            epoch (int): Current epoch index.
-
-        Returns:
-            dict: Modified state/measurements.
-        """
+    @abc.abstractmethod
+    def check_fault(self, **params):
+        # TODO: docstring
         pass
 
     def __str__(self):
@@ -34,30 +33,47 @@ class Fault(abc.ABC):
         return f"{self.__class__.__name__}({self.params})"
 
 
-# ================================
-# Cycle Slip Fault Example
-# ================================
-class CycleSlipFault(Fault):
-    """ Injects a cycle slip into carrier phase measurements. """
+# ==============================
+# Measurement Bias Fault Example
+# ==============================
+class MeasurementBias(Fault):
+    """ Injects a measurement bias into the provided GNSS observation. """
 
-    def apply(self, state: Dict[str, Any], epoch: int) -> Dict[str, Any]:
-        sat_id = self.params["sat_id"]
-        freq = self.params["freq"]
-        ep_start = int(self.params["epoch_start"])
-        ep_end = int(self.params["epoch_end"])
-        val = float(self.params["val"])
+    def __init__(self, params: Dict[str, Any]):
+        super().__init__(params)
 
-        if ep_start <= epoch <= ep_end:
-            if "CP" in state and sat_id in state["CP"]:
-                if freq in state["CP"][sat_id]:
-                    state["CP"][sat_id][freq] += val
-        return state
+        # additional initializations
+        self.epoch_start = Epoch.strptime(self.params["epoch_start"], scale=self.params["time_scale"])
+        self.epoch_end = Epoch.strptime(self.params["epoch_end"], scale=self.params["time_scale"])
+        self.bias = float(self.params["bias"])
+        self.sat = self.params["sat_id"]
+        self.rinex_obs = self.params["rinex_obs"]
+
+    def apply(self, state_in):
+        return state_in + self.bias
+
+    def check_fault(self, **params):
+        epoch = params["epoch"]
+        sat = params["sat"]
+        obs = params["obs"]
+
+        # epoch check
+        if self.epoch_start <= epoch <= self.epoch_end:
+
+            # satellite check
+            if str(sat) == self.sat:
+
+                # observation type check
+                if self.rinex_obs == obs:
+
+                    return True
+        return False
 
     def __str__(self):
-        return (f"CycleSlipFault(sat={self.params['sat_id']}, "
-                f"freq={self.params['freq']}, "
-                f"epoch=[{self.params['epoch_start']},{self.params['epoch_end']}], "
-                f"val={self.params['val']})")
+        return (f"MeasurementBias(sat={self.sat}, "
+                f"obs={self.rinex_obs}, "
+                f"epoch=[{str(self.epoch_start)},{str(self.epoch_end)}], "
+                f"bias={self.bias})")
 
 
 # ================================
@@ -66,11 +82,17 @@ class CycleSlipFault(Fault):
 class FilterResetFault(Fault):
     """Triggers a Kalman filter reset at a specific epoch."""
 
-    def apply(self, state: Dict[str, Any], epoch: int) -> Dict[str, Any]:
-        trigger_epoch = int(self.params["epoch"])
-        if epoch == trigger_epoch:
-            state["KF_reset"] = True
-        return state
+    def __init__(self, params: Dict[str, Any]):
+        super().__init__(params)
+
+        # additional initializations
+        self.params["epoch"] = Epoch.strptime(self.params["epoch"], scale=self.params["time_scale"])
+
+    def apply(self, state_in):
+        return state_in
+
+    def check_fault(self, **params):
+        return False
 
     def __str__(self):
         return f"FilterResetFault(epoch={self.params['epoch']})"

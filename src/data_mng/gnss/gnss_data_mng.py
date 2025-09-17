@@ -165,7 +165,8 @@ class GnssDataManager(Container):
         log.info("Launching RinexObsReader.")
 
         for file in obs_files:
-            RinexObsReader(file, self.get_data("obs_data"), self.get_data("phase_center"))
+            RinexObsReader(file, self.get_data("obs_data"), self.get_data("phase_center"),
+                           self.get_data("fault_injector"))
 
         # Load specific inputs for each PNT Algorithm
         if gnss_alg == EnumAlgorithmPNT.SPS:

@@ -22,7 +22,7 @@ class RinexObsReader:
     Parser of Rinex Observation files
     """
 
-    def __init__(self, file: str, obs: ObservationData, phase_center: PhaseCenterManager):
+    def __init__(self, file: str, obs: ObservationData, phase_center: PhaseCenterManager, fault_injector):
         """
         Reads the provided observation file and stores its content in the `ObservationData` instance.
 
@@ -32,6 +32,7 @@ class RinexObsReader:
                 the file
             phase_center(PhaseCenterManager): the `PhaseCenterManager` object to store the phase center information
                 extracted from the file header
+            fault_injector(src.fault.fault_mng.FaultInjector): fault injector manager.
         """
         first_epoch = config_dict.get("inputs", "arc", "first_epoch")
         last_epoch = config_dict.get("inputs", "arc", "last_epoch")
@@ -43,6 +44,7 @@ class RinexObsReader:
         self._phase_center = phase_center
         self._snr_control_check = config_dict.get("inputs", "snr_control")
         self._log = get_logger(IO_LOG)
+        self._fault_injector = fault_injector
 
         f_handler = open(f"{WORKSPACE_PATH}/{file}", "r")
         self._log.info(f"Reading observation file {WORKSPACE_PATH}/{file}...")
@@ -290,6 +292,12 @@ class RinexObsReader:
                             if DataType.is_carrier(this_type):
                                 wavelength = SPEED_OF_LIGHT / this_type.freq_value
                                 observable = observable * wavelength
+
+                            # checks if there is any active fault for this epoch and fault type (MEAS_BIAS)
+                            if self._fault_injector.enabled:
+                                observable = self._fault_injector.check_faults("MEAS_BIAS", observable,
+                                                                               epoch=this_epoch, sat=this_sat,
+                                                                               obs=this_obsCode)
 
                             # set observable
                             self._obs.set_observable(this_epoch, this_sat, this_type, observable)
