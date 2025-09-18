@@ -8,7 +8,7 @@
 
    "fault_injector":
    {
-      "enabled": true,
+      "enabled": false,
       "fault_file": "faults/test_fault_config.csv"
    },
 
@@ -78,7 +78,7 @@
       "cycle_slips":
       {
          "_comment": "Select `true` to detect cycle slip detection or `false` to disable it",
-         "enabled": true,
+         "enabled": false,
 
          "_comment1": "Select `true` to run the Melbourne-Wubbena Cycle Slip Detector (requires computation of narrow-lane, wide-lane and melbourne-wubbena combinations)",
          "melbourne_wubbena": true,
