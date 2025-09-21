@@ -5,10 +5,8 @@ from typing import Dict, Any
 from src.data_types.date import Epoch
 
 
-# TODO: class cleanup
-
 class Fault(abc.ABC):
-    """Abstract base class for all faults."""
+    """ Abstract base class for all faults. """
 
     def __init__(self, params: Dict[str, Any]):
         """
@@ -20,16 +18,43 @@ class Fault(abc.ABC):
         self.params = params
 
     @abc.abstractmethod
-    def apply(self, state_in):
+    def apply(self, state_in: Any):
+        """ Apply the fault to the provided state.
+
+        Args:
+            state_in (Any): input state before the fault
+
+        Returns:
+            state with fault added. The implementation is specific for each Fault class
+                derived from this abstract one.
+
+        """
         return state_in
 
     @abc.abstractmethod
     def check_fault(self, **params):
-        # TODO: docstring
-        pass
+        """
+        Checks based on the input parameters if the fault is to be applied or not. The input dict must have the
+        required fields for the specific fault class called.
+
+        For example, the MeasurementBias requires the following fields:
+            * epoch
+            * sat
+            * obs
+
+        Args:
+            params(dict): parameter dict with the required fields to check whether the fault is to be applied or not
+
+        Returns:
+             bool: True if the fault is to be applied and False otherwise.
+
+        Raises:
+            KeyError: If a required key is missing.
+        """
+        return False
 
     def __str__(self):
-        """Generic string representation for debugging."""
+        """ Generic string representation for debugging. """
         return f"{self.__class__.__name__}({self.params})"
 
 
@@ -80,7 +105,10 @@ class MeasurementBias(Fault):
 # Example: Filter Reset Fault
 # ================================
 class FilterResetFault(Fault):
-    """Triggers a Kalman filter reset at a specific epoch."""
+    """ Triggers a Kalman filter reset at a specific epoch.
+
+    **Not yet tested!!**
+    """
 
     def __init__(self, params: Dict[str, Any]):
         super().__init__(params)

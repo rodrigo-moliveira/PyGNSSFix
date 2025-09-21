@@ -4,7 +4,7 @@ This module computes several geometry-related data for the reconstruction of GNS
 from datetime import timedelta
 import numpy as np
 
-from src.constants import SPEED_OF_LIGHT
+from src.constants import SPEED_OF_LIGHT, MU_WGS84 as MU
 from src.io.config import EnumTransmissionTime, config_dict, EnumAlgorithmPNT
 from src.models.frames import enu2azel, ecef2enu, cartesian2geodetic, dcm_e_i
 from src.data_mng import Container
@@ -117,7 +117,11 @@ class SatelliteGeometry(Container):
         else:
             true_range = transit * SPEED_OF_LIGHT
 
-        # TODO: apply shapiro correction here (Eq. (19.14) of ref [1])
+        # apply shapiro correction here (Eq. (19.14) of ref [1])
+        norm_sat = np.linalg.norm(p_sat)
+        norm_pos = np.linalg.norm(rec_pos)
+        shapiro_cor = 2 * MU / SPEED_OF_LIGHT**3 * np.log((norm_sat + norm_pos + true_range) /
+                                                          (norm_sat + norm_pos - true_range))
 
         # get satellite elevation and azimuth angles (from the receiver), ENU frame
         lat, long, h = cartesian2geodetic(rec_pos[0], rec_pos[1], rec_pos[2])
@@ -175,7 +179,7 @@ class SatelliteGeometry(Container):
         self.el = el
         self.satellite_position = p_sat
         self.satellite_velocity = v_sat
-        self.dt_rel_correction = dt_relative
+        self.dt_rel_correction = dt_relative - shapiro_cor
         self.los = los
         self.drift_rel_correction = drift_relative
         self.dcm_b_e = dcm_b_e

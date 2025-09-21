@@ -1,16 +1,14 @@
-""" Module Manager class for fault injections """
+""" Module Manager class for fault injections. """
 
-from typing import List, Dict, Any
+from typing import List
 
 from src import WORKSPACE_PATH
 from src.common_log import IO_LOG, get_logger
 from src.fault.fault import Fault, MeasurementBias, FilterResetFault
 
 
-# TODO: class cleanup
-
 class FaultInjector:
-    """Handles parsing a fault file and applying faults."""
+    """ Handles parsing a fault file and applying faults. """
 
     # Available faults
     FAULT_CLASSES = {
@@ -65,14 +63,19 @@ class FaultInjector:
 
     def check_faults(self, fault_type, state_in, **params):
         """
-        Checks if there are any faults of `fault_type` to be applied at the provided `epoch`
+        Checks if there are any faults of `fault_type` to be applied at the provided `epoch`.
+        If so, the faults are applied to the provided state object.
 
         Args:
-            epoch():
-            fault_type():
+            fault_type (str): type of fault to be checked. Must be a valid string name. Available faults are:
+                * MEAS_BIAS
+                * FILTER_RESET
+                see FaultInjector.FAULT_CLASSES
+            state_in (Any): input state before the fault
+            params(dict): parameter dict with the required fields to check whether the fault is to be applied or not
 
         Returns:
-            bool: True if there faults to be injected for this type and epoch, and false otherwise
+            State with fault added if it was applied, otherwise the same as the input state.
 
         Raises:
             ValueError: an exception is raised if the provided fault type is not correct
@@ -90,7 +93,7 @@ class FaultInjector:
         return state_out
 
     def __str__(self):
-        """Pretty print the list of loaded faults."""
+        """ Pretty print the list of loaded faults. """
         if not self.faults:
             return "FaultInjector(no faults loaded)"
         return f"FaultInjector (enabled={self.enabled}) with faults:\n  " + "\n  ".join(str(f) for f in self.faults)

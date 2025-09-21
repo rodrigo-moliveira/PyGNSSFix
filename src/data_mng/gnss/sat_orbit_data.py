@@ -218,7 +218,7 @@ class SatelliteOrbits:
             * the relativistic clock and drift correction
         at the requested epoch ('time_emission': time of signal emission). It is noted that the position and velocity
         vectors are rotated to the correct ECEF frame of the reception time, according to the provided transit time.
-        That is, the satellite position dnd velocity are computed for the `time_emission` epoch (with respect to the
+        That is, the satellite position and velocity are computed for the `time_emission` epoch (with respect to the
         ECEF frame defined at this epoch), but then these vectors are rotated to the ECEF frame valid for the reception
         epoch (according to reception_epoch = time_emission + transit).
 
@@ -236,7 +236,6 @@ class SatelliteOrbits:
                 vectors at the transmission epoch with respect to the ECEF frame of the reception epoch. The satellite
                 relativistic clock in [s] and clock drift in [s/s] is also returned.
         """
-        # TODO: update docstring
         # satellite coordinates in ECEF frame defined at TX time, relativistic correction for satellite clock
         r_sat, v_sat, rel_correction, rel_drift = self.get_orbit(sat, time_emission)
 
