@@ -23,7 +23,7 @@
       "ionex_files": ["datasets/gnss/ZIM/codg2900.18i"],
       "antex_files": ["datasets/gnss/ZIM/igs14.atx"],
 
-      "bias_type": "DCB",
+      "bias_type": "OSB",
       "dcb_files": ["datasets/gnss/ZIM/CAS0MGXRAP_20182900000_01D_01D_DCB.BSX"],
       "osb_files": ["datasets/gnss/ZIM/COD0R03FIN_20182900000_01D_01D_OSB.BIA"],
 
@@ -49,7 +49,7 @@
          "_comment1": "Select first and last epochs in estimation arc in format YYYY-MM-DD hh:mm:ss",
          "_comment2": "Select false to deactivate fields",
          "first_epoch": "2018-10-17 16:00:00",
-         "last_epoch": "2018-10-17 16:01:00"
+         "last_epoch": "2018-10-17 16:14:59"
       },
 
       "_comment4": "Select the input data rate (in seconds). The rate must be consistent with the RINEX OBS rate. Select false to disable.",
@@ -100,12 +100,12 @@
       "constellations": ["GPS", "GAL"],
 
       "_comment": "Select the GNSS PNT algorithm. The available algorithms are SPS, PR-PPP, CP-PPP",
-      "algorithm": "PR-PPP",
+      "algorithm": "CP-PPP",
 
       "_comment1": "Select the observation model. The available models are combined, uncombined. The combined model requires 2 observations.",
       "obs_model": "uncombined",
 
-      "estimate_velocity": false,
+      "estimate_velocity": true,
       "_comment2": "Use Doppler measurements to estimate velocity",
 
       "estimate_ggto": true,

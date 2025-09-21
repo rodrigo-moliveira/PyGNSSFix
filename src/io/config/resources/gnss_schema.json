@@ -334,7 +334,9 @@
               "type": "array",
               "items": {
                 "type": "string"
-              }
+              },
+              "minItems": 1,
+              "maxItems": 2
             },
             "clock_product_service": {
               "type": "array",
@@ -390,7 +392,9 @@
               "type": "array",
               "items": {
                 "type": "string"
-              }
+              },
+              "minItems": 1,
+              "maxItems": 2
             },
             "clock_product_service": {
               "type": "array",

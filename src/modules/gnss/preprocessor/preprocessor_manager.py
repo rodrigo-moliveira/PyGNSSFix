@@ -166,13 +166,14 @@ class PreprocessorManager:
 
         for constellation, services in self.services.items():
             required_datatypes[constellation] = []
-            for service in services["user_service"]:
+            for idx, service in enumerate(services["user_service"]):
                 pr = data_type_from_rinex(f"C{service}", constellation)
                 required_datatypes[constellation].append(pr)
                 if keep_carrier:
                     cp = data_type_from_rinex(f"L{service}", constellation)
                     required_datatypes[constellation].append(cp)
-                if keep_doppler:
+                if keep_doppler and idx == 0:
+                    # only need to keep the Doppler observation for the main service
                     doppler = data_type_from_rinex(f"D{service}", constellation)
                     required_datatypes[constellation].append(doppler)
 

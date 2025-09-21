@@ -11,6 +11,8 @@ from src.data_types.gnss import data_type_from_rinex
 from src.errors import ConfigError
 from .enums import EnumAlgorithmPNT, EnumObservationModel
 from src.common_log import get_logger, IO_LOG
+from ...data_types.gnss.data_type import get_base_freq
+from ...data_types.gnss.service_utils import Services
 
 __all__ = ["config_dict"]
 
@@ -197,7 +199,24 @@ class Config(dict):
                 const_upper = constellation.upper()
                 services[const_upper] = dict()
                 if const_upper == "GPS" or const_upper == "GAL":
-                    services[const_upper]["user_service"] = self.get("model", const_upper, "observations")
+                    services_for_const = self.get("model", const_upper, "observations")
+                    # validate services
+                    for this_service in services_for_const:
+                        if this_service not in Services[const_upper]:
+                            raise ConfigError(f"Service {this_service} not valid for const {const_upper}, according "
+                                              f"to RINEX documentation standards. Available services: "
+                                              f"{Services[const_upper]}")
+                    if len(services_for_const) == 2:
+                        base_freq = get_base_freq(const_upper)
+                        pr_datatype = data_type_from_rinex(f"C{services_for_const[0]}", const_upper)
+                        if not (pr_datatype.freq == base_freq):
+                            raise ConfigError(f"First service for const {const_upper} must be of the base frequency "
+                                              f"(L1 for GPS / E1 for GAL). Provided services are {services_for_const}")
+                        if services_for_const[0][0] == services_for_const[1][0]:
+                            raise ConfigError(f"Services for const {const_upper} must be of different frequencies. "
+                                              f"Services selected: {services_for_const}")
+
+                    services[const_upper]["user_service"] = services_for_const
                     clock_services = self.get("model", const_upper, "clock_product_service")
                     services[const_upper]["clock_product_service"] = [f"C{clock_services[0]}", f"C{clock_services[1]}"]
             self.set("services", services)
