@@ -10,7 +10,6 @@ Currently, the available modes include:
 
 Currently supported constellations: **GPS** and **Galileo**.
 
----
 
 ## 1. Features
 - Flexible support for multiple GNSS constellations (GPS, GAL).
@@ -22,7 +21,6 @@ Currently supported constellations: **GPS** and **Galileo**.
   - Weighted Least Squares
   - Extended Kalman Filter
 
----
 
 ## 2. Algorithm Details \& Variations
 
@@ -34,7 +32,6 @@ Currently supported constellations: **GPS** and **Galileo**.
 4. **Filtering method**  
 5. **Stochastic process models**
 
----
 
 ### 2.1 Constellations
 
@@ -44,7 +41,6 @@ Currently supported constellations: **GPS** and **Galileo**.
 | PR-PPP | GPS, GAL, or GPS+GAL     |
 | CP-PPP | GPS, GAL, or GPS+GAL     |
 
----
 
 ### 2.2 Observables
 
@@ -54,7 +50,6 @@ Currently supported constellations: **GPS** and **Galileo**.
 | **Raw Dual-Frequency**   | Use pseudorange and/or carrier phase from two frequencies per constellation               |
 | **Iono-Free**            | Linear combination of dual-frequency observations to remove first-order ionospheric delay |
 
----
 
 ### 2.3 Estimation Variables
 
@@ -64,7 +59,6 @@ Currently supported constellations: **GPS** and **Galileo**.
 - **Position + Velocity**:  
   If Doppler observations are enabled, estimate velocity and clock bias rate in addition to position and clock bias.
 
----
 
 The process varies depending on the selected solver (WLS or EKF).
 
@@ -74,7 +68,6 @@ Two-step process:
 1. First solve **position + clock bias** from PR/CP observations (Iterated Least Squares).  
 2. Then solve **velocity + clock bias rate** from Doppler observations (separate LS problem).  
 
----
 
 #### 2.3.2 Extended Kalman Filter (EKF)
 
@@ -91,7 +84,6 @@ All states are estimated **jointly** in the EKF state vector:
 
 For more information about the states, see the specific internal documentation [KalmanFilterProcessModels.md](theory%20notes/KalmanFilterProcessModels.md).
 
----
 
 ### 2.4 Stochastic Process Models
 
@@ -133,16 +125,113 @@ More details in the table below:
 | Ambiguity             | N_obs×1 (per carrier-phase observation, per satellite & frequency) | cycles   | Only present in CP-PPP mode                                                        |
 | Receiver Phase Bias   | N_freq×1 (per frequency, per constellation)                        | s        | Only present in CP-PPP mode                                                        |
 
+### 2.6 Observation Models
 
----
+The implemented measurement models are:
 
+- **Pseudorange (PR)**
+- **Carrier Phase (CP)**
+- **Pseudorange Rate (PRR)**
+
+
+**Single-Frequency Pseudorange (PR):**
+
+$$
+PR_j = \rho(t, t-\tau) + c \, \Delta t_{rec} + ISB - c \, (\Delta t_{sat} - b_{sat,j}) + \mu_j \, (I + \delta I) + T + pcc_{rec,j} + pcc_{sat,j}
+$$
+
+**Single-Frequency Carrier Phase (CP):**
+
+$$
+CP_j = \rho(t, t-\tau) + c \, \Delta t_{rec} + b^{\phi}_j + ISB - c \, (\Delta t_{sat} - b_{sat,j}) + \mu_j \, (I + \delta I) + T + \lambda_j N_j + pcc_{rec,j} + pcc_{sat,j}
+$$
+
+**Iono-Free Pseudorange (IF-PR):**
+
+$$
+PR_{IF} = \rho(t, t-\tau) + c \, \Delta t_{rec} + ISB - c \, (\Delta t_{sat} - b_{sat,IF}) + T + pcc_{rec,IF} + pcc_{sat,IF}
+$$
+
+**Iono-Free Carrier Phase (IF-CP):**  
+
+$$
+CP_{IF} = \rho(t, t-\tau) + c \, \Delta t_{rec} + b^{\phi}_{IF} + ISB - c \, (\Delta t_{sat} - b_{sat,IF}) + T + \lambda_{IF} N_{IF} + pcc_{rec,IF} + pcc_{sat,IF}
+$$
+
+**Pseudorange Rate (PRR):**  
+
+$$
+PRR_j = ( \mathbf{v}^{sat} - \mathbf{v}_{rec} ) \cdot \mathbf{los} + c \, (\dot{\Delta t}_{rec} - \dot{\Delta t}_{sat} - \dot{rel}_{sat})
+$$
+
+
+#### 2.6.1 List of Variables
+
+- $\rho(t, t-\tau)$: Geometric range between receiver and satellite at transmit time  
+- $c$: Speed of light  
+- $\Delta t_{rec}$: Receiver clock bias, with hardware bias included (s)  
+- $\dot{\Delta t}_{rec}$: Receiver clock drift (s/s)  
+- $\Delta t_{sat}$: Satellite clock bias, with hardware bias included (depending on configuration) (s)  
+- $\dot{\Delta t}_{sat}$: Satellite clock drift (s/s)  
+- $\dot{rel}_{sat}$: Relativistic satellite clock correction rate (s/s)  
+- $ISB$: Inter-system bias (between GNSS constellations)  
+- $b_{sat,j}$: Satellite group delay (code bias) for frequency $j$  
+- $b^{\phi}_j$: Receiver phase bias for frequency $j$  
+- $I$: Ionospheric delay (a-priori model)  
+- $\delta I$: Estimated ionospheric delay (residual)  
+- $\mu_j$: Frequency-dependent ionospheric scaling factor  
+- $T$: Tropospheric delay  
+- $N_j$: Carrier-phase ambiguity for frequency $j$ (float or integer)  
+- $\lambda_j$: Carrier wavelength for frequency $j$  
+- $pcc_{rec,j}$: Receiver phase center correction (frequency-dependent)  
+- $pcc_{sat,j}$: Satellite phase center correction (frequency-dependent)  
+- $PR_j$: Pseudorange measurement at frequency $j$  
+- $CP_j$: Carrier-phase measurement at frequency $j$  
+- $PR_{IF}$: Iono-free pseudorange combination  
+- $CP_{IF}$: Iono-free carrier-phase combination  
+- $\mathbf{v}^{sat}$: Satellite velocity vector (ECEF)  
+- $\mathbf{v}_{rec}$: Receiver velocity vector (ECEF)  
+- $\mathbf{los}$: Line-of-sight unit vector from receiver to satellite  
+- $PRR_j$: Pseudorange-rate (Doppler) observable at frequency $j$  
+
+
+See [1] (Chapter 21) for a complete explanation of the meaning of all estimation variables and their relation with the 
+theoretical terms that form the standard definition of the GNSS observation equations. 
+
+For more details see the theory notes.
+
+### 2.7 Corrections \& Models
+
+The following correction models are implemented:
+
+- **Ionospheric Delay**:  
+  - Klobuchar Model
+  - NTCM-G Model
+  - Global Ionospheric Maps (IONEX)  
+
+- **Tropospheric Delay**:  
+  - Saastamoinen model  
+  - GPT3 
+
+- **Satellite Clock Corrections**:  
+  - Broadcast clock parameters  
+  - Precise clock files (CLK)  
+
+- **Satellite Orbits**:  
+  - Broadcast ephemerides  
+  - Precise orbits (SP3)  
+
+- **Antenna Phase Center Offsets/Variations**:  
+  - Receiver antenna models from ANTEX  
+  - Satellite antenna models from ANTEX 
+
+For more details see the theory notes. 
 
 ## 3. Input Data
 
 **PyGNSSFix** requires different sets of input files depending on the processing mode (SPP, PR-PPP, CP-PPP).  
 The following file types are supported:
 
----
 
 ### 3.1 Core GNSS Files
 
@@ -174,7 +263,6 @@ The following file types are supported:
   Contain observable-specific biases (OSBs) or differential code biases (DCBs).  
   OSBs are required for ambiguity resolution in CP-PPP model (PPP-AR).
 
----
 
 ### 3.2 Auxiliary Data Files
 
@@ -209,6 +297,15 @@ The following file types are supported:
   [gpt3_1.grd](workspace/geo_time_data/tropo/gpt3_5.grd) (Global Pressure and Temperature 3 model).  
   Provide site-dependent meteorological parameters for advanced tropospheric delay modeling.
 
+### 3.3 Required Files per Mode
+
+| **Mode** | **Mandatory Files**                                                                                       | **Optional Files**             |
+|----------|-----------------------------------------------------------------------------------------------------------|--------------------------------|
+| SPP      | Observation RINEX, Navigation RINEX                                                                       | –                              |
+| PR-PPP   | Observation RINEX, SP3 (orbits), CLK (satellite clocks), SINEX Bias (with OSBs or DCBs)                   | Navigation RINEX, ANTEX, IONEX |
+| CP-PPP   | Observation RINEX, SP3 (orbits), CLK (satellite clocks), SINEX Bias (**must be OSBs when AR is enabled**) | Navigation RINEX, ANTEX, IONEX |
+
+
 ## 4. Output files
 
 The full list of output files available is:
@@ -237,209 +334,81 @@ The full list of output files available is:
   * `geometry_free_obs.txt` : Geometry-Free observations (combination)
   * `cycle_slips.txt` : detected cycle slips
 
-Note that the files are only created when the data is processed by the selected configuration. 
-
-
-
-## 5. Required Files per Mode
-
-
-| **Mode** | **Mandatory Files**                                                                                       | **Optional Files**             |
-|----------|-----------------------------------------------------------------------------------------------------------|--------------------------------|
-| SPP      | Observation RINEX, Navigation RINEX                                                                       | –                              |
-| PR-PPP   | Observation RINEX, SP3 (orbits), CLK (satellite clocks), SINEX Bias (with OSBs or DCBs)                   | Navigation RINEX, ANTEX, IONEX |
-| CP-PPP   | Observation RINEX, SP3 (orbits), CLK (satellite clocks), SINEX Bias (**must be OSBs when AR is enabled**) | Navigation RINEX, ANTEX, IONEX |
-
+Note that the files are only created when the data is processed by the selected configuration.
 
 
 ---
 
-(parei aqui)
+## 5. Installation
 
-## 6. Observation Models
-
-The implemented measurement models are:
-
-- **Pseudorange (PR)**
-- **Carrier Phase (CP)**
-- **Pseudorange Rate (PRR)**
-
-The following observation equations have been implemented:
-
-Single Frequency Pseudorange (PR): 
-`PR_j = ρ(t, t-τ) + Δt_rec + ISB - (Δt_sat - sat_bias_j) + μ_j * (I + dI) + T + pcc_rec_j + pcc_sat_j `
-
-Single Frequency Carrier Phase (CP):
-`CP_j = ρ(t, t-τ) + Δt_rec + phase_bias_j + ISB - (Δt_sat - sat_bias_j) + μ_j * (I + dI) + T + lambda_j * N_j + pcc_rec_j + pcc_sat_j `
-
-Iono-Free Combination Pseudorange (IF-PR):
-`PR_IF= ρ(t, t-τ) + Δt_rec + ISB - (Δt_sat - sat_bias_IF) + T + pcc_rec_IF + pcc_sat_IF `
-
-Iono-Free Combination Carrier Phase (IF-CP):
-`CP_IF = ρ(t, t-τ) + Δt_rec + phase_bias_IF + ISB - (Δt_sat - sat_bias_IF) + T + lambda_IF * N_IF + pcc_rec_IF + pcc_sat_IF `
-
-Pseudorange Rate (PRR):
-`PRR_j = (v^sat - v_rec) . los + c(clock_rate_rec - clock_rate_sat - rel_clock_rate_sat)`
-
-## Implemented Observation Equations
-
-**Single-Frequency Pseudorange (PR):**
-
-$$
-PR_j = \rho(t, t-\tau) + c \, \Delta t_{rec} + ISB - c \, (\Delta t_{sat} - b_{sat,j}) + \mu_j \, (I + \delta I) + T + pcc_{rec,j} + pcc_{sat,j}
-$$
-
-**Single-Frequency Carrier Phase (CP):**
-
-$$
-CP_j = \rho(t, t-\tau) + c \, \Delta t_{rec} + b^{\phi}_j + ISB - c \, (\Delta t_{sat} - b_{sat,j}) + \mu_j \, (I + \delta I) + T + \lambda_j N_j + pcc_{rec,j} + pcc_{sat,j}
-$$
-
-**Iono-Free Pseudorange (IF-PR):**
-
-$$
-PR_{IF} = \rho(t, t-\tau) + c \, \Delta t_{rec} + ISB - c \, (\Delta t_{sat} - b_{sat,IF}) + T + pcc_{rec,IF} + pcc_{sat,IF}
-$$
-
-**Iono-Free Carrier Phase (IF-CP):**  
-
-$$
-CP_{IF} = \rho(t, t-\tau) + c \, \Delta t_{rec} + b^{\phi}_{IF} + ISB - c \, (\Delta t_{sat} - b_{sat,IF}) + T + \lambda_{IF} N_{IF} + pcc_{rec,IF} + pcc_{sat,IF}
-$$
-
-**Pseudorange Rate (PRR):**  
-
-$$
-PRR_j = ( \mathbf{v}^{sat} - \mathbf{v}_{rec} ) \cdot \mathbf{los} + c \, (\dot{\Delta t}_{rec} - \dot{\Delta t}_{sat} - \dot{rel}_{sat})
-$$
-
----
-
-## List of Variables
-
-- $\rho(t, t-\tau)$: Geometric range between receiver and satellite at transmit time  
-- $c$: Speed of light  
-- $\Delta t_{rec}$: Receiver clock bias, with hardware bias included (s)  
-- $\dot{\Delta t}_{rec}$: Receiver clock drift (s/s)  
-- $\Delta t_{sat}$: Satellite clock bias, with hardware bias included (depending on configuration) (s)  
-- $\dot{\Delta t}_{sat}$: Satellite clock drift (s/s)  
-- $\dot{rel}_{sat}$: Relativistic satellite clock correction rate (s/s)  
-- $ISB$: Inter-system bias (between GNSS constellations)  
-- $b_{sat,j}$: Satellite group delay (code bias) for frequency $j$  
-- $b^{\phi}_j$: Receiver phase bias for frequency $j$  
-- $I$: Ionospheric delay (a-priori model)  
-- $\delta I$: Estimated ionospheric delay (residual)  
-- $\mu_j$: Frequency-dependent ionospheric scaling factor  
-- $T$: Tropospheric delay  
-- $N_j$: Carrier-phase ambiguity for frequency $j$ (float or integer)  
-- $\lambda_j$: Carrier wavelength for frequency $j$  
-- $pcc_{rec,j}$: Receiver phase center correction (frequency-dependent)  
-- $pcc_{sat,j}$: Satellite phase center correction (frequency-dependent)  
-- $PR_j$: Pseudorange measurement at frequency $j$  
-- $CP_j$: Carrier-phase measurement at frequency $j$  
-- $PR_{IF}$: Iono-free pseudorange combination  
-- $CP_{IF}$: Iono-free carrier-phase combination  
-- $\mathbf{v}^{sat}$: Satellite velocity vector (ECEF)  
-- $\mathbf{v}_{rec}$: Receiver velocity vector (ECEF)  
-- $\mathbf{los}$: Line-of-sight unit vector from receiver to satellite  
-- $PRR_j$: Pseudorange-rate (Doppler) observable at frequency $j$  
-
-
-See [1] (Chapter 21) for a complete explanation of the meaning of all estimation variables and their relation with the 
-theoretical terms that form the standard definition of the GNSS observation equations. 
-
-For more details see the theory notes. 
-
----
-
-### 6.1 Corrections \& Models
-
-The following correction models are implemented:
-
-- **Ionospheric Delay**:  
-  - Klobuchar model  
-  - Global Ionospheric Maps (IONEX)  
-
-- **Tropospheric Delay**:  
-  - Saastamoinen model  
-  - (other models can be listed here)  
-
-- **Satellite Clock Corrections**:  
-  - Broadcast clock parameters  
-  - Precise clock files (CLK)  
-
-- **Satellite Orbits**:  
-  - Broadcast ephemerides  
-  - Precise orbits (SP3)  
-
-- **Antenna Phase Center Offsets/Variations**:  
-  - Receiver antenna models (from ANTEX, if applicable)  
-  - Satellite antenna models  
-
-For more details see the theory notes. 
-
----
-
-## Installation
-
-### Requirements
+### 5.1 Requirements
 - Python 3.10+
-- `numpy`, `scipy`, `pandas`, `matplotlib`, etc.  
-  *(full list in `requirements.txt`)*
+- Requirement libraries in [requirements.txt](requirements.txt). 
 
-### Setup
+### 5.2 Setup
+
 ```bash
-git clone https://github.com/yourusername/PositionFix.git
-cd PositionFix
+git clone https://github.com/rodrigo-moliveira/PyGNSSFix.git
+cd PyGNSSFix
 pip install -r requirements.txt
 ```
 
-## Usage
+## 6. Usage
 
 There are two main entry points:
 
-### Run the Algorithms
+### 6.1 Run the GNSS Algorithms
 
 ```bash
-python main.py --config config.yaml
+python algs/main_gnss.py <config_gnss.json>
 ```
 
 * Executes the positioning algorithm (SPP, PR-PPP, or CP-PPP).
 
 * Requires a configuration file specifying input data, processing options, and models.
 
-### Post-processing analysis
+### 6.2 Post-processing analysis
 
 ```bash
-python post_proc.py --config config_post.yaml
+python algs/post_processing_gnss.py <config_performance.json>
 ```
 
-* Performs additional analysis on the results (plots, error statistics, comparisons).
+* Performs additional analysis on the results (plots, error statistics, residual analysis, comparisons).
 
 * Uses a different configuration file.
 
-## Configuration
+## 7. Configuration
 
-Configuration is handled via YAML files (`config.yaml`, `config_post.yaml`).
+Configuration is handled via json files. Examples for `<config_gnss.json>` and `<config_performance.json>` are provided in [configs](configs).
+
+* [brux_2024_gnss_solver.json](configs/brux_2024_gnss_solver.json), [jfng_gnss_solver.json](configs/jfng_gnss_solver.json), [zim_gnss_solver.json](configs/zim_gnss_solver.json) for GNSS algorithms
+* [brux_performance.json](configs/brux_performance.json), [jfng_performance.json](configs/jfng_performance.json), [zim_performance.json](configs/zim_performance.json) for post-processing algorithms
+
+See the html documentation with json schemas for both configurations in [gnss_doc.html](configs/gnss_doc.html) and [performance_doc.html](configs/performance_doc.html).
 
 
-## Project Structure
+## 8. Project Structure
 
 ```graphql
-PositionFix/
-│── main.py              # Core positioning algorithms
-│── post_proc.py         # Post-processing and analysis
-│── config/              # Configuration files
-│── data/                # Sample RINEX and precise products
-│── src/                 # Implementation of models and algorithms
-│── tests/               # Unit tests
-│── requirements.txt
-│── README.md
+PyGNSSFix/
+│── algs/                   # Algorithm entry points and executable scripts
+│── configs/                # Configuration templates and parameter files
+│── runs/                   # Generated outputs from execution runs
+│── src/                    # Core source code (modules, classes, utilities)
+│── docs/                   # Documentation and theory notes (algorithms, models)
+│── workspace/              # Working directory for local data and experiments
+│   ├── datasets/           # GNSS input datasets (RINEX, SP3, CLK, etc.)
+│   ├── faults/             # Fault injection or error scenario files
+│   └── geo_time_data/      # Auxiliary geophysical/temporal data (CSpice, EOP, ITRF, tropo)
+│── LICENSE                 # License information
+│── requirements.txt        # Python dependencies
+│── README.md               # Project overview and usage instructions
 
 ```
 
 
-## References
+## 9. References
+
 The following reference books/references have been used to implement this project.
 
 [1] Springer Handbook of Global Navigation Satellite Systems, Peter J.G. Teunissen, Oliver Montenbruck, Springer Cham, 2017
@@ -453,7 +422,7 @@ The following reference books/references have been used to implement this projec
 
 These references are used in the documentation of some classes/functions.
 
-## License
+## 10. License
 
 This project is built under an [MIT License](LICENSE).
 
