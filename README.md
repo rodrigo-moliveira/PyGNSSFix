@@ -283,27 +283,32 @@ Pseudorange Rate (PRR):
 
 ## Implemented Observation Equations
 
-**Single-Frequency Pseudorange (PR):**  
+**Single-Frequency Pseudorange (PR):**
+
 $$
 PR_j = \rho(t, t-\tau) + c \, \Delta t_{rec} + ISB - c \, (\Delta t_{sat} - b_{sat,j}) + \mu_j \, (I + \delta I) + T + pcc_{rec,j} + pcc_{sat,j}
 $$
 
-**Single-Frequency Carrier Phase (CP):**  
+**Single-Frequency Carrier Phase (CP):**
+
 $$
 CP_j = \rho(t, t-\tau) + c \, \Delta t_{rec} + b^{\phi}_j + ISB - c \, (\Delta t_{sat} - b_{sat,j}) + \mu_j \, (I + \delta I) + T + \lambda_j N_j + pcc_{rec,j} + pcc_{sat,j}
 $$
 
-**Iono-Free Pseudorange (IF-PR):**  
+**Iono-Free Pseudorange (IF-PR):**
+
 $$
 PR_{IF} = \rho(t, t-\tau) + c \, \Delta t_{rec} + ISB - c \, (\Delta t_{sat} - b_{sat,IF}) + T + pcc_{rec,IF} + pcc_{sat,IF}
 $$
 
 **Iono-Free Carrier Phase (IF-CP):**  
+
 $$
 CP_{IF} = \rho(t, t-\tau) + c \, \Delta t_{rec} + b^{\phi}_{IF} + ISB - c \, (\Delta t_{sat} - b_{sat,IF}) + T + \lambda_{IF} N_{IF} + pcc_{rec,IF} + pcc_{sat,IF}
 $$
 
 **Pseudorange Rate (PRR):**  
+
 $$
 PRR_j = ( \mathbf{v}^{sat} - \mathbf{v}_{rec} ) \cdot \mathbf{los} + c \, (\dot{\Delta t}_{rec} - \dot{\Delta t}_{sat} - \dot{rel}_{sat})
 $$
