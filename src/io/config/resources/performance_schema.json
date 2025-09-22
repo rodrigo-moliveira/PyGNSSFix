@@ -1,0 +1,76 @@
+{
+  "type": "object",
+  "properties": {
+    "log": {
+      "type": "object",
+      "properties": {
+        "minimum_level": {"type": "string", "enum": ["DEBUG", "INFO", "WARN", "ERROR", "FATAL"]}
+      },
+      "required": ["minimum_level"]
+    },
+    "performance_evaluation": {
+      "type": "object",
+      "properties": {
+        "run_folder": {"type": "string"},
+        "run_error_computation": {"type": "boolean"},
+        "run_residual_analysis": {"type": "boolean"},
+        "run_plot_manager": {"type": "boolean"},
+
+        "residual_configs": {
+          "type": "object",
+          "properties": {
+            "chi_squared_test": {
+              "type": "object",
+              "properties":{
+                "pr_estimated_params": {"type": "integer"},
+                "pr_rate_estimated_params": {"type": "integer"},
+                "significance_level": {"type": "number"}
+              },
+              "required": ["pr_estimated_params", "pr_rate_estimated_params", "significance_level"]
+            },
+            "shapiro_test": {
+              "type": "object",
+              "properties":{
+                "significance_level": {"type": "number"}
+              },
+              "required": ["significance_level"]
+            }
+          },
+          "required": ["chi_squared_test", "shapiro_test"]
+        },
+
+        "plot_configs": {
+          "type": "object",
+          "properties": {
+            "show_plots": {"type": "boolean"},
+            "save_plots": {"type": "boolean"},
+            "plot_observations": {"type": "boolean"},
+            "plot_estimation_errors": {"type": "boolean"},
+            "plot_estimated_states": {"type": "boolean"},
+            "plot_dops": {"type": "boolean"},
+            "plot_residuals": {"type": "boolean"},
+            "plot_trajectories": {"type": "boolean"},
+            "plot_planimetric": {"type": "boolean"}
+          },
+          "required": ["show_plots", "save_plots", "plot_observations", "plot_estimation_errors",
+            "plot_estimated_states", "plot_dops", "plot_residuals", "plot_trajectories",
+            "plot_planimetric"
+          ]
+        },
+
+        "error_configs": {
+          "type": "object",
+          "properties": {
+            "static": {"type": "boolean"},
+            "convergence_time": {"type": "number", "minimum": 0},
+            "true_static_position": {"type": "array", "items": {"type": "number"}}
+          },
+          "required": ["static", "true_static_position", "convergence_time"]
+        }
+      },
+      "required": ["run_folder", "run_error_computation", "run_residual_analysis",
+        "run_plot_manager", "residual_configs", "plot_configs", "error_configs"]
+    }
+  },
+  "required": ["log", "performance_evaluation"]
+}

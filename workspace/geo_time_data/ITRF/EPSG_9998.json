@@ -1,0 +1,305 @@
+{
+    "$schema": "https://proj.org/schemas/v0.7/projjson.schema.json",
+    "type": "Transformation",
+    "name": "ITRF93 to ITRF2020 (1)",
+    "source_crs": {
+        "type": "GeodeticCRS",
+        "name": "ITRF93",
+        "datum": {
+            "type": "DynamicGeodeticReferenceFrame",
+            "name": "International Terrestrial Reference Frame 1993",
+            "frame_reference_epoch": 1993,
+            "ellipsoid": {
+                "name": "GRS 1980",
+                "semi_major_axis": 6378137,
+                "inverse_flattening": 298.257222101
+            }
+        },
+        "coordinate_system": {
+            "subtype": "Cartesian",
+            "axis": [
+                {
+                    "name": "Geocentric X",
+                    "abbreviation": "X",
+                    "direction": "geocentricX",
+                    "unit": "metre"
+                },
+                {
+                    "name": "Geocentric Y",
+                    "abbreviation": "Y",
+                    "direction": "geocentricY",
+                    "unit": "metre"
+                },
+                {
+                    "name": "Geocentric Z",
+                    "abbreviation": "Z",
+                    "direction": "geocentricZ",
+                    "unit": "metre"
+                }
+            ]
+        },
+        "id": {
+            "authority": "EPSG",
+            "code": 4915
+        }
+    },
+    "target_crs": {
+        "type": "GeodeticCRS",
+        "name": "ITRF2020",
+        "datum": {
+            "type": "DynamicGeodeticReferenceFrame",
+            "name": "International Terrestrial Reference Frame 2020",
+            "frame_reference_epoch": 2015,
+            "ellipsoid": {
+                "name": "GRS 1980",
+                "semi_major_axis": 6378137,
+                "inverse_flattening": 298.257222101
+            }
+        },
+        "coordinate_system": {
+            "subtype": "Cartesian",
+            "axis": [
+                {
+                    "name": "Geocentric X",
+                    "abbreviation": "X",
+                    "direction": "geocentricX",
+                    "unit": "metre"
+                },
+                {
+                    "name": "Geocentric Y",
+                    "abbreviation": "Y",
+                    "direction": "geocentricY",
+                    "unit": "metre"
+                },
+                {
+                    "name": "Geocentric Z",
+                    "abbreviation": "Z",
+                    "direction": "geocentricZ",
+                    "unit": "metre"
+                }
+            ]
+        },
+        "id": {
+            "authority": "EPSG",
+            "code": 9988
+        }
+    },
+    "method": {
+        "name": "Time-dependent Position Vector tfm (geocentric)",
+        "id": {
+            "authority": "EPSG",
+            "code": 1053
+        }
+    },
+    "parameters": [
+        {
+            "name": "X-axis translation",
+            "value": 65.8,
+            "unit": {
+                "type": "LinearUnit",
+                "name": "millimetre",
+                "conversion_factor": 0.001
+            },
+            "id": {
+                "authority": "EPSG",
+                "code": 8605
+            }
+        },
+        {
+            "name": "Y-axis translation",
+            "value": -1.9,
+            "unit": {
+                "type": "LinearUnit",
+                "name": "millimetre",
+                "conversion_factor": 0.001
+            },
+            "id": {
+                "authority": "EPSG",
+                "code": 8606
+            }
+        },
+        {
+            "name": "Z-axis translation",
+            "value": 71.3,
+            "unit": {
+                "type": "LinearUnit",
+                "name": "millimetre",
+                "conversion_factor": 0.001
+            },
+            "id": {
+                "authority": "EPSG",
+                "code": 8607
+            }
+        },
+        {
+            "name": "X-axis rotation",
+            "value": 3.36,
+            "unit": {
+                "type": "AngularUnit",
+                "name": "milliarc-second",
+                "conversion_factor": 4.84813681109536e-09
+            },
+            "id": {
+                "authority": "EPSG",
+                "code": 8608
+            }
+        },
+        {
+            "name": "Y-axis rotation",
+            "value": 4.33,
+            "unit": {
+                "type": "AngularUnit",
+                "name": "milliarc-second",
+                "conversion_factor": 4.84813681109536e-09
+            },
+            "id": {
+                "authority": "EPSG",
+                "code": 8609
+            }
+        },
+        {
+            "name": "Z-axis rotation",
+            "value": -0.75,
+            "unit": {
+                "type": "AngularUnit",
+                "name": "milliarc-second",
+                "conversion_factor": 4.84813681109536e-09
+            },
+            "id": {
+                "authority": "EPSG",
+                "code": 8610
+            }
+        },
+        {
+            "name": "Scale difference",
+            "value": -4.47,
+            "unit": {
+                "type": "ScaleUnit",
+                "name": "parts per billion",
+                "conversion_factor": 1e-09
+            },
+            "id": {
+                "authority": "EPSG",
+                "code": 8611
+            }
+        },
+        {
+            "name": "Rate of change of X-axis translation",
+            "value": 2.8,
+            "unit": {
+                "type": "LinearUnit",
+                "name": "millimetres per year",
+                "conversion_factor": 3.16887651727315e-11
+            },
+            "id": {
+                "authority": "EPSG",
+                "code": 1040
+            }
+        },
+        {
+            "name": "Rate of change of Y-axis translation",
+            "value": 0.2,
+            "unit": {
+                "type": "LinearUnit",
+                "name": "millimetres per year",
+                "conversion_factor": 3.16887651727315e-11
+            },
+            "id": {
+                "authority": "EPSG",
+                "code": 1041
+            }
+        },
+        {
+            "name": "Rate of change of Z-axis translation",
+            "value": 2.3,
+            "unit": {
+                "type": "LinearUnit",
+                "name": "millimetres per year",
+                "conversion_factor": 3.16887651727315e-11
+            },
+            "id": {
+                "authority": "EPSG",
+                "code": 1042
+            }
+        },
+        {
+            "name": "Rate of change of X-axis rotation",
+            "value": 0.11,
+            "unit": {
+                "type": "AngularUnit",
+                "name": "milliarc-seconds per year",
+                "conversion_factor": 1.53631468932076e-16
+            },
+            "id": {
+                "authority": "EPSG",
+                "code": 1043
+            }
+        },
+        {
+            "name": "Rate of change of Y-axis rotation",
+            "value": 0.19,
+            "unit": {
+                "type": "AngularUnit",
+                "name": "milliarc-seconds per year",
+                "conversion_factor": 1.53631468932076e-16
+            },
+            "id": {
+                "authority": "EPSG",
+                "code": 1044
+            }
+        },
+        {
+            "name": "Rate of change of Z-axis rotation",
+            "value": -0.07,
+            "unit": {
+                "type": "AngularUnit",
+                "name": "milliarc-seconds per year",
+                "conversion_factor": 1.53631468932076e-16
+            },
+            "id": {
+                "authority": "EPSG",
+                "code": 1045
+            }
+        },
+        {
+            "name": "Rate of change of Scale difference",
+            "value": -0.12,
+            "unit": {
+                "type": "ScaleUnit",
+                "name": "parts per billion per year",
+                "conversion_factor": 3.16887651727315e-17
+            },
+            "id": {
+                "authority": "EPSG",
+                "code": 1046
+            }
+        },
+        {
+            "name": "Parameter reference epoch",
+            "value": 2015,
+            "unit": {
+                "type": "TimeUnit",
+                "name": "year",
+                "conversion_factor": 31556925.445
+            },
+            "id": {
+                "authority": "EPSG",
+                "code": 1047
+            }
+        }
+    ],
+    "accuracy": "0.01",
+    "scope": "Geodesy.",
+    "area": "World.",
+    "bbox": {
+        "south_latitude": -90,
+        "west_longitude": -180,
+        "north_latitude": 90,
+        "east_longitude": 180
+    },
+    "id": {
+        "authority": "EPSG",
+        "code": 9998
+    },
+    "remarks": "IERS describes CT in opposite direction. Parameter values derived from the those between ITRF2020, ITRF2014 and ITRF2008 and those published between earlier realizations. Scale difference in ppb and scale difference rate in ppb/yr where 1/billion = 1E-9."
+}

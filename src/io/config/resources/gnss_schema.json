@@ -1,0 +1,804 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "log": {
+      "type": "object",
+      "properties": {
+        "minimum_level": {
+          "type": "string",
+          "enum": [
+            "DEBUG",
+            "INFO",
+            "WARN",
+            "ERROR",
+            "FATAL"
+          ]
+        }
+      },
+      "required": [
+        "minimum_level"
+      ]
+    },
+    "fault_injector": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "fault_file": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "enabled", "fault_file"
+      ]
+    },
+    "inputs": {
+      "type": "object",
+      "properties": {
+        "trace_files": {
+          "type": "boolean"
+        },
+        "obs_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "nav_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "clk_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sp3_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ionex_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "antex_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "bias_type": {
+          "type": "string",
+          "enum": [
+            "DCB",
+            "OSB"
+          ]
+        },
+        "dcb_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "osb_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "leap_file": {
+          "type": "string"
+        },
+        "finals_file": {
+          "type": "string"
+        },
+        "tropo_file": {
+          "type": "string"
+        },
+        "cspice_kernels": {
+          "type": "object",
+          "properties": {
+            "enable": {
+              "type": "boolean"
+            },
+            "dir": {
+              "type": "string"
+            },
+            "list": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "cspice_ecef_frame": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "enable",
+            "dir",
+            "list",
+            "cspice_ecef_frame"
+          ]
+        },
+        "IGS_ecef_frame": {
+          "type": "string"
+        },
+        "ITRF_dir": {
+          "type": "string"
+        },
+        "snr_control": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9
+        },
+        "arc": {
+          "type": "object",
+          "properties": {
+            "first_epoch": {
+              "type": "string"
+            },
+            "last_epoch": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "first_epoch",
+            "last_epoch"
+          ]
+        },
+        "rate": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "trace_files",
+        "obs_files",
+        "nav_files",
+        "clk_files",
+        "sp3_files",
+        "ionex_files",
+        "antex_files",
+        "osb_files",
+        "dcb_files",
+        "bias_type",
+        "leap_file",
+        "finals_file",
+        "tropo_file",
+        "cspice_kernels",
+        "IGS_ecef_frame",
+        "ITRF_dir",
+        "snr_control",
+        "arc",
+        "rate"
+      ]
+    },
+    "model": {
+      "type": "object",
+      "properties": {
+        "constellations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "GPS",
+              "GAL"
+            ]
+          }
+        },
+        "algorithm": {
+          "type": "string",
+          "enum": [
+            "SPS",
+            "PR-PPP",
+            "CP-PPP"
+          ]
+        },
+        "obs_model": {
+          "type": "string",
+          "enum": [
+            "combined",
+            "uncombined"
+          ]
+        },
+        "estimate_velocity": {
+          "type": "boolean"
+        },
+        "estimate_ggto": {
+          "type": "boolean"
+        },
+        "estimate_diono": {
+          "type": "boolean"
+        },
+        "troposphere": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "enum": [
+                "NONE",
+                "Saastamoinen",
+                "GPT3"
+              ]
+            },
+            "map": {
+              "type": "string",
+              "enum": [
+                "Saastamoinen",
+                "GMF",
+                "VMF1",
+                "VMF3"
+              ]
+            },
+            "estimate_tropo_wet": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "model",
+            "map",
+            "estimate_tropo_wet"
+          ]
+        },
+        "phase_center_corrections": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "receiver": {
+              "type": "object",
+              "properties": {
+                "ARP_enabled": {
+                  "type": "boolean"
+                },
+                "PCO_enabled": {
+                  "type": "boolean"
+                },
+                "PCV_enabled": {
+                  "type": "boolean"
+                },
+                "ARP_offset": {
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
+                },
+                "PCV_model": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "required": [
+                "ARP_enabled",
+                "PCO_enabled",
+                "PCV_enabled",
+                "ARP_offset",
+                "PCV_model"
+              ]
+            },
+            "satellite": {
+              "type": "object",
+              "properties": {
+                "PCO_enabled": {
+                  "type": "boolean"
+                },
+                "PCV_enabled": {
+                  "type": "boolean"
+                },
+                "GPS_PCV_model": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "GAL_PCV_model": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "required": [
+                "PCO_enabled",
+                "PCV_enabled",
+                "GPS_PCV_model",
+                "GAL_PCV_model"
+              ]
+            }
+          },
+          "required": [
+            "enabled",
+            "receiver",
+            "satellite"
+          ]
+        },
+        "GPS": {
+          "type": "object",
+          "properties": {
+            "observations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 2
+            },
+            "clock_product_service": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "pr_obs_std": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "cp_obs_std": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "doppler_obs_std": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "elevation_mask": {
+              "type": "boolean"
+            },
+            "ionosphere": {
+              "type": "string",
+              "enum": [
+                "NONE",
+                "Klobuchar",
+                "NTCM-G",
+                "IONEX"
+              ]
+            }
+          },
+          "required": [
+            "observations",
+            "clock_product_service",
+            "pr_obs_std",
+            "cp_obs_std",
+            "doppler_obs_std",
+            "elevation_mask",
+            "ionosphere"
+          ]
+        },
+        "GAL": {
+          "type": "object",
+          "properties": {
+            "observations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 2
+            },
+            "clock_product_service": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "pr_obs_std": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "cp_obs_std": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "doppler_obs_std": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "elevation_mask": {
+              "type": "boolean"
+            },
+            "ionosphere": {
+              "type": "string",
+              "enum": [
+                "NONE",
+                "Klobuchar",
+                "NTCM-G",
+                "IONEX"
+              ]
+            },
+            "nav_type": {
+              "type": "string",
+              "enum": [
+                "INAV",
+                "FNAV"
+              ]
+            }
+          },
+          "required": [
+            "observations",
+            "clock_product_service",
+            "pr_obs_std",
+            "cp_obs_std",
+            "doppler_obs_std",
+            "elevation_mask",
+            "ionosphere",
+            "nav_type"
+          ]
+        }
+      },
+      "required": [
+        "constellations",
+        "algorithm",
+        "obs_model",
+        "estimate_velocity",
+        "estimate_ggto",
+        "estimate_diono",
+        "phase_center_corrections",
+        "GPS",
+        "GAL"
+      ]
+    },
+    "preprocessor": {
+      "type": "object",
+      "properties": {
+        "trace_files": {
+          "type": "boolean"
+        },
+        "snr_filter": {
+          "type": "number"
+        },
+        "satellite_status": {
+          "type": "object",
+          "properties": {
+            "GPS": {
+              "type": "object",
+              "properties": {
+                "URA": {
+                  "type": "boolean"
+                },
+                "max_URA": {
+                  "type": "number"
+                },
+                "health": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "URA",
+                "max_URA",
+                "health"
+              ]
+            },
+            "GAL": {
+              "type": "object",
+              "properties": {
+                "SISA": {
+                  "type": "boolean"
+                },
+                "max_SISA": {
+                  "type": "number"
+                },
+                "health": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "SISA",
+                "max_SISA",
+                "health"
+              ]
+            }
+          },
+          "required": [
+            "GPS",
+            "GAL"
+          ]
+        },
+        "cycle_slips": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "melbourne_wubbena": {
+              "type": "boolean"
+            },
+            "mw_k_factor": {
+              "type": "number"
+            },
+            "geometry_free": {
+              "type": "boolean"
+            },
+            "gf_threshold": {
+              "type": "number"
+            },
+            "max_gap": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "enabled",
+            "melbourne_wubbena",
+            "geometry_free",
+            "mw_k_factor",
+            "gf_threshold",
+            "max_gap"
+          ]
+        },
+        "compute_smooth": {
+          "type": "boolean"
+        },
+        "smooth_time_constant_secs": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "trace_files",
+        "snr_filter",
+        "satellite_status",
+        "compute_smooth",
+        "smooth_time_constant_secs",
+        "cycle_slips"
+      ]
+    },
+    "solver": {
+      "type": "object",
+      "properties": {
+        "trace_files": {
+          "type": "boolean"
+        },
+        "algorithm": {
+          "type": "string",
+          "enum": [
+            "LS",
+            "WLS",
+            "EKF"
+          ]
+        },
+        "a_priori_constrain": {
+          "type": "boolean"
+        },
+        "feedforward_solution": {
+          "type": "boolean"
+        },
+        "n_iteration": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "stop_criteria": {
+          "type": "number"
+        },
+        "transmission_time_alg": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "relativistic_corrections": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "elevation_filter": {
+          "type": "number"
+        },
+        "ambiguity_resolution": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "method": {
+              "type": "string",
+              "enum": [
+                "ILS",
+                "IR",
+                "BS",
+                "PAR",
+                "ILS + Ratio Test"
+              ]
+            },
+            "P0_PAR": {
+              "type": "number"
+            },
+            "P0_RatioTest": {
+              "type": "number"
+            },
+            "pivot_unfix_behaviour": {
+              "type": "string",
+              "enum": [
+                "constellation",
+                "all"
+              ]
+            }
+          },
+          "required": [
+            "enabled",
+            "method",
+            "P0_PAR",
+            "P0_RatioTest"
+          ]
+        },
+        "initial_pos_cov": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "initial_vel_cov": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "initial_clock_cov": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "initial_isb_cov": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "initial_iono_cov": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "initial_tropo_cov": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "initial_clock_rate_cov": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "initial_ambiguity_cov": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "initial_phase_bias_cov": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "noise_model": {
+          "type": "object",
+          "description": "Defines the process noise models for various states",
+          "properties": {
+            "PV_Model_Enabled":{
+              "type": "boolean"
+            },
+            "Clock_Model_Enabled": {
+              "type": "boolean"
+            },
+            "position": { "$ref": "#/definitions/state_noise_model" },
+            "velocity": { "$ref": "#/definitions/state_noise_model" },
+            "clock_bias": { "$ref": "#/definitions/state_noise_model" },
+            "clock_drift": { "$ref": "#/definitions/state_noise_model" },
+            "isb": { "$ref": "#/definitions/state_noise_model" },
+            "iono": { "$ref": "#/definitions/state_noise_model" },
+            "tropo": { "$ref": "#/definitions/state_noise_model" },
+            "ambiguity": { "$ref": "#/definitions/state_noise_model" },
+            "phase_bias": { "$ref": "#/definitions/state_noise_model" }
+          },
+          "required": ["PV_Model_Enabled", "Clock_Model_Enabled", "position", "velocity", "clock_bias", "clock_drift", "isb", "iono", "tropo", "ambiguity", "phase_bias"]
+        }
+      },
+      "required": ["trace_files", "algorithm", "a_priori_constrain", "feedforward_solution", "n_iterations", "stop_criteria", "transmission_time_alg","relativistic_corrections","elevation_filter","ambiguity_resolution",
+        "initial_pos_cov","initial_vel_cov","initial_clock_cov","initial_isb_cov","initial_iono_cov","initial_tropo_cov","initial_clock_rate_cov","initial_ambiguity_cov","initial_phase_bias_cov","noise_model"]
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "output_path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output_path"
+        ]
+      }
+    },
+    "required": [
+      "log",
+      "fault_injector",
+      "inputs",
+      "model",
+      "preprocessor",
+      "solver",
+      "output"
+    ],
+
+  "definitions": {
+    "state_noise_model": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["white_noise", "random_walk", "gauss_markov"]
+        },
+        "white_noise_random_walk": {
+          "type": "object",
+          "properties": {
+            "process_noise_std": {
+              "oneOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "array",
+                  "items": { "type": "number" },
+                  "minItems": 3,
+                  "maxItems": 3
+                }
+              ]
+            }
+          },
+          "required": ["process_noise_std"]
+        },
+        "gauss_markov": {
+          "type": "object",
+          "properties": {
+            "process_noise_std": {
+              "oneOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "array",
+                  "items": { "type": "number" },
+                  "minItems": 3,
+                  "maxItems": 3
+                }
+              ]
+            },
+            "correlation_time": { "type": "number" }
+          },
+          "required": ["process_noise_std", "correlation_time"]
+        },
+        "relative_re-parameterization": {
+          "type": "number"
+        }
+      },
+      "required": ["type", "white_noise_random_walk", "gauss_markov", "relative_re-parameterization"]
+    }
+  }
+}

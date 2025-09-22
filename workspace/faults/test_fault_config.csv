@@ -1,0 +1,7 @@
+# comments start with #
+# MEAS_BIAS, satellite id, frequency, observation type, epoch start, epoch end, value
+MEAS_BIAS, sat_id=G11, rinex_obs=L2W, epoch_start=2024-03-30 11:00:20, epoch_end=2024-03-30 11:00:25, time_scale=GPST, bias=-10000
+MEAS_BIAS, sat_id=E18, rinex_obs=L1C, epoch_start=2024-03-30 11:00:40, epoch_end=2024-03-30 11:00:40, time_scale=GPST, bias=50000
+
+# FILTER_RESET, epoch
+FILTER_RESET, epoch=2024-03-30 11:05:00, time_scale=GPST

@@ -1,0 +1,398 @@
+{
+   "_comment": "This is the JSON configuration file to run the GNSS positioning algorithm. ",
+
+   "log": {
+      "_comment": "Configuration of the Log File (Possible values: DEBUG, INFO, WARN, ERROR, FATAL).",
+      "minimum_level": "DEBUG"
+   },
+
+   "fault_injector":
+   {
+      "enabled": false,
+      "fault_file": "faults/test_fault_config.csv"
+   },
+
+   "inputs": {
+      "trace_files": true,
+
+      "_comment1": "Input data files",
+      "obs_files": ["datasets/gnss/BRUX_2024/BRUX00BEL_S_20240901100_15M_01S_MO.rnx"],
+      "nav_files": ["datasets/gnss/BRUX_2024/BRDM00DLR_S_20240900000_01D_MN.rnx"],
+      "clk_files": ["datasets/gnss/BRUX_2024/COD0MGXFIN_20240900000_01D_30S_CLK_short.CLK"],
+      "sp3_files": ["datasets/gnss/BRUX_2024/COD0MGXFIN_20240900000_01D_05M_ORB_short.SP3"],
+      "ionex_files": ["datasets/gnss/BRUX_2024/COD0OPSFIN_20240900000_01D_01H_GIM.INX"],
+      "antex_files": ["datasets/gnss/BRUX_2024/igs20.atx"],
+
+      "bias_type": "OSB",
+      "dcb_files": ["datasets/gnss/BRUX_2024/DLR0OPSFIN_20240010000_03L_01D_DCB.BIA"],
+      "osb_files": ["datasets/gnss/BRUX_2024/COD0MGXFIN_20240900000_01D_01D_OSB.BIA"],
+
+      "_comment2": "Select 'true' to use CLK and SP3 products or 'false' to use navigation ephemerides",
+
+      "leap_file": "geo_time_data/eop/tai-utc.dat",
+      "finals_file": "geo_time_data/eop/finals1980.all",
+      "tropo_file": "geo_time_data/tropo/gpt3_5.grd",
+
+      "cspice_kernels": {
+         "enable": true,
+         "dir": "geo_time_data/cspice_kernels/",
+         "list": ["de421.bsp", "earth_latest_high_prec.bpc", "naif0012.tls.pc"],
+         "cspice_ecef_frame": "ITRF93"
+      },
+      "IGS_ecef_frame": "ITRF2020",
+      "ITRF_dir": "geo_time_data/ITRF/",
+
+      "_comment3": "snr threshold to discard RINEX observables (compare with snr control digit). [1-4]: bad, [5:8]: good, 9: excellent",
+      "snr_control": 1,
+
+      "arc": {
+         "_comment1": "Select first and last epochs in estimation arc in format YYYY-MM-DD hh:mm:ss",
+         "_comment2": "Select false to deactivate fields",
+         "first_epoch": "2024-03-30 11:00:00",
+         "last_epoch": "2024-03-30 11:01:00"
+      },
+
+      "_comment4": "Select the input data rate (in seconds). The rate must be consistent with the RINEX OBS rate. Select false to disable.",
+      "rate": 1
+   },
+
+   "preprocessor": {
+      "trace_files": true,
+
+      "_comment4": "Signal strength (SNR) filter. Select value of SNR (dBHz) threshold. Select false to turn off",
+      "snr_filter": 1,
+
+      "satellite_status": {
+         "_comment": "whether or not to check the SV Accuracy and SV health fields of the navigation message",
+         "GPS": {
+            "URA": true,
+            "max_URA": 6144.0,
+            "health": true
+         },
+         "GAL": {
+            "SISA": true,
+            "max_SISA": 6.0,
+            "health": true
+         }
+      },
+      "cycle_slips":
+      {
+         "_comment": "Select `true` to detect cycle slip detection or `false` to disable it",
+         "enabled": false,
+
+         "_comment1": "Select `true` to run the Melbourne-Wubbena Cycle Slip Detector (requires computation of narrow-lane, wide-lane and melbourne-wubbena combinations)",
+         "melbourne_wubbena": true,
+         "mw_k_factor": 4.0,
+
+         "_comment2": "Select `true` to run the Geometry-Free Cycle Slip Detector (requires computation of geometry-free combinations)",
+         "geometry_free": true,
+         "_comment3": "Select threshold for the Geometry-Free Cycle Slip Detector. -1 to let the algorithm choose the threshold",
+         "gf_threshold": -1,
+
+         "_comment4": "Select maximum number of missing observations to be considered as cycle slip",
+         "max_gap": 1
+      },
+      "compute_smooth": false,
+      "smooth_time_constant_secs": 300
+   },
+
+   "model": {
+      "constellations": ["GPS", "GAL"],
+
+      "_comment": "Select the GNSS PNT algorithm. The available algorithms are SPS, PR-PPP, CP-PPP",
+      "algorithm": "CP-PPP",
+
+      "_comment1": "Select the observation model. The available models are combined, uncombined. The combined model requires 2 observations.",
+      "obs_model": "uncombined",
+
+      "estimate_velocity": true,
+      "_comment2": "Use Doppler measurements to estimate velocity",
+
+      "estimate_ggto": true,
+      "_comment3": "Select `true` to estimate GGTO or `false` to use the broadcast GGTO",
+
+      "estimate_diono": true,
+        "_comment4": "Select `true` to estimate residual ionospheric delay or `false` to disable it",
+
+      "troposphere": {
+         "_comment1": "Select Tropospheric model. Available models are 'NONE', 'Saastamoinen', 'GPT3'",
+         "model": "Saastamoinen",
+
+         "_comment2": "Select Tropospheric map function for model GPT3. Available maps are 'Saastamoinen', 'GMF', 'VMF1', 'VMF3'",
+         "map": "VMF3",
+
+         "_comment3": "Select `true` to estimate tropospheric wet delay or `false` to disable tropo estimation",
+         "estimate_tropo_wet": false
+      },
+
+      "phase_center_corrections": {
+         "enabled": true,
+         "receiver":
+         {
+            "ARP_enabled": true,
+            "PCO_enabled": true,
+            "PCV_enabled": true,
+
+            "ARP_offset": null,
+            "_comment": "ARP_offset is null if fetched from RINEX OBS file or defined as a delta vector [H, E, N] in meters",
+
+            "PCV_model": 1,
+            "_comment1": "PCV Model 0: non-azimuth dependent, 1: azimuth dependent"
+         },
+         "satellite":
+         {
+            "PCO_enabled": true,
+            "PCV_enabled": true,
+
+            "GPS_PCV_model": 1,
+            "GAL_PCV_model": 1,
+            "_comment1": "GPS/GAL PCV Models 0: non-azimuth dependent, 1: azimuth dependent. Resort to non-azimuth dependent if no azimuth dependent model is available."
+         }
+      },
+
+      "GPS": {
+         "observations": ["1C", "2W"],
+
+         "clock_product_service": ["1W", "2W"],
+
+         "_comment1": "in `pr_obs_std` define the observation noise for the selected pseudorange observations (consistent with the signals defined in `observations`), in meters",
+         "pr_obs_std": [0.5, 1.0],
+
+         "_comment2": "in `cp_obs_std` define the observation noise for the selected carrier phase observations (consistent with the signals defined in `observations`), in meters",
+         "cp_obs_std": [0.01, 0.05],
+
+         "_comment3": "in `doppler_obs_std` define the observation noise for the selected doppler observations (consistent with the signals defined in `observations`), in Hertz",
+         "doppler_obs_std": [1.7, 1.0],
+
+         "elevation_mask": true,
+
+         "_comment4": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G', 'IONEX' ",
+         "ionosphere": "IONEX"
+      },
+
+      "GAL": {
+         "observations": ["1C", "5Q"],
+
+         "clock_product_service": ["1C", "5Q"],
+
+         "_comment1": "in `pr_obs_std` define the observation noise for the selected pseudorange observations (consistent with the signals defined in `observations`), in meters",
+         "pr_obs_std": [0.5, 1.0],
+
+         "_comment2": "in `cp_obs_std` define the observation noise for the selected carrier phase observations (consistent with the signals defined in `observations`), in meters",
+         "cp_obs_std": [0.01, 0.05],
+
+         "_comment3": "in `doppler_obs_std` define the observation noise for the selected doppler observations (consistent with the signals defined in `observations`), in Hertz",
+         "doppler_obs_std": [1.1, 1.0],
+
+         "elevation_mask": true,
+
+         "_comment4": "select between INAV or FNAV navigation message",
+         "nav_type": "FNAV",
+
+         "_comment5": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G', 'IONEX' ",
+         "ionosphere": "IONEX"
+      }
+   },
+
+   "solver": {
+      "trace_files": true,
+
+      "_comment1": "Select Algorithm. Available: LS, WLS, EKF",
+      "algorithm": "EKF",
+
+      "a_priori_constrain": false,
+      "feedforward_solution": true,
+
+      "_comment2": "maximum number of iterations in iterative procedure",
+      "n_iterations": 10,
+
+      "_comment3": "stop condition to end iterated least squares. Process ends when (RMS(i-1) - RMS(i)) / RMS(i-1) <= stop_criteria",
+      "stop_criteria": 0.0000002,
+
+      "_comment6": "Select algorithm to compute the transmission time: 0 - geometric, 1 - pseudorange, 2 - NAPEOS",
+      "transmission_time_alg": 0,
+
+      "_comment34": "Enable / disable relativistic corrections: 0 - disable, 1 - enable",
+      "relativistic_corrections": 1,
+
+      "_comment5": "Elevation filter. Select the value of minimum elevation angle to consider, in degree. Select -1 to turn off",
+      "elevation_filter": 5,
+
+      "ambiguity_resolution": {
+         "_comment1": "Select `true` to enable ambiguity resolution or `false` to disable it",
+         "enabled": true,
+
+         "_comment2": "Select the ambiguity resolution method. Available methods are 'ILS', 'IR', 'BS', 'PAR', 'ILS + Ratio Test'",
+         "method": "PAR",
+
+         "_comment3": "Select P0 value: minimum required success rate for method PAR",
+         "P0_PAR": 0.95,
+
+         "_comment4": "Select P0 value: fixed failure rate for method ILS + Ratio Test",
+         "P0_RatioTest": 0.010,
+
+         "_comment5": "When the pivot changes the ambiguities are unfixed. Options are 'all' (to unfix all satellites) or 'constellation' (to unfix only satellites for the given constellation) ",
+         "pivot_unfix_behaviour": "all"
+
+      },
+
+      "_comment7": "Initial states and expected covariances for the initial state vector.",
+      "initial_pos_cov": [0.402788131984481E+07,0.306998818013051E+06,0.491949906282187E+07,1E0,1E0,1E0],
+      "initial_vel_cov": [0,0,0,1,1,1],
+      "initial_clock_cov": [0,1e-17],
+      "initial_isb_cov": [0,1E-16],
+      "initial_iono_cov": [0.0, 10],
+      "initial_tropo_cov": [0.0, 10],
+      "initial_clock_rate_cov": [0.0, 1E-1],
+      "initial_ambiguity_cov": [0.0, 1000],
+      "initial_phase_bias_cov": [0.0, 1e-16],
+
+      "noise_model":
+      {
+         "PV_Model_Enabled": true,
+         "Clock_Model_Enabled": true,
+
+         "comment": "available types are white_noise, random_walk or gauss_markov",
+         "position":
+         {
+            "type": "random_walk",
+            "white_noise_random_walk": {
+               "comment": "Configurations for White Noise and Random Walk. Process noise units (continuous-time) are in [m/sqrt(s)]",
+               "process_noise_std": 0.0001
+            },
+            "gauss_markov":
+            {
+               "comment": "Configurations for Gauss Markov. Process noise units are in [m]. Correlation time in [s].",
+               "process_noise_std": 0.001,
+               "correlation_time": 1000
+            },
+            "relative_re-parameterization": 100
+         },
+         "velocity":
+         {
+            "type": "random_walk",
+            "white_noise_random_walk": {
+               "comment": "Configurations for White Noise and Random Walk. Process noise units (continuous-time) are in [m/s/sqrt(s)]",
+               "process_noise_std": 0.00001
+            },
+            "gauss_markov":
+            {
+               "comment": "Configurations for Gauss Markov. Process noise units are in [m/s]. Correlation time in [s].",
+               "process_noise_std": 0.001,
+               "correlation_time": 1000
+            },
+            "relative_re-parameterization": 100
+         },
+         "clock_bias":
+         {
+            "type": "random_walk",
+            "white_noise_random_walk": {
+               "comment": "Configurations for White Noise and Random Walk. Process noise units (continuous-time) are in [s/sqrt(s)]",
+               "process_noise_std": 3.3E-9
+            },
+            "gauss_markov":
+            {
+               "comment": "Configurations for Gauss Markov. Process noise units are in [s]. Correlation time in [s].",
+               "process_noise_std": 3.3E-11,
+               "correlation_time": 1
+            },
+            "relative_re-parameterization": 1000
+         },
+         "clock_drift":
+         {
+            "type": "random_walk",
+            "white_noise_random_walk": {
+               "comment": "Configurations for White Noise and Random Walk. Process noise units (continuous-time) are in [s/s/sqrt(s)]",
+               "process_noise_std": 1.1844e-9
+            },
+            "gauss_markov":
+            {
+               "comment": "Configurations for Gauss Markov. Process noise units are in [s/s]. Correlation time in [s].",
+               "process_noise_std": 1.1844e-10,
+               "correlation_time": 1
+            },
+            "relative_re-parameterization": 1000
+         },
+         "isb":
+         {
+            "type": "random_walk",
+            "white_noise_random_walk": {
+               "comment": "Configurations for White Noise and Random Walk. Process noise units (continuous-time) are in [s/sqrt(s)]",
+               "process_noise_std": 3.3E-10
+            },
+            "gauss_markov":
+            {
+               "comment": "Configurations for Gauss Markov. Process noise units are in [s]. Correlation time in [s].",
+               "process_noise_std": 3.3E-11,
+               "correlation_time": 1000
+            },
+            "relative_re-parameterization": 1000
+         },
+         "iono":
+         {
+            "type": "gauss_markov",
+            "white_noise_random_walk": {
+               "comment": "Configurations for White Noise and Random Walk. Process noise units (continuous-time) are in [m/sqrt(s)]",
+               "process_noise_std": 0.0001
+            },
+            "gauss_markov":
+            {
+               "comment": "Configurations for Gauss Markov. Process noise units are in [m]. Correlation time in [s].",
+               "process_noise_std": 1,
+               "correlation_time": 1800
+            },
+            "relative_re-parameterization": 1000
+         },
+         "tropo":
+         {
+            "type": "gauss_markov",
+            "white_noise_random_walk": {
+               "comment": "Configurations for White Noise and Random Walk. Process noise units (continuous-time) are in [m/sqrt(s)]",
+               "process_noise_std": 0.001
+            },
+            "gauss_markov":
+            {
+               "comment": "Configurations for Gauss Markov. Process noise units are in [m]. Correlation time in [s].",
+               "process_noise_std": 0.05,
+               "correlation_time": 10800
+            },
+            "relative_re-parameterization": 1000
+         },
+         "ambiguity":
+         {
+            "type": "random_walk",
+            "white_noise_random_walk": {
+               "comment": "Configurations for White Noise and Random Walk. Process noise units (continuous-time) are in [cycles/sqrt(s)]",
+               "process_noise_std": 0.01
+            },
+            "gauss_markov":
+            {
+               "comment": "Configurations for Gauss Markov. Process noise units are in [cycles]. Correlation time in [s].",
+               "process_noise_std": 0.1,
+               "correlation_time": 10000
+            },
+            "relative_re-parameterization": 1000
+         },
+         "phase_bias":
+         {
+            "type": "random_walk",
+            "white_noise_random_walk": {
+               "comment": "Configurations for White Noise and Random Walk. Process noise units (continuous-time) are in [s/sqrt(s)]",
+               "process_noise_std": 3.3E-12
+            },
+            "gauss_markov":
+            {
+               "comment": "Configurations for Gauss Markov. Process noise units are in [s]. Correlation time in [s].",
+               "process_noise_std": 3.3E-12,
+               "correlation_time": 1
+            },
+            "relative_re-parameterization": 1000
+         }
+      }
+   },
+
+   "output": {
+      "_comment": "select output folder (absolute path) to store the run. Set 'default' to store in default path runs/",
+      "output_path": "default"
+   }
+}
