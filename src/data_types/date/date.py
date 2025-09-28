@@ -161,6 +161,9 @@ class Epoch:
     JD_MJD = 2400000.5
     """Offset between JD and MJD"""
 
+    DJC = 36525.0
+    """Days per Julian century"""
+
     J2000 = 2451545.0
     """Offset between JD and J2000"""
 
@@ -500,6 +503,20 @@ class Epoch:
         if "year" not in self._cache.keys():
             self._cache["year"] = self.datetime.timetuple().tm_year
         return self._cache["year"]
+
+    @property
+    def month(self) -> int:
+        """ Computes the calendar month """
+        if "month" not in self._cache.keys():
+            self._cache["month"] = self.datetime.timetuple().tm_mon
+        return self._cache["month"]
+
+    @property
+    def day(self) -> int:
+        """ Computes the calendar day """
+        if "day" not in self._cache.keys():
+            self._cache["day"] = self.datetime.timetuple().tm_mday
+        return self._cache["day"]
 
     @property
     def decimal_year(self) -> int:
