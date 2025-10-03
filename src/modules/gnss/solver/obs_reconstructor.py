@@ -7,8 +7,10 @@ from src.data_types.gnss.data_type import DataType, get_data_type
 from src.io.config import config_dict
 from src.io.config.enums import EnumOnOff
 from src.models.frames import cartesian2geodetic
+from src.models.gnss_models.tides.solid import compute_displacement
 from src.models.gnss_models import receiver_phase_center_correction, satellite_phase_center_correction
 from src import constants
+from src.spicepy_wrapper import compute_sun_pos, compute_moon_pos
 
 
 class ObservationReconstructor:
@@ -229,8 +231,18 @@ class PseudorangeReconstructor(ObservationReconstructor):
                 get_logger(MODEL_LOG).warning(f"Error computing satellite antenna correction for "
                                               f"{epoch}, datatype {datatype} and sat {str(sat)}: {e}")
 
+        # Earth deformation effects
+        # TODO: consider moving to geometry...
+        los = self.get_unit_line_of_sight(sat)
+        sun_pos = compute_sun_pos(epoch)
+        moon_pos = compute_moon_pos(epoch)
+        dr = compute_displacement(epoch, los, sun_pos, moon_pos, self._state.position)
+
+        # compute displacement in the line of sight direction
+        disp = np.dot(los, dr)
+
         # finally, construct obs
-        obs = true_range + dt_rec - (dt_sat - bias) * constants.SPEED_OF_LIGHT + iono + tropo + dI + pcc_rec + pcc_sat
+        obs = true_range + dt_rec - (dt_sat - bias) * constants.SPEED_OF_LIGHT + iono + tropo + dI + pcc_rec + pcc_sat #+ disp
         if self._write_trace:
             self._trace_handler.write(f"{epoch},{sat},{datatype},{obs},{true_range},{dt_rec},"
                                       f"{dt_sat * constants.SPEED_OF_LIGHT},{bias * constants.SPEED_OF_LIGHT},"

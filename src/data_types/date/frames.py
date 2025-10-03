@@ -77,8 +77,6 @@ def iauGMST82(dj1, dj2):
 
     # Julian centuries since J2000.0
     t = (d1 + (d2 - Epoch.J2000)) / Epoch.DJC
-    print(d1, d2)
-    print("t", t)
 
     # Fractional part of UT1 day, in seconds
     f = SECONDS_IN_DAY * (math.fmod(d1, 1.0) + math.fmod(d2, 1.0))
@@ -183,28 +181,3 @@ def iauGMST06(uta, utb, tta, ttb):
              (-0.0000000368) * t) * t) * t) * t) * t) * DAS2R)
 
     return gmst
-
-
-def _validation_test():
-    print("Validation Test Comparing to IAU SOFA implementation in C")
-    epoch_test = Epoch(2007, 4, 5, 15, 5, 23, scale="UTC")
-    epoch_ut1 = epoch_test.change_scale("UT1")
-    epoch_tt = epoch_test.change_scale("TT")
-    gmst82 = get_gmst(epoch_test, 'IAU82')
-    gmst00 = get_gmst(epoch_test, 'IAU00')
-    gmst06 = get_gmst(epoch_test, 'IAU06')
-
-    # IAU REFS
-    GMST82 = 1.045176704334423
-    GMST00 = 1.045176678373470
-    GMST06 = 1.045176677938862
-
-    print(f"JD UTC: computed value = {epoch_test.jd} | IAU SOFA = {2454195.500000000000000+0.628738425925926}")
-    print(f"JD UT1: computed value = {epoch_ut1.jd} | IAU SOFA = {2454195.500000000000000+0.628737599274306}")
-    print(f"JD TT: computed value = {epoch_tt.jd} | IAU SOFA = {2454195.500000000000000+0.629492870370370}")
-    print(f"gmst82: computed value = {gmst82} | IAU SOFA = {GMST82}")
-    print(f"gmst00: computed value = {gmst00} | IAU SOFA = {GMST00}")
-    print(f"gmst06: computed value = {gmst06} | IAU SOFA = {GMST06}")
-
-
-# _validation_test()
