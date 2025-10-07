@@ -48,7 +48,6 @@ AVERAGE_DAYS_IN_YEAR = 365.25
 SECONDS_IN_HOUR = 3600
 DS2R = 7.272205216643039903848712e-5
 
-
 #######################
 # GNSS Frequencies (Hz)
 #######################

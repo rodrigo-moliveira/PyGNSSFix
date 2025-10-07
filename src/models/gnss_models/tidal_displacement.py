@@ -2,10 +2,13 @@
 # see also file:///C:/Users/rooo/Downloads/iersconventions_v1_3_0/tn36.pdf
 # see also https://www.rtklib.com/prog/manual_2.4.2.pdf
 
+# TODO: add docstrings
+
 from math import sin, cos
 import numpy as np
 
-from src.constants import MASS_RATIO_SUN, MASS_RATIO_MOON
+from src.constants import MASS_RATIO_SUN, MASS_RATIO_MOON, SECONDS_IN_DAY, AVERAGE_DAYS_IN_YEAR
+from src.data_types.date import Epoch
 from src.data_types.date.frames import get_gmst
 from src.models.frames import latlon2dcm_e_enu
 
@@ -76,6 +79,51 @@ def solid_disp(lat, long, r_sun, r_moon, r_rec, R_ECEF2ENU, gmst, step3):
     return disp
 
 
+def iers_mean_pole(epoch):
+    epoch_ut1 = epoch.change_scale("UT1")
+    epoch_2000 = Epoch(2000, 1, 1, 0, 0, 0, scale='UT1')
+    years = (epoch_ut1 - epoch_2000).total_seconds() / SECONDS_IN_DAY / AVERAGE_DAYS_IN_YEAR
+
+    if years < 3653.0/AVERAGE_DAYS_IN_YEAR:  # until 2010.0
+        y2 = years * years
+        y3 = y2 * years
+        xp_bar = 55.974 + 1.8243 * years + 0.18413 * y2 + 0.007024 * y3  # in (mas)
+        yp_bar = 346.346 + 1.7896 * years - 0.10729 * y2 - 0.000908 * y3
+    else:  # after 2010.0
+        xp_bar = 23.513 + 7.6141 * years  # (mas)
+        yp_bar = 358.891 - 0.6287 * years
+
+    return xp_bar, yp_bar
+
+
+def tide_pole(epoch, lat, long):
+    disp_enu = [0, 0, 0]
+
+    # iers mean pole (mas)
+    xp_bar, yp_bar = iers_mean_pole(epoch)
+
+    # earth rotation parameters
+    eop = epoch.eop
+    xp = eop.x  # in as
+    yp = eop.y  # in as
+
+    # ref [7] eq.7.24
+    m1 = xp - xp_bar * 1E-3  # (as)
+    m2 = -yp + yp_bar * 1E-3
+
+    cos_long = cos(long)
+    sin_long = sin(long)
+
+    # ref [7] eq.7.26 (correct formula is from the Errata
+    # https://iers-conventions.obspm.fr/content/chapter7/icc7.pdf
+    # sin(2*theta) = sin(2*phi), cos(2*theta)=-cos(2*phi)
+    disp_enu[0] = 9E-3 * sin(lat) * (m1 * sin_long - m2 * cos_long)  # de = S_lambda (m)  positive east
+    disp_enu[1] = -9E-3 * cos(2.0 * lat) * (m1 * cos_long + m2 * sin_long)  # dn = -S_theta (m)  positive south
+    disp_enu[2] = -33E-3 * sin(2.0 * lat) * (m1 * cos_long + m2 * sin_long)  # du = S_r (m)  positive upwards
+
+    return disp_enu
+
+
 def compute_displacement(epoch, r_sun, r_moon, r_rec, step3=True, gmst_model='IAU82'):
     # site displacement vector in ECEF
     lat = np.arcsin(r_rec[2] / np.linalg.norm(r_rec))
@@ -87,5 +135,10 @@ def compute_displacement(epoch, r_sun, r_moon, r_rec, step3=True, gmst_model='IA
 
     # Solid Displacement
     disp = solid_disp(lat, long, r_sun, r_moon, r_rec, R_ECEF2ENU, gmst, step3)
+
+    # displacement by pole tide
+    disp_enu = tide_pole(epoch, lat, long)
+    disp_pole = R_ECEF2ENU.T @ disp_enu
+    disp = disp + disp_pole
 
     return disp
