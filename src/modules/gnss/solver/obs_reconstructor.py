@@ -7,7 +7,7 @@ from src.data_types.gnss.data_type import DataType, get_data_type
 from src.io.config import config_dict
 from src.io.config.enums import EnumOnOff
 from src.models.frames import cartesian2geodetic
-from src.models.gnss_models.tides.solid import compute_displacement
+from src.models.gnss_models.tidal_displacement import compute_displacement
 from src.models.gnss_models import receiver_phase_center_correction, satellite_phase_center_correction
 from src import constants
 from src.spicepy_wrapper import compute_sun_pos, compute_moon_pos

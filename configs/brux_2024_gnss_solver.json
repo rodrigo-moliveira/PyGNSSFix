@@ -22,6 +22,10 @@
       "sp3_files": ["datasets/gnss/BRUX_2024/COD0MGXFIN_20240900000_01D_05M_ORB_short.SP3"],
       "ionex_files": ["datasets/gnss/BRUX_2024/COD0OPSFIN_20240900000_01D_01H_GIM.INX"],
       "antex_files": ["datasets/gnss/BRUX_2024/igs20.atx"],
+      "ocean_loading": {
+         "file": "datasets/gnss/BRUX_2024/ocean_loading_brux.blq",
+         "station": "BRUX"
+      },
 
       "bias_type": "OSB",
       "dcb_files": ["datasets/gnss/BRUX_2024/DLR0OPSFIN_20240010000_03L_01D_DCB.BIA"],
@@ -100,7 +104,7 @@
       "constellations": ["GPS", "GAL"],
 
       "_comment": "Select the GNSS PNT algorithm. The available algorithms are SPS, PR-PPP, CP-PPP",
-      "algorithm": "CP-PPP",
+      "algorithm": "PR-PPP",
 
       "_comment1": "Select the observation model. The available models are combined, uncombined. The combined model requires 2 observations.",
       "obs_model": "uncombined",
@@ -148,6 +152,13 @@
             "GAL_PCV_model": 1,
             "_comment1": "GPS/GAL PCV Models 0: non-azimuth dependent, 1: azimuth dependent. Resort to non-azimuth dependent if no azimuth dependent model is available."
          }
+      },
+
+      "earth_deformation_effects":
+      {
+         "enable_solid_tides": true,
+         "enable_ocean_loading": true,
+         "enable_pode_tides": true
       },
 
       "GPS": {
@@ -198,7 +209,7 @@
       "trace_files": true,
 
       "_comment1": "Select Algorithm. Available: LS, WLS, EKF",
-      "algorithm": "EKF",
+      "algorithm": "WLS",
 
       "a_priori_constrain": false,
       "feedforward_solution": true,
@@ -220,7 +231,7 @@
 
       "ambiguity_resolution": {
          "_comment1": "Select `true` to enable ambiguity resolution or `false` to disable it",
-         "enabled": true,
+         "enabled": false,
 
          "_comment2": "Select the ambiguity resolution method. Available methods are 'ILS', 'IR', 'BS', 'PAR', 'ILS + Ratio Test'",
          "method": "PAR",

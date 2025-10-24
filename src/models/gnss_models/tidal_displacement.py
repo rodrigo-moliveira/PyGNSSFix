@@ -124,6 +124,13 @@ def tide_pole(epoch, lat, long):
     return disp_enu
 
 
+def ocean_loading():
+    """This routine computes time series of tidal displacements
+    from an input file containing the ocean loading coefficients for a given station. These coefficients can be obtained from the ocean loading service by
+    request from the website https://barre.oso.chalmers.se/loading/l.php"""
+    pass
+
+
 def compute_displacement(epoch, r_sun, r_moon, r_rec, step3=True, gmst_model='IAU82'):
     # site displacement vector in ECEF
     lat = np.arcsin(r_rec[2] / np.linalg.norm(r_rec))
