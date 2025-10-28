@@ -292,7 +292,7 @@ class SystemGeometry:
         # Earth deformation effects
         if config_dict.get("model", "earth_deformation_effects", "enable"):
             self.tidal_displacement = compute_displacement(epoch, state.position,
-                                                           ocean_loading_mgn=self.ocean_loading_mng)
+                                                           ocean_loading_mng=self.ocean_loading_mng)
         else:
             self.tidal_displacement = None
 
