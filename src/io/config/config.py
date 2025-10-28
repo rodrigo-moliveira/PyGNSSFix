@@ -86,8 +86,9 @@ class Config(dict):
                                           f"number of observations for constellation {constellation} is not 2 "
                                           f"({services}). Please revise the configurations.")
 
-            # For PPP Solutions, load CSpice kernels and initialize the ITRF frame transformations
+            # specific tasks for PPP Solutions
             if self["gnss_alg"] != EnumAlgorithmPNT.SPS:
+                # For PPP Solutions, load CSpice kernels and initialize the ITRF frame transformations
                 from src.spicepy_wrapper import setup_cspice
                 from src import WORKSPACE_PATH
                 log = get_logger(IO_LOG)
@@ -98,6 +99,12 @@ class Config(dict):
                     kernel_list = self.get("inputs", "cspice_kernels", "list")
                     log.info(f"Setting up CSpice kernels {kernel_list} from folder {kernels_folder}.")
                     setup_cspice(WORKSPACE_PATH / f"{kernels_folder}", kernel_list, log)
+
+            # specific tasks for SPS Solutions
+            elif self["gnss_alg"] == EnumAlgorithmPNT.SPS:
+                # disable precision corrections
+                self.set('model', 'earth_deformation_effects', 'enable', False)
+                self.set('model', 'phase_center_corrections', 'enabled', False)
 
     def _validate(self, initial_dict, alg):
         # Read the schema from the file

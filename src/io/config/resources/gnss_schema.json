@@ -339,11 +339,12 @@
         "earth_deformation_effects": {
           "type": "object",
           "properties": {
+            "enable": {"type": "boolean"},
             "enable_solid_tides": {"type": "boolean"},
             "enable_ocean_loading": {"type": "boolean"},
             "enable_pode_tides": {"type": "boolean"}
           },
-          "required": ["enable_solid_tides", "enable_ocean_loading", "enable_pode_tides"]
+          "required": ["enable", "enable_solid_tides", "enable_ocean_loading", "enable_pode_tides"]
         },
 
         "GPS": {

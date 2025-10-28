@@ -276,7 +276,7 @@ class Epoch:
         elif isinstance(other, datetime):
             return self.datetime - other
         elif isinstance(other, Epoch):
-            return self._datetime - other._datetime
+            return self.datetime - other.datetime
         else:
             raise TypeError(f"Unknown operation with {type(other)}")
 

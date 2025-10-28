@@ -9,6 +9,7 @@ from src.io.config import EnumTransmissionTime, config_dict, EnumAlgorithmPNT
 from src.models.frames import enu2azel, ecef2enu, cartesian2geodetic, dcm_e_i
 from src.data_mng import Container
 from src.common_log import MODEL_LOG, get_logger
+from src.models.gnss_models.tidal_displacement import compute_displacement
 from src.spicepy_wrapper import compute_sun_pos
 from src.models.gnss_models import gnss_attitude, compute_tx_time
 
@@ -191,7 +192,7 @@ class SystemGeometry:
     """ System Geometry class.
     This class is serves as a dataframe to store `SatelliteGeometry` objects for all available satellites.
     """
-    def __init__(self, obs_data, sat_clocks, sat_orbits, phase_center, sat_bias):
+    def __init__(self, obs_data, sat_clocks, sat_orbits, phase_center, sat_bias, ocean_loading_mng):
         """
         Constructor of the SystemGeometry. This is a container that stores data (instances of `SatelliteGeometry`)
         for all available satellites and for a single epoch. This data is useful in the reconstruction equations
@@ -205,6 +206,7 @@ class SystemGeometry:
             phase_center(src.data_mng.gnss.phase_center_mng.PhaseCenterManager): `PhaseCenterManager` object with
                 phase center data
             sat_bias(src.data_mng.gnss.bias_manager.BiasManager): manager of satellite code and phase biases
+            ocean_loading_mng(src.data_mng.gnss.ocean_loading_data.OceanLoadingData): ocean loading manager
 
         """
         self._data = dict.fromkeys(obs_data.get_satellites())
@@ -213,6 +215,8 @@ class SystemGeometry:
         self.sat_orbits = sat_orbits
         self.phase_center = phase_center
         self.sat_bias = sat_bias
+        self.ocean_loading_mng = ocean_loading_mng
+        self.tidal_displacement = None
 
     def _clean(self):
         vSats = self.get_satellites()
@@ -272,7 +276,7 @@ class SystemGeometry:
 
     def compute(self, epoch, state, metadata):
         """
-        compute satellite-related quantities (tropo, iono, transmission time, etc.) to be used in the
+        Compute satellite-related quantities (tropo, iono, transmission time, etc.) to be used in the
         Observation reconstruction models
 
         Args:
@@ -284,6 +288,15 @@ class SystemGeometry:
         _to_remove = []
         sat_list = self.get_satellites()
 
+        # Compute receiver-related geometry (independent of GNSS SVs)
+        # Earth deformation effects
+        if config_dict.get("model", "earth_deformation_effects", "enable"):
+            self.tidal_displacement = compute_displacement(epoch, state.position,
+                                                           ocean_loading_mgn=self.ocean_loading_mng)
+        else:
+            self.tidal_displacement = None
+
+        # Compute satellite-related geometry
         for sat in sat_list:
             geometry = SatelliteGeometry()
 

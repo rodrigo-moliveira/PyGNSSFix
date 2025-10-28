@@ -23,7 +23,7 @@
       "ionex_files": ["datasets/gnss/BRUX_2024/COD0OPSFIN_20240900000_01D_01H_GIM.INX"],
       "antex_files": ["datasets/gnss/BRUX_2024/igs20.atx"],
       "ocean_loading": {
-         "file": "datasets/gnss/BRUX_2024/ocean_loading_brux.blq",
+         "file": "geo_time_data/ocean_loading/brux.blq",
          "station": "BRUX"
       },
 
@@ -156,6 +156,7 @@
 
       "earth_deformation_effects":
       {
+        "enable": true,
          "enable_solid_tides": true,
          "enable_ocean_loading": true,
          "enable_pode_tides": true

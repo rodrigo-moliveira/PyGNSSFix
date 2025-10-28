@@ -7,10 +7,13 @@
 from math import sin, cos
 import numpy as np
 
-from src.constants import MASS_RATIO_SUN, MASS_RATIO_MOON, SECONDS_IN_DAY, AVERAGE_DAYS_IN_YEAR
+from src.constants import MASS_RATIO_SUN, MASS_RATIO_MOON, SECONDS_IN_DAY, AVERAGE_DAYS_IN_YEAR, PI, DEG2RAD
 from src.data_types.date import Epoch
 from src.data_types.date.frames import get_gmst
+from src.io.config import config_dict
 from src.models.frames import latlon2dcm_e_enu
+from src.spicepy_wrapper import compute_sun_pos, compute_moon_pos
+
 
 R_EARTH = 6378136.6  # specific value for the IERS 2010 convention
 H2 = 0.6078
@@ -43,17 +46,17 @@ def tide_gravity(h2, l2, r_rec_unit, r_body, MASS_RATIO, lat, long):
 
     # Step 1: out of phase (only radial)
     du = 3.0 / 4.0 * 0.0025 * K2 * sin(2.0 * lat_body) * sin(2.0 * lat) * sin(long - long_body)  # Eq. (7.10a)
-    du += 3.0 / 4.0 * 0.0022 * K2 * cos(lat_body)**2 * np.cos(lat)**2 * sin(2.0 * (long - long_body))  # Eq. (7.11a)
+    du += 3.0 / 4.0 * 0.0022 * K2 * cos(lat_body) ** 2 * np.cos(lat) ** 2 * sin(2.0 * (long - long_body))  # Eq. (7.11a)
     disp_body += du * r_rec_unit
 
     return disp_body
 
 
-def solid_disp(lat, long, r_sun, r_moon, r_rec, R_ECEF2ENU, gmst, step3):
+def solid_disp(lat, long, r_sun, r_moon, r_rec, R_ECEF2ENU, gmst, step3=True):
     r_rec_unit = r_rec / np.linalg.norm(r_rec)
 
-    h2 = H2 - 0.0006 * ((3 * sin(lat)**2 - 1) / 2)
-    l2 = L2 + 0.0002 * ((3 * sin(lat)**2 - 1) / 2)
+    h2 = H2 - 0.0006 * ((3 * sin(lat) ** 2 - 1) / 2)
+    l2 = L2 + 0.0002 * ((3 * sin(lat) ** 2 - 1) / 2)
 
     # step 1: time domain
     # Sun and moon contributions
@@ -71,7 +74,7 @@ def solid_disp(lat, long, r_sun, r_moon, r_rec, R_ECEF2ENU, gmst, step3):
         # step 3: eliminate permanent deformation
         P2 = (3 * np.sin(lat) ** 2 - 1) / 2
         d_radial = (-0.1206 + 0.0001 * P2) * P2  # Eq. (7.14a)
-        d_north = (-0.0252 + 0.0001 * P2) * np.sin(2*lat)  # Eq. (7.14b)
+        d_north = (-0.0252 + 0.0001 * P2) * np.sin(2 * lat)  # Eq. (7.14b)
         delta_enu = np.array([0, d_north, d_radial])
         delta_ecef = R_ECEF2ENU.T @ delta_enu
         disp = disp - delta_ecef
@@ -84,7 +87,7 @@ def iers_mean_pole(epoch):
     epoch_2000 = Epoch(2000, 1, 1, 0, 0, 0, scale='UT1')
     years = (epoch_ut1 - epoch_2000).total_seconds() / SECONDS_IN_DAY / AVERAGE_DAYS_IN_YEAR
 
-    if years < 3653.0/AVERAGE_DAYS_IN_YEAR:  # until 2010.0
+    if years < 3653.0 / AVERAGE_DAYS_IN_YEAR:  # until 2010.0
         y2 = years * years
         y3 = y2 * years
         xp_bar = 55.974 + 1.8243 * years + 0.18413 * y2 + 0.007024 * y3  # in (mas)
@@ -124,15 +127,67 @@ def tide_pole(epoch, lat, long):
     return disp_enu
 
 
-def ocean_loading():
+def ocean_loading(epoch, ocean_mng):
     """This routine computes time series of tidal displacements
     from an input file containing the ocean loading coefficients for a given station. These coefficients can be obtained from the ocean loading service by
     request from the website https://barre.oso.chalmers.se/loading/l.php"""
-    pass
+
+    args = [[1.40519E-4, 2.0, -2.0, 0.0, 0.00],   # M2
+            [1.45444E-4, 0.0, 0.0, 0.0, 0.00],    # S2
+            [1.37880E-4, 2.0, -3.0, 1.0, 0.00],   # N2
+            [1.45842E-4, 2.0, 0.0, 0.0, 0.00],    # K2
+            [0.72921E-4, 1.0, 0.0, 0.0, 0.25],    # K1
+            [0.67598E-4, 1.0, -2.0, 0.0, -0.25],  # O1
+            [0.72523E-4, -1.0, 0.0, 0.0, -0.25],  # P1
+            [0.64959E-4, 1.0, -3.0, 1.0, -0.25],  # Q1
+            [0.53234E-5, 0.0, 2.0, 0.0, 0.00],    # Mf
+            [0.26392E-5, 0.0, 1.0, -1.0, 0.00],   # Mm
+            [0.03982E-5, 2.0, 0.0, 0.0, 0.00]]    # Ssa
+
+    epoch_ut1 = epoch.change_scale("UT1").datetime
+    epoch_ut1_00 = Epoch(epoch_ut1.year, epoch_ut1.month, epoch_ut1.day, 0, 0, 0, scale="UT1").datetime
+    epoch_1975 = Epoch(1975, 1, 1, 0, 0, 0, scale="UT1").datetime
+    f_day = epoch_ut1.hour * 3600.0 + epoch_ut1.minute * 60.0 + epoch_ut1.second
+    d_days = (epoch_ut1_00 - epoch_1975).total_seconds() / 86400 + 1.0
 
 
-def compute_displacement(epoch, r_sun, r_moon, r_rec, step3=True, gmst_model='IAU82'):
+    t = (27392.500528 + 1.000000035 * d_days) / 36525.0
+    t2 = t * t
+    t3 = t2 * t
+
+
+    a = [0, 0, 0, 0, 0]
+    a[0] = f_day
+    a[1] =  (279.69668 + 36000.768930485 * t + 3.03E-4 * t2) * DEG2RAD  # H0
+    a[2] = (270.434358 + 481267.88314137 * t - 0.001133 * t2 + 1.9E-6 * t3) * DEG2RAD  # S0
+    a[3] = (334.329653 + 4069.0340329577 * t - 0.010325 * t2 - 1.2E-5 * t3) * DEG2RAD  # P0
+    a[4] = 2 * PI
+
+    dp = [0, 0, 0]
+    d_enu = [0, 0, 0]
+
+
+    for i in range(11):
+        ang = 0.0
+        for j in range(5):
+            ang += a[j] * args[i][j]
+        dp[0] += ocean_mng.radial_amplitude[i] * cos(ang - ocean_mng.radial_phase[i] * DEG2RAD)
+        dp[1] += ocean_mng.west_amplitude[i] * cos(ang - ocean_mng.west_phase[i] * DEG2RAD)
+        dp[2] += ocean_mng.south_amplitude[i] * cos(ang - ocean_mng.south_phase[i] * DEG2RAD)
+
+
+    d_enu[0] = -dp[1]  # east (-west)
+    d_enu[1] = -dp[2]  # north(-south)
+    d_enu[2] = dp[0]  # up (+radial)
+    return d_enu
+
+def compute_displacement(epoch, r_rec, ocean_loading_mgn = None, gmst_model='IAU82'):
+    # Main function
     # site displacement vector in ECEF
+    return np.array([0, 0, 0])
+
+    first_epoch = config_dict.get("inputs", "arc", "first_epoch")
+
     lat = np.arcsin(r_rec[2] / np.linalg.norm(r_rec))
     long = np.arctan2(r_rec[1], r_rec[0])
 
@@ -141,7 +196,13 @@ def compute_displacement(epoch, r_sun, r_moon, r_rec, step3=True, gmst_model='IA
     gmst = get_gmst(epoch, gmst_model)
 
     # Solid Displacement
-    disp = solid_disp(lat, long, r_sun, r_moon, r_rec, R_ECEF2ENU, gmst, step3)
+    r_sun = compute_sun_pos(epoch)
+    r_moon = compute_moon_pos(epoch)
+    disp = solid_disp(lat, long, r_sun, r_moon, r_rec, R_ECEF2ENU, gmst, step3=True)
+
+    # ocean loading
+    if ocean_loading_mgn is not None:
+        disp_ocn = ocean_loading(epoch, ocean_loading_mgn)
 
     # displacement by pole tide
     disp_enu = tide_pole(epoch, lat, long)

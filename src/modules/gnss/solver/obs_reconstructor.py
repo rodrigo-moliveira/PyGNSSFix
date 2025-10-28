@@ -7,10 +7,8 @@ from src.data_types.gnss.data_type import DataType, get_data_type
 from src.io.config import config_dict
 from src.io.config.enums import EnumOnOff
 from src.models.frames import cartesian2geodetic
-from src.models.gnss_models.tidal_displacement import compute_displacement
 from src.models.gnss_models import receiver_phase_center_correction, satellite_phase_center_correction
 from src import constants
-from src.spicepy_wrapper import compute_sun_pos, compute_moon_pos
 
 
 class ObservationReconstructor:
@@ -119,7 +117,7 @@ class PseudorangeReconstructor(ObservationReconstructor):
     """
     Reconstructor of pseudorange observations, according to the following equation.
 
-        PR = rho + dt_rec - dt_sat + iono + tropo + dI + pcc_rec + pcc_sat
+        PR = rho + dt_rec - dt_sat + iono + tropo + dI + pcc_rec + pcc_sat + earth_deformation
     where:
         * PR is the reconstructed pseudorange observation
         * rho is the true range (geometrical distance between satellite at TX time and receiver at RX time)
@@ -130,9 +128,10 @@ class PseudorangeReconstructor(ObservationReconstructor):
         * dI is the estimated ionospheric residual
         * pcc_rec is the receiver antenna phase center correction (ARP, PCO, PCV)
         * pcc_sat is the satellite antenna phase center correction (PCO, PCV)
+        * earth_deformation is the displacement correction by earth tides in the LOS direction for each SV-receiver link
     """
     __trace_header__ = "epoch,sat,datatype,observation,true_range,receiver_clock,satellite_clock," \
-                       "satellite_bias,iono_model,tropo,iono_correction,pcc_rec,pcc_sat"
+                       "satellite_bias,iono_model,tropo,iono_correction,pcc_rec,pcc_sat,earth_deformation"
 
     def __init__(self, system_geometry: src.data_mng.gnss.geometry.SystemGeometry, metadata: dict,
                  state: src.data_mng.gnss.state_space.GnssStateSpace, trace_data: tuple):
@@ -232,21 +231,20 @@ class PseudorangeReconstructor(ObservationReconstructor):
                                               f"{epoch}, datatype {datatype} and sat {str(sat)}: {e}")
 
         # Earth deformation effects
-        # TODO: consider moving to geometry...
-        los = self.get_unit_line_of_sight(sat)
-        sun_pos = compute_sun_pos(epoch)
-        moon_pos = compute_moon_pos(epoch)
-        dr = compute_displacement(epoch, los, sun_pos, moon_pos, self._state.position)
-
-        # compute displacement in the line of sight direction
-        disp = np.dot(los, dr)
+        disp_los = 0.0
+        if config_dict.get("model", "earth_deformation_effects", "enable"):
+            disp_ecef = self._system_geometry.tidal_displacement  # the same for all GNSS SVs
+            if disp_ecef is not None:
+                los = self.get_unit_line_of_sight(sat)
+                disp_los = np.dot(los, disp_ecef)  # compute displacement in the line of sight direction
 
         # finally, construct obs
-        obs = true_range + dt_rec - (dt_sat - bias) * constants.SPEED_OF_LIGHT + iono + tropo + dI + pcc_rec + pcc_sat #+ disp
+        obs = true_range + dt_rec - (dt_sat - bias) * constants.SPEED_OF_LIGHT + iono + tropo + dI + pcc_rec + pcc_sat \
+              + disp_los
         if self._write_trace:
             self._trace_handler.write(f"{epoch},{sat},{datatype},{obs},{true_range},{dt_rec},"
                                       f"{dt_sat * constants.SPEED_OF_LIGHT},{bias * constants.SPEED_OF_LIGHT},"
-                                      f"{iono},{tropo},{dI},{pcc_rec},{pcc_sat}\n")
+                                      f"{iono},{tropo},{dI},{pcc_rec},{pcc_sat},{disp_los}\n")
         return obs
 
 
@@ -255,6 +253,7 @@ class CarrierPhaseReconstructor(ObservationReconstructor):
     Reconstructor of carrier phase observations, according to the following equation.
 
         CP = rho + dt_rec + phase_bias - dt_sat - (iono + dI) + tropo + lambda * N + pcc_rec + pcc_sat
+            + earth_deformation
     where:
         * CP is the reconstructed carrier phase observation
         * rho is the true range (geometrical distance between satellite at TX time and receiver at RX time)
@@ -268,9 +267,11 @@ class CarrierPhaseReconstructor(ObservationReconstructor):
         * lambda is the wavelength of the signal in meters
         * pcc_rec is the receiver antenna phase center correction (ARP, PCO, PCV)
         * pcc_sat is the satellite antenna phase center correction (PCO, PCV)
+        * earth_deformation is the displacement correction by earth tides in the LOS direction for each SV-receiver link
     """
     __trace_header__ = "epoch,sat,datatype,observation,true_range,receiver_clock,satellite_clock," \
-                       "receiver_phase_bias,satellite_bias,iono_model,ambiguity,tropo,iono_correction,pcc_rec,pcc_sat"
+                       "receiver_phase_bias,satellite_bias,iono_model,ambiguity,tropo,iono_correction,pcc_rec," \
+                       "pcc_sat,earth_deformation"
 
     def __init__(self, system_geometry: src.data_mng.gnss.geometry.SystemGeometry, metadata: dict,
                  state: src.data_mng.gnss.state_space.GnssStateSpace, trace_data: tuple):
@@ -385,14 +386,22 @@ class CarrierPhaseReconstructor(ObservationReconstructor):
         else:
             N = wavelength = 0.0
 
+        # Earth deformation effects
+        disp_los = 0.0
+        if config_dict.get("model", "earth_deformation_effects", "enable"):
+            disp_ecef = self._system_geometry.tidal_displacement  # the same for all GNSS SVs
+            if disp_ecef is not None:
+                los = self.get_unit_line_of_sight(sat)
+                disp_los = np.dot(los, disp_ecef)  # compute displacement in the line of sight direction
+
         # finally, construct obs
         obs = true_range + dt_rec + phase_bias - (dt_sat - bias) * constants.SPEED_OF_LIGHT - iono + tropo - \
-              dI + pcc_rec + pcc_sat + wavelength * N
+              dI + pcc_rec + pcc_sat + wavelength * N + disp_los
         if self._write_trace:
             self._trace_handler.write(f"{epoch},{sat},{datatype},{obs},{true_range},{dt_rec},"
                                       f"{dt_sat * constants.SPEED_OF_LIGHT},{phase_bias},"
                                       f"{bias * constants.SPEED_OF_LIGHT},"
-                                      f"{iono},{wavelength * N},{tropo},{dI},{pcc_rec},{pcc_sat}\n")
+                                      f"{iono},{wavelength * N},{tropo},{dI},{pcc_rec},{pcc_sat},{disp_los}\n")
         return obs
 
 
