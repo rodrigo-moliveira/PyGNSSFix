@@ -259,6 +259,7 @@
             "estimate_tropo_wet"
           ]
         },
+        "phase_windup": {"type": "boolean"},
         "phase_center_corrections": {
           "type": "object",
           "properties": {
@@ -479,6 +480,7 @@
         "estimate_velocity",
         "estimate_ggto",
         "estimate_diono",
+        "phase_windup",
         "phase_center_corrections",
         "earth_deformation_effects",
         "GPS",

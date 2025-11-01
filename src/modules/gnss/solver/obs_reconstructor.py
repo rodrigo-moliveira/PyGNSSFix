@@ -253,7 +253,7 @@ class CarrierPhaseReconstructor(ObservationReconstructor):
     Reconstructor of carrier phase observations, according to the following equation.
 
         CP = rho + dt_rec + phase_bias - dt_sat - (iono + dI) + tropo + lambda * N + pcc_rec + pcc_sat
-            + earth_deformation
+            + earth_deformation + windup
     where:
         * CP is the reconstructed carrier phase observation
         * rho is the true range (geometrical distance between satellite at TX time and receiver at RX time)
@@ -268,10 +268,11 @@ class CarrierPhaseReconstructor(ObservationReconstructor):
         * pcc_rec is the receiver antenna phase center correction (ARP, PCO, PCV)
         * pcc_sat is the satellite antenna phase center correction (PCO, PCV)
         * earth_deformation is the displacement correction by earth tides in the LOS direction for each SV-receiver link
+        * windup is the phase windup correction
     """
     __trace_header__ = "epoch,sat,datatype,observation,true_range,receiver_clock,satellite_clock," \
                        "receiver_phase_bias,satellite_bias,iono_model,ambiguity,tropo,iono_correction,pcc_rec," \
-                       "pcc_sat,earth_deformation"
+                       "pcc_sat,windup,earth_deformation"
 
     def __init__(self, system_geometry: src.data_mng.gnss.geometry.SystemGeometry, metadata: dict,
                  state: src.data_mng.gnss.state_space.GnssStateSpace, trace_data: tuple):
@@ -380,11 +381,11 @@ class CarrierPhaseReconstructor(ObservationReconstructor):
                                               f"{epoch}, datatype {datatype} and sat {str(sat)}: {e}")
 
         # ambiguity
+        wavelength = constants.SPEED_OF_LIGHT / datatype.freq.freq_value
         if sat is not self._state.ambiguity.pivot[sat.sat_system]:
             N = self._state.ambiguity[sat][datatype].val
-            wavelength = constants.SPEED_OF_LIGHT / datatype.freq.freq_value
         else:
-            N = wavelength = 0.0
+            N = 0.0
 
         # Earth deformation effects
         disp_los = 0.0
@@ -394,14 +395,19 @@ class CarrierPhaseReconstructor(ObservationReconstructor):
                 los = self.get_unit_line_of_sight(sat)
                 disp_los = np.dot(los, disp_ecef)  # compute displacement in the line of sight direction
 
+        # phase windup
+        windup = self._system_geometry.get("windup", sat)
+        windup_m = wavelength * windup
+
         # finally, construct obs
         obs = true_range + dt_rec + phase_bias - (dt_sat - bias) * constants.SPEED_OF_LIGHT - iono + tropo - \
-              dI + pcc_rec + pcc_sat + wavelength * N + disp_los
+              dI + pcc_rec + pcc_sat + wavelength * N + disp_los + windup_m
         if self._write_trace:
             self._trace_handler.write(f"{epoch},{sat},{datatype},{obs},{true_range},{dt_rec},"
                                       f"{dt_sat * constants.SPEED_OF_LIGHT},{phase_bias},"
                                       f"{bias * constants.SPEED_OF_LIGHT},"
-                                      f"{iono},{wavelength * N},{tropo},{dI},{pcc_rec},{pcc_sat},{disp_los}\n")
+                                      f"{iono},{wavelength * N},{tropo},{dI},{pcc_rec},{pcc_sat},{windup_m},"
+                                      f"{disp_los}\n")
         return obs
 
 
