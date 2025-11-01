@@ -1,11 +1,22 @@
 import numpy as np
 
-from src.models.gnss_models.tidal_displacement import compute_displacement
+from src.models.gnss_models.tidal_displacement import compute_displacement, ocean_loading
+from src.data_mng.gnss.ocean_loading_data import OceanLoadingData
 from src.data_types.date import Epoch
+
+def ocean_loading_testing():
+    mng = OceanLoadingData()
+    mng._enabled = True
+    mng._station = "Onsala"
+    mng.init("datasets/gnss/BRUX_2024/Onsala.blq")
+
+    epoch = Epoch(2009, 6, 25, 4, 10, 45, scale="UT1")
+    d_enu = ocean_loading(epoch, mng)
+    print(d_enu)
 
 
 def solid_testing():
-    epoch = Epoch(2010, 1, 1, 0, 1, 0, scale="UTC")
+    epoch = Epoch(2008, 11, 6, 12, 0, 0, scale="UTC")
     moon = np.array([-179996231.920342, -312468450.131567, -169288918.592160])
     sun = np.array([137859926952.015, 54228127881.4350, 23509422341.6960])
     rec = np.array([4075578.385, 931852.890, 4801570.154])
@@ -24,4 +35,4 @@ def solid_testing():
 
 
 if __name__ == "__main__":
-    solid_testing()
+    ocean_loading_testing()
