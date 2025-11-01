@@ -20,7 +20,7 @@ def gnss_attitude(gnss_pos: numpy.ndarray, sun_pos: numpy.ndarray):
         sun_pos (numpy.ndarray): the ECEF position of the Sun.
 
     Returns:
-        numpy.ndarray: the rotation matrix (DCM) from the body-fixed frame to the E
+        numpy.ndarray: the rotation matrix (DCM) from the body-fixed frame to the ECEF
     """
     e_z = -gnss_pos / numpy.linalg.norm(gnss_pos)
     e_s = (sun_pos - gnss_pos) / numpy.linalg.norm(sun_pos - gnss_pos)

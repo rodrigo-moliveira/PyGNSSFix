@@ -45,7 +45,7 @@ class SinexBiasReader:
         Reads the provided Bias SINEX file and stores its content in the provided `bias_manager` instance.
 
         Args:
-            file(str): path to the input RINEX Clock file
+            file(str): path to the input Bias SINEX file
             bias_manager(src.data_mng.gnss.bias_manager.BiasManager): the `BiasManager` object to store the
                 satellite biases (precise)
             bias_enum(EnumSatelliteBias): enumeration with the bias mode selected to be read (OSBs or DCBs)

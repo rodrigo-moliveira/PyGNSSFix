@@ -22,6 +22,10 @@
       "sp3_files": ["datasets/gnss/BRUX_2024/COD0MGXFIN_20240900000_01D_05M_ORB_short.SP3"],
       "ionex_files": ["datasets/gnss/BRUX_2024/COD0OPSFIN_20240900000_01D_01H_GIM.INX"],
       "antex_files": ["datasets/gnss/BRUX_2024/igs20.atx"],
+      "ocean_loading": {
+         "file": "geo_time_data/ocean_loading/brux.blq",
+         "station": "BRUX"
+      },
 
       "bias_type": "OSB",
       "dcb_files": ["datasets/gnss/BRUX_2024/DLR0OPSFIN_20240010000_03L_01D_DCB.BIA"],
@@ -125,6 +129,8 @@
          "estimate_tropo_wet": false
       },
 
+      "phase_windup": true,
+
       "phase_center_corrections": {
          "enabled": true,
          "receiver":
@@ -148,6 +154,14 @@
             "GAL_PCV_model": 1,
             "_comment1": "GPS/GAL PCV Models 0: non-azimuth dependent, 1: azimuth dependent. Resort to non-azimuth dependent if no azimuth dependent model is available."
          }
+      },
+
+      "earth_deformation_effects":
+      {
+        "enable": true,
+         "enable_solid_tides": true,
+         "enable_ocean_loading": true,
+         "enable_pode_tides": true
       },
 
       "GPS": {
@@ -198,7 +212,7 @@
       "trace_files": true,
 
       "_comment1": "Select Algorithm. Available: LS, WLS, EKF",
-      "algorithm": "EKF",
+      "algorithm": "WLS",
 
       "a_priori_constrain": false,
       "feedforward_solution": true,
@@ -220,7 +234,7 @@
 
       "ambiguity_resolution": {
          "_comment1": "Select `true` to enable ambiguity resolution or `false` to disable it",
-         "enabled": true,
+         "enabled": false,
 
          "_comment2": "Select the ambiguity resolution method. Available methods are 'ILS', 'IR', 'BS', 'PAR', 'ILS + Ratio Test'",
          "method": "PAR",

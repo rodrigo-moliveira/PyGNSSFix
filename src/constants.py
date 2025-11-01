@@ -11,9 +11,11 @@ Reference:
 #######################
 # RAD - DEG Conversions
 #######################
-PI = 3.141592653589793
+PI = np.pi
 DEG2RAD = PI / 180
 RAD2DEG = 180 / PI
+DAS2R = PI / (180.0 * 3600.0)  # Arc seconds to radians
+
 
 #######################################
 # Orbital Mechanics and Earth constants
@@ -44,7 +46,7 @@ SECONDS_IN_GNSS_WEEK = 604800
 DAYS_PER_WEEK = 7
 AVERAGE_DAYS_IN_YEAR = 365.25
 SECONDS_IN_HOUR = 3600
-
+DS2R = 7.272205216643039903848712e-5
 
 #######################
 # GNSS Frequencies (Hz)

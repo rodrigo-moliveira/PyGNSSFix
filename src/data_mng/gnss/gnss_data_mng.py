@@ -14,6 +14,7 @@ from .phase_center_mng import PhaseCenterManager
 from .sat_clock_data import SatelliteClocks
 from .sat_orbit_data import SatelliteOrbits
 from .bias_manager import BiasManager
+from .ocean_loading_data import OceanLoadingData
 from .global_iono_map import GlobalIonoMap
 from src.fault.fault_mng import FaultInjector
 
@@ -31,6 +32,7 @@ class GnssDataManager(Container):
         sat_clocks(SatelliteClocks): manager of satellite clocks (precise or navigation clocks)
         sat_orbits(SatelliteOrbits): manager of satellite orbits (precise or navigation orbits)
         iono_gim(GlobalIonoMap): manager of global ionospheric maps (VTEC)
+        ocean_loading_data(OceanLoadingData): manager of ocean loading parameters
         phase_center(PhaseCenterManager): manager of phase center data
         sat_bias(BiasManager): manager of satellite code and phase biases (precise or navigation bias)
         smooth_obs_data(ObservationData): processed smooth observation data
@@ -54,6 +56,7 @@ class GnssDataManager(Container):
         "iono_gim",                # Input
         "phase_center",            # Input
         "sat_bias",                # Input
+        "ocean_loading_data",      # Input
         "smooth_obs_data",         # Internal data
         "iono_free_obs_data",      # Internal data
         "narrow_lane_obs_data",    # Internal data
@@ -77,6 +80,7 @@ class GnssDataManager(Container):
         self.iono_gim = GlobalIonoMap()  # Global Ionospheric (VTEC) Map Manager
         self.phase_center = PhaseCenterManager()  # Phase Center Data Manager
         self.sat_bias = BiasManager()  # Satellite Code and Phase Bias Manager
+        self.ocean_loading_data = OceanLoadingData()  # Ocean Loading Parameters
         self.sat_orbits = SatelliteOrbits()  # Satellite orbits manager (precise or navigation orbits)
         self.iono_free_obs_data = ObservationData()  # Iono Free Observation Data
         self.narrow_lane_obs_data = ObservationData()
@@ -201,6 +205,7 @@ class GnssDataManager(Container):
             antex_files = config_dict.get("inputs", "antex_files")
             nav_files = config_dict.get("inputs", "nav_files")
             gal_nav_type = config_dict.get("model", "GAL", "nav_type")
+            ocean_loading_file = config_dict.get("inputs", "ocean_loading", "file")
 
             GnssDataManager.check_input_list("inputs.clk_files", clock_files, log)
             GnssDataManager.check_input_list("inputs.sp3_files", sp3_files, log)
@@ -209,6 +214,12 @@ class GnssDataManager(Container):
             GnssDataManager.check_input_list("inputs.ionex_files", ionex_files, log, warning=True)
             GnssDataManager.check_input_list("inputs.antex_files", antex_files, log, warning=True)
             GnssDataManager.check_input_list("inputs.nav_files", nav_files, log, warning=True)
+            if self.ocean_loading_data.enabled:
+                GnssDataManager.check_input_list("inputs.ocean_loading.file", [ocean_loading_file], log, warning=True)
+                log.info("Reading Ocean Loading Tidal Deformation Data")
+                self.ocean_loading_data.init(ocean_loading_file)
+            else:
+                log.info("Ocean Loading Tidal Deformation Corrections disabled.")
 
             log.info("Launching GlobalIonoMap constructor (ionex products).")
             self.iono_gim.init(ionex_files, trace_dir)
@@ -268,8 +279,12 @@ class GnssDataManager(Container):
                 file.write(str(self.get_data("sat_bias")))
             with open(f"{inputs_dir}\\GlobalIonoMap.txt", "w") as file:
                 file.write(str(self.get_data("iono_gim")))
-            with open(f"{inputs_dir}\\PhaseCenterVariations.txt", "w") as file:
-                file.write(str(self.get_data("phase_center")))
+            if self.phase_center.enabled:
+                with open(f"{inputs_dir}\\PhaseCenterVariations.txt", "w") as file:
+                    file.write(str(self.get_data("phase_center")))
+            if self.ocean_loading_data.enabled:
+                with open(f"{inputs_dir}\\OceanLoading.txt", "w") as file:
+                    file.write(str(self.get_data("ocean_loading_data")))
         with open(f"{inputs_dir}\\FaultInjections.txt", "w") as file:
             file.write(str(self.get_data("fault_injector")))
 

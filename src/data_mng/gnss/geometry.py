@@ -9,6 +9,8 @@ from src.io.config import EnumTransmissionTime, config_dict, EnumAlgorithmPNT
 from src.models.frames import enu2azel, ecef2enu, cartesian2geodetic, dcm_e_i
 from src.data_mng import Container
 from src.common_log import MODEL_LOG, get_logger
+from src.models.gnss_models.tidal_displacement import compute_displacement
+from src.models.gnss_models.windup import compute_phase_windup
 from src.spicepy_wrapper import compute_sun_pos
 from src.models.gnss_models import gnss_attitude, compute_tx_time
 
@@ -41,10 +43,11 @@ class SatelliteGeometry(Container):
         azimuth_sat(float): azimuth angle of the satellite. This is the angle between the LOS vector projected in the
             XY-plane and the +Y-axis, measured clockwise toward +X when looking in the direction of -Z (toward deep
             space). Axes here are referred to the satellite body-fixed frame.
+        windup(float): Phase Windup correction for CP measurements
     """
     __slots__ = ["transit_time", "time_emission", "time_reception", "true_range", "az", "el",
                  "satellite_position", "satellite_velocity", "dt_rel_correction", "los", "tropo_map_wet",
-                 "drift_rel_correction", "dcm_b_e", "nadir_sat", "azimuth_sat"]
+                 "drift_rel_correction", "dcm_b_e", "nadir_sat", "azimuth_sat", "windup"]
 
     def __init__(self):
         """ Base Constructor with no arguments. The attributes are filled in the `compute` method.  """
@@ -64,6 +67,7 @@ class SatelliteGeometry(Container):
         self.dcm_b_e = None
         self.nadir_sat = 0
         self.azimuth_sat = 0
+        self.windup = 0.0
 
     def __str__(self):
         _allAttrs = ""
@@ -131,11 +135,11 @@ class SatelliteGeometry(Container):
         # line of sight (Eq. (21.21) of [1])
         los = np.array([(rec_pos[i] - p_sat[i]) / true_range for i in (0, 1, 2)])
 
+        pvt_alg = config_dict.get("gnss_alg")
         dcm_b_e = None
         nadir_sat = None
         azimuth_sat = None
         if config_dict.get("inputs", "cspice_kernels", "enable"):
-            pvt_alg = config_dict.get("gnss_alg")
             if pvt_alg == EnumAlgorithmPNT.SPS:
                 if "sps" not in _warning_cache:
                     log = get_logger(MODEL_LOG)
@@ -170,6 +174,22 @@ class SatelliteGeometry(Container):
                 log.info(f"Not computing satellite attitude for sat {sat} because CSpice is disabled.")
                 _warning_cache.add(sat)
 
+        windup = 0.0
+        if config_dict.get("model", "phase_windup") and pvt_alg == EnumAlgorithmPNT.CP_PPP:
+            if config_dict.get("inputs", "cspice_kernels", "enable") and dcm_b_e is not None:
+                windup = compute_phase_windup(epoch, sat, dcm_b_e, los, lat, long)
+            else:
+                if "windup" not in _warning_cache:
+                    log = get_logger(MODEL_LOG)
+                    log.warning(f"Skipping Phase Windup computation because GNSS attitude could not be computed. "
+                                f"Please check logs.")
+                    _warning_cache.add("windup")
+        else:
+            if "windup" not in _warning_cache:
+                log = get_logger(MODEL_LOG)
+                log.warning(f"Skipping Phase Windup computation due to scenario configuration.")
+                _warning_cache.add("windup")
+
         # save results in container
         self.transit_time = transit
         self.time_emission = time_emission
@@ -181,6 +201,7 @@ class SatelliteGeometry(Container):
         self.satellite_velocity = v_sat
         self.dt_rel_correction = dt_relative - shapiro_cor
         self.los = los
+        self.windup = windup
         self.drift_rel_correction = drift_relative
         self.dcm_b_e = dcm_b_e
         self.nadir_sat = nadir_sat
@@ -191,7 +212,7 @@ class SystemGeometry:
     """ System Geometry class.
     This class is serves as a dataframe to store `SatelliteGeometry` objects for all available satellites.
     """
-    def __init__(self, obs_data, sat_clocks, sat_orbits, phase_center, sat_bias):
+    def __init__(self, obs_data, sat_clocks, sat_orbits, phase_center, sat_bias, ocean_loading_mng):
         """
         Constructor of the SystemGeometry. This is a container that stores data (instances of `SatelliteGeometry`)
         for all available satellites and for a single epoch. This data is useful in the reconstruction equations
@@ -205,6 +226,7 @@ class SystemGeometry:
             phase_center(src.data_mng.gnss.phase_center_mng.PhaseCenterManager): `PhaseCenterManager` object with
                 phase center data
             sat_bias(src.data_mng.gnss.bias_manager.BiasManager): manager of satellite code and phase biases
+            ocean_loading_mng(src.data_mng.gnss.ocean_loading_data.OceanLoadingData): ocean loading manager
 
         """
         self._data = dict.fromkeys(obs_data.get_satellites())
@@ -213,6 +235,8 @@ class SystemGeometry:
         self.sat_orbits = sat_orbits
         self.phase_center = phase_center
         self.sat_bias = sat_bias
+        self.ocean_loading_mng = ocean_loading_mng
+        self.tidal_displacement = None
 
     def _clean(self):
         vSats = self.get_satellites()
@@ -272,7 +296,7 @@ class SystemGeometry:
 
     def compute(self, epoch, state, metadata):
         """
-        compute satellite-related quantities (tropo, iono, transmission time, etc.) to be used in the
+        Compute satellite-related quantities (tropo, iono, transmission time, etc.) to be used in the
         Observation reconstruction models
 
         Args:
@@ -284,6 +308,15 @@ class SystemGeometry:
         _to_remove = []
         sat_list = self.get_satellites()
 
+        # Compute receiver-related geometry (independent of GNSS SVs)
+        # Earth deformation effects
+        if config_dict.get("model", "earth_deformation_effects", "enable"):
+            self.tidal_displacement = compute_displacement(epoch, state.position,
+                                                           ocean_loading_mng=self.ocean_loading_mng)
+        else:
+            self.tidal_displacement = None
+
+        # Compute satellite-related geometry
         for sat in sat_list:
             geometry = SatelliteGeometry()
 

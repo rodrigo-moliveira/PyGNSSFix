@@ -76,6 +76,14 @@
             "type": "string"
           }
         },
+        "ocean_loading": {
+          "type": "object",
+          "properties": {
+            "file": {"type": "string"},
+            "station": {"type": "string"}
+          },
+          "required": ["file", "station"]
+        },
         "bias_type": {
           "type": "string",
           "enum": [
@@ -169,6 +177,7 @@
         "sp3_files",
         "ionex_files",
         "antex_files",
+        "ocean_loading",
         "osb_files",
         "dcb_files",
         "bias_type",
@@ -250,6 +259,7 @@
             "estimate_tropo_wet"
           ]
         },
+        "phase_windup": {"type": "boolean"},
         "phase_center_corrections": {
           "type": "object",
           "properties": {
@@ -327,6 +337,17 @@
             "satellite"
           ]
         },
+        "earth_deformation_effects": {
+          "type": "object",
+          "properties": {
+            "enable": {"type": "boolean"},
+            "enable_solid_tides": {"type": "boolean"},
+            "enable_ocean_loading": {"type": "boolean"},
+            "enable_pode_tides": {"type": "boolean"}
+          },
+          "required": ["enable", "enable_solid_tides", "enable_ocean_loading", "enable_pode_tides"]
+        },
+
         "GPS": {
           "type": "object",
           "properties": {
@@ -459,7 +480,9 @@
         "estimate_velocity",
         "estimate_ggto",
         "estimate_diono",
+        "phase_windup",
         "phase_center_corrections",
+        "earth_deformation_effects",
         "GPS",
         "GAL"
       ]

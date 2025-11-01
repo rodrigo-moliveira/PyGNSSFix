@@ -1,0 +1,56 @@
+To:
+Subject: Ocean loading values results
+From: barre.loading@chalmers.se
+Content-type: text/plain
+
+
+$$ Ocean loading displacement
+$$
+$$ Calculated on barre.oso.chalmers.se using olfg/olmpp of H.-G. Scherneck
+$$
+$$ Greens function: mc00egbc
+$$ 
+$$ COLUMN ORDER:  M2  S2  N2  K2  K1  O1  P1  Q1  MF  MM SSA
+$$
+$$ ROW ORDER:
+$$ AMPLITUDES (m)
+$$   RADIAL
+$$   TANGENTL    EW
+$$   TANGENTL    NS
+$$ PHASES (degrees)
+$$   RADIAL
+$$   TANGENTL    EW
+$$   TANGENTL    NS
+$$
+$$ Displacement is defined positive in Upwards, South and West direction.
+$$ The phase lag is relative to Greenwich and lags positive. The 
+$$ Gutenberg-Bullen Greens function is used. In the ocean tide model the 
+$$ deficit of tidal water mass has been corrected by subtracting a uniform 
+$$ layer of water with a certain phase lag globally.
+$$
+$$ Complete <model name> : No interpolation of ocean model was necessary
+$$ <model name>_PP       : Ocean model has been interpolated near the station 
+$$                         (PP = Post-Processing)
+$$ 
+$$ CMC:  NO   (corr.tide centre of mass)
+$$
+$$ Ocean tide model: GOT00.2, long-period tides from FES99
+$$
+$$ END HEADER
+$$
+  Onsala          13101M010
+$$ GOT00.2_PP ID: 2025-10-20 22:58:29
+$$ Computed by OLMPP by H G Scherneck, Onsala Space Observatory, 2025
+$$ Onsala                                 lon/lat:   11.9264   57.3958    0.00
+  .00352 .00123 .00080 .00032 .00187 .00112 .00063 .00003 .00082 .00044 .00037
+  .00144 .00035 .00035 .00008 .00053 .00049 .00018 .00009 .00012 .00005 .00006
+  .00086 .00023 .00023 .00006 .00029 .00028 .00010 .00007 .00004 .00002 .00001
+   -64.7  -52.0  -96.2  -55.2  -58.8 -151.4  -65.6 -138.1    8.4    5.2    2.1
+    85.5  114.5   56.5  113.6   99.4   19.1   94.1  -10.4 -167.4 -170.0 -177.7
+   109.5  147.0   92.7  148.8   50.5  -55.1   36.4 -170.4  -15.0    2.3    5.2
+
+$$ END TABLE
+Token:
+Errors:
+Warnings:
+Done: GOT00.2 ID:2025-10-20 20:58:29 20:58:29 (UTC)
