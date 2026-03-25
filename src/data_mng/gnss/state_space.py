@@ -80,6 +80,7 @@ class GnssStateSpace(Container):
         # dict to store state information
         self._info = dict()
         self.index_map = dict()
+        self._info["states"] = list()
 
         # initialize state variables
         if metadata is not None and sat_list is not None:

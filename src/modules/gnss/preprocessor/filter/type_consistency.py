@@ -22,7 +22,7 @@ class TypeConsistencyFilter(Filter):
 
     def write_header(self, trace_path):
         if trace_path is not None:
-            self.fd = open(trace_path + "/TypeConsistentFilter.txt", "w")
+            self.fd = open(trace_path, "w")
             self.fd.write("Epoch, Satellite, Observable, To Remove\n")
 
     def is_applicable(self, sat, epoch, observation, **kwargs):

@@ -88,7 +88,7 @@ class SatelliteGeometry(Container):
             epoch (src.data_types.date.Epoch) : epoch under evaluation
             state (src.data_mng.gnss.state_space.GnssStateSpace) : state
             constellation (src.data_types.gnss.Constellation) : constellation
-            compute_tx (function) : function to compute the transmission time
+            compute_tx (EnumTransmissionTime) : EnumTransmissionTime selection to compute the transmission time
             PR_obs (src.data_types.gnss.observation.Observation) : pseudorange observation to use in some computations
             sat_orbits(src.data_mng.gnss.sat_orbit_data.SatelliteOrbits): `SatelliteOrbits` object with orbit data
             sat_clocks(src.data_mng.gnss.sat_clock_data.SatelliteClocks): `SatelliteClocks` object with clock data
@@ -140,7 +140,7 @@ class SatelliteGeometry(Container):
         nadir_sat = None
         azimuth_sat = None
         if config_dict.get("inputs", "cspice_kernels", "enable"):
-            if pvt_alg == EnumAlgorithmPNT.SPS:
+            if pvt_alg == EnumAlgorithmPNT.SPS or pvt_alg == EnumAlgorithmPNT.DGNSS:
                 if "sps" not in _warning_cache:
                     log = get_logger(MODEL_LOG)
                     log.warning(f"Skipping GNSS Attitude computation in SPS Mode.")
@@ -187,7 +187,7 @@ class SatelliteGeometry(Container):
         else:
             if "windup" not in _warning_cache:
                 log = get_logger(MODEL_LOG)
-                log.warning(f"Skipping Phase Windup computation due to scenario configuration.")
+                log.debug(f"Skipping Phase Windup computation due to scenario configuration.")
                 _warning_cache.add("windup")
 
         # save results in container

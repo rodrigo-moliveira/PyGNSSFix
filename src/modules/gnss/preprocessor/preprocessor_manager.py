@@ -5,7 +5,7 @@ import os
 from src.common_log import get_logger, PREPROCESSOR_LOG
 from src.data_types.gnss import data_type_from_rinex
 from src.data_types.gnss.service_utils import get_freq_from_service
-from src.io.config import config_dict, EnumObservationModel
+from src.io.config import config_dict, EnumObservationModel, EnumAlgorithmPNT
 from src.errors import PreprocessorError
 from .filter import *
 from .functor import *
@@ -33,6 +33,8 @@ class PreprocessorManager:
         * Perform Cycle Slip Detection: detect cycle slips in the GNSS measurements
 
         * Write intermediate trace files for each operation
+
+        * If the D-GNSS mode is enabled, the D-GNSS corrections are also computed.
     """
 
     def __init__(self, trace_path, data_manager):
@@ -154,6 +156,22 @@ class PreprocessorManager:
             f.write(str(obs_data))
             f.close()
 
+        # Compute D-GNSS Reference Station Corrections
+        if config_dict.get('gnss_alg') == EnumAlgorithmPNT.DGNSS:
+            self.log.info("Computing D-GNSS Reference Station Corrections.")
+            ref_station_data = self.data_manager.get_data("ref_station_obs_data")
+
+            # First apply Type Consistency Filter
+            try:
+                self.consistency_filter_dgnss(ref_station_data)
+            except Exception as e:
+                raise PreprocessorError(f"PreprocessorManager -> Error performing Consistency Type filter: {e}")
+
+            try:
+                self.dgnss_corrections(ref_station_data)
+            except Exception as e:
+                raise PreprocessorError(f"Error computing DGNSS Observation Data: {e}")
+
         self.log.info("End of module Preprocessor")
 
     def consistency_filter(self, observation_data):
@@ -178,7 +196,7 @@ class PreprocessorManager:
                     required_datatypes[constellation].append(doppler)
 
         self.log.info(f"Type Consistency Filter: Required datatypes are {required_datatypes}")
-        type_filter = TypeConsistencyFilter(required_datatypes, self.trace_path)
+        type_filter = TypeConsistencyFilter(required_datatypes, self.trace_path + "/TypeConsistentFilter.txt")
         mapper = FilterMapper(type_filter)
         mapper.apply(observation_data)
 
@@ -415,4 +433,51 @@ class PreprocessorManager:
 
             f = open(self.trace_path + "/CycleSlips.txt", "w")
             f.write(str(detector.cycle_slips))
+            f.close()
+
+    def consistency_filter_dgnss(self, observation_data):
+        """ Perform Consistency Filter for the DGNSS Station"""
+        self.log.info("Applying consistency filter to remove unnecessary datatypes and data-less satellites in the DGNSS Station")
+        required_datatypes = {}
+        keep_carrier = False  # currently only working with PR
+
+        for constellation, services in self.services.items():
+            required_datatypes[constellation] = []
+            for idx, service in enumerate(services["ref_station_service"]):
+                pr = data_type_from_rinex(f"C{service}", constellation)
+                required_datatypes[constellation].append(pr)
+                if keep_carrier:
+                    cp = data_type_from_rinex(f"L{service}", constellation)
+                    required_datatypes[constellation].append(cp)
+
+        self.log.info(f"Type Consistency Filter: Required datatypes are {required_datatypes}")
+        type_filter = TypeConsistencyFilter(required_datatypes, self.trace_path + "/DGNSSTypeConsistentFilter.txt")
+        mapper = FilterMapper(type_filter)
+        mapper.apply(observation_data)
+
+        # Write report to log
+        self.log.info(f"Type Consistency Filter Report: {mapper.report}")
+
+        # Saving Consistent data to file
+        if self.write_trace:
+            self.log.debug(
+                "Writing DGNSS Station Type Consistent Observation Data to trace file {}".format("DGNSSTypeConsistentObservationData.txt"))
+            f = open(self.trace_path + "/DGNSSTypeConsistentObservationData.txt", "w")
+            f.write(str(observation_data))
+            f.close()
+
+
+    def dgnss_corrections(self, ref_station_data):
+        """ Computation of DGNSS Corrections. """
+        true_position = config_dict.get("inputs", "DGNSS", "true_position")
+        sat_clocks = self.data_manager.get_data("sat_clocks")
+        sat_orbits = self.data_manager.get_data("sat_orbits")
+        dgnss_functor = DGNSSFunctor(true_position, sat_clocks, sat_orbits)
+        mapper = FunctorMapper(dgnss_functor)
+        mapper.apply(ref_station_data, ref_station_data)  # ref_station_data is both input and output
+
+        if self.write_trace:
+            self.log.debug("Writing DGNSS Observation Data to trace file {}".format("DGNSSObservationData.txt"))
+            f = open(self.trace_path + "/DGNSSObservationData.txt", "w")
+            f.write(str(ref_station_data))
             f.close()

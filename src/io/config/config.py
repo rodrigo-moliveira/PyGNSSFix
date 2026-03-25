@@ -87,7 +87,7 @@ class Config(dict):
                                           f"({services}). Please revise the configurations.")
 
             # specific tasks for PPP Solutions
-            if self["gnss_alg"] != EnumAlgorithmPNT.SPS:
+            if self["gnss_alg"] == EnumAlgorithmPNT.PR_PPP or self["gnss_alg"] == EnumAlgorithmPNT.CP_PPP:
                 # For PPP Solutions, load CSpice kernels and initialize the ITRF frame transformations
                 from src.spicepy_wrapper import setup_cspice
                 from src import WORKSPACE_PATH
@@ -101,7 +101,7 @@ class Config(dict):
                     setup_cspice(WORKSPACE_PATH / f"{kernels_folder}", kernel_list, log)
 
             # specific tasks for SPS Solutions
-            elif self["gnss_alg"] == EnumAlgorithmPNT.SPS:
+            elif self["gnss_alg"] == EnumAlgorithmPNT.SPS or self["gnss_alg"] == EnumAlgorithmPNT.DGNSS:
                 # disable precision corrections
                 self.set('model', 'earth_deformation_effects', 'enable', False)
                 self.set('model', 'phase_center_corrections', 'enabled', False)
@@ -223,9 +223,23 @@ class Config(dict):
                             raise ConfigError(f"Services for const {const_upper} must be of different frequencies. "
                                               f"Services selected: {services_for_const}")
 
+                    # Clock Product Services (for managing HW biases)
                     services[const_upper]["user_service"] = services_for_const
                     clock_services = self.get("model", const_upper, "clock_product_service")
                     services[const_upper]["clock_product_service"] = [f"C{clock_services[0]}", f"C{clock_services[1]}"]
+
+                    # Reference Station Selected Services (for D-GNSS mode)
+                    if self["gnss_alg"] == EnumAlgorithmPNT.DGNSS:
+                        station_services = self.get("inputs", "DGNSS", f"{const_upper}_observations")
+                        services[const_upper]["ref_station_service"] = list()
+                        for this_service in station_services:
+                            if this_service not in Services[const_upper]:
+                                raise ConfigError(
+                                    f"D-GNSS Reference Station service {this_service} not valid for const "
+                                    f"{const_upper}, according to RINEX documentation standards. Available services: "
+                                    f"{Services[const_upper]}")
+                            services[const_upper]["ref_station_service"].append(this_service)
+
             self.set("services", services)
         return self["services"]
 
