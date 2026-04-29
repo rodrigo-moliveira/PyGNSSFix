@@ -209,6 +209,7 @@
           "type": "string",
           "enum": [
             "SPS",
+            "DGNSS",
             "PR-PPP",
             "CP-PPP"
           ]

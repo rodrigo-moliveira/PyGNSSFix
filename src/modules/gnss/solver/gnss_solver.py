@@ -220,8 +220,15 @@ class GnssSolver:
                     self.log.error(f"No Doppler observations for constellation {const} are available")
                 DOPPLER[const] = doppler_types[:1]
 
+        # DGNSS Observation Data
+        if config.get("gnss_alg") == EnumAlgorithmPNT.DGNSS:
+            ref_station_obs_data = data_manager.get_data("ref_station_obs_data")
+        else:
+            ref_station_obs_data = None
+
         # fill info dict
         self._metadata = {
+            "GNSS_ALG": config.get("gnss_alg"),
             "CONSTELLATIONS": CONSTELLATIONS,
             "MAX_ITER": MAX_ITER,
             "STOP_CRITERIA": STOP_CRITERIA,
@@ -241,7 +248,8 @@ class GnssSolver:
             "ERROR_MODEL": ERROR_MODEL,
             "ELEVATION_FILTER": ELEVATION_FILTER,
             "VELOCITY_EST": VELOCITY_EST,
-            "SAT_BIAS_ENUM": self.sat_bias.bias_enum
+            "SAT_BIAS_ENUM": self.sat_bias.bias_enum,
+            "REF_OBS_DGNSS": ref_station_obs_data
         }
 
     def solve(self) -> None:
@@ -266,7 +274,7 @@ class GnssSolver:
         self.log.info("Successfully executed main function of GNSS Solver algorithm.")
 
     def _solve_lsq(self, init_KF=False) -> None:
-        """ Execute Least Squares Solver """
+        """ Execute Least-Squares Solver """
         # available epochs
         epochs = self.obs_data_for_pos.get_epochs()
 

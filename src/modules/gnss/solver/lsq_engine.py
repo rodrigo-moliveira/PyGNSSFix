@@ -5,9 +5,10 @@ from src import constants
 from src.constants import SPEED_OF_LIGHT
 from src.data_types.gnss.data_type import get_base_freq
 from src.errors import SolverError
-from src.io.config import EnumSolver
+from src.io.config import EnumSolver, EnumAlgorithmPNT
 from src.modules.estimators.weighted_ls import WeightedLeastSquares
-from src.modules.gnss.solver import PseudorangeReconstructor, RangeRateReconstructor, CarrierPhaseReconstructor
+from src.modules.gnss.solver import (PseudorangeReconstructor, RangeRateReconstructor, CarrierPhaseReconstructor,
+                                     DifferentialPseudorangeReconstructor)
 from src.data_types.gnss import DataType
 
 
@@ -291,7 +292,10 @@ class LSQ_Engine_Position(LSQ_Engine):
         self._initial_state.build_index_map(system_geometry.get_satellites())  # this updates potential new sat states
 
         self.reconstructor = dict()
-        self.reconstructor["PR"] = PseudorangeReconstructor(system_geometry, metadata, state, trace_data)
+        if metadata["GNSS_ALG"] is not EnumAlgorithmPNT.DGNSS:
+            self.reconstructor["PR"] = PseudorangeReconstructor(system_geometry, metadata, state, trace_data)
+        else:
+            self.reconstructor["PR"] = DifferentialPseudorangeReconstructor(system_geometry, metadata, state, trace_data)
 
         if self.cp_based:
             datatypes = dict()

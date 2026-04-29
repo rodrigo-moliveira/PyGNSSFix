@@ -108,7 +108,7 @@
    },
 
    "model": {
-      "constellations": ["GPS", "GAL"],
+      "constellations": ["GPS"],
 
       "_comment": "Select the GNSS PNT algorithm. The available algorithms are SPS, DGNSS, PR-PPP, CP-PPP",
       "algorithm": "DGNSS",
@@ -122,12 +122,12 @@
       "estimate_ggto": true,
       "_comment3": "Select `true` to estimate GGTO or `false` to use the broadcast GGTO",
 
-      "estimate_diono": true,
+      "estimate_diono": false,
         "_comment4": "Select `true` to estimate residual ionospheric delay or `false` to disable it",
 
       "troposphere": {
          "_comment1": "Select Tropospheric model. Available models are 'NONE', 'Saastamoinen', 'GPT3'",
-         "model": "Saastamoinen",
+         "model": "NONE",
 
          "_comment2": "Select Tropospheric map function for model GPT3. Available maps are 'Saastamoinen', 'GMF', 'VMF1', 'VMF3'",
          "map": "VMF3",
@@ -172,7 +172,7 @@
       },
 
       "GPS": {
-         "observations": ["1C", "2W"],
+         "observations": ["1C"],
 
          "clock_product_service": ["1W", "2W"],
 
@@ -188,7 +188,7 @@
          "elevation_mask": true,
 
          "_comment4": "Select Ionospheric model. Available models are 'NONE', 'Klobuchar', 'NTCM-G', 'IONEX' ",
-         "ionosphere": "Klobuchar"
+         "ionosphere": "NONE"
       },
 
       "GAL": {
