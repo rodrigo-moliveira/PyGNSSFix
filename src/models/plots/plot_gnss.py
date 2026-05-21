@@ -290,6 +290,48 @@ def plot_tropo_wet_delay(tropo: CSVData):
     return ax
 
 
+def plot_dgnss_biases(dgnss_bias: CSVData):
+    """
+    Plot the estimated DGNSS code bias states for each datatype.
+
+    Args:
+        dgnss_bias(CSVData): input CSVData object with the estimated states for all available datatypes
+    Returns:
+        list[matplotlib.pyplot.Axes]: returns a list of Axes objects for each available datatype
+    """
+    # Group only by constellation
+    grouped = dgnss_bias.data.groupby(['constellation'])
+    ax = None
+
+    # Plot for each constellation
+    for constellation, group in grouped:
+        # Now group by datatype within this constellation
+        for iType, (datatype, subgroup) in enumerate(group.groupby('datatype')):
+            sow_array = subgroup.iloc[:, 1].values
+            week_array = subgroup.iloc[:, 0].values
+            dgnss_bias_array = subgroup.iloc[:, 4].values
+            sigma_array = np.sqrt(subgroup.iloc[:, 5].values)
+
+            time_array = [Epoch.from_gnss_time(week, sow, scale="GPST")
+                          for sow, week in zip(sow_array, week_array)]
+
+            ax = plot_1D(time_array, dgnss_bias_array, ax=ax, label=f"{constellation[0]} - {datatype}",
+                         linewidth=2.0, linestyle="solid")
+            #plot_1D(time_array, dgnss_bias_array + sigma_array, ax=ax,
+            #        linewidth=1.0, linestyle="dashed")
+            #plot_1D(time_array, dgnss_bias_array - sigma_array, ax=ax,
+            #        linewidth=1.0, linestyle="dashed")
+            #ax.fill_between(time_array, phase_bias_array - sigma_array, phase_bias_array + sigma_array,
+            #                alpha=0.3)
+
+    if ax is not None:
+        ax.set_xlabel("Time")
+        ax.set_ylabel("DGNSS Bias [s]")
+        ax.set_title(f"{dgnss_bias.title}")
+        ax.legend()
+
+    return ax
+
 def plot_iono_states(iono: CSVData):
     """
     Plot the estimated iono states for each satellite.
@@ -687,7 +729,7 @@ def plot_covariance_ellipse(ax, cov_matrix, center=(0, 0), color='r'):
     width, height = 2 * np.sqrt(eigvals)
 
     # Create and add the ellipse patch
-    ellipse = Ellipse(center, width, height, angle, edgecolor=color, facecolor='none', linewidth=2)
+    ellipse = Ellipse(center, width, height, angle=angle, edgecolor=color, facecolor='none', linewidth=2)
     ax.add_patch(ellipse)
     ellipse.set_label('Covariance Ellipse')
 

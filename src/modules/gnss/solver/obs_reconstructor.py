@@ -316,6 +316,11 @@ class DifferentialPseudorangeReconstructor(ObservationReconstructor):
         time_correction = sat_clocks.nav_data.header.time_correction if sat_clocks.nav_data is not None else None
         dt_rec = self._state.get_clock_bias(sat.sat_system, time_correction)  # receiver clock bias in [m]
 
+        # DGNSS Biases
+        bias = 0.0
+        if datatype != self._state.get_additional_info("code_master"):
+            bias = self._state.dgnss_bias[sat.sat_system][datatype]
+
         # ionosphere (a-priori correction)
         #iono_corrections = sat_clocks.nav_data.header.iono_corrections if sat_clocks.nav_data is not None else None
         #if not DataType.is_iono_free_code(datatype) and not DataType.is_iono_free_smooth_code(datatype):
@@ -368,7 +373,7 @@ class DifferentialPseudorangeReconstructor(ObservationReconstructor):
         #        disp_los = np.dot(los, disp_ecef)  # compute displacement in the line of sight direction
 
         # finally, construct obs
-        obs = true_range + dt_rec - prc
+        obs = true_range + dt_rec + bias - prc
         #if self._write_trace:
         #    self._trace_handler.write(f"{epoch},{sat},{datatype},{obs},{true_range},{dt_rec},"
         #                              f"{dt_sat * constants.SPEED_OF_LIGHT},{bias * constants.SPEED_OF_LIGHT},"

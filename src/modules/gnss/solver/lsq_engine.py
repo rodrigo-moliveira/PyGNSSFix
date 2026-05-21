@@ -447,6 +447,8 @@ class LSQ_Engine_Position(LSQ_Engine):
                     X0[idx_phase_bias] = initial_state.phase_bias[const][cp_type]
                     X0_prev[idx_phase_bias] = state.phase_bias[const][cp_type]
 
+        # TODO: add dgnss_bias
+
         return X0 - X0_prev, np.linalg.inv(P0)
 
     def _build_lsq(self, epoch, obs_data, state, solver_enum):
@@ -514,6 +516,12 @@ class LSQ_Engine_Position(LSQ_Engine):
                             idx_phase_bias = index_map["phase_bias"][const][datatype]
                             self.design_mat[obs_offset + iSat, idx_phase_bias] = 1.0
 
+                    # DGNSS Bias
+                    if "dgnss_bias" in index_map:
+                        if not state.get_additional_info("code_master") == datatype:
+                            idx_dgnss_bias = index_map["dgnss_bias"][const][datatype]
+                            self.design_mat[obs_offset + iSat, idx_dgnss_bias] = 1.0
+
                     # Weight matrix -> as 1/(obs_std^2)
                     if solver_enum == EnumSolver.WLS:
                         std = reconstructor.get_obs_std(sat, datatype)
@@ -572,6 +580,13 @@ class LSQ_Engine_Position(LSQ_Engine):
                     idx_phase_bias = cp_types[cp_type]
                     state.phase_bias[const][cp_type] += dX[idx_phase_bias]
                     state.cov_phase_bias[const][cp_type] = cov[idx_phase_bias, idx_phase_bias]
+
+        # DGNSS Bias
+        if "dgnss_bias" in index_map:
+            for const, codes in index_map["dgnss_bias"].items():
+                for code, idx_dgnss_bias in codes.items():
+                    state.dgnss_bias[const][code] += dX[idx_dgnss_bias]
+                    state.cov_dgnss_bias[const][code] = cov[idx_dgnss_bias, idx_dgnss_bias]
 
         # unpack covariance matrices
         state.cov_position = np.array(cov[idx_pos:idx_pos+3, idx_pos:idx_pos+3])
