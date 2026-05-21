@@ -128,6 +128,7 @@ class GnssSolver:
         INITIAL_CLOCK_RATE = config.get("solver", "initial_clock_rate_cov")
         INITIAL_AMBIGUITY = config.get("solver", "initial_ambiguity_cov")
         INITIAL_PHASE_BIAS = config.get("solver", "initial_phase_bias_cov")
+        INITIAL_DGNSS_BIAS = config.get("solver", "initial_dgnss_bias_cov")
         INITIAL_STATE = {
             "pos": INITIAL_POS,
             "vel": INITIAL_VEL,
@@ -137,7 +138,8 @@ class GnssSolver:
             "tropo": INITIAL_TROPO,
             "clock_rate": INITIAL_CLOCK_RATE,
             "ambiguity": INITIAL_AMBIGUITY,
-            "phase_bias": INITIAL_PHASE_BIAS
+            "phase_bias": INITIAL_PHASE_BIAS,
+            "dgnss_bias": INITIAL_DGNSS_BIAS
         }
         ERROR_MODEL = data_manager.noise_manager
 

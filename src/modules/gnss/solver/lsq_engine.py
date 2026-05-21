@@ -447,7 +447,12 @@ class LSQ_Engine_Position(LSQ_Engine):
                     X0[idx_phase_bias] = initial_state.phase_bias[const][cp_type]
                     X0_prev[idx_phase_bias] = state.phase_bias[const][cp_type]
 
-        # TODO: add dgnss_bias
+        if "dgnss_bias" in index_map:
+            for const, codes in index_map["dgnss_bias"].items():
+                for code,idx in codes.items():
+                    P0[idx, idx] = initial_state.cov_dgnss_bias[const][code]
+                    X0[idx] = initial_state.dgnss_bias[const][code]
+                    X0_prev[idx] = state.dgnss_bias[const][code]
 
         return X0 - X0_prev, np.linalg.inv(P0)
 

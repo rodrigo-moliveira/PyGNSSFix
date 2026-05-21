@@ -267,6 +267,7 @@
       "initial_clock_rate_cov": [0.0, 1E-1],
       "initial_ambiguity_cov": [0.0, 1000],
       "initial_phase_bias_cov": [0.0, 1e-16],
+      "initial_dgnss_bias_cov": [0.0, 1E-20],
 
       "noise_model":
       {
@@ -406,6 +407,21 @@
                "comment": "Configurations for Gauss Markov. Process noise units are in [s]. Correlation time in [s].",
                "process_noise_std": 3.3E-12,
                "correlation_time": 1
+            },
+            "relative_re-parameterization": 1000
+         },
+         "dgnss_bias":
+         {
+            "type": "random_walk",
+            "white_noise_random_walk": {
+               "comment": "Configurations for White Noise and Random Walk. Process noise units (continuous-time) are in [s/sqrt(s)]",
+               "process_noise_std": 3.3E-10
+            },
+            "gauss_markov":
+            {
+               "comment": "Configurations for Gauss Markov. Process noise units are in [s]. Correlation time in [s].",
+               "process_noise_std": 3.3E-11,
+               "correlation_time": 1000
             },
             "relative_re-parameterization": 1000
          }

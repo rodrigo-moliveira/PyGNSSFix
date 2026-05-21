@@ -157,7 +157,6 @@ class GnssStateSpace(Container):
                     state.phase_bias[const][cp_type] = self.phase_bias[const][cp_type]
                     state.cov_phase_bias[const][cp_type] = self.cov_phase_bias[const][cp_type]
 
-        # TODO: add dgnss_bias here
         if "dgnss_bias" in _states:
             state.dgnss_bias = dict()
             state.cov_dgnss_bias = dict()
@@ -166,7 +165,7 @@ class GnssStateSpace(Container):
                 state.cov_dgnss_bias[const] = dict()
                 for code, val in codes.items():
                     state.dgnss_bias[const][code] = val
-                    state.cov_dgnss_bias[const][code] = val
+                    state.cov_dgnss_bias[const][code] = self.cov_dgnss_bias[const][code]
 
         state.add_additional_info("states", _states)
         state.add_additional_info("clock_master", self.get_additional_info("clock_master"))
@@ -321,8 +320,10 @@ class GnssStateSpace(Container):
                 if code_master is None:
                     code_master = code
                     continue
-                self.dgnss_bias[constellation][code] = 0.0 # TODO: to be changed
-                self.cov_dgnss_bias[constellation][code] = 1.0 # TODO: to be changed
+                self.dgnss_bias[constellation][code] = metadata["INITIAL_STATES"]["dgnss_bias"][0] * \
+                                                  constants.SPEED_OF_LIGHT
+                self.cov_dgnss_bias[constellation][code] = metadata["INITIAL_STATES"]["dgnss_bias"][1] * \
+                                                      constants.SPEED_OF_LIGHT ** 2
         if code_master is not None:
             _states.append("dgnss_bias")
         self.add_additional_info("code_master", code_master)
