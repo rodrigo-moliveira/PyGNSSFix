@@ -4,6 +4,7 @@ import os
 
 import src.data_mng.gnss.geometry
 from src.data_types.gnss.data_type import DataType, get_data_type
+from src.errors import ReconstructionError
 from src.io.config import config_dict
 from src.io.config.enums import EnumOnOff
 from src.models.frames import cartesian2geodetic
@@ -250,24 +251,23 @@ class PseudorangeReconstructor(ObservationReconstructor):
 
 class DifferentialPseudorangeReconstructor(ObservationReconstructor):
     """
-    Reconstructor of pseudorange observations, according to the following equation.
-    for PR-DGNSS
+    Reconstructor of pseudorange observations, according to the following equation suitable for PR-DGNSS algorithms.
+    It applies the PRC correction, that eliminates satellite-related clocks and biases
 
-        PR = rho + dt_rec_diff - PRC
+        PR = rho + dt_rec + gnss_bias + tropo - PRC
     where:
         * PR is the reconstructed pseudorange observation
         * rho is the true range (geometrical distance between satellite at TX time and receiver at RX time)
-        * dt_rec_diff is the receiver clock bias (with proper ISB applied, if necessary)
-        * PRC is the DGNSS Pseudorange Correction
-
+        * dt_rec is the differential receiver clock bias
+        * gnss_bias is the estimated differential receiver bias (applicable for the non-master code types)
+        * tropo is the estimated differential tropospheric delay
+        * PRC is the D-GNSS Pseudorange Correction
     """
-    __trace_header__ = "epoch,sat,datatype,observation,true_range,receiver_clock,satellite_clock," \
-                       "satellite_bias,iono_model,tropo,iono_correction,pcc_rec,pcc_sat,earth_deformation"
+    __trace_header__ = "epoch,sat,datatype,observation,true_range,receiver_clock,gnss_bias,tropo,PRC"
 
     def __init__(self, system_geometry: src.data_mng.gnss.geometry.SystemGeometry, metadata: dict,
                  state: src.data_mng.gnss.state_space.GnssStateSpace, trace_data: tuple):
         """
-        TODO: to be updated
         Constructor of the `DifferentialPseudorangeReconstructor` instances.
 
         Args:
@@ -279,7 +279,9 @@ class DifferentialPseudorangeReconstructor(ObservationReconstructor):
             trace_data(tuple or None): path to the trace dir and iteration number
 
         """
-        # TODO: check that we have metadata["REF_OBS_DGNSS"]
+        if metadata["REF_OBS_DGNSS"].is_empty():
+            raise ReconstructionError(f"No available observation data for the reference station.")
+
         if trace_data is not None:
             trace_file = f"{trace_data[0]}\\DifferentialPseudorangeReconstructionIter_{trace_data[1]}.txt"
         else:
@@ -288,10 +290,7 @@ class DifferentialPseudorangeReconstructor(ObservationReconstructor):
 
     def compute(self, sat, epoch, datatype):
         """
-        TODO: to be updated
         Compute the pseudorange observation for the provided satellite, epoch and datatype.
-
-        PR = rho + dt_rec_diff - PRC
 
         Args:
             sat(src.data_types.gnss.satellite.Satellite): satellite instance
@@ -302,82 +301,26 @@ class DifferentialPseudorangeReconstructor(ObservationReconstructor):
         dgnss_dt = DataType.get_dgnss_datatype(datatype)
         prc = ref_obs_data.get_observable_at_epoch(sat, epoch, dgnss_dt).value
 
-        # TODO: what to do when there is no REF DATA?
-
-        #az = self._system_geometry.get("az", sat)  # satellite azimuth from receiver
-        #el = self._system_geometry.get("el", sat)  # satellite elevation from receiver
-        #[lat, long, height] = cartesian2geodetic(*self._state.position)  # user lat, long and height
-
         # true range
         true_range = self._system_geometry.get("true_range", sat)
 
-        # user clock in meters (with proper ISB applied, if necessary)
-        sat_clocks = self._system_geometry.sat_clocks
-        time_correction = sat_clocks.nav_data.header.time_correction if sat_clocks.nav_data is not None else None
-        dt_rec = self._state.get_clock_bias(sat.sat_system, time_correction)  # receiver clock bias in [m]
+        # user clock in meters (no ISB applied in D-GNSS)
+        dt_rec = self._state.get_clock_bias(sat.sat_system, None)  # receiver clock bias in [m]
 
         # DGNSS Biases
         bias = 0.0
         if datatype != self._state.get_additional_info("code_master"):
             bias = self._state.dgnss_bias[sat.sat_system][datatype]
 
-        # ionosphere (a-priori correction)
-        #iono_corrections = sat_clocks.nav_data.header.iono_corrections if sat_clocks.nav_data is not None else None
-        #if not DataType.is_iono_free_code(datatype) and not DataType.is_iono_free_smooth_code(datatype):
-        #    iono = self._metadata["IONO"][sat.sat_system].compute_iono_delay(
-        #        epoch, iono_corrections, sat, lat, long, el, az, datatype.freq)
-
-        # iono estimated correction dI
-        #dI = 0.0
-        #if self._metadata["IONO"][sat.sat_system].estimate_diono():
-        #    try:
-        #        factor = (self._metadata["CODES"][sat.sat_system][0].freq.freq_value /
-        #                  datatype.freq.freq_value) ** 2
-        #        dI = factor * self._state.iono[sat]
-        #    except KeyError or TypeError:
-        #        pass
-
-        # troposphere
+        # differential troposphere
         #tropo, map_wet = self._metadata["TROPO"].compute_tropo_delay(lat, long, height, el, epoch,
         #                                                            self._state.tropo_wet)
         #self._system_geometry.set("tropo_map_wet", map_wet, sat)
 
-        # receiver antenna phase center corrections
-        #pcc_rec = pcc_sat = 0.0
-        #if self._system_geometry.phase_center.enabled:
-        #    los = self.get_unit_line_of_sight(sat)
-        #    try:
-        #       rec_antenna = self._system_geometry.phase_center.get_receiver_antenna()
-        #        pcc_rec = receiver_phase_center_correction(rec_antenna, datatype, los, lat, long, az, el)
-        #    except Exception as e:
-        #        from src.common_log import get_logger, MODEL_LOG
-        #        get_logger(MODEL_LOG).warning(f"Error computing receiver antenna correction for "
-        #                                      f"{epoch}, datatype {datatype} and sat {str(sat)}: {e}")
-        #    try:
-        #        dcm_b_e = self._system_geometry.get("dcm_b_e", sat)
-        #        nadir_sat = self._system_geometry.get("nadir_sat", sat)
-        #        azimuth_sat = self._system_geometry.get("azimuth_sat", sat)
-        #        sat_antenna = self._system_geometry.phase_center.get_satellite_antenna(sat)
-        #       pcc_sat = satellite_phase_center_correction(sat_antenna, dcm_b_e, datatype, los, nadir_sat, azimuth_sat)
-        #  except Exception as e:
-        #        from src.common_log import get_logger, MODEL_LOG
-        #       get_logger(MODEL_LOG).warning(f"Error computing satellite antenna correction for "
-        #                                      f"{epoch}, datatype {datatype} and sat {str(sat)}: {e}")
-
-        # Earth deformation effects
-        #disp_los = 0.0
-        #if config_dict.get("model", "earth_deformation_effects", "enable"):
-        #    disp_ecef = self._system_geometry.tidal_displacement  # the same for all GNSS SVs
-        #    if disp_ecef is not None:
-        #        los = self.get_unit_line_of_sight(sat)
-        #        disp_los = np.dot(los, disp_ecef)  # compute displacement in the line of sight direction
-
         # finally, construct obs
         obs = true_range + dt_rec + bias - prc
-        #if self._write_trace:
-        #    self._trace_handler.write(f"{epoch},{sat},{datatype},{obs},{true_range},{dt_rec},"
-        #                              f"{dt_sat * constants.SPEED_OF_LIGHT},{bias * constants.SPEED_OF_LIGHT},"
-        #                              f"{iono},{tropo},{dI},{pcc_rec},{pcc_sat},{disp_los}\n")
+        if self._write_trace:
+            self._trace_handler.write(f"{epoch},{sat},{datatype},{obs},{true_range},{dt_rec},{bias},0.0,{prc}\n")
         return obs
 
 class CarrierPhaseReconstructor(ObservationReconstructor):
