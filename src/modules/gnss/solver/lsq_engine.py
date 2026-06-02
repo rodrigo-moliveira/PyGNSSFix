@@ -238,6 +238,11 @@ class LSQ_Engine_Position(LSQ_Engine):
         ΔPR = -LOS * Δr + ΔT + c * Δdt_r + ΔI + c * ΔISB
         ΔCP = -LOS * Δr + ΔT + c * Δdt_r + c * Δδ_r - ΔI + c * ΔISB + λ * ΔN
 
+    For D-GNSS code-based processing algorithm (currently the software does not provide the RTK algorithm), the
+    linearized PR observation equation becomes:
+        ΔPR = -LOS * Δr + ΔT + c * Δdt_r + c * ΔDGNSS_BIAS
+    The satellite-related clocks and biases are removed, by adding the D-GNSS station correction to the raw observation.
+
     where:
         - ΔPR: is the prefit residual pseudorange observation (true minus computed PR observation)
         - ΔCP: is the prefit residual carrier phase observation (true minus computed CP observation)
@@ -249,6 +254,7 @@ class LSQ_Engine_Position(LSQ_Engine):
         - Δδ_r: Change in receiver phase bias
         - ΔI: Change in ionospheric delay (when iono estimation is enabled). ΔI = mu * dI
         - ΔISB: Change in Inter System Bias (only enabled for the slave constellations)
+        - ΔDGNSS_BIAS: Change in D-GNSS Bias (only enabled for the non-master code type)
         - λ: Wavelength of the carrier phase observation
         - ΔN: Change in ambiguity (only enabled for the carrier phase observation)
 
@@ -278,6 +284,7 @@ class LSQ_Engine_Position(LSQ_Engine):
         * I -> I + dI
         * T -> T + Δzwd (only zwd is estimated)
         * ISB -> ISB + ΔISB
+        * DGNSS_BIAS -> DGNSS_BIAS + ΔDGNSS_BIAS
         * N -> N + ΔN (only for CP)
 
     These new quantities are then used in the next iteration of the LSQ, for the new computation of the predicted

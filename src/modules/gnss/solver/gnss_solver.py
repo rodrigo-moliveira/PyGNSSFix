@@ -35,6 +35,13 @@ class GnssSolver:
         * Troposphere [1] (Zenith Wet Delay ZWD coefficient): this state is enabled/disabled in the user configurations
         * Ionosphere [1xN_i]: this state is enabled for dual-frequency scenarios, where N_i is the number of satellites
             for constellation i
+        * Ambiguities [N_CPx(N_i-1)]: the ambiguity state is enabled when processing carrier phase observations,
+            where N_CP is the number of carrier phase datatypes (summed for all constellations), and N_i is the number
+            of satellites (the pivot satellite is excluded).
+        * Phase Bias [N_CPx1]: the phase bias state is enabled when processing carrier phase observations,
+            where N_CP is the number of carrier phase datatypes (summed for all constellations).
+        * DGNSS Bias [N_PR-1x1]: The DGNSS biases are enabled when processing D-GNSS algorithm. They are one bias
+            per datatype (except for the first datatype).
         * Receiver velocity [3x1]: the velocity estimation is enabled/disabled by the user in the configurations and
             requires Doppler measurements
         * Clock drift [1xN_C]: the clock drift state is a by-product of the velocity estimation process, where N_C is

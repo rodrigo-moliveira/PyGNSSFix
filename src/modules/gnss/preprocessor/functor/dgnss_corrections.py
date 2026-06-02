@@ -1,9 +1,9 @@
-""" Module with the implementation of the DGNSS Corrections """
+""" Module with the implementation of the D-GNSS Corrections """
 import numpy as np
 
 from src.data_mng.gnss import GnssStateSpace
 from src.data_mng.gnss.geometry import SatelliteGeometry
-from src.io.config import config_dict, EnumTransmissionTime
+from src.io.config import EnumTransmissionTime
 from . import Functor
 from src.data_types.gnss.data_type import DataType
 from src.data_types.gnss.observation import Observation
@@ -11,12 +11,25 @@ from src.data_types.gnss.observation import Observation
 
 class DGNSSFunctor(Functor):
     """
-    The `DGNSSFunctor` computes ...
+    The `DGNSSFunctor` computes the differential GNSS observables, that is, the differential observations between the
+    rover and the reference station. These are required by code based (D-GNSS) and phase based (RTK) processing
+    algorithms.
 
-    ...
+    The differential pseudorange and carrier phase observations are computed with the following equations:
+
+        PRC_PRi = rho - PRi
+        PRC_CPi = rho - CPi
+
+    where PRC_PRi and PRC_CPi are the pseudorange and carrier phase differential corrections for frequency fi.
+    Moreover, rho is the true geometric range, and PRi and CPi are the raw PR and CP observations.
+    Note that in the current software version, only code-based corrections are computed.
+
+    The corrected pseudorange measurement applied to the rover is then computed as:
+        * PR_corrected = PR_raw + PRC_PR, which is free of satellite-related clocks and biases
 
     More information can be found in:
-    TBC
+        * [1] Springer Handbook of Global Navigation Satellite Systems, Peter J.G. Teunissen, Oliver Montenbruck,
+            Springer Cham, 2017, Section 21.4.1
     """
     def __init__(self, true_position, sat_clocks, sat_orbits):
         super().__init__()

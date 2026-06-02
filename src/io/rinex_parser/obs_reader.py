@@ -35,6 +35,8 @@ class RinexObsReader:
                 extracted from the file header. If set to None, this feature is disabled.
             fault_injector(src.fault.fault_mng.FaultInjector or None): fault injector manager. If set to None, this
                 feature is disabled
+            service_str (str): optional string to define which if the observations are from the user or from a reference
+                station. Defaults to "user_service". Available options are "user_service" or "ref_station_service"
         """
         first_epoch = config_dict.get("inputs", "arc", "first_epoch")
         last_epoch = config_dict.get("inputs", "arc", "last_epoch")

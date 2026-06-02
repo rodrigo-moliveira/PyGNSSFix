@@ -292,7 +292,7 @@ def plot_tropo_wet_delay(tropo: CSVData):
 
 def plot_dgnss_biases(dgnss_bias: CSVData):
     """
-    Plot the estimated DGNSS code bias states for each datatype.
+    Plot the estimated D-GNSS code bias states for each datatype.
 
     Args:
         dgnss_bias(CSVData): input CSVData object with the estimated states for all available datatypes

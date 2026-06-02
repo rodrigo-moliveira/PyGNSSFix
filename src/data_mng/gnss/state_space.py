@@ -33,6 +33,8 @@ class GnssStateSpace(Container):
             and estimated ambiguity values as values
         * phase_bias (dict): two-level dictionary with constellations as first keys and CP types as second keys
             and estimated phase bias values as values
+        * dgnss_bias (dict): two-level dictionary with constellations as first keys and datatypes as second keys
+            and estimated phase bias values as values
 
     Additional parameters:
         * epoch (Epoch): Epoch object for this time instant
@@ -45,6 +47,7 @@ class GnssStateSpace(Container):
         * _info["states"] provides a list with all valid states to be estimated, depending on the configuration
         * _info["clock_master"] provides the master constellation, when the ISB state is active
         * _info["clock_slave"] provides the slave constellation, when the ISB state is active
+        * _info["code_master"] provides the master code type relevant for D-GNSS algorithms
 
     Additionally, the GNSS solver will also save the following information in the `_info` dict parameter:
         * geometry
@@ -275,7 +278,8 @@ class GnssStateSpace(Container):
         self.build_index_map()
 
     def _init_states_DGNSS(self, metadata, sat_list):
-        """ TODO: update Initialize the state variables and covariances with the values provided in the metadata dict """
+        """ Initialize the state variables and covariances with the values provided in the metadata dict for the
+        DGNSS algorithms. """
         _states = ["position", "clock_bias"]  # mandatory states
 
         # initialize position
@@ -309,7 +313,7 @@ class GnssStateSpace(Container):
         self.cov_iono = dict()
         self.add_additional_info("estimate_iono", set())
 
-        # Add one bias per constellation and frequency (excluding first)
+        # DGNSS Biases: add one bias per constellation and frequency (excluding first, which is the code master type)
         self.dgnss_bias = dict()
         code_master = None
         self.cov_dgnss_bias = dict()
@@ -324,6 +328,8 @@ class GnssStateSpace(Container):
                                                   constants.SPEED_OF_LIGHT
                 self.cov_dgnss_bias[constellation][code] = metadata["INITIAL_STATES"]["dgnss_bias"][1] * \
                                                       constants.SPEED_OF_LIGHT ** 2
+
+        # Defining the code master type
         if code_master is not None:
             _states.append("dgnss_bias")
         self.add_additional_info("code_master", code_master)
@@ -339,6 +345,7 @@ class GnssStateSpace(Container):
 
         self.add_additional_info("states", _states)
         self.add_additional_info("sat_list", sat_list)
+        # There is no ISB estimation, hence no need to master/slave clock definition
         self.add_additional_info("clock_master", None)
         self.add_additional_info("clock_slave", None)
         self.build_index_map()
@@ -425,7 +432,7 @@ class GnssStateSpace(Container):
             * tropo wet (dimension 1)
             * ambiguity (dimension 1 per satellite and CP type, excluding the pivot satellite)
             * phase bias (dimension 1 per constellation and CP type)
-            * DGNSS Bias (...)
+            * DGNSS Bias (dimension 1 per constellation and code datatype, excluding code master)
 
         Args:
             sat_list(list[src.data_types.gnss.Satellite]) : list of available satellites
