@@ -5,8 +5,10 @@ from src.constants import SPEED_OF_LIGHT
 from src.data_types.gnss import DataType
 from src.data_types.gnss.data_type import get_base_freq
 from src.errors import SolverError
+from src.io.config import EnumAlgorithmPNT
 from src.modules.estimators.EKF import EKF
-from src.modules.gnss.solver import PseudorangeReconstructor, CarrierPhaseReconstructor, RangeRateReconstructor
+from src.modules.gnss.solver import PseudorangeReconstructor, CarrierPhaseReconstructor, RangeRateReconstructor, \
+    DifferentialPseudorangeReconstructor
 from src.utils.math_utils import add_state, delete_state
 
 
@@ -145,6 +147,13 @@ class EKF_Engine:
                     idx_phase_bias = cp_types[cp_type]
                     P0[idx_phase_bias, idx_phase_bias] = self._state.cov_phase_bias[const][cp_type]
                     X0[idx_phase_bias] = self._state.phase_bias[const][cp_type]
+
+        if "dgnss_bias" in index_map:
+            for const, biases in index_map["dgnss_bias"].items():
+                for bias in biases:
+                    idx_bias = biases[bias]
+                    P0[idx_bias, idx_bias] = self._state.cov_dgnss_bias[const][bias]
+                    X0[idx_bias] = self._state.dgnss_bias[const][bias]
 
         if "velocity" in index_map:
             idx_vel = index_map["velocity"]
@@ -304,6 +313,14 @@ class EKF_Engine:
                     idx_phase_bias = cp_types[cp_type]
                     P_out[idx_phase_bias, idx_phase_bias] = P_in[idx_phase_bias, idx_phase_bias] * relative_re_param
 
+        # DGNSS Bias
+        if "dgnss_bias" in index_map:
+            relative_re_param = self._noise_manager.dgnss_bias.relative_re_param
+            for const, biases in index_map["dgnss_bias"].items():
+                for bias in biases:
+                    idx_bias = biases[bias]
+                    P_out[idx_bias, idx_bias] = P_in[idx_bias, idx_bias] * relative_re_param
+
         if "velocity" in index_map:
             idx_vel = index_map["velocity"]
             relative_re_param = self._noise_manager.velocity.relative_re_param
@@ -446,6 +463,15 @@ class EKF_Engine:
                     Q_d[idx_phase_bias, idx_phase_bias] = self._noise_manager.phase_bias.get_process_noise(time_step) \
                                                           * SPEED_OF_LIGHT ** 2
                     F[idx_phase_bias, idx_phase_bias] = self._noise_manager.phase_bias.get_stm_entry(time_step)
+
+        # DGNSS bias (m)
+        if "dgnss_bias" in index_map:
+            for const, biases in index_map["dgnss_bias"].items():
+                for bias in biases:
+                    idx_bias = biases[bias]
+                    Q_d[idx_bias, idx_bias] = self._noise_manager.dgnss_bias.get_process_noise(
+                        time_step)* SPEED_OF_LIGHT ** 2
+                    F[idx_bias, idx_bias] = self._noise_manager.dgnss_bias.get_stm_entry(time_step)
 
         return F, Q_d
 
@@ -596,6 +622,12 @@ class EKF_Engine:
                 idx_isb = index_map["isb"]
                 design_mat[obs_offset + iSat, idx_isb] = 1.0
 
+            # DGNSS bias
+            if "dgnss_bias" in index_map and const in index_map["dgnss_bias"]:
+                if datatype in index_map["dgnss_bias"][const]:
+                    idx_bias = index_map["dgnss_bias"][const][datatype]
+                    design_mat[obs_offset + iSat, idx_bias] = 1.0
+
             if DataType.is_carrier(datatype):
                 # ambiguity
                 if "ambiguity" in index_map and sat in index_map["ambiguity"]:
@@ -713,6 +745,13 @@ class EKF_Engine:
                     self._state.phase_bias[const][cp_type] = x_out[idx_phase_bias]
                     self._state.cov_phase_bias[const][cp_type] = P_out[idx_phase_bias, idx_phase_bias]
 
+        if "dgnss_bias" in index_map:
+            for const, biases in index_map["dgnss_bias"].items():
+                for bias in biases:
+                    idx_bias = biases[bias]
+                    self._state.dgnss_bias[const][bias] = x_out[idx_bias]
+                    self._state.cov_dgnss_bias[const][bias] = P_out[idx_bias, idx_bias]
+
         if "velocity" in index_map:
             idx_vel = index_map["velocity"]
             # velocity with respect to ECEF frame
@@ -735,8 +774,13 @@ class EKF_Engine:
     def _build_obs_reconstructor(self, system_geometry) -> tuple[dict, dict]:
         """ Builds the reconstructor and datatypes dictionaries for internal processing procedures. """
         reconstructor = dict()
-        reconstructor["PR"] = PseudorangeReconstructor(system_geometry, self.metadata, self._state,
-                                                       self._trace_data)
+
+        if self.metadata["GNSS_ALG"] is not EnumAlgorithmPNT.DGNSS:
+            reconstructor["PR"] = PseudorangeReconstructor(system_geometry, self.metadata, self._state,
+                                                           self._trace_data)
+        else:
+            reconstructor["PR"] = DifferentialPseudorangeReconstructor(system_geometry, self.metadata, self._state,
+                                                                       self._trace_data)
 
         if self.cp_based:
             datatypes = dict()

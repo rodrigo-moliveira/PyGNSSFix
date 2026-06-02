@@ -723,6 +723,12 @@
             "type": "number"
           }
         },
+        "initial_dgnss_bias_cov": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
         "noise_model": {
           "type": "object",
           "description": "Defines the process noise models for various states",
@@ -741,13 +747,14 @@
             "iono": { "$ref": "#/definitions/state_noise_model" },
             "tropo": { "$ref": "#/definitions/state_noise_model" },
             "ambiguity": { "$ref": "#/definitions/state_noise_model" },
-            "phase_bias": { "$ref": "#/definitions/state_noise_model" }
+            "phase_bias": { "$ref": "#/definitions/state_noise_model" },
+            "dgnss_bias": { "$ref": "#/definitions/state_noise_model" }
           },
-          "required": ["PV_Model_Enabled", "Clock_Model_Enabled", "position", "velocity", "clock_bias", "clock_drift", "isb", "iono", "tropo", "ambiguity", "phase_bias"]
+          "required": ["PV_Model_Enabled", "Clock_Model_Enabled", "position", "velocity", "clock_bias", "clock_drift", "isb", "iono", "tropo", "ambiguity", "phase_bias", "dgnss_bias"]
         }
       },
       "required": ["trace_files", "algorithm", "a_priori_constrain", "feedforward_solution", "n_iterations", "stop_criteria", "transmission_time_alg","relativistic_corrections","elevation_filter","ambiguity_resolution",
-        "initial_pos_cov","initial_vel_cov","initial_clock_cov","initial_isb_cov","initial_iono_cov","initial_tropo_cov","initial_clock_rate_cov","initial_ambiguity_cov","initial_phase_bias_cov","noise_model"]
+        "initial_pos_cov","initial_vel_cov","initial_clock_cov","initial_isb_cov","initial_iono_cov","initial_tropo_cov","initial_clock_rate_cov","initial_ambiguity_cov","initial_phase_bias_cov","initial_dgnss_bias_cov","noise_model"]
       },
       "output": {
         "type": "object",

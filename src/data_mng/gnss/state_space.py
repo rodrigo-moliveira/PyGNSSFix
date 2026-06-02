@@ -425,6 +425,7 @@ class GnssStateSpace(Container):
             * tropo wet (dimension 1)
             * ambiguity (dimension 1 per satellite and CP type, excluding the pivot satellite)
             * phase bias (dimension 1 per constellation and CP type)
+            * DGNSS Bias (...)
 
         Args:
             sat_list(list[src.data_types.gnss.Satellite]) : list of available satellites

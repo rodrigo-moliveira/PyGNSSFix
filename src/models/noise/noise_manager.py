@@ -26,12 +26,13 @@ class GNSSNoiseManager(Container):
         tropo (NoiseModel): Tropospheric delay model (e.g., Gauss-Markov or random walk).
         ambiguity (NoiseModel): Carrier-phase ambiguity model (typically random walk).
         phase_bias (NoiseModel): Phase bias model (usually fixed or random walk).
+        dgnss_bias (NoiseModel): DGNSS bias model (typically random walk).
         b_pv_model(bool): boolean to enable the PV Model (position and velocity correlated)
         b_clock_model(bool): boolean to enable the Clock Model (clock bias and drift correlated)
     """
 
     __slots__ = ["position", "velocity", "clock_bias", "clock_drift", "isb", "iono", "tropo", "ambiguity",
-                 "phase_bias", "b_pv_model", "b_clock_model"]
+                 "phase_bias", "dgnss_bias", "b_pv_model", "b_clock_model"]
 
     def __init__(self, config_dict):
         """
@@ -59,6 +60,7 @@ class GNSSNoiseManager(Container):
         self.iono = None
         self.ambiguity = None
         self.phase_bias = None
+        self.dgnss_bias = None
 
         self.b_pv_model = config_dict.get("solver", "noise_model", "PV_Model_Enabled")
         self.b_clock_model = config_dict.get("solver", "noise_model", "Clock_Model_Enabled")
