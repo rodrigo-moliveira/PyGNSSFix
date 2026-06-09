@@ -4,7 +4,7 @@ import numpy as np
 from src import constants
 from src.constants import SPEED_OF_LIGHT
 from src.data_types.gnss.data_type import get_base_freq
-from src.errors import SolverError
+from src.errors import SolverError, ReconstructionError
 from src.io.config import EnumSolver, EnumAlgorithmPNT
 from src.modules.estimators.weighted_ls import WeightedLeastSquares
 from src.modules.gnss.solver import (PseudorangeReconstructor, RangeRateReconstructor, CarrierPhaseReconstructor,
@@ -210,15 +210,17 @@ class LSQ_Engine:
         """
 
         res_dict = dict()
+        obs_offset = 0
         for const in self.sat_list.keys():
             n_sats = len(self.sat_list[const])
             res_dict[const] = dict()
 
-            for iSat, sat in enumerate(self.sat_list[const]):
-                res_dict[const][sat] = dict()
-
-                for iFreq, datatype in enumerate(self.datatypes[const]):
-                    res_dict[const][sat][datatype] = residual_vec[iFreq * n_sats + iSat]
+            for iFreq, datatype in enumerate(self.datatypes[const]):
+                for iSat, sat in enumerate(self.sat_list[const]):
+                    if sat not in res_dict[const]:
+                        res_dict[const][sat] = dict()
+                    res_dict[const][sat][datatype] = residual_vec[obs_offset + iSat]
+                obs_offset += n_sats
         return res_dict
 
 
@@ -480,7 +482,10 @@ class LSQ_Engine_Position(LSQ_Engine):
                     raise SolverError(f"Unknown datatype {datatype} at epoch {epoch}.")
 
                 for iSat, sat in enumerate(self.sat_list[const]):
-                    residual, los = self.compute_residual_los(sat, epoch, datatype, obs_data)
+                    try:
+                        residual, los = self.compute_residual_los(sat, epoch, datatype, obs_data)
+                    except ReconstructionError:
+                        continue
 
                     # filling the LS matrices
                     self.y_vec[obs_offset + iSat] = residual

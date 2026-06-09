@@ -206,7 +206,7 @@ class GnssDataManager(Container):
                 for file in obs_files:
                     RinexObsReader(file, self.get_data("ref_station_obs_data"), service_str="ref_station_service")
 
-                if self.get_data("ref_station_obs_data").is_empty:
+                if self.get_data("ref_station_obs_data").is_empty():
                     raise IOError(f"No reference station data found in {obs_files}. This is a mandatory input "
                                   f"for the D-GNSS processing algorithm.")
 

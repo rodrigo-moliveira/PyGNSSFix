@@ -16,7 +16,7 @@
       "trace_files": true,
 
       "_comment1": "Input data files",
-      "obs_files": ["datasets/gnss/DGNSS/obs/DLF100NLD_R_20240740800_15M_01S_MO.rnx"],
+      "obs_files": ["datasets/gnss/DGNSS/obs/KOS100NLD_R_20240740800_15M_01S_MO.rnx"],
       "nav_files": ["datasets/gnss/DGNSS/BRDC00IGS_R_20240740000_01D_MN.rnx"],
       "clk_files": ["datasets/gnss/DGNSS/COD0MGXFIN_20240740000_01D_30S_CLK.CLK"],
       "sp3_files": ["datasets/gnss/DGNSS/COD0MGXFIN_20240740000_01D_05M_ORB.SP3"],
@@ -28,17 +28,15 @@
       },
 
       "DGNSS": {
-        "obs_files": ["datasets/gnss/DGNSS/obs/KOS100NLD_R_20240740800_15M_01S_MO.rnx"],
-        "true_position": [3899613.9607,397361.6230,5014738.6348],
+        "obs_files": ["datasets/gnss/DGNSS/obs/DLF100NLD_R_20240740800_15M_01S_MO.rnx"],
+        "true_position": [3924698.1156, 301124.8036, 5001904.9952],
         "GPS_observations": ["1C", "2W"],
-        "GAL_observations": ["1C", "5Q"]
+        "GAL_observations": ["1X", "5X"]
       },
 
       "bias_type": "OSB",
       "dcb_files": [""],
       "osb_files": ["datasets/gnss/DGNSS/COD0MGXFIN_20240740000_01D_01D_OSB.BIA"],
-
-      "_comment2": "Select 'true' to use CLK and SP3 products or 'false' to use navigation ephemerides",
 
       "leap_file": "geo_time_data/eop/tai-utc.dat",
       "finals_file": "geo_time_data/eop/finals1980.all",
@@ -116,7 +114,7 @@
       "_comment1": "Select the observation model. The available models are combined, uncombined. The combined model requires 2 observations.",
       "obs_model": "uncombined",
 
-      "estimate_velocity": false,
+      "estimate_velocity": true,
       "_comment2": "Use Doppler measurements to estimate velocity",
 
       "estimate_ggto": true,
@@ -130,10 +128,10 @@
          "model": "NONE",
 
          "_comment2": "Select Tropospheric map function for model GPT3. Available maps are 'Saastamoinen', 'GMF', 'VMF1', 'VMF3'",
-         "map": "VMF3",
+         "map": "Saastamoinen",
 
          "_comment3": "Select `true` to estimate tropospheric wet delay or `false` to disable tropo estimation",
-         "estimate_tropo_wet": false
+         "estimate_tropo_wet": true
       },
 
       "phase_windup": false,
@@ -192,9 +190,9 @@
       },
 
       "GAL": {
-         "observations": ["1X", "5X"],
+         "observations": ["1C", "5Q"],
 
-         "clock_product_service": ["1X", "5X"],
+         "clock_product_service": ["1C", "5Q"],
 
          "_comment1": "in `pr_obs_std` define the observation noise for the selected pseudorange observations (consistent with the signals defined in `observations`), in meters",
          "pr_obs_std": [0.5, 1.0],
@@ -258,7 +256,7 @@
       },
 
       "_comment7": "Initial states and expected covariances for the initial state vector.",
-      "initial_pos_cov": [3924698.1156,301124.8036,5001904.9952,1E0,1E0,1E0],
+      "initial_pos_cov": [3899613.9607,397361.6230,5014738.6348,1E0,1E0,1E0],
       "initial_vel_cov": [0,0,0,1,1,1],
       "initial_clock_cov": [0,1e-17],
       "initial_isb_cov": [0,1E-16],

@@ -297,9 +297,18 @@ class DifferentialPseudorangeReconstructor(ObservationReconstructor):
             epoch(src.data_types.date.Epoch): epoch instance
             datatype(src.data_types.gnss.data_type.DataType): DataType instance
         """
+        el = self._system_geometry.get("el", sat)  # satellite elevation from receiver
+        [lat, long, height] = cartesian2geodetic(*self._state.position)  # user lat, long and height
+
         ref_obs_data = self._metadata["REF_OBS_DGNSS"]
         dgnss_dt = DataType.get_dgnss_datatype(datatype)
-        prc = ref_obs_data.get_observable_at_epoch(sat, epoch, dgnss_dt).value
+        try:
+            prc = ref_obs_data.get_observable_at_epoch(sat, epoch, dgnss_dt).value
+        except Exception:
+            from src.common_log import get_logger, MODEL_LOG
+            get_logger(MODEL_LOG).warning(f"Cannot obtain DGNSS PRC correction for sat {sat} at epoch {epoch}. "
+                                      f"Ignoring this observation.")
+            raise ReconstructionError("")
 
         # true range
         true_range = self._system_geometry.get("true_range", sat)
@@ -312,15 +321,17 @@ class DifferentialPseudorangeReconstructor(ObservationReconstructor):
         if datatype != self._state.get_additional_info("code_master"):
             bias = self._state.dgnss_bias[sat.sat_system][datatype]
 
-        # differential troposphere
-        #tropo, map_wet = self._metadata["TROPO"].compute_tropo_delay(lat, long, height, el, epoch,
-        #                                                            self._state.tropo_wet)
-        #self._system_geometry.set("tropo_map_wet", map_wet, sat)
+        # differential troposphere (main tropo model delay is ignored, only tropo correction is estimated)
+        dtropo = 0.0
+        if self._metadata["TROPO"].estimate_tropo():
+            _, map_wet = self._metadata["TROPO"].compute_tropo_delay(lat, long, height, el, epoch, self._state.tropo_wet)
+            self._system_geometry.set("tropo_map_wet", map_wet, sat)
+            dtropo = self._state.tropo_wet * map_wet
 
         # finally, construct obs
-        obs = true_range + dt_rec + bias - prc
+        obs = true_range + dt_rec + bias + dtropo - prc
         if self._write_trace:
-            self._trace_handler.write(f"{epoch},{sat},{datatype},{obs},{true_range},{dt_rec},{bias},0.0,{prc}\n")
+            self._trace_handler.write(f"{epoch},{sat},{datatype},{obs},{true_range},{dt_rec},{bias},{dtropo},{prc}\n")
         return obs
 
 class CarrierPhaseReconstructor(ObservationReconstructor):
