@@ -576,7 +576,7 @@ class DataType:
             SignalError: an exception is raised if the differential datatype could not be formed from the provided input
                 argument
         """
-        if datatype not in cAvailableCodes:
+        if datatype not in cAvailableCodes and datatype not in cAvailableIonoFreeCodes:
             raise SignalError(f"Unable to convert datatype {datatype} to the corresponding DGNSS code datatype")
         return get_data_type(f"D{datatype.data_type}", datatype.constellation)
 
@@ -960,6 +960,12 @@ PR2_DGPS = DataType(data_type="DPR2", description="DGNSS Correction PseudoRange 
 PR5_DGPS = DataType(data_type="DPR5", description="DGNSS Correction PseudoRange in L5 (GPS)", freq=L5, freq_number=5,
                    constellation="GPS")
 
+# DGPS Iono-Free Code (Differential GPS)
+PR12_DGPS = DataType(data_type="DPR12", description="DGNSS Correction PseudoRange in Iono-Free L1-L2 (GPS)", freq_number=12,
+                    constellation="GPS", freq=L1L2_IF)
+PR15_DGPS = DataType(data_type="DPR15", description="DGNSS Correction PseudoRange in Iono-Free L1-L5 (GPS)", freq_number=15,
+                    constellation="GPS", freq=L1L5_IF)
+
 # DGAL Code (Differential Galileo)
 PR1_DGAL = DataType(data_type="DPR1", description="DGNSS Correction PseudoRange in E1 (GAL)", freq=E1, freq_number=1,
                    constellation="GAL")
@@ -971,6 +977,16 @@ PR8_DGAL = DataType(data_type="DPR8", description="DGNSS Correction PseudoRange 
                    constellation="GAL")
 PR6_DGAL = DataType(data_type="DPR6", description="DGNSS Correction PseudoRange in E6 (GAL)", freq=E6, freq_number=6,
                    constellation="GAL")
+
+# DGAL Iono-Free Code (Differential Galileo)
+PR15_DGAL = DataType(data_type="DPR15", description="DGNSS Correction PseudoRange in Iono-Free E1-E5a (GAL)", freq_number=15,
+                    constellation="GAL", freq=E1E5a_IF)
+PR17_DGAL = DataType(data_type="DPR17", description="DGNSS Correction PseudoRange in Iono-Free E1-E5b (GAL)", freq_number=17,
+                    constellation="GAL", freq=E1E5b_IF)
+PR18_DGAL = DataType(data_type="DPR18", description="DGNSS Correction PseudoRange in Iono-Free E1-E5AltBOC (GAL)", freq_number=18,
+                    constellation="GAL", freq=E1E5AltBOC_IF)
+PR16_DGAL = DataType(data_type="DPR16", description="DGNSS Correction PseudoRange in Iono-Free E1-E6 (GAL)", freq_number=16,
+                    constellation="GAL", freq=E1E6_IF)
 
 # Unknown
 UN = DataType(data_type="UN", description="Unknown inputs type")
@@ -994,7 +1010,8 @@ cAvailableGFCarrier = [CP_GF12_GPS, CP_GF15_GPS, CP_GF15_GAL, CP_GF16_GAL, CP_GF
 cAvailableWLCarrier = [CP_WL12_GPS, CP_WL15_GPS, CP_WL15_GAL, PR_WL16_GAL, PR_WL17_GAL, PR_WL18_GAL]
 cAvailableMWObs = [MW12_GPS, MW15_GPS, MW15_GAL, MW16_GAL, MW17_GAL, MW18_GAL]
 cAvailableDoppler = [D1_GPS, D2_GPS, D5_GPS, D1_GAL, D5_GAL, D6_GAL, D7_GAL, D8_GAL]
-cAvailableDGNSSCodes = [PR1_DGPS, PR2_DGPS, PR5_DGPS, PR1_DGAL, PR5_DGAL, PR6_DGAL, PR7_DGAL, PR8_DGAL]
+cAvailableDGNSSCodes = [PR1_DGPS, PR2_DGPS, PR5_DGPS, PR12_DGPS, PR15_DGPS, # GPS
+                        PR1_DGAL, PR5_DGAL, PR6_DGAL, PR7_DGAL, PR8_DGAL, PR15_DGAL, PR16_DGAL, PR7_DGAL] # GAL
 
 cGPSObsSignals = {"C": {"1": PR1_GPS, "2": PR2_GPS, "5": PR5_GPS},
                   "L": {"1": CP1_GPS, "2": CP2_GPS, "5": CP5_GPS},

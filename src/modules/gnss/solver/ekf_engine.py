@@ -4,7 +4,7 @@ import numpy as np
 from src.constants import SPEED_OF_LIGHT
 from src.data_types.gnss import DataType
 from src.data_types.gnss.data_type import get_base_freq
-from src.errors import SolverError
+from src.errors import SolverError, ReconstructionError
 from src.io.config import EnumAlgorithmPNT
 from src.modules.estimators.EKF import EKF
 from src.modules.gnss.solver import PseudorangeReconstructor, CarrierPhaseReconstructor, RangeRateReconstructor, \
@@ -588,7 +588,11 @@ class EKF_Engine:
             if sat.sat_system != const:
                 continue
 
-            residual, los = self.compute_residual_los(sat, epoch, datatype, obs_data, reconstructor)
+            try:
+                residual, los = self.compute_residual_los(sat, epoch, datatype, obs_data, reconstructor)
+            except ReconstructionError:
+                iSat += 1
+                continue
 
             # filling the LS matrices
             y_vec[obs_offset + iSat] = residual
@@ -906,6 +910,9 @@ class EKF_Engine:
         """
 
         res_dict = dict()
+        obs_offset = 0
+        iFreq = 0
+        iSat = 0
         for const in datatypes.keys():
             n_sats = 0
             for sat in sat_list:
@@ -913,14 +920,16 @@ class EKF_Engine:
                     n_sats += 1
 
             res_dict[const] = dict()
-            iSat = 0
-            for sat in sat_list:
-                if sat.sat_system == const:
-                    res_dict[const][sat] = dict()
 
-                    for iFreq, datatype in enumerate(datatypes[const]):
-                        res_dict[const][sat][datatype] = residual_vec[iFreq * n_sats + iSat]
-                    iSat += 1
+            for iFreq, datatype in enumerate(datatypes[const]):
+                iSat = 0
+                for sat in sat_list:
+                    if sat.sat_system == const:
+                        if sat not in res_dict[const]:
+                            res_dict[const][sat] = dict()
+                        res_dict[const][sat][datatype] = residual_vec[obs_offset + n_sats * iFreq + iSat]
+                        iSat += 1
+            obs_offset += n_sats * iFreq + iSat
         return res_dict
 
     def get_postfit_residuals(self, epoch, pr_cp_obs_data, rr_obs_data,
@@ -964,10 +973,14 @@ class EKF_Engine:
                     if sat.sat_system != const:
                         continue
 
-                    if DataType.is_code(datatype) or DataType.is_carrier(datatype):
-                        r, _ = self.compute_residual_los(sat, epoch, datatype, pr_cp_obs_data, reconstructor)
-                    else:
-                        r, _ = self.compute_residual_los_rr(sat, epoch, datatype, rr_obs_data, reconstructor)
+                    try:
+                        if DataType.is_code(datatype) or DataType.is_carrier(datatype):
+                            r, _ = self.compute_residual_los(sat, epoch, datatype, pr_cp_obs_data, reconstructor)
+                        else:
+                            r, _ = self.compute_residual_los_rr(sat, epoch, datatype, rr_obs_data, reconstructor)
+                    except ReconstructionError:
+                        iSat += 1
+                        continue
 
                     # filling the LS matrices
                     postfit_residuals[obs_offset + iSat] = r

@@ -167,6 +167,26 @@ class PreprocessorManager:
             except Exception as e:
                 raise PreprocessorError(f"PreprocessorManager -> Error performing Consistency Type filter: {e}")
 
+            # check to compute or not iono free dataset from raw observables
+            if config_dict.get("obs_model") == EnumObservationModel.COMBINED:
+                for constellation in self.services.keys():
+                    code_types = ref_station_data.get_code_types(constellation)
+                    if len(code_types) != 2:
+                        raise PreprocessorError(
+                            f"Unable to compute Reference Station (D-GNSS) Iono-Free data for constellation {constellation} "
+                            f"due to lack of data. Need 2 observations, but have {len(code_types)} ({code_types})")
+                    else:
+                        self.log.info(
+                            f"Computing Reference Station (D-GNSS) Iono-Free data for constellation {constellation} with observations "
+                            f"{code_types}")
+                        try:
+                            self.iono_free(ref_station_data, ref_station_data, constellation,
+                                           service_str="ref_station_service")
+                        except Exception as e:
+                            raise PreprocessorError(
+                                f"PreprocessorManager -> Error computing Reference Station (D-GNSS) Iono-Free Observation Data: {e}")
+
+            # Compute raw D-GNSS corrections
             try:
                 self.dgnss_corrections(ref_station_data)
             except Exception as e:
@@ -270,9 +290,9 @@ class PreprocessorManager:
         #    f.write(str(observation_data))
         #    f.close()
 
-    def iono_free(self, raw_data, data_out, constellation):
+    def iono_free(self, raw_data, data_out, constellation, service_str="user_service"):
         """ Compute IonoFree data """
-        services = self.services[constellation]["user_service"]
+        services = self.services[constellation][service_str]
         if len(services) != 2:
             raise AttributeError(f"Problem getting base and second frequencies in Iono Free Computation for "
                                  f"constellation {constellation}, observations provided are {services}. "

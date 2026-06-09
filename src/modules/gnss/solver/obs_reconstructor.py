@@ -306,7 +306,7 @@ class DifferentialPseudorangeReconstructor(ObservationReconstructor):
             prc = ref_obs_data.get_observable_at_epoch(sat, epoch, dgnss_dt).value
         except Exception:
             from src.common_log import get_logger, MODEL_LOG
-            get_logger(MODEL_LOG).warning(f"Cannot obtain DGNSS PRC correction for sat {sat} at epoch {epoch}. "
+            get_logger(MODEL_LOG).warning(f"Cannot obtain DGNSS PRC correction for sat {sat} at epoch {epoch} and {datatype}. "
                                       f"Ignoring this observation.")
             raise ReconstructionError("")
 

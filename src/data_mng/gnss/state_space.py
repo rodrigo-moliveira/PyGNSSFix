@@ -346,7 +346,7 @@ class GnssStateSpace(Container):
         self.add_additional_info("states", _states)
         self.add_additional_info("sat_list", sat_list)
         # There is no ISB estimation, hence no need to master/slave clock definition
-        self.add_additional_info("clock_master", None)
+        self.add_additional_info("clock_master", code_master.constellation)
         self.add_additional_info("clock_slave", None)
         self.build_index_map()
 

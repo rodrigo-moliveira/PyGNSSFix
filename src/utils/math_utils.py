@@ -1,7 +1,7 @@
 """ Module with useful mathematical functions to support the library """
 
 __all__ = ["rot1", "rot2", "rot3", "vector2skew_symmetric", "skew_symmetric2vector", "require_len_array",
-           "require_len_matrix"]
+           "require_len_matrix", "add_state", "delete_state"]
 
 import numpy as np
 from numpy import sin, cos

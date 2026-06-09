@@ -81,10 +81,10 @@ class Config(dict):
 
             if self["obs_model"] == EnumObservationModel.COMBINED:
                 for constellation, services in service_dict.items():
-                    if len(services) != 2:
+                    if len(services["user_service"]) != 2:
                         raise ConfigError(f"Iono-free combined model was selected but the "
                                           f"number of observations for constellation {constellation} is not 2 "
-                                          f"({services}). Please revise the configurations.")
+                                          f"({services["user_service"]}). Please revise the configurations.")
 
             # specific tasks for PPP Solutions
             if self["gnss_alg"] == EnumAlgorithmPNT.PR_PPP or self["gnss_alg"] == EnumAlgorithmPNT.CP_PPP:
