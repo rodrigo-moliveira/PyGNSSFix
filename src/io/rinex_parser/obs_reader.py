@@ -22,7 +22,8 @@ class RinexObsReader:
     Parser of Rinex Observation files
     """
 
-    def __init__(self, file: str, obs: ObservationData, phase_center: PhaseCenterManager, fault_injector):
+    def __init__(self, file: str, obs: ObservationData, phase_center: PhaseCenterManager = None, fault_injector=None,
+                 service_str = "user_service"):
         """
         Reads the provided observation file and stores its content in the `ObservationData` instance.
 
@@ -30,9 +31,12 @@ class RinexObsReader:
             file(str): path to the input RINEX Observation file to load
             obs(ObservationData): the `ObservationData` object to store the observation information extracted from
                 the file
-            phase_center(PhaseCenterManager): the `PhaseCenterManager` object to store the phase center information
-                extracted from the file header
-            fault_injector(src.fault.fault_mng.FaultInjector): fault injector manager.
+            phase_center(PhaseCenterManager or None): the `PhaseCenterManager` object to store the phase center information
+                extracted from the file header. If set to None, this feature is disabled.
+            fault_injector(src.fault.fault_mng.FaultInjector or None): fault injector manager. If set to None, this
+                feature is disabled
+            service_str (str): optional string to define which if the observations are from the user or from a reference
+                station. Defaults to "user_service". Available options are "user_service" or "ref_station_service"
         """
         first_epoch = config_dict.get("inputs", "arc", "first_epoch")
         last_epoch = config_dict.get("inputs", "arc", "last_epoch")
@@ -45,6 +49,7 @@ class RinexObsReader:
         self._snr_control_check = config_dict.get("inputs", "snr_control")
         self._log = get_logger(IO_LOG)
         self._fault_injector = fault_injector
+        self._service_str = service_str
 
         f_handler = open(f"{WORKSPACE_PATH}/{file}", "r")
         self._log.info(f"Reading observation file {WORKSPACE_PATH}/{file}...")
@@ -102,7 +107,7 @@ class RinexObsReader:
             #    data = line[:RINEX_OBS_END_OF_DATA_HEADER].split()
             #    self._obs.header.leap_seconds = int(data[0])
 
-            elif "ANT # / TYPE" in line:
+            elif "ANT # / TYPE" in line and self._phase_center:
                 serial_no = int(line[0:20])
                 antenna_type = line[20:40]
                 antenna = self._phase_center.get_receiver_antenna()
@@ -110,7 +115,7 @@ class RinexObsReader:
                     antenna.ant_type = antenna_type
                     antenna.serial_no = serial_no
 
-            elif "ANTENNA: DELTA H/E/N" in line:
+            elif "ANTENNA: DELTA H/E/N" in line and self._phase_center:
                 # check if the ARP offset is to be initialized from RINEX OBS
                 arp_offset = config_dict.get("model", "phase_center_corrections", "receiver", "ARP_offset")
                 if arp_offset is None:
@@ -153,7 +158,7 @@ class RinexObsReader:
                         for this_obsCode in data[2:]:
                             if len(this_obsCode) == 3:
                                 this_service = this_obsCode[1:]
-                                if this_service in services["user_service"]:
+                                if this_service in services[self._service_str]:
                                     this_type = this_obsCode[0]
                                     if this_type in RINEX_OBS_TYPES_TO_READ:
                                         _map[this_obsCode] = data[2:].index(this_obsCode)
@@ -166,7 +171,7 @@ class RinexObsReader:
         for constellation, services in self._services.items():
             if constellation in self._map:
                 services_read = set([x[1:] for x in self._map[constellation]])
-                for service in services["user_service"]:
+                for service in services[self._service_str]:
                     if service not in services_read:
                         raise ConfigError(f"User-selected service "
                                           f"'{service}' {constellation} does not exist in provided Observation File")
@@ -294,7 +299,7 @@ class RinexObsReader:
                                 observable = observable * wavelength
 
                             # checks if there is any active fault for this epoch and fault type (MEAS_BIAS)
-                            if self._fault_injector.enabled:
+                            if self._fault_injector and self._fault_injector.enabled:
                                 observable = self._fault_injector.check_faults("MEAS_BIAS", observable,
                                                                                epoch=this_epoch, sat=this_sat,
                                                                                obs=this_obsCode)

@@ -317,6 +317,7 @@ class PerformanceManager:
             self._plot_tropo(plot_dir)
             self._plot_ambiguity(plot_dir)
             self._plot_phase_bias(plot_dir)
+            self._plot_dgnss_bias(plot_dir)
 
         if config_dict.get("performance_evaluation", "plot_configs", "plot_dops"):
             self.log.info("Plotting DOPs...")
@@ -454,6 +455,21 @@ class PerformanceManager:
             self._save_figure(plot_dir, ax)
         except Exception as e:
             self.log.error(f"Unexpected error when performing plot_clock_rate function: {e}")
+
+    def _plot_dgnss_bias(self, plot_dir):
+        """ Plot estimated DGNSS Biases. """
+        try:
+            dgnss_bias = self.data_manager.get_data("dgnss_bias")
+            if dgnss_bias.is_empty():
+                raise ValueError
+        except ValueError:
+            self.log.warning("DGNSS Biases dataframe not found or is empty. Skipping plot_dgnss_bias")
+            return
+        try:
+            ax = plot_gnss.plot_dgnss_biases(dgnss_bias)
+            self._save_figure(plot_dir, ax)
+        except Exception as e:
+            self.log.error(f"Unexpected error when performing plot_dgnss_bias function: {e}")
 
     def _plot_iono(self, plot_dir):
         """ Plot Iono estimated states for all available satellites. """

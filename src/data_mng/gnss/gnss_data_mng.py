@@ -29,6 +29,7 @@ class GnssDataManager(Container):
     Attributes:
         nav_data(NavigationData): navigation data object containing RINEX NAV ephemerides
         obs_data(ObservationData): raw observation data from RINEX OBS
+        ref_station_obs_data(ObservationData): raw observation data from RINEX OBS for the reference station (DGNSS)
         sat_clocks(SatelliteClocks): manager of satellite clocks (precise or navigation clocks)
         sat_orbits(SatelliteOrbits): manager of satellite orbits (precise or navigation orbits)
         iono_gim(GlobalIonoMap): manager of global ionospheric maps (VTEC)
@@ -51,6 +52,7 @@ class GnssDataManager(Container):
     __slots__ = [
         "nav_data",                # Input
         "obs_data",                # Input
+        "ref_station_obs_data",    # Input
         "sat_clocks",              # Input
         "sat_orbits",              # Input
         "iono_gim",                # Input
@@ -75,6 +77,7 @@ class GnssDataManager(Container):
 
         self.nav_data = NavigationData()  # Input Navigation Data
         self.obs_data = ObservationData()  # Input Observation Data
+        self.ref_station_obs_data = ObservationData()  # Input Observation Data for the DGNSS reference station
         self.smooth_obs_data = ObservationData()  # Smooth Observation Data
         self.sat_clocks = SatelliteClocks()  # Satellite clocks manager (precise or navigation clocks)
         self.iono_gim = GlobalIonoMap()  # Global Ionospheric (VTEC) Map Manager
@@ -173,8 +176,8 @@ class GnssDataManager(Container):
                            self.get_data("fault_injector"))
 
         # Load specific inputs for each PNT Algorithm
-        if gnss_alg == EnumAlgorithmPNT.SPS:
-            log.info("In SPS Mode, GNSS orbits and clocks are provided from broadcast ephemerides (RINEX NAV).")
+        if gnss_alg == EnumAlgorithmPNT.SPS or gnss_alg == EnumAlgorithmPNT.DGNSS:
+            log.info(f"In {gnss_alg}, GNSS orbits and clocks are provided from broadcast ephemerides (RINEX NAV).")
 
             nav_files = config_dict.get("inputs", "nav_files")
             gal_nav_type = config_dict.get("model", "GAL", "nav_type")
@@ -194,8 +197,21 @@ class GnssDataManager(Container):
             log.info("Launching Satellite Code Bias Manager with BGD/TGD data from broadcast ephemerides.")
             self.sat_bias.init(self.get_data("nav_data"), None, EnumSatelliteBias.BROADCAST)
 
+            if gnss_alg == EnumAlgorithmPNT.DGNSS:
+                log.info(f"Reading D-GNSS Reference Station Observations.")
+                obs_files = config_dict.get("inputs", "DGNSS", "obs_files")
+                GnssDataManager.check_input_list("inputs.dgnss.obs_files", obs_files, log)
+                log.info("Launching RinexObsReader.")
+
+                for file in obs_files:
+                    RinexObsReader(file, self.get_data("ref_station_obs_data"), service_str="ref_station_service")
+
+                if self.get_data("ref_station_obs_data").is_empty():
+                    raise IOError(f"No reference station data found in {obs_files}. This is a mandatory input "
+                                  f"for the D-GNSS processing algorithm.")
+
         elif gnss_alg == EnumAlgorithmPNT.PR_PPP or gnss_alg == EnumAlgorithmPNT.CP_PPP:
-            log.info("In PR-PPP Mode, GNSS orbits and clocks are provided from precise products (SP3 and CLK files).")
+            log.info(f"In {gnss_alg} Mode, GNSS orbits and clocks are provided from precise products (SP3 and CLK files).")
 
             clock_files = config_dict.get("inputs", "clk_files")
             sp3_files = config_dict.get("inputs", "sp3_files")

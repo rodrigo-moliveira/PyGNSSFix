@@ -43,9 +43,10 @@ class GnssAlgorithmManager:
         self.main_log.info("Starting GNSS Algorithm Manager")
         gnss_alg = config_dict.get('gnss_alg')
 
-        if gnss_alg not in (EnumAlgorithmPNT.SPS, EnumAlgorithmPNT.PR_PPP, EnumAlgorithmPNT.CP_PPP):
+        if gnss_alg not in (EnumAlgorithmPNT.SPS, EnumAlgorithmPNT.PR_PPP, EnumAlgorithmPNT.CP_PPP,
+                            EnumAlgorithmPNT.DGNSS):
             raise ConfigError(f"Selected Model {gnss_alg} not valid. Available options are "
-                              f"SPS, PR-PPP, CP-PPP.")
+                              f"SPS, PR-PPP, CP-PPP. DGNSS")
         self.main_log.info(f"Running GNSS algorithm {gnss_alg}")
 
         config_dict.get_obs_std()

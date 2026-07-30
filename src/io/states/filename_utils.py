@@ -22,6 +22,7 @@ RAW_OBSERVATIONS = "raw_observations.txt"
 MW_OBSERVATIONS = "melbourne_wubbena_obs.txt"
 GF_OBSERVATIONS = "geometry_free_obs.txt"
 CYCLE_SLIPS = "cycle_slips.txt"
+DGNSS_BIAS = "dgnss_bias.txt"
 
 OUTPUT_FILENAME_MAP = {
     "satellite_azel": AZEL,
@@ -49,5 +50,6 @@ OUTPUT_FILENAME_MAP = {
     "gf_obs": GF_OBSERVATIONS,
     "ambiguity": AMBIGUITY,
     "phase_bias": PHASE_BIAS,
-    "cycle_slips": CYCLE_SLIPS
+    "cycle_slips": CYCLE_SLIPS,
+    "dgnss_bias": DGNSS_BIAS
 }

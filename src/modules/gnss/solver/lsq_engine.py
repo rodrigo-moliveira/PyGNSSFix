@@ -4,10 +4,11 @@ import numpy as np
 from src import constants
 from src.constants import SPEED_OF_LIGHT
 from src.data_types.gnss.data_type import get_base_freq
-from src.errors import SolverError
-from src.io.config import EnumSolver
+from src.errors import SolverError, ReconstructionError
+from src.io.config import EnumSolver, EnumAlgorithmPNT
 from src.modules.estimators.weighted_ls import WeightedLeastSquares
-from src.modules.gnss.solver import PseudorangeReconstructor, RangeRateReconstructor, CarrierPhaseReconstructor
+from src.modules.gnss.solver import (PseudorangeReconstructor, RangeRateReconstructor, CarrierPhaseReconstructor,
+                                     DifferentialPseudorangeReconstructor)
 from src.data_types.gnss import DataType
 
 
@@ -209,15 +210,17 @@ class LSQ_Engine:
         """
 
         res_dict = dict()
+        obs_offset = 0
         for const in self.sat_list.keys():
             n_sats = len(self.sat_list[const])
             res_dict[const] = dict()
 
-            for iSat, sat in enumerate(self.sat_list[const]):
-                res_dict[const][sat] = dict()
-
-                for iFreq, datatype in enumerate(self.datatypes[const]):
-                    res_dict[const][sat][datatype] = residual_vec[iFreq * n_sats + iSat]
+            for iFreq, datatype in enumerate(self.datatypes[const]):
+                for iSat, sat in enumerate(self.sat_list[const]):
+                    if sat not in res_dict[const]:
+                        res_dict[const][sat] = dict()
+                    res_dict[const][sat][datatype] = residual_vec[obs_offset + iSat]
+                obs_offset += n_sats
         return res_dict
 
 
@@ -237,6 +240,11 @@ class LSQ_Engine_Position(LSQ_Engine):
         ΔPR = -LOS * Δr + ΔT + c * Δdt_r + ΔI + c * ΔISB
         ΔCP = -LOS * Δr + ΔT + c * Δdt_r + c * Δδ_r - ΔI + c * ΔISB + λ * ΔN
 
+    For D-GNSS code-based processing algorithm (currently the software does not provide the RTK algorithm), the
+    linearized PR observation equation becomes:
+        ΔPR = -LOS * Δr + ΔT + c * Δdt_r + c * ΔDGNSS_BIAS
+    The satellite-related clocks and biases are removed, by adding the D-GNSS station correction to the raw observation.
+
     where:
         - ΔPR: is the prefit residual pseudorange observation (true minus computed PR observation)
         - ΔCP: is the prefit residual carrier phase observation (true minus computed CP observation)
@@ -248,6 +256,7 @@ class LSQ_Engine_Position(LSQ_Engine):
         - Δδ_r: Change in receiver phase bias
         - ΔI: Change in ionospheric delay (when iono estimation is enabled). ΔI = mu * dI
         - ΔISB: Change in Inter System Bias (only enabled for the slave constellations)
+        - ΔDGNSS_BIAS: Change in D-GNSS Bias (only enabled for the non-master code type)
         - λ: Wavelength of the carrier phase observation
         - ΔN: Change in ambiguity (only enabled for the carrier phase observation)
 
@@ -277,6 +286,7 @@ class LSQ_Engine_Position(LSQ_Engine):
         * I -> I + dI
         * T -> T + Δzwd (only zwd is estimated)
         * ISB -> ISB + ΔISB
+        * DGNSS_BIAS -> DGNSS_BIAS + ΔDGNSS_BIAS
         * N -> N + ΔN (only for CP)
 
     These new quantities are then used in the next iteration of the LSQ, for the new computation of the predicted
@@ -291,7 +301,10 @@ class LSQ_Engine_Position(LSQ_Engine):
         self._initial_state.build_index_map(system_geometry.get_satellites())  # this updates potential new sat states
 
         self.reconstructor = dict()
-        self.reconstructor["PR"] = PseudorangeReconstructor(system_geometry, metadata, state, trace_data)
+        if metadata["GNSS_ALG"] is not EnumAlgorithmPNT.DGNSS:
+            self.reconstructor["PR"] = PseudorangeReconstructor(system_geometry, metadata, state, trace_data)
+        else:
+            self.reconstructor["PR"] = DifferentialPseudorangeReconstructor(system_geometry, metadata, state, trace_data)
 
         if self.cp_based:
             datatypes = dict()
@@ -443,6 +456,13 @@ class LSQ_Engine_Position(LSQ_Engine):
                     X0[idx_phase_bias] = initial_state.phase_bias[const][cp_type]
                     X0_prev[idx_phase_bias] = state.phase_bias[const][cp_type]
 
+        if "dgnss_bias" in index_map:
+            for const, codes in index_map["dgnss_bias"].items():
+                for code,idx in codes.items():
+                    P0[idx, idx] = initial_state.cov_dgnss_bias[const][code]
+                    X0[idx] = initial_state.dgnss_bias[const][code]
+                    X0_prev[idx] = state.dgnss_bias[const][code]
+
         return X0 - X0_prev, np.linalg.inv(P0)
 
     def _build_lsq(self, epoch, obs_data, state, solver_enum):
@@ -462,7 +482,11 @@ class LSQ_Engine_Position(LSQ_Engine):
                     raise SolverError(f"Unknown datatype {datatype} at epoch {epoch}.")
 
                 for iSat, sat in enumerate(self.sat_list[const]):
-                    residual, los = self.compute_residual_los(sat, epoch, datatype, obs_data)
+                    try:
+                        residual, los = self.compute_residual_los(sat, epoch, datatype, obs_data)
+                    except ReconstructionError:
+                        reconstructor.get_geometry().remove(sat)
+                        continue
 
                     # filling the LS matrices
                     self.y_vec[obs_offset + iSat] = residual
@@ -509,6 +533,12 @@ class LSQ_Engine_Position(LSQ_Engine):
                         if "phase_bias" in index_map and const in index_map["phase_bias"]:
                             idx_phase_bias = index_map["phase_bias"][const][datatype]
                             self.design_mat[obs_offset + iSat, idx_phase_bias] = 1.0
+
+                    # DGNSS Bias
+                    if "dgnss_bias" in index_map:
+                        if not state.get_additional_info("code_master") == datatype:
+                            idx_dgnss_bias = index_map["dgnss_bias"][const][datatype]
+                            self.design_mat[obs_offset + iSat, idx_dgnss_bias] = 1.0
 
                     # Weight matrix -> as 1/(obs_std^2)
                     if solver_enum == EnumSolver.WLS:
@@ -568,6 +598,13 @@ class LSQ_Engine_Position(LSQ_Engine):
                     idx_phase_bias = cp_types[cp_type]
                     state.phase_bias[const][cp_type] += dX[idx_phase_bias]
                     state.cov_phase_bias[const][cp_type] = cov[idx_phase_bias, idx_phase_bias]
+
+        # DGNSS Bias
+        if "dgnss_bias" in index_map:
+            for const, codes in index_map["dgnss_bias"].items():
+                for code, idx_dgnss_bias in codes.items():
+                    state.dgnss_bias[const][code] += dX[idx_dgnss_bias]
+                    state.cov_dgnss_bias[const][code] = cov[idx_dgnss_bias, idx_dgnss_bias]
 
         # unpack covariance matrices
         state.cov_position = np.array(cov[idx_pos:idx_pos+3, idx_pos:idx_pos+3])

@@ -1,7 +1,6 @@
 """ Module with the implementation of the Geometry-Free Functor """
 
 from src.io.config import config_dict
-from src.common_log import MODEL_LOG, get_logger
 from . import Functor
 from src.data_types.gnss.data_type import DataType
 from src.data_types.gnss.observation import Observation
@@ -68,7 +67,7 @@ class GeometryFreeFunctor(Functor):
             if obs.datatype == self.cp2:
                 L2 = obs
 
-        return C1, C2, L1, L2
+        return [C1, C2, L1, L2]
 
     def __call__(self, obs_data_in, epoch, sat):
         v_obs_in = obs_data_in.get_observables_at_epoch(epoch, sat)

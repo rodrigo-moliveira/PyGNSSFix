@@ -9,3 +9,5 @@ Makefile
 # output (algs) directory
 ./runs/*
 /workspace/geo_time_data/cspice_kernels/de430.bsp
+
+plan.txt

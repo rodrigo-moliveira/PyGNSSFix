@@ -54,6 +54,8 @@ def get_file_header(state_variable, state):
         master = state.get_additional_info("clock_master")
         slave = state.get_additional_info("clock_slave")
         return f"Week_Number({epoch_system}),Time_of_Week[s],ISB(master={master} slave={slave})[s],cov[s^2]"
+    elif state_variable == "dgnss_bias":
+        return f"Week_Number({epoch_system}),Time_of_Week[s],constellation,datatype,dgnss_bias[m],cov[m^2]"
     else:
         raise ValueError(f"Undefined header due to unknown state_variable '{state_variable}'")
 
@@ -174,6 +176,14 @@ def export_to_file(state_variable, state):
 
     elif state_variable == "time":
         return f"{str(state.epoch)}"
+
+    elif state_variable == "dgnss_bias":
+        data = []
+        for constellation, codes in state.dgnss_bias.items():
+            for code, val in codes.items():
+                cov = state.cov_dgnss_bias[constellation][code]
+                data.append(f"{constellation},{code},{val/constants.SPEED_OF_LIGHT},{cov/constants.SPEED_OF_LIGHT**2}")
+        return data
 
     else:
         raise ValueError(f"Undefined data due to unknown state_variable '{state_variable}'")

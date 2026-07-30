@@ -7,6 +7,7 @@ Currently, the available modes include:
 - **Pseudorange-based Precise Point Positioning (PR-PPP)**
 - **Carrier Phase-based Precise Point Positioning (CP-PPP)**  
   (with cycle slip detection and ambiguity resolution available)
+- **Differential GNSS (Code-Based)** (given a reference station)
 
 Currently supported constellations: **GPS** and **Galileo**.
 
@@ -40,7 +41,7 @@ Currently supported constellations: **GPS** and **Galileo**.
 | SPP    | GPS, GAL, or GPS+GAL     |
 | PR-PPP | GPS, GAL, or GPS+GAL     |
 | CP-PPP | GPS, GAL, or GPS+GAL     |
-
+| D-GNSS | GPS, GAL, or GPS+GAL     |
 
 ### 2.2 Observables
 
@@ -110,6 +111,7 @@ The list of all available states that are estimable are the following:
 * **Ionosphere Delay** 
 * **Ambiguity**
 * **Receiver Phase Bias**
+* **D-GNSS Code Biases**
 
 More details in the table below:
 
@@ -124,6 +126,7 @@ More details in the table below:
 | Ionosphere Delay      | N_sat×1 (per satellite)                                            | m        | Estimated when raw dual-frequency observations are processed and enabled by config |
 | Ambiguity             | N_obs×1 (per carrier-phase observation, per satellite & frequency) | cycles   | Only present in CP-PPP mode                                                        |
 | Receiver Phase Bias   | N_freq×1 (per frequency, per constellation)                        | s        | Only present in CP-PPP mode                                                        |
+| DGNSS Code Bias       | (N_freq-1)×1 (per frequency, per constellation)                    | s        | Only present in D-GNSS mode                                                        |
 
 ### 2.6 Observation Models
 
@@ -164,6 +167,11 @@ $$
 PRR_j = ( \mathbf{v}^{sat} - \mathbf{v}_{rec} ) \cdot \mathbf{los} + c \, (\dot{\Delta t}_{rec} - \dot{\Delta t}_{sat} - \dot{rel}_{sat})
 $$
 
+**Single-Frequency DGNSS Pseudorange (PR):**
+
+$$
+PR_{DGNSS_j} = \rho(t, t-\tau) + c \, \Delta t_{rec} + b_{dgnss} + dT_{dgnss}
+$$
 
 #### 2.6.1 List of Variables
 
@@ -193,6 +201,8 @@ $$
 - $\mathbf{v}_{rec}$: Receiver velocity vector (ECEF)  
 - $\mathbf{los}$: Line-of-sight unit vector from receiver to satellite  
 - $PRR_j$: Pseudorange-rate (Doppler) observable at frequency $j$  
+- $b_{dgnss}$: DGNSS receiver code biases
+- $dT_{dgnss}$: differential troposphere
 
 
 See [1] (Chapter 21) for a complete explanation of the meaning of all estimation variables and their relation with the 
@@ -304,6 +314,7 @@ The following file types are supported:
 | SPP      | Observation RINEX, Navigation RINEX                                                                       | –                              |
 | PR-PPP   | Observation RINEX, SP3 (orbits), CLK (satellite clocks), SINEX Bias (with OSBs or DCBs)                   | Navigation RINEX, ANTEX, IONEX |
 | CP-PPP   | Observation RINEX, SP3 (orbits), CLK (satellite clocks), SINEX Bias (**must be OSBs when AR is enabled**) | Navigation RINEX, ANTEX, IONEX |
+| DGNSS    | Observation RINEX, Navigation RINEX, Observation RINEX for reference station                              | –                              |
 
 
 ## 4. Output files
@@ -320,6 +331,7 @@ The full list of output files available is:
   * `isb.txt` : estimated ISB state
   * `tropo.txt` : estimated tropospheric wet delay state
   * `clock_bias_rate.txt` : estimated clock bias rate states
+  * `dgnss_bias.txt` : estimated D-GNSS bias states
   
 * Additional Files:
   * `satellite_azel.txt` : satellite azimuth and elevation angles

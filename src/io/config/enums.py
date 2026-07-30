@@ -31,21 +31,24 @@ class EnumAlgorithmPNT(Enum):
     SPS = 0
     PR_PPP = 1
     CP_PPP = 2
+    DGNSS = 3
 
     @classmethod
     def init_model(cls, model_str: str):
         if model_str.lower() == "sps":
             return EnumAlgorithmPNT.SPS
+        elif model_str.lower() == "dgnss":
+            return EnumAlgorithmPNT.DGNSS
         elif model_str.lower() == "pr-ppp":
             return EnumAlgorithmPNT.PR_PPP
         elif model_str.lower() == "cp-ppp":
             return EnumAlgorithmPNT.CP_PPP
         else:
-            raise EnumError(f"Unsupported algorithm {model_str}. Available options are 'SPS', 'PR-PPP', 'CP-PPP'.")
+            raise EnumError(f"Unsupported algorithm {model_str}. Available options are {cls.show_options()}.")
 
     @classmethod
     def show_options(cls):
-        return f"[SPS, PR-PPP ]"
+        return f"'SPS', 'DGNSS', 'PR-PPP', 'CP-PPP'"
 
 
 class EnumObservationModel(Enum):

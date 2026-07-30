@@ -24,6 +24,7 @@ class GnssRunStorageManager(Container):
             dop_ecef(CSVData)
             dop_local(CSVData)
             clock_bias_rate(CSVData)
+            dgnss_bias(CSVData)
             isb(CSVData)
             tropo_wet(CSVData)
             pr_prefit_residuals(CSVData)
@@ -44,7 +45,7 @@ class GnssRunStorageManager(Container):
     __inputs__ = ["time", "position", "velocity", "clock_bias", "dop_ecef", "dop_local", "clock_bias_rate", "isb",
                   "tropo_wet", "pr_prefit_residuals", "pr_postfit_residuals", "iono", "satellite_azel",
                   "pr_rate_prefit_residuals", "pr_rate_postfit_residuals", "obs", "ambiguity", "phase_bias",
-                  "cp_prefit_residuals", "cp_postfit_residuals", "raw_obs", "mw_obs", "gf_obs"]
+                  "cp_prefit_residuals", "cp_postfit_residuals", "raw_obs", "mw_obs", "gf_obs", "dgnss_bias"]
     __slots__ = __inputs__ + ["_available", "log"]
 
     def __init__(self, log: logging.Logger):
@@ -85,6 +86,15 @@ class GnssRunStorageManager(Container):
                                        title="Receiver Clock Bias Rate",
                                        time_cols=(0, 1),
                                        data_cols=(2, 3, 4))
+
+        # DGNSS Bias
+        self.dgnss_bias = CSVData(name="dgnss_bias",
+                                  description="DGNSS Biases",
+                                  units=['','','s', 's^2'],
+                                  legend=['constellation','datatype','bias', 'cov'],
+                                  title="Estimated DGNSS Biases",
+                                  time_cols=(0, 1),
+                                  data_cols=(2, 3, 4, 5))
 
         # velocity in ECEF
         self.velocity = CSVData(name="velocity",
