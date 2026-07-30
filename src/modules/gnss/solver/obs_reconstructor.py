@@ -113,6 +113,14 @@ class ObservationReconstructor:
             obs_std = 1.0
         return el_std * obs_std
 
+    def get_geometry(self):
+        """ Returns the system geometry instance.
+
+        Returns:
+            src.data_mng.gnss.geometry.SystemGeometry
+        """
+        return self._system_geometry
+
 
 class PseudorangeReconstructor(ObservationReconstructor):
     """
@@ -254,16 +262,17 @@ class DifferentialPseudorangeReconstructor(ObservationReconstructor):
     Reconstructor of pseudorange observations, according to the following equation suitable for PR-DGNSS algorithms.
     It applies the PRC correction, that eliminates satellite-related clocks and biases
 
-        PR = rho + dt_rec + gnss_bias + tropo - PRC
+        PR = rho + dt_rec + gnss_bias + tropo + iono - PRC
     where:
         * PR is the reconstructed pseudorange observation
         * rho is the true range (geometrical distance between satellite at TX time and receiver at RX time)
         * dt_rec is the differential receiver clock bias
         * gnss_bias is the estimated differential receiver bias (applicable for the non-master code types)
         * tropo is the estimated differential tropospheric delay
+        * iono is the estimated differential ionospheric delay
         * PRC is the D-GNSS Pseudorange Correction
     """
-    __trace_header__ = "epoch,sat,datatype,observation,true_range,receiver_clock,gnss_bias,tropo,PRC"
+    __trace_header__ = "epoch,sat,datatype,observation,true_range,receiver_clock,gnss_bias,tropo,iono,PRC"
 
     def __init__(self, system_geometry: src.data_mng.gnss.geometry.SystemGeometry, metadata: dict,
                  state: src.data_mng.gnss.state_space.GnssStateSpace, trace_data: tuple):
@@ -313,12 +322,25 @@ class DifferentialPseudorangeReconstructor(ObservationReconstructor):
         # true range
         true_range = self._system_geometry.get("true_range", sat)
 
-        # user clock in meters (no ISB applied in D-GNSS)
-        dt_rec = self._state.get_clock_bias(sat.sat_system, None)  # receiver clock bias in [m]
+        # user clock in meters (ISB may or not be applied, depending on active configuration)
+        sat_clocks = self._system_geometry.sat_clocks
+        time_correction = sat_clocks.nav_data.header.time_correction if sat_clocks.nav_data is not None else None
+        dt_rec = self._state.get_clock_bias(sat.sat_system, time_correction)  # receiver clock bias in [m]
+
+        # iono estimated correction dI
+        dI = 0.0
+        if self._metadata["IONO"][sat.sat_system].estimate_diono():
+            try:
+                factor = (self._metadata["CODES"][sat.sat_system][0].freq.freq_value /
+                          datatype.freq.freq_value) ** 2
+                dI = factor * self._state.iono[sat]
+            except KeyError or TypeError:
+                pass
 
         # DGNSS Biases
         bias = 0.0
-        if datatype != self._state.get_additional_info("code_master"):
+        code_master = self._state.get_additional_info("code_master")
+        if code_master and datatype != self._state.get_additional_info("code_master"):
             bias = self._state.dgnss_bias[sat.sat_system][datatype]
 
         # differential troposphere (main tropo model delay is ignored, only tropo correction is estimated)
@@ -329,9 +351,9 @@ class DifferentialPseudorangeReconstructor(ObservationReconstructor):
             dtropo = self._state.tropo_wet * map_wet
 
         # finally, construct obs
-        obs = true_range + dt_rec + bias + dtropo - prc
+        obs = true_range + dt_rec + bias + dtropo + dI - prc
         if self._write_trace:
-            self._trace_handler.write(f"{epoch},{sat},{datatype},{obs},{true_range},{dt_rec},{bias},{dtropo},{prc}\n")
+            self._trace_handler.write(f"{epoch},{sat},{datatype},{obs},{true_range},{dt_rec},{bias},{dtropo},{dI},{prc}\n")
         return obs
 
 class CarrierPhaseReconstructor(ObservationReconstructor):

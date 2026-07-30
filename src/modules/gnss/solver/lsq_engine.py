@@ -485,6 +485,7 @@ class LSQ_Engine_Position(LSQ_Engine):
                     try:
                         residual, los = self.compute_residual_los(sat, epoch, datatype, obs_data)
                     except ReconstructionError:
+                        reconstructor.get_geometry().remove(sat)
                         continue
 
                     # filling the LS matrices

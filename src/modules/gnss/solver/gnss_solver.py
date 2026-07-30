@@ -391,7 +391,9 @@ class GnssSolver:
             except SolverError as e:
                 self.log.warning(f"Least Squares failed for {str(epoch)} on iteration {iteration}."
                                  f"Reason: {e}")
-                return False
+                iteration += 1
+                continue
+                # return False
 
             # check stop condition
             if self._stop(rms_prev, rms, self._metadata["STOP_CRITERIA"]):

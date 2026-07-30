@@ -44,7 +44,7 @@ class TropoManager:
             self.tropo_model = GPT3Tropo(WORKSPACE_PATH / f"{gpt_file}")
         elif tropo_model_enum == EnumTropoModel.DISABLED:
             self.tropo_model = None
-            # self._estimate_tropo_wet = EnumOnOff.DISABLED
+            self._estimate_tropo_wet = EnumOnOff.DISABLED
         else:
             raise ConfigError(f'Unknown tropo model {config.get("model", "troposphere", "model")}')
 

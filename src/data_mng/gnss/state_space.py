@@ -308,31 +308,56 @@ class GnssStateSpace(Container):
                 self.cov_clock_bias_rate[constellation] = list(metadata["INITIAL_STATES"].get("clock_rate"))[1] \
                                                           * constants.SPEED_OF_LIGHT ** 2
 
-        # iono dict (not used for DGNSS)
+        # iono dict (if dual-frequency mode is selected)
         self.iono = dict()
         self.cov_iono = dict()
-        self.add_additional_info("estimate_iono", set())
+        estimate_iono = set()
+        for constellation in metadata["CONSTELLATIONS"]:
+            if metadata["MODEL"][constellation] == EnumFrequencyModel.DUAL_FREQ and \
+                    metadata["IONO"][constellation].estimate_diono():
+                estimate_iono.add(constellation)
+                for sat in sat_list:
+                    if sat.sat_system == constellation:
+                        self.iono[sat] = list(metadata["INITIAL_STATES"].get("iono"))[0]
+                        self.cov_iono[sat] = list(metadata["INITIAL_STATES"].get("iono"))[1]
+                        self.add_additional_info("initial_iono", list(metadata["INITIAL_STATES"].get("iono")))
+        if len(self.iono) >= 1:
+            _states.append("iono")
+        self.add_additional_info("estimate_iono", estimate_iono)
 
-        # DGNSS Biases: add one bias per constellation and frequency (excluding first, which is the code master type)
         self.dgnss_bias = dict()
         code_master = None
         self.cov_dgnss_bias = dict()
-        for constellation in metadata["CONSTELLATIONS"]:
-            self.dgnss_bias[constellation] = dict()
-            self.cov_dgnss_bias[constellation] = dict()
-            for code in metadata["CODES"][constellation]:
-                if code_master is None:
-                    code_master = code
-                    continue
-                self.dgnss_bias[constellation][code] = metadata["INITIAL_STATES"]["dgnss_bias"][0] * \
-                                                  constants.SPEED_OF_LIGHT
-                self.cov_dgnss_bias[constellation][code] = metadata["INITIAL_STATES"]["dgnss_bias"][1] * \
-                                                      constants.SPEED_OF_LIGHT ** 2
-
-        # Defining the code master type
-        if code_master is not None:
+        if "iono" not in _states:
+            # DGNSS Biases: add one bias per constellation and frequency (excluding first, which is the code master type)
+            for constellation in metadata["CONSTELLATIONS"]:
+                self.dgnss_bias[constellation] = dict()
+                self.cov_dgnss_bias[constellation] = dict()
+                for code in metadata["CODES"][constellation]:
+                    if code_master is None:
+                        code_master = code
+                        continue
+                    self.dgnss_bias[constellation][code] = metadata["INITIAL_STATES"]["dgnss_bias"][0] * \
+                                                      constants.SPEED_OF_LIGHT
+                    self.cov_dgnss_bias[constellation][code] = metadata["INITIAL_STATES"]["dgnss_bias"][1] * \
+                                                          constants.SPEED_OF_LIGHT ** 2
             _states.append("dgnss_bias")
-        self.add_additional_info("code_master", code_master)
+            self.add_additional_info("clock_master", code_master.constellation)
+            self.add_additional_info("clock_slave", None)
+
+        else:
+            # check for ISB estimation (optional -> in case there are 2 constellations)
+            if len(metadata["CONSTELLATIONS"]) > 1:
+                # convert input units from seconds to meters
+                self.isb = list(metadata["INITIAL_STATES"].get("isb"))[0] * constants.SPEED_OF_LIGHT
+                self.cov_isb = list(metadata["INITIAL_STATES"].get("isb"))[1] * constants.SPEED_OF_LIGHT ** 2
+                self.add_additional_info("clock_master", metadata["CONSTELLATIONS"][0])
+                self.add_additional_info("clock_slave", metadata["CONSTELLATIONS"][1])
+                _states.append("isb")
+            else:
+                self.add_additional_info("clock_master", None)
+                self.add_additional_info("clock_slave", None)
+
 
         # tropo wet delay (optional -> in case the user defined it)
         self.tropo_wet = None
@@ -345,9 +370,7 @@ class GnssStateSpace(Container):
 
         self.add_additional_info("states", _states)
         self.add_additional_info("sat_list", sat_list)
-        # There is no ISB estimation, hence no need to master/slave clock definition
-        self.add_additional_info("clock_master", code_master.constellation)
-        self.add_additional_info("clock_slave", None)
+        self.add_additional_info("code_master", code_master)
         self.build_index_map()
 
     def _update_sat_list(self, new_sat_list):
