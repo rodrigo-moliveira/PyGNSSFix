@@ -1,0 +1,32 @@
+Obs files download from https://cddis.nasa.gov/archive/gnss/data/highrate/2024/074/
+
+Selected Stations:
+    * ZIM200CHE (ZIM2)
+    * DLF100NLD (DLF1)
+    * KOS100NLD (KOS1)
+See https://network.igs.org/
+
+GPS Week: 2305
+DOY: 74
+14 March 2024
+
+True positions (CRD) from: http://ftp.aiub.unibe.ch/BSWUSER52/STA/2024/
+
+
+To decompress the files, use the following software: CRX2RNX
+URL: https://terras.gsi.go.jp/ja/crx2rnx.html
+
+
+Not yet...
+DCB:
+https://cddis.nasa.gov/archive/gnss/products/bias/2024/
+
+iono:
+https://cddis.nasa.gov/archive/gnss/products/ionex/2024/090/
+
+NAV:
+https://cddis.nasa.gov/archive/gnss/data/daily/2024/brdc/
+
+CLK/SP3/OSB
+https://cddis.nasa.gov/archive/gnss/products/2307/
+
