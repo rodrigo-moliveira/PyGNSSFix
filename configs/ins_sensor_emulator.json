@@ -1,0 +1,27 @@
+{
+  "_comment": "This is the JSON configuration file to run the INS Algorithms. ",
+  "log": {
+    "_comment": "Configuration of the Log File (Possible values: DEBUG, INFO, WARN, ERROR, FATAL).",
+    "minimum_level": "DEBUG"
+  },
+
+  "algorithm": {
+    "_comment": "Select the INS algorithm to execute (Possible options are: Sensor Emulator, Free Integration, Loosely Coupled)",
+    "selection": "Sensor Emulator",
+    "trace_files": true
+  },
+
+  "inputs": {
+    "_comment1": "Select Input data files",
+    "reference_position": "datasets/ins/ins_coil_move/reference/ref_pos.csv",
+    "reference_velocity": "datasets/ins/ins_coil_move/reference/ref_vel.csv",
+    "reference_attitude": "datasets/ins/ins_coil_move/reference/ref_att_euler.csv",
+    "imu_sensor_file": "",
+    "gps_sensor_file": ""
+  },
+
+  "output": {
+      "_comment": "select output folder (absolute path) to store the run. Set 'default' to store in default path runs/",
+      "output_path": "default"
+   }
+}

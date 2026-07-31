@@ -1,0 +1,381 @@
+""" Data Manager for GNSS Algorithms
+"""
+import os
+
+from src.io.states import OUTPUT_FILENAME_MAP, get_file_header, export_to_file
+from src.io.config import config_dict, EnumObservationModel, EnumAlgorithmPNT, EnumSatelliteBias
+from src.io.rinex_parser import RinexNavReader, RinexObsReader, AntexReader
+from src.models.noise.noise_manager import GNSSNoiseManager
+from src.data_mng import Container
+from src.common_log import IO_LOG, get_logger
+
+__all__ = ["InsDataManager"]
+
+
+class InsDataManager(Container):
+    """
+    TODO: to update
+    Data Manager class that stores all necessary data for a GNSS run. Derives from the :py:class:`Container`
+    class.
+
+    Attributes:
+        nav_data(NavigationData): navigation data object containing RINEX NAV ephemerides
+        obs_data(ObservationData): raw observation data from RINEX OBS
+        ref_station_obs_data(ObservationData): raw observation data from RINEX OBS for the reference station (DGNSS)
+        sat_clocks(SatelliteClocks): manager of satellite clocks (precise or navigation clocks)
+        sat_orbits(SatelliteOrbits): manager of satellite orbits (precise or navigation orbits)
+        iono_gim(GlobalIonoMap): manager of global ionospheric maps (VTEC)
+        ocean_loading_data(OceanLoadingData): manager of ocean loading parameters
+        phase_center(PhaseCenterManager): manager of phase center data
+        sat_bias(BiasManager): manager of satellite code and phase biases (precise or navigation bias)
+        smooth_obs_data(ObservationData): processed smooth observation data
+        iono_free_obs_data(ObservationData): processed iono-free observation data
+        narrow_lane_obs_data(ObservationData): processed narrow lane observation data
+        wide_lane_obs_data(ObservationData): processed wide lane observation data
+        melbourne_obs_data(ObservationData): processed Melbourne-Wubbena observation data
+        noise_manager(GNSSNoiseManager): manage the noise models for GNSS Kalman Filter states
+        geometry_free_obs_data(ObservationData): processed geometry-free observation data
+        cycle_slips(dict): dictionary of cycle slips
+        nav_solution(list): navigation solution, list of :py:class:`src.data_mng.gnss.state_space.GnssStateSpace`
+            objects
+        fault_injector(FaultInjector): fault injector manager
+
+    """
+    __slots__ = [
+        "nav_data",                # Input
+        "obs_data",                # Input
+        "ref_station_obs_data",    # Input
+        "sat_clocks",              # Input
+        "sat_orbits",              # Input
+        "iono_gim",                # Input
+        "phase_center",            # Input
+        "sat_bias",                # Input
+        "ocean_loading_data",      # Input
+        "smooth_obs_data",         # Internal data
+        "iono_free_obs_data",      # Internal data
+        "narrow_lane_obs_data",    # Internal data
+        "wide_lane_obs_data",      # Internal data
+        "melbourne_obs_data",      # Internal data
+        "geometry_free_obs_data",  # Internal data
+        "cycle_slips",             # Internal data
+        "noise_manager",           # Internal data
+        "fault_injector",          # Internal data
+        "nav_solution"             # Output
+    ]
+
+    def __init__(self):
+        """ Default constructor with no arguments """
+        super().__init__()
+
+
+        self.noise_manager = GNSSNoiseManager(config_dict)
+        self.cycle_slips = {}  # Cycle slips dictionary
+        self.nav_solution = None  # Navigation solution
+
+    def __str__(self):
+        return f'{type(self).__name__}( DataManager for GNSS algorithms )'
+
+    def __repr__(self):
+        return str(self)
+
+    def add_data(self, data_name, data):
+        """
+        Adds the provided data to this DataManager instance.
+
+        Args:
+            data_name(str): the string name of the data to fill, matching one of the class attributes
+            data(Any): data object to be stored
+
+        Raises:
+            AttributeError: an `AttributeError` is raised if the `data_name` string does not match one of the
+                class attributes
+        """
+        if data_name in self.__slots__:
+            setattr(self, data_name, data)
+        else:
+            raise AttributeError(f"Unsupported data: {data_name}, not in {self.__slots__}")
+
+    def get_data(self, data_name):
+        """
+        Args:
+            data_name(str): the data to be fetched
+        Returns:
+            Any: returns the queried data for the provided `data_name` attribute
+        """
+        # single data
+        if isinstance(data_name, str):
+            if data_name in self.__slots__:
+                return getattr(self, data_name)
+            else:
+                raise AttributeError(f'{data_name} is not available.')
+
+    def get_clean_obs_data(self):
+        """
+        Returns:
+            ObservationData: returns the observation data for the PVT processing, depending on user configuration
+        """
+        obs_model = config_dict.get('obs_model')
+        if config_dict.get("preprocessor", "compute_smooth"):
+            return self.smooth_obs_data
+        elif obs_model == EnumObservationModel.COMBINED:
+            return self.iono_free_obs_data
+        else:
+            return self.obs_data
+
+    def get_raw_obs_data(self):
+        """
+        Returns:
+            ObservationData: returns the raw observation data for the PVT processing
+        """
+        return self.obs_data
+
+    def read_inputs(self, gnss_alg: EnumAlgorithmPNT, trace_dir):
+        """
+        Function to read the input data. The data files are read from the user configurations
+        according to the chosen algorithm.
+        There are mandatory inputs for each GNSS Algorithm (SPS, PR-PPP).
+
+        Args:
+            gnss_alg(EnumAlgorithmPNT): GNSS Algorithm Enumeration
+            trace_dir(str): path to write trace files
+        Raises:
+            IOError: an exception is raised if the trace directory is not created successfully
+        """
+        log = get_logger(IO_LOG)
+
+        # read observation data
+        obs_files = config_dict.get("inputs", "obs_files")
+        GnssDataManager.check_input_list("inputs.obs_files", obs_files, log)
+        log.info("Launching RinexObsReader.")
+
+        for file in obs_files:
+            RinexObsReader(file, self.get_data("obs_data"), self.get_data("phase_center"),
+                           self.get_data("fault_injector"))
+
+        # Load specific inputs for each PNT Algorithm
+        if gnss_alg == EnumAlgorithmPNT.SPS or gnss_alg == EnumAlgorithmPNT.DGNSS:
+            log.info(f"In {gnss_alg}, GNSS orbits and clocks are provided from broadcast ephemerides (RINEX NAV).")
+
+            nav_files = config_dict.get("inputs", "nav_files")
+            gal_nav_type = config_dict.get("model", "GAL", "nav_type")
+            GnssDataManager.check_input_list("inputs.nav_files", nav_files, log)
+            log.info(f'Galileo messages selected by user are {gal_nav_type}.')
+            log.info('Launching RinexNavReader.')
+
+            for file in nav_files:
+                RinexNavReader(file, self.get_data("nav_data"), gal_nav_type)
+
+            log.info("Launching SatelliteClocks constructor (clocks from broadcast ephemerides).")
+            self.sat_clocks.init(self.get_data("nav_data"), None, False)
+
+            log.info("Launching SatelliteOrbits constructor (orbits from broadcast ephemerides).")
+            self.sat_orbits.init(self.get_data("nav_data"), None, False)
+
+            log.info("Launching Satellite Code Bias Manager with BGD/TGD data from broadcast ephemerides.")
+            self.sat_bias.init(self.get_data("nav_data"), None, EnumSatelliteBias.BROADCAST)
+
+            if gnss_alg == EnumAlgorithmPNT.DGNSS:
+                log.info(f"Reading D-GNSS Reference Station Observations.")
+                obs_files = config_dict.get("inputs", "DGNSS", "obs_files")
+                GnssDataManager.check_input_list("inputs.dgnss.obs_files", obs_files, log)
+                log.info("Launching RinexObsReader.")
+
+                for file in obs_files:
+                    RinexObsReader(file, self.get_data("ref_station_obs_data"), service_str="ref_station_service")
+
+                if self.get_data("ref_station_obs_data").is_empty():
+                    raise IOError(f"No reference station data found in {obs_files}. This is a mandatory input "
+                                  f"for the D-GNSS processing algorithm.")
+
+        elif gnss_alg == EnumAlgorithmPNT.PR_PPP or gnss_alg == EnumAlgorithmPNT.CP_PPP:
+            log.info(f"In {gnss_alg} Mode, GNSS orbits and clocks are provided from precise products (SP3 and CLK files).")
+
+            clock_files = config_dict.get("inputs", "clk_files")
+            sp3_files = config_dict.get("inputs", "sp3_files")
+            dcb_files = config_dict.get("inputs", "dcb_files")
+            osb_files = config_dict.get("inputs", "osb_files")
+            ionex_files = config_dict.get("inputs", "ionex_files")
+            antex_files = config_dict.get("inputs", "antex_files")
+            nav_files = config_dict.get("inputs", "nav_files")
+            gal_nav_type = config_dict.get("model", "GAL", "nav_type")
+            ocean_loading_file = config_dict.get("inputs", "ocean_loading", "file")
+
+            GnssDataManager.check_input_list("inputs.clk_files", clock_files, log)
+            GnssDataManager.check_input_list("inputs.sp3_files", sp3_files, log)
+
+            # not mandatory file checks
+            GnssDataManager.check_input_list("inputs.ionex_files", ionex_files, log, warning=True)
+            GnssDataManager.check_input_list("inputs.antex_files", antex_files, log, warning=True)
+            GnssDataManager.check_input_list("inputs.nav_files", nav_files, log, warning=True)
+            if self.ocean_loading_data.enabled:
+                GnssDataManager.check_input_list("inputs.ocean_loading.file", [ocean_loading_file], log, warning=True)
+                log.info("Reading Ocean Loading Tidal Deformation Data")
+                self.ocean_loading_data.init(ocean_loading_file)
+            else:
+                log.info("Ocean Loading Tidal Deformation Corrections disabled.")
+
+            log.info("Launching GlobalIonoMap constructor (ionex products).")
+            self.iono_gim.init(ionex_files, trace_dir)
+
+            if self.phase_center.enabled:
+                log.info("Reading Antenna Exchange Files.")
+                self.phase_center.init(trace_dir)
+                for file in antex_files:
+                    AntexReader(file, self.get_data("phase_center"))
+            else:
+                log.info("Phase Center Corrections disabled.")
+
+            for file in nav_files:
+                RinexNavReader(file, self.get_data("nav_data"), gal_nav_type)
+
+            log.info("Launching SatelliteClocks constructor (clocks from precise products).")
+            self.sat_clocks.init(self.get_data("nav_data"), clock_files, True)
+
+            log.info("Launching SatelliteOrbits constructor (orbits from precise products).")
+            self.sat_orbits.init(self.get_data("nav_data"), sp3_files, True)
+
+            bias_type_str = config_dict.get("inputs", "bias_type")
+            log.info(f"Launching Satellite Code and Phase Bias Manager with bias {bias_type_str}.")
+            if bias_type_str.upper() == "DCB":
+                GnssDataManager.check_input_list("inputs.dcb_files", dcb_files, log)
+                self.sat_bias.init(self.get_data("nav_data"), dcb_files, EnumSatelliteBias.DCB)
+            elif bias_type_str.upper() == "OSB":
+                GnssDataManager.check_input_list("inputs.dcb_files", osb_files, log)
+                self.sat_bias.init(self.get_data("nav_data"), osb_files, EnumSatelliteBias.OSB)
+            else:
+                raise IOError(f"Unknown bias type in inputs.bias_type ({bias_type_str})")
+
+        else:
+            raise IOError(f"Unknown Model {gnss_alg}")
+
+        if config_dict.get("inputs", "trace_files"):
+            self._trace_files(trace_dir, gnss_alg)
+
+    def _trace_files(self, trace_dir, gnss_alg: EnumAlgorithmPNT):
+        inputs_dir = f"{trace_dir}\\inputs"
+        try:
+            os.makedirs(inputs_dir)
+        except:
+            raise IOError(f"Cannot create dir: {inputs_dir}")
+        # trace data files
+        with open(f"{inputs_dir}\\RawObservationData.txt", "w") as file:
+            file.write(str(self.get_data("obs_data")))
+        if gnss_alg == EnumAlgorithmPNT.SPS:
+            with open(f"{inputs_dir}\\RawNavigationData.txt", "w") as file:
+                file.write(str(self.get_data("nav_data")))
+        elif gnss_alg == EnumAlgorithmPNT.PR_PPP:
+            with open(f"{inputs_dir}\\PreciseClocks.txt", "w") as file:
+                file.write(str(self.get_data("sat_clocks")))
+            with open(f"{inputs_dir}\\PreciseOrbits.txt", "w") as file:
+                file.write(str(self.get_data("sat_orbits")))
+            with open(f"{inputs_dir}\\PreciseBiasProducts.txt", "w") as file:
+                file.write(str(self.get_data("sat_bias")))
+            with open(f"{inputs_dir}\\GlobalIonoMap.txt", "w") as file:
+                file.write(str(self.get_data("iono_gim")))
+            if self.phase_center.enabled:
+                with open(f"{inputs_dir}\\PhaseCenterVariations.txt", "w") as file:
+                    file.write(str(self.get_data("phase_center")))
+            if self.ocean_loading_data.enabled:
+                with open(f"{inputs_dir}\\OceanLoading.txt", "w") as file:
+                    file.write(str(self.get_data("ocean_loading_data")))
+        with open(f"{inputs_dir}\\FaultInjections.txt", "w") as file:
+            file.write(str(self.get_data("fault_injector")))
+
+    def save_data(self, directory):
+        """ Saves the navigation solution (contained in the `nav_solution` attribute) to the output file """
+        log = get_logger(IO_LOG)
+        log.info(f"storing data to {directory}...")
+        file_list = {}
+
+        # Save state variables (navigation solution)
+        sim = getattr(self, "nav_solution", None)
+        if sim is not None:
+            # iterate over estimated states
+            for state in sim:
+
+                week, sow = state.epoch.gnss_time
+                time_str = f"{week},{sow}"
+
+                # save estimated data for this epoch
+                exportable_lst = state.get_exportable_lst()
+                for ext in exportable_lst:
+
+                    # add this estimable to the file list (only do this once)
+                    if ext not in file_list:
+                        filename = f"{directory}\\{OUTPUT_FILENAME_MAP[ext]}"
+                        file_list[ext] = open(filename, "w")
+                        file_list[ext].write(f"{get_file_header(ext, state)}\n")
+                        log.info(f"creating output file {filename}")
+
+                    # save this epoch data
+                    data = export_to_file(ext, state)
+                    if isinstance(data, str):
+                        file_list[ext].write(f"{time_str},{data}\n")
+                    elif isinstance(data, list):
+                        for entry in data:
+                            file_list[ext].write(f"{time_str},{entry}\n")
+
+        # save observation data
+        obs_data = self.get_clean_obs_data()
+        ext = 'obs'
+        filename = f"{directory}\\{OUTPUT_FILENAME_MAP[ext]}"
+        file_list[ext] = open(filename, "w")
+        file_list[ext].write(f"{obs_data.to_csv_file()}")
+        log.info(f"creating output file {filename}")
+
+        # save raw observation data
+        obs_data = self.get_raw_obs_data()
+        ext = 'raw_obs'
+        filename = f"{directory}\\{OUTPUT_FILENAME_MAP[ext]}"
+        file_list[ext] = open(filename, "w")
+        file_list[ext].write(f"{obs_data.to_csv_file()}")
+        log.info(f"creating output file {filename}")
+
+        # save melbourne-wubbena data
+        if not self.melbourne_obs_data.is_empty():
+            ext = 'mw_obs'
+            filename = f"{directory}\\{OUTPUT_FILENAME_MAP[ext]}"
+            file_list[ext] = open(filename, "w")
+            file_list[ext].write(f"{self.melbourne_obs_data.to_csv_file()}")
+            log.info(f"creating output file {filename}")
+        else:
+            log.info(f"Melbourne-Wubbena data not saved because it was not computed.")
+
+        # save geometry-free data
+        if not self.geometry_free_obs_data.is_empty():
+            ext = 'gf_obs'
+            filename = f"{directory}\\{OUTPUT_FILENAME_MAP[ext]}"
+            file_list[ext] = open(filename, "w")
+            file_list[ext].write(f"{self.geometry_free_obs_data.to_csv_file()}")
+            log.info(f"creating output file {filename}")
+        else:
+            log.info(f"Geometry-Free data not saved because it was not computed.")
+
+        # save cycle slips
+        if len(self.cycle_slips) > 0:
+            ext = 'cycle_slips'
+            filename = f"{directory}\\{OUTPUT_FILENAME_MAP[ext]}"
+            file_list[ext] = open(filename, "w")
+            file_list[ext].write(f"{str(self.cycle_slips)}")
+            log.info(f"creating output file {filename}")
+        else:
+            log.info(f"Cycle Slips not computed or no cycle slip detected.")
+
+        # close all files
+        for ext in file_list.keys():
+            file_list[ext].close()
+
+    @staticmethod
+    def check_input_list(folder_name: str, input_list: list, log, warning=False):
+        if len(input_list) == 0:
+            if warning:
+                log.warning(f"Optional input files {folder_name} not provided. "
+                            f"Please check if they are necessary for some of the selected models.")
+            else:
+                raise IOError(f"Mandatory input files {folder_name} not provided. Please check the configurations.")
+        if len(input_list) == 1 and not input_list[0]:
+            if warning:
+                log.warning(f"Optional input files {folder_name} not provided. "
+                            f"Please check if they are necessary for some of the selected models.")
+            else:
+                raise IOError(f"Mandatory input files {folder_name} not provided. Please check the configurations.")

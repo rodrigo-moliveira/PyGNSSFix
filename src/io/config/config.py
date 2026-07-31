@@ -9,7 +9,7 @@ from jsonschema import validate, ValidationError
 from src import PROJECT_PATH
 from src.data_types.gnss import data_type_from_rinex
 from src.errors import ConfigError
-from .enums import EnumAlgorithmPNT, EnumObservationModel
+from .enums import EnumAlgorithmPNT, EnumObservationModel, EnumAlgorithmINS
 from src.common_log import get_logger, IO_LOG
 from ...data_types.gnss.data_type import get_base_freq
 from ...data_types.gnss.service_utils import Services
@@ -62,12 +62,12 @@ class Config(dict):
             ConfigError: when the initialization of the configuration handler fails, a ConfigError is raised
         """
 
-        if alg.lower() not in ("gnss", "post_processing"):
-            raise ConfigError(f"illegal value for {alg} argument. Available values are 'gnss', 'post_processing'")
+        if alg.lower() not in ("gnss", "post_processing", "ins"):
+            raise ConfigError(f"illegal value for {alg} argument. Available values are 'gnss', 'post_processing', 'ins'")
         self.alg = alg.lower()
 
         # validate config file
-        self._validate(initial_dict, alg)
+        self._validate(initial_dict, self.alg)
 
         # Update the dictionary with the values from initial_dict
         self.update(initial_dict)
@@ -106,12 +106,17 @@ class Config(dict):
                 self.set('model', 'earth_deformation_effects', 'enable', False)
                 self.set('model', 'phase_center_corrections', 'enabled', False)
 
+        elif self.alg.lower() == "ins":
+            self["ins_alg"] = EnumAlgorithmINS.init_model(self["algorithm"]["selection"])
+
     def _validate(self, initial_dict, alg):
         # Read the schema from the file
         if alg.lower() == "gnss":
             schema_path = PROJECT_PATH / "src/io/config/resources/gnss_schema.json"
         elif alg.lower() == "post_processing":
             schema_path = PROJECT_PATH / "src/io/config/resources/performance_schema.json"
+        elif alg.lower() == "ins":
+            schema_path = PROJECT_PATH / "src/io/config/resources/ins_schema.json"
         else:
             raise ConfigError(f"invalid value for argument alg: {alg}")
 

@@ -51,6 +51,28 @@ class EnumAlgorithmPNT(Enum):
         return f"'SPS', 'DGNSS', 'PR-PPP', 'CP-PPP'"
 
 
+class EnumAlgorithmINS(Enum):
+    """ Enumeration for the INS algorithm (Sensor Emulator, INS Integration, Loosely Coupled) """
+    SENSOR_EMULATOR = 0
+    INS_INTEGRATION = 1
+    LOOSELY_COUPLED = 2
+
+    @classmethod
+    def init_model(cls, model_str: str):
+        if model_str.lower() == "sensor emulator":
+            return EnumAlgorithmINS.SENSOR_EMULATOR
+        elif model_str.lower() == "ins integration":
+            return EnumAlgorithmINS.INS_INTEGRATION
+        elif model_str.lower() == "loosely coupled":
+            return EnumAlgorithmINS.LOOSELY_COUPLED
+        else:
+            raise EnumError(f"Unsupported algorithm {model_str}. Available options are {cls.show_options()}.")
+
+    @classmethod
+    def show_options(cls):
+        return f"'Sensor Emulator', 'INS Integration', 'Loosely Coupled'"
+
+
 class EnumObservationModel(Enum):
     """
     Enumeration for the selected GNSS Observation model. Available models are:

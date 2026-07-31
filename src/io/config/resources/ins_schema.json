@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "log": {
+      "type": "object",
+      "properties": {
+        "minimum_level": {
+          "type": "string",
+          "enum": [
+            "DEBUG",
+            "INFO",
+            "WARN",
+            "ERROR",
+            "FATAL"
+          ]
+        }
+      },
+      "required": [
+        "minimum_level"
+      ]
+    },
+
+    "algorithm": {
+      "type": "object",
+      "properties": {
+        "selection": {
+          "type": "string",
+          "enum": [
+            "Sensor Emulator",
+            "Free Integration",
+            "Loosely Coupled"
+          ]
+        },
+        "trace_files": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "selection",
+        "trace_files"
+      ]
+    },
+
+    "inputs": {
+      "type": "object",
+      "properties": {
+        "reference_position": {
+          "type": "string"
+        },
+        "reference_velocity": {
+          "type": "string"
+        },
+        "reference_attitude": {
+          "type": "string"
+        },
+        "imu_sensor_file": {
+          "type": "string"
+        },
+        "gps_sensor_file": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "reference_position",
+        "reference_velocity",
+        "reference_attitude",
+        "imu_sensor_file",
+        "gps_sensor_file"
+      ]
+    },
+    "output": {
+        "type": "object",
+        "properties": {
+          "output_path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "output_path"
+        ]
+    }
+  },
+  "required": [
+    "log",
+    "algorithm",
+    "inputs",
+    "output"
+  ]
+}
