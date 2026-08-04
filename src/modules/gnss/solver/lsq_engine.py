@@ -432,7 +432,7 @@ class LSQ_Engine_Position(LSQ_Engine):
                     X0_prev[idx_iono] = state.iono[sat]
 
             # ISB
-            if iConst > 0 and "isb" in index_map:
+            if "isb" in index_map and const == state.get_additional_info("clock_slave"):
                 idx_isb = index_map["isb"]
                 P0[idx_isb, idx_isb] = initial_state.cov_isb
                 X0[idx_isb] = initial_state.isb
@@ -516,7 +516,7 @@ class LSQ_Engine_Position(LSQ_Engine):
                             self.design_mat[obs_offset + iSat, idx_iono] = 1.0 * factor  # iono
 
                     # ISB
-                    if iConst > 0 and "isb" in index_map:
+                    if "isb" in index_map and const == state.get_additional_info("clock_slave"):
                         idx_isb = index_map["isb"]
                         self.design_mat[obs_offset + iSat, idx_isb] = 1.0
 

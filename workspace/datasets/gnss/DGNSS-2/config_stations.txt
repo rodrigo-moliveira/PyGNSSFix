@@ -1,0 +1,44 @@
+Stations downloaded (from https://epncb.oma.be/_networkdata/stationlist.php)
+
+* BOGE00POL	Borowa Gora	POL	12207M004	boge00pol_20231112.log	IGIK	3633803.40	1397432.40	5035298.60
+* BOGI00POL	Borowa Gora	POL	12207M003	bogi00pol_20250321.log	IGIK	3633815.70	1397453.90	5035280.80
+
+Distance = (-12.3, -21.5, 17.8) -> RMS = 30.5021
+
+RINEX DOWNLOADED
+https://epncb.oma.be/_networkdata/datacalendar.php?station=BOGE00POL&year=2025&month=7&c=epn&rv=3
+https://epncb.oma.be/_networkdata/datacalendar.php?station=BOGI00POL&year=2025&month=7&c=epn&rv=3
+
+
+Reference coordinates:
+The station positions and velocities given in the tables below are valid for a specific period in time (indicated in the first column). Indeed, station positions can be affected by sudden position changes also call discontinuities mainly caused by station-specific equipment changes. In addition, it is possible that the velocity of the station change in time. To obtain the station positions at an epoch t different from t0, apply the station velocities:
+X(t) = X(t0) + (t-t0)*VX
+Y(t) = Y(t0) + (t-t0)*VY
+Z(t) = Z(t0) + (t-t0)*VZ
+
+https://epncb.oma.be/_productsservices/coordinates/crd4station.php?station=BOGI00POL
+BOGI00POL
+2021-04-29 / 2025-09-27	4	T0 = 2020-01-01
+(x,y,z) = (3633815.0725, 1397454.3500, 5035281.1150)
+(vx,vy,vz) = (-0.0181, 0.0153, 0.0087)
+
+
+https://epncb.oma.be/_productsservices/coordinates/crd4station.php?station=BOGE00POL
+BOGE00POL
+2019-03-06 / 2025-09-22	1	T0 =2020-01-01
+(x,y,z) = (3633803.2571, 1397432.5823, 5035298.5751)
+(vx,vy,vz) = (-0.0181, 0.0153, 0.0087)
+
+Navigation data download from
+https://cddis.nasa.gov/archive/gnss/data/daily/2025/brdc/
+
+Clock / Orbit / OSBs download from
+https://cddis.nasa.gov/archive/gnss/products/2374/
+
+Iono download from
+https://cddis.nasa.gov/archive/gnss/products/ionex/2025/187/
+
+for 2025-07-06 (Day of Year 187) we have:
+(t-t0) = 5 years + 187/365 = 5.5123 years
+-> BOGE = (3633803.2571, 1397432.5823, 5035298.5751) + 5.5123 * (-0.0181, 0.0153, 0.0087) = (3633803.15732737, 1397432.66663819, 5035298.62305701)
+-> BOGI = (3633815.0725, 1397454.3500, 5035281.1150) + 5.5123 * (-0.0181, 0.0153, 0.0087) = (3633814.97272737, 1397454.43433819, 5035281.16295701)
