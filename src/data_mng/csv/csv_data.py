@@ -1,4 +1,5 @@
 """Module with CSVData to store data from a CSV File"""
+import numpy as np
 import pandas as pd
 import os
 
@@ -101,6 +102,10 @@ class CSVData:
         """ Returns a dataframe with the data columns only """
         data_matrix = self.data.iloc[:, list(self.data_cols)]
         return data_matrix
+
+    def update_data_array(self, new_data: np.ndarray):
+        """ Updates the data array with the new data """
+        self.data.iloc[:, list(self.data_cols)] = new_data.copy()
 
     def to_time_array(self) -> pd.DataFrame:
         """ Returns a dataframe with the time columns only """

@@ -13,9 +13,25 @@
 
   "inputs": {
     "_comment1": "Select Input data files",
-    "reference_position": "datasets/ins/ins_coil_move/reference/ref_pos.csv",
-    "reference_velocity": "datasets/ins/ins_coil_move/reference/ref_vel.csv",
-    "reference_attitude": "datasets/ins/ins_coil_move/reference/ref_att_euler.csv",
+    "reference_position": {
+      "file": "datasets/ins/ins_coil_move/reference/ref_pos.csv",
+      "_comment": "available forms are LLA (latitude,longitude,altitude), LLD (latitude,longitude,down) or ECEF (cartesian x,y,z)",
+      "form": "LLA",
+      "units": ["deg","deg","m"]
+    },
+
+    "reference_velocity": {
+      "file": "datasets/ins/ins_coil_move/reference/ref_vel.csv",
+      "_comment": "available frames: navigation n (v_eb^n), body b (v_eb^b), ECEF e (v_eb^e)",
+      "frame": "n",
+      "units": ["m/s","m/s","m/s"]
+    },
+
+    "reference_attitude": {
+      "file": "datasets/ins/ins_coil_move/reference/ref_att_euler.csv",
+      "form": "RPY",
+      "units": ["deg","deg","deg"]
+    },
     "imu_sensor_file": "",
     "gps_sensor_file": ""
   },

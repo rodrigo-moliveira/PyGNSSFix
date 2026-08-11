@@ -308,3 +308,63 @@ class EnumNoiseProcess(Enum):
     @classmethod
     def show_options(cls):
         return f"[random_constant, white_noise, random_walk, gauss_markov]"
+
+class EnumPositionForm(Enum):
+    """ Enumeration for the Position Form """
+    POS_LLA = 0
+    POS_LLD = 1
+    POS_ECEF = 2
+
+    @classmethod
+    def init_model(cls, model_str: str):
+        if model_str.lower() == "lla":
+            return EnumPositionForm.POS_LLA
+        elif model_str.lower() == "lld":
+            return EnumPositionForm.POS_LLD
+        elif model_str.lower() == "ecef":
+            return EnumPositionForm.POS_ECEF
+        else:
+            raise EnumError(f"Unsupported algorithm {model_str}. Available options are {cls.show_options()}.")
+
+    @classmethod
+    def show_options(cls):
+        return f"'LLA', 'LLD', 'ECEF'"
+
+class EnumVelocityFrame(Enum):
+    """ Enumeration for the Velocity Frame """
+    FRAME_N = 0
+    FRAME_B = 1
+    FRAME_E = 2
+
+    @classmethod
+    def init_model(cls, model_str: str):
+        if model_str.lower() == "n":
+            return EnumVelocityFrame.FRAME_N
+        elif model_str.lower() == "b":
+            return EnumVelocityFrame.FRAME_B
+        elif model_str.lower() == "e":
+            return EnumVelocityFrame.FRAME_E
+        else:
+            raise EnumError(f"Unsupported algorithm {model_str}. Available options are {cls.show_options()}.")
+
+    @classmethod
+    def show_options(cls):
+        return f"'N', 'B', 'E'"
+
+class EnumAttitudeForm(Enum):
+    """ Enumeration for the Attitude Form """
+    RPY = 0
+    QUAT = 1
+
+    @classmethod
+    def init_model(cls, model_str: str):
+        if model_str.lower() == "rpy":
+            return EnumAttitudeForm.RPY
+        elif model_str.lower() == "quat":
+            return EnumAttitudeForm.QUAT
+        else:
+            raise EnumError(f"Unsupported algorithm {model_str}. Available options are {cls.show_options()}.")
+
+    @classmethod
+    def show_options(cls):
+        return f"'RPY', 'QUAT'"

@@ -1,0 +1,12 @@
+{
+  "name": "Low-end GPS sensor",
+  "position": {
+    "comment": "Position error standard deviation in [m] for white-noise, in NED components",
+    "std": [0.01,0.01,0.02]
+  },
+
+  "velocity": {
+    "comment": "Velocity error standard deviation in [m/s] for white-noise, in NED components",
+    "std": [0.0001, 0.0001, 0.05]
+  }
+}

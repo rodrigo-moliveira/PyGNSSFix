@@ -315,3 +315,32 @@ def enu2azel(x_enu, y_enu, z_enu):
     Az = np.arctan2(x_enu, y_enu) % (2 * constants.PI)
 
     return [Az, El]
+
+
+def lla2lld(data: np.ndarray) -> np.ndarray:
+    data = np.asarray(data)
+
+    if data.ndim == 1:
+        if data.shape[0] != 3:
+            raise ValueError(
+                f"Expected a vector with dimension 3, got shape {data.shape}"
+            )
+        was_single = True
+        data = data[None, :]       # (3,) -> (1, 3)
+
+    elif data.ndim == 2:
+        if data.shape[1] != 3:
+            raise ValueError(
+                f"Expected each vector to have dimension 3, got shape {data.shape}"
+            )
+        was_single = False
+
+    else:
+        raise ValueError(
+            f"Expected input with shape (3,) or (N, 3), got {data.shape}"
+        )
+
+    lld = data.copy()
+    lld[:, 2] *= -1
+
+    return lld[0] if was_single else lld

@@ -131,3 +131,10 @@ class ITRFError(GNSSNavPyError):
     def __init__(self, message):
         message = "ITRF Transformations Error -> " + message
         super().__init__(message)
+
+class UnknownConversion(GNSSNavPyError):
+    """ Error in the `unit_conversions` module. """
+
+    def __init__(self, message):
+        message = "Unit Conversions Error -> " + message
+        super().__init__(message)
