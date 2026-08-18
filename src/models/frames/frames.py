@@ -1,9 +1,14 @@
 """ Useful reference frame functions and conversions """
-
+#TODO: update docstrings
 import numpy as np
 from src import constants
 from src.utils.math_utils import rot2, rot3, rot1
 
+# Constants
+MU = constants.MU_WGS84
+FLATTENING = constants.EARTH_FLATNESS
+EARTH_A = constants.EARTH_SEMI_MAJOR_AXIS
+e_sq = constants.EARTH_ECCENTRICITY_SQ
 
 def geodetic2cartesian(lat, long, height):
     """
@@ -344,3 +349,63 @@ def lla2lld(data: np.ndarray) -> np.ndarray:
     lld[:, 2] *= -1
 
     return lld[0] if was_single else lld
+
+def get_earth_radii(lat):
+    # Eq. 6 of Sensors 2012, 12 (see paper full name...)
+    # see https://en.wikipedia.org/wiki/Earth_radius section 'Radii of curvature'
+    # Rn -> primer vertical at provided latitude
+    # Rm -> Radius of curvature in the meridian
+
+    sl_sqr = np.sin(lat) ** 2
+
+    rm = (EARTH_A * (1 - e_sq)) / (np.sqrt(1.0 - e_sq * sl_sqr) * (1.0 - e_sq * sl_sqr))
+    rn = EARTH_A / (np.sqrt(1.0 - e_sq * sl_sqr))
+
+    return rm, rn
+
+def grav_acceleration(r_eb_e, mode="earth"):
+    """
+    compute acceleration due to zonal harmonics.
+    The harmonics coded are the low-order ones (the equations are hard-coded) and
+    the general harmonic series is not applied
+
+    Args:
+        ----------
+        r_eb_e : numpy array of (3,) or (3,1)
+            position vector in expressed e-frame coordinates
+        mode : str
+            'inertial' to compute inertial gravity or 'earth' to compute gravity w.r.t. Earth (Coriolis effect)
+
+    NOTE: The relation between inertial gravity and gravity w.r.t. Earth is given by:
+        Earth_grav^e = Inertial_grav^e - w_ie_e cross_product (w_ie_e cross_product r_eb_e)
+
+    where
+        w_ie_e x (w_ie_e x r_eb_e) = [-w_Earth^2 . x, -w_Earth^2 . y, 0]^T
+
+    Returns:
+        numpy array of (3,)
+            g_eb^e if mode = 'earth' (gravity w.r.t Earth in e-frame coordinates)
+            g_ib^e if mode = 'inertial' (inertial gravity in e-frame coordinates)
+    """
+
+    if mode not in ["earth", "inertial"]:
+        raise AttributeError(f"Invalid argument 'mode'. Must either be 'earth' or 'inertial'")
+
+    if mode == "earth":
+        w_2 = constants.EARTH_ROTATION ** 2
+    else:
+        w_2 = 0
+    x, y, z = r_eb_e
+
+    R = np.linalg.norm(r_eb_e)
+    r_2 = R * R
+
+    a = -MU * r_eb_e / (R ** 3)
+
+    aux = -3 * constants.EARTH_J2 * MU * EARTH_A ** 2 / (2 * R ** 5)
+    aux1 = aux * (1 - 5 * z ** 2 / r_2) * x
+    a[0] = w_2 * x + a[0] + aux1
+    a[1] = w_2 * y + a[1] + aux1 * y / x
+    a[2] = a[2] + aux * (3 - 5 * z ** 2 / r_2) * z
+
+    return a

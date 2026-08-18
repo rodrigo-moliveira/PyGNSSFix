@@ -21,12 +21,11 @@ class CSVData:
         Args:
             name(str): Short name of the dataset.
             description(str): Description of the dataset.
-            time_cols(list[int] or None): List with the column indexes in the csv file containing the time
-                information
-            data_cols(list[int] or None): List with the column indexes in the csv file containing the data
+            time_cols(list[int]): List with the column indexes in the csv file containing the time information
+            data_cols(list[int]): List with the column indexes in the csv file containing the data
             units(list[str] or None): optional. List of strings to specify the units of data. The dimension of the list
                 must be consistent with the dimension of the `data_cols` list. Default is None.
-            legend(list[str] or None): optional. List of strings to specify the legend of the data for plotting purposes
+            legend(list[str]): optional. List of strings to specify the legend of the data for plotting purposes
                 This is the name of each axis in the plot. The dimension of the list must be consistent with the
                 dimension of the `data_cols` list. Default is None.
             title(str): optional. Name of the title of the plot. Default is an empty string.
@@ -111,3 +110,22 @@ class CSVData:
         """ Returns a dataframe with the time columns only """
         time_matrix = self.data.iloc[:, list(self.time_cols)]
         return time_matrix
+
+    def to_file(self):
+        """TODO: add docstring"""
+        return self.data.to_csv(path_or_buf=None, index=False).rstrip("\r\n")
+
+    def init_data(self, time_array:np.ndarray, data_array:np.ndarray):
+        """TODO: add docstring"""
+        dataframe = np.hstack((time_array, data_array))
+
+        n_epochs, n_dim = dataframe.shape  # (n,m) shape, where n is the number of epochs and m is the row dimension
+
+        # unpack shape
+        n_dim -= len(self.time_cols)
+
+        if self._dim != n_dim:
+            raise ValueError(f"Inconsistency between the defined dimension of data (dim={self._dim}) and the shape "
+                             f"of the input data {dataframe.shape}. Please review.")
+
+        self.data = pd.DataFrame(dataframe, columns=["time (sec)"] + self.legend)

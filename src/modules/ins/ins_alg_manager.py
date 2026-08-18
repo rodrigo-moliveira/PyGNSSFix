@@ -1,12 +1,14 @@
 """ GNSS Algorithm Manager Module """
+# TODO: update docstrings
 
 import traceback
-import numpy as np
 
 from src.io.config import config_dict, EnumAlgorithmINS
 from src.errors import ConfigError
 from src.common_log import MAIN_LOG, get_logger
 from src.data_mng.ins.ins_data_mng import InsDataManager
+from src.modules.ins.sensor_emulator import SensorEmulator
+
 
 #from .solver.gnss_solver import GnssSolver
 #from .preprocessor import PreprocessorManager
@@ -59,14 +61,14 @@ class InsAlgorithmManager:
             exit(-1)
 
         # Main Algorithm Module
-        #try:
-        #    self.main_log.info(f"Starting Main Algorithm Module...")
-        #    self._compute(self.data_manager, f"{self.data_dir}\\trace")
-        #except Exception as e:
-        #    self.main_log.error(f"Stopping execution of program due to error in execution of Main Algorithm "
-        #                        f"Module: {e}")
-        #    print(traceback.format_exc())
-        #    exit(-1)
+        try:
+            self.main_log.info(f"Starting Main Algorithm Module...")
+            self._compute(self.data_manager, ins_alg, f"{self.data_dir}\\trace")
+        except Exception as e:
+            self.main_log.error(f"Stopping execution of program due to error in execution of Main Algorithm "
+                                f"Module: {e}")
+            print(traceback.format_exc())
+            exit(-1)
 
         # Output Writer Module
         #try:
@@ -81,17 +83,15 @@ class InsAlgorithmManager:
         self.main_log.info(f"Successfully executed INS algorithm {ins_alg}")
 
 
-    #def _compute(self, data_manager, trace_path):
-    #    """ Internal function for the computation of the PNT solver task """
-    #    # perform pre-processing here
-    #    self.main_log.info(f"Starting Preprocessor Module")
-    #    preprocessor = PreprocessorManager(trace_path, data_manager)
-    #    preprocessor.compute()
+    def _compute(self, data_manager, ins_alg, trace_path):
+        """ Internal function for the computation of the PNT solver task """
 
-        # run estimation algorithm
-    #    self.main_log.info(f"Running estimation algorithm...")
-    #    solver = GnssSolver(data_manager, trace_path)
-    #    solver.solve()
+        if ins_alg == EnumAlgorithmINS.SENSOR_EMULATOR:
+            # Running Sensor Emulator
+            self.main_log.info(f"Running Sensor Emulator Module")
+            emulator = SensorEmulator(trace_path, data_manager)
+            emulator.compute()
 
-    #    data_manager.add_data("nav_solution", solver.solution)
+
+        #data_manager.add_data("nav_solution", solver.solution)
 

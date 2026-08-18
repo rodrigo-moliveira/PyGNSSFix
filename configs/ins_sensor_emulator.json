@@ -12,6 +12,8 @@
   },
 
   "inputs": {
+    "trace_files": true,
+
     "_comment1": "Select Input data files",
     "reference_position": {
       "file": "datasets/ins/ins_coil_move/reference/ref_pos.csv",

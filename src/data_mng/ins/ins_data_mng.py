@@ -1,17 +1,14 @@
 """ Data Manager for GNSS Algorithms
+TODO: update all docstrings
 """
 import os
 
-import logging
 
 from src import WORKSPACE_PATH
 from src.data_mng.csv.csv_data import CSVData
 from src.data_mng.unit_conversions import convert_unit
-from src.io.states import OUTPUT_FILENAME_MAP, get_file_header, export_to_file
 from src.io.config import config_dict, EnumAlgorithmPNT, EnumPositionForm, EnumAlgorithmINS, EnumVelocityFrame, EnumAttitudeForm
-from src.io.rinex_parser import RinexNavReader, RinexObsReader, AntexReader
 from src.models.frames import lla2lld
-from src.models.noise.noise_manager import GNSSNoiseManager
 from src.data_mng import Container
 from src.common_log import IO_LOG, get_logger
 
@@ -81,6 +78,46 @@ class InsDataManager(Container):
             title="Attitude (Euler Angles)",
             time_cols=[0],
             data_cols=[1, 2, 3])
+
+        #######################
+        # Sensor Measurements #
+        #######################
+
+        # True (errorless) gyro readout measurements
+        self.ref_gyro = CSVData(name='ref_gyro',
+            description='true angular velocity in the body frame (w_ib_b)',
+            units=['rad/s', 'rad/s', 'rad/s'],
+            legend=['ref_gyro_x', 'ref_gyro_y', 'ref_gyro_z'],
+            title="Gyroscope Readouts w_ib_b",
+            time_cols=[0],
+            data_cols=[1, 2, 3])
+
+        # True (errorless) accelerometer readout measurements
+        self.ref_accel = CSVData(name='ref_accel',
+            description='true acceleration in the body frame (f_ib_b)',
+            units=['m/s^2', 'm/s^2', 'm/s^2'],
+            legend=['ref_accel_x', 'ref_accel_y', 'ref_accel_z'],
+            title="Accelerometer Readouts f_ib_b",
+            time_cols=[0],
+            data_cols=[1, 2, 3])
+
+        # Real (with error) gyro readout measurements
+        self.gyro = CSVData(name='gyro',
+            description='gyro measurements w_ib_b',
+            units=['rad/s', 'rad/s', 'rad/s'],
+            legend=['gyro_x', 'gyro_y', 'gyro_z'],
+            title="Gyroscope Readouts w_ib_b",
+            time_cols=[0],
+            data_cols=[1, 2, 3])
+
+        # Real (with error) accelerometer readout measurements
+        self.accel = CSVData(name='accel',
+             description='accelerometer measurements f_ib_b',
+             units=['m/s^2', 'm/s^2', 'm/s^2'],
+             legend=['accel_x', 'accel_y', 'accel_z'],
+             title="Accelerometer Readouts f_ib_b",
+             time_cols=[0],
+             data_cols=[1, 2, 3])
 
     def __str__(self):
         return f'{type(self).__name__}( DataManager for INS algorithms )'
@@ -224,14 +261,14 @@ class InsDataManager(Container):
 
         # trace data files
         if ins_alg == EnumAlgorithmINS.SENSOR_EMULATOR:
-            with open(f"{inputs_dir}\\InputPosition.txt", "w") as file:
-                file.write(str(self.get_data("ref_pos")))
+            with open(f"{inputs_dir}\\InputPosition.txt", "w", newline="") as file:
+                file.write(self.ref_pos.to_file())
 
-            with open(f"{inputs_dir}\\InputVelocity.txt", "w") as file:
-                file.write(str(self.get_data("ref_vel")))
+            with open(f"{inputs_dir}\\InputVelocity.txt", "w", newline="") as file:
+                file.write(self.ref_vel.to_file())
 
-            with open(f"{inputs_dir}\\InputAttitude.txt", "w") as file:
-                file.write(str(self.get_data("ref_att")))
+            with open(f"{inputs_dir}\\InputAttitude.txt", "w", newline="") as file:
+                file.write(self.ref_att.to_file())
 
 
     @staticmethod
