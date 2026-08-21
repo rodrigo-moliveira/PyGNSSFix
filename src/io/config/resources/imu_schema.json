@@ -1,0 +1,239 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "accelerometer": {
+      "type": "object",
+      "properties": {
+        "misalignment": {
+          "type": "object",
+          "properties": {
+            "select_model": {
+              "type": "string",
+              "enum": ["gauss_markov", "random_constant", "constant"]
+            },
+            "gauss_markov": {
+              "$ref": "#/definitions/gauss_markov_model"
+            },
+            "random_constant": {
+              "$ref": "#/definitions/random_constant_model"
+            },
+            "constant": {
+              "$ref": "#/definitions/constant_model"
+            }
+          },
+          "required": ["select_model", "gauss_markov", "random_constant", "constant"]
+        },
+        "scale_factor": {
+          "type": "object",
+          "properties": {
+            "select_model": {
+              "type": "string",
+              "enum": ["gauss_markov", "random_constant", "constant"]
+            },
+            "gauss_markov": {
+              "$ref": "#/definitions/gauss_markov_model"
+            },
+            "random_constant": {
+              "$ref": "#/definitions/random_constant_model"
+            },
+            "constant": {
+              "$ref": "#/definitions/constant_model"
+            }
+          },
+          "required": ["select_model", "gauss_markov", "random_constant", "constant"]
+        },
+        "bias_constant": {
+          "type": "object",
+          "properties": {
+            "select_model": {
+              "type": "string",
+              "enum": ["random_constant", "constant"]
+            },
+            "random_constant": {
+              "$ref": "#/definitions/random_constant_model"
+            },
+            "constant": {
+              "$ref": "#/definitions/constant_model"
+            }
+          },
+          "required": ["select_model", "random_constant", "constant"]
+        },
+        "bias_drift": {
+          "type": "object",
+          "properties": {
+            "select_model": {
+              "type": "string",
+              "enum": ["gauss_markov"]
+            },
+            "gauss_markov": {
+              "$ref": "#/definitions/gauss_markov_model"
+            }
+          },
+          "required": ["select_model", "gauss_markov"]
+        },
+        "observation_noise": {
+          "type": "object",
+          "properties": {
+            "select_model": {
+              "type": "string",
+              "enum": ["white_noise"]
+            },
+            "white_noise": {
+              "$ref": "#/definitions/white_noise_model"
+            }
+          },
+          "required": ["select_model", "white_noise"]
+        }
+      },
+      "required": ["misalignment", "scale_factor", "bias_constant", "bias_drift", "observation_noise"]
+    },
+
+    "gyroscope": {
+      "type": "object",
+      "properties": {
+        "misalignment": {
+          "type": "object",
+          "properties": {
+            "select_model": {
+              "type": "string",
+              "enum": ["gauss_markov", "random_constant", "constant"]
+            },
+            "gauss_markov": {
+              "$ref": "#/definitions/gauss_markov_model"
+            },
+            "random_constant": {
+              "$ref": "#/definitions/random_constant_model"
+            },
+            "constant": {
+              "$ref": "#/definitions/constant_model"
+            }
+          },
+          "required": ["select_model", "gauss_markov", "random_constant", "constant"]
+        },
+        "scale_factor": {
+          "type": "object",
+          "properties": {
+            "select_model": {
+              "type": "string",
+              "enum": ["gauss_markov", "random_constant", "constant"]
+            },
+            "gauss_markov": {
+              "$ref": "#/definitions/gauss_markov_model"
+            },
+            "random_constant": {
+              "$ref": "#/definitions/random_constant_model"
+            },
+            "constant": {
+              "$ref": "#/definitions/constant_model"
+            }
+          },
+          "required": ["select_model", "gauss_markov", "random_constant", "constant"]
+        },
+        "bias_constant": {
+          "type": "object",
+          "properties": {
+            "select_model": {
+              "type": "string",
+              "enum": ["random_constant", "constant"]
+            },
+            "random_constant": {
+              "$ref": "#/definitions/random_constant_model"
+            },
+            "constant": {
+              "$ref": "#/definitions/constant_model"
+            }
+          },
+          "required": ["select_model", "random_constant", "constant"]
+        },
+        "bias_drift": {
+          "type": "object",
+          "properties": {
+            "select_model": {
+              "type": "string",
+              "enum": ["gauss_markov"]
+            },
+            "gauss_markov": {
+              "$ref": "#/definitions/gauss_markov_model"
+            }
+          },
+          "required": ["select_model", "gauss_markov"]
+        },
+        "observation_noise": {
+          "type": "object",
+          "properties": {
+            "select_model": {
+              "type": "string",
+              "enum": ["white_noise"]
+            },
+            "white_noise": {
+              "$ref": "#/definitions/white_noise_model"
+            }
+          },
+          "required": ["select_model", "white_noise"]
+        }
+      },
+      "required": ["misalignment", "scale_factor", "bias_constant", "bias_drift", "observation_noise"]
+    }
+  },
+  "required": ["accelerometer", "gyroscope"],
+
+  "definitions": {
+    "gauss_markov_model": {
+      "type": "object",
+      "properties": {
+        "Prn": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "Tau": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "required": ["Prn", "Tau"]
+    },
+    "random_constant_model": {
+      "type": "object",
+      "properties": {
+        "std": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      },
+      "required": ["std"]
+    },
+    "constant_model": {
+      "type": "object",
+      "properties": {
+        "val": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      },
+      "required": ["val"]
+    },
+    "white_noise_model": {
+      "type": "object",
+      "properties": {
+        "std": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      },
+      "required": ["std"]
+    }
+  }
+}

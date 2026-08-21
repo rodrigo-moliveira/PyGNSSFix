@@ -52,6 +52,8 @@
     },
 
     "bias_drift": {
+      "select_model": "gauss_markov",
+      "info": "In field 'select_model' select 'gauss_markov'",
       "gauss_markov": {
         "comment": "Prn is the sigma value of the GM Process, in [mg]. Tau is the GM time constant in [sec], if null, then resorts to Random Walk",
         "Prn": [0.0003, 0.0003, 0.0003],
@@ -60,6 +62,8 @@
     },
 
     "observation_noise": {
+      "select_model": "white_noise",
+      "info": "In field 'select_model' select 'white_noise'",
       "white_noise": {
         "comment": "std is the continuous-time standard deviation of the white-noise process, in [m/s/sqrt(hr)]",
         "std": [2.5e-5, 2.5e-5, 2.5e-5]
@@ -118,6 +122,8 @@
     },
 
     "bias_drift": {
+      "select_model": "gauss_markov",
+      "info": "In field 'select_model' select 'gauss_markov'",
       "gauss_markov": {
         "comment": "Prn is the sigma value of the GM Process, in [deg/hr]. Tau is the GM time constant in [sec], if null, then resorts to Random Walk",
         "Prn": [0.1, 0.1, 0.1],
@@ -125,6 +131,8 @@
       }
     },
     "observation_noise": {
+      "select_model": "white_noise",
+      "info": "In field 'select_model' select 'white_noise'",
       "white_noise": {
         "comment": "std is the continuous-time standard deviation of the white-noise process, in [deg/sqrt(hr)]",
         "std": [0.002, 0.002, 0.002]

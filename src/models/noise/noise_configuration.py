@@ -1,6 +1,4 @@
 """ Module with the definition of Noise Models (Stochastic Processes). """
-import numpy as np
-
 from src.io.config import EnumNoiseProcess
 from .noise_gen import *
 
@@ -62,9 +60,11 @@ class NoiseModel:
         self.correlation_time = correlation_time  # in [s]
         self.relative_re_param = 1.0
 
-    def gen(self):
-        """ Placeholder method for generating noise samples (currently not implemented). """
-        pass
+    def gen(self, shape):
+        """
+        TODO: update...
+        Placeholder method for generating noise samples (currently not implemented). """
+        self.process_gen.compute(shape)
 
     def get_stm_entry(self, time_step: float):
         """

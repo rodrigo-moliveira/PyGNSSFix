@@ -34,7 +34,7 @@
       "form": "RPY",
       "units": ["deg","deg","deg"]
     },
-    "imu_sensor_file": "",
+    "imu_sensor_file": "sensors/imu_high_end.json",
     "gps_sensor_file": ""
   },
 

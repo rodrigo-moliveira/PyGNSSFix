@@ -5,7 +5,7 @@ import os
 from src.io.states import OUTPUT_FILENAME_MAP, get_file_header, export_to_file
 from src.io.config import config_dict, EnumObservationModel, EnumAlgorithmPNT, EnumSatelliteBias
 from src.io.rinex_parser import RinexNavReader, RinexObsReader, AntexReader
-from src.models.noise.noise_manager import GNSSNoiseManager
+from src.models.sensor.noise_manager import GNSSNoiseManager
 from src.data_mng import Container
 from src.common_log import IO_LOG, get_logger
 from .navigation_data import NavigationData

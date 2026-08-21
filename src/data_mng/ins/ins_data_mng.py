@@ -8,11 +8,14 @@ from src import WORKSPACE_PATH
 from src.data_mng.csv.csv_data import CSVData
 from src.data_mng.unit_conversions import convert_unit
 from src.io.config import config_dict, EnumAlgorithmPNT, EnumPositionForm, EnumAlgorithmINS, EnumVelocityFrame, EnumAttitudeForm
+from src.io.config.import_imu import read_imu_file
 from src.models.frames import lla2lld
 from src.data_mng import Container
 from src.common_log import IO_LOG, get_logger
 
 __all__ = ["InsDataManager"]
+
+from src.models.sensor.imu import IMU
 
 
 class InsDataManager(Container):
@@ -37,7 +40,8 @@ class InsDataManager(Container):
         "att",
         "gyro",
         "accel",
-        "gps"]
+        "gps",
+        "imu_sensor"]
 
     def __init__(self):
         """ Default constructor with no arguments """
@@ -118,6 +122,9 @@ class InsDataManager(Container):
              title="Accelerometer Readouts f_ib_b",
              time_cols=[0],
              data_cols=[1, 2, 3])
+
+        # Sensors
+        self.imu_sensor = IMU()
 
     def __str__(self):
         return f'{type(self).__name__}( DataManager for INS algorithms )'
@@ -245,6 +252,10 @@ class InsDataManager(Container):
         if ins_alg == EnumAlgorithmINS.SENSOR_EMULATOR:
             log.info(f"Reading Sensor Emulator Inputs.")
             self._read_input_pva()
+
+            # TODO: read IMU / GPS sensors
+            imu_path = config_dict.get("inputs", "imu_sensor_file")
+            read_imu_file(f"{WORKSPACE_PATH}/{imu_path}", self.imu_sensor)
 
         else:
             raise IOError(f"Unknown Model {ins_alg}")
