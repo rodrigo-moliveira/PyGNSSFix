@@ -23,9 +23,9 @@ import sys
 import json
 import shutil
 
+from gnss_alg_manager import GnssAlgorithmManager
 from src.common_log import set_logs
 from src.io.io_utils import create_output_dir
-from src.modules.gnss import GnssAlgorithmManager
 from src.io.config import config_dict
 
 

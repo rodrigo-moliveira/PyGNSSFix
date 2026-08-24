@@ -26,46 +26,34 @@ _UNIT_MAP = {
     },
 }
 
-_PROCESS_STATS_MAP = {
-    "gauss_markov": "prn",
-    "random_constant": "std",
-    "constant": "bias",
-    "white_noise": "std"
-}
-
-
-def _validate_file(json_dict):
-    # mandatory keys 'name', 'accelerometer' and 'gyroscope'
-    pass
-
 
 def _get_process_stats(process, process_dict):
     stats = {}
     if process == "gauss_markov":
-        stats["prn"] = process_dict["Prn"]
+        stats["process_noise"] = process_dict["Prn"]
         stats["tau"] = process_dict["Tau"]
 
     elif process == "random_constant" or process == "white_noise":
-        stats["std"] = process_dict["std"]
+        stats["process_noise"] = process_dict["std"]
 
     elif process == "constant":
-        stats["bias"] = process_dict["val"]
+        stats["process_noise"] = process_dict["val"]
 
     return stats
 
 
-def _convert_to_SI_units(sensor, model, process, stats):
+def _convert_to_SI_units(sensor, model, stats):
     # get units
     unit_in, unit_out = _UNIT_MAP[sensor][model]
 
-    vec = np.array(stats[_PROCESS_STATS_MAP[process]])
+    vec = np.array(stats["process_noise"])
     vec_out = convert_unit(vec, 3 * [unit_in], 3 * [unit_out])
 
     # update stats dict
-    stats[_PROCESS_STATS_MAP[process]] = vec_out
+    stats["process_noise"] = vec_out
 
 
-def read_imu_file(path, imu):
+def read_imu_file(path, imu, log=None):
     # Opening JSON file
     with open(path) as json_file:
         json_dict = json.load(json_file)
@@ -85,14 +73,15 @@ def read_imu_file(path, imu):
                 # get selected model
                 process = json_dict[sensor][model]["select_model"]
 
-                print(f"processing sensor {sensor} for model {model} with process {process}")
+                if log is not None:
+                    log.info(f"processing sensor {sensor} for model {model} with process {process}")
 
                 # get statistics for this model and process
                 stats = _get_process_stats(process, json_dict[sensor][model][process])
 
                 # convert data to SI units (degrees to rads, ref acceleration g to m/s^2)
-                _convert_to_SI_units(sensor, model, process, stats)
+                _convert_to_SI_units(sensor, model, stats)
 
                 # set the imu for this model
-                # imu.set(sensor, model, process, stats)
+                imu.set(sensor, model, process, stats)
 

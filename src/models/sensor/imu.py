@@ -2,6 +2,10 @@
 
 import os
 from pathlib import Path
+from typing import Any
+
+from src.models.noise.noise_configuration import NoiseModel
+
 """
 Available stochastic models:
     - White Noise
@@ -30,84 +34,33 @@ SENSOR_PATH_MAP = {
 }
 
 
-"""class _Process:
-    def __init__(self):
-        self.process = None
-        self.stats = None
-
-    def set(self, process, stats):
-        self.process = process
-        self.stats = stats
-
-    def __str__(self):
-        return f"Process({self.process}, stats={self.stats})"
-
-    def __repr__(self):
-        return str(self)
-
-    def get_stochastic_process(self, dim):
-        if self.process == "gauss_markov":
-            std = self.stats["prn"]
-            tau = self.stats["tau"]
-            if tau is None or tau < 0:
-                # resort to Random Walk
-                return st.RandomWalk(dim=dim, std=std, axis=3)
-            return st.GaussMarkov(dim=dim, std=std, correlation_time=tau, axis=3)
-
-        elif self.process == "random_constant":
-            std = self.stats["std"]
-            return st.RandomConstant(dim=dim, std=std, axis=3)
-
-        elif self.process == "constant":
-            bias = self.stats["bias"]
-            return st.RandomConstant(dim=dim, std=bias, axis=3)
-
-        elif self.process == "white_noise":
-            std = self.stats["std"]
-            return st.WhiteNoise(dim=dim, std=std, axis=3)
-
-        else:
-            # this should never happen...
-            raise ValueError(f"Unknown process {self.process}")
-"""
-
 class IMU:
 
     def __init__(self):
 
         # initialize data dict
-        self._data = {
+        self._data: dict[str, dict[str, Any]] = {
             "gyroscope": {
                 "misalignment": None,
                 "scale_factor": None,
                 "bias_constant": None,
                 "bias_drift": None,
-                "observation_noise": None
+                "observation_noise": None,
             },
             "accelerometer": {
                 "misalignment": None,
                 "scale_factor": None,
                 "bias_constant": None,
                 "bias_drift": None,
-                "observation_noise": None
-            }
+                "observation_noise": None,
+            },
         }
 
-        #if isinstance(accuracy, str):
-        #    if accuracy in SENSOR_PATH_MAP.keys():
-        #        path = SENSOR_PATH_MAP[accuracy]
-        #    else:
-        #        path = accuracy
-
-            # read imu file (may raise exceptions)
-            #read_imu_file(path, self)
-        #else:
-         #   raise AttributeError(f"Provided 'accuracy' argument is not valid. Must be a string 'low-end', 'mid-end', "
-          #                       f" 'high-end', or, alternatively, a path to a valid imu json file")
-
     def set(self, sensor, model, process, stats):
-        self._data[sensor][model] = NoiseModel()
-        self._data[sensor][model].set(process, stats)
+        self._data[sensor][model] = NoiseModel(f"{sensor}_{model}", process,
+                                               process_noise=stats.get("process_noise",None),
+                                               correlation_time=stats.get("process_noise",None))
+
 
     def __getitem__(self, sensor):
         if sensor not in self._data:

@@ -3,14 +3,13 @@
 import traceback
 import numpy as np
 
+from preprocessor import PreprocessorManager
+from solver.gnss_solver import GnssSolver
+from src.data_mng.gnss.gnss_data_mng import GnssDataManager
 from src.io.config import config_dict, EnumAlgorithmPNT
 from src.models.frames import cartesian2geodetic, latlon2dcm_e_enu
 from src.errors import ConfigError
 from src.common_log import MAIN_LOG, get_logger
-
-from .solver.gnss_solver import GnssSolver
-from .preprocessor import PreprocessorManager
-from ...data_mng.gnss.gnss_data_mng import GnssDataManager
 
 
 class GnssAlgorithmManager:

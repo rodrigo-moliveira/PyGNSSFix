@@ -291,6 +291,7 @@ class EnumNoiseProcess(Enum):
     WHITE_NOISE = 2
     RANDOM_WALK = 3
     GAUSS_MARKOV = 4
+    CONSTANT = 5
 
     @classmethod
     def init_model(cls, model_str: str):
@@ -302,12 +303,14 @@ class EnumNoiseProcess(Enum):
             return EnumNoiseProcess.RANDOM_WALK
         elif model_str.lower() == "gauss_markov":
             return EnumNoiseProcess.GAUSS_MARKOV
+        elif model_str.lower() == "constant":
+            return EnumNoiseProcess.RANDOM_CONSTANT
         else:
             raise EnumError(f"Unsupported Process Noise Model {model_str}. Available options are {cls.show_options()}")
 
     @classmethod
     def show_options(cls):
-        return f"[random_constant, white_noise, random_walk, gauss_markov]"
+        return f"[random_constant, constant, white_noise, random_walk, gauss_markov]"
 
 class EnumPositionForm(Enum):
     """ Enumeration for the Position Form """
