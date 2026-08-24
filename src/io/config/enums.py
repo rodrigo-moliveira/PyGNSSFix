@@ -304,7 +304,7 @@ class EnumNoiseProcess(Enum):
         elif model_str.lower() == "gauss_markov":
             return EnumNoiseProcess.GAUSS_MARKOV
         elif model_str.lower() == "constant":
-            return EnumNoiseProcess.RANDOM_CONSTANT
+            return EnumNoiseProcess.CONSTANT
         else:
             raise EnumError(f"Unsupported Process Noise Model {model_str}. Available options are {cls.show_options()}")
 

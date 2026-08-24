@@ -25,9 +25,10 @@ class NoiseModel:
         get_stm_entry(time_step):
         get_process_noise(time_step):
     """
-    def __init__(self, state_str, process_str, process_noise=None, correlation_time=None):
+    def __init__(self, state_str, process_str, process_noise=None, correlation_time=None, init=None):
         """
         Constructor of NoiseModel instances.
+        TODO: for INS we provide already discrete units ... (???)
 
         Args:
             state_str (str): Name of the associated state (e.g., 'position', 'clock_bias', etc.).
@@ -45,13 +46,15 @@ class NoiseModel:
         self.process_enum = EnumNoiseProcess.init_model(process_str)
 
         if self.process_enum == EnumNoiseProcess.WHITE_NOISE:
-            self.process_gen = WhiteNoiseProcess()
+            self.process_gen = WhiteNoiseProcess(psd=process_noise)
         elif self.process_enum == EnumNoiseProcess.RANDOM_CONSTANT:
-            self.process_gen = RandomConstantProcess()
+            self.process_gen = RandomConstantProcess(std=process_noise)
         elif self.process_enum == EnumNoiseProcess.RANDOM_WALK:
-            self.process_gen = RandomWalkProcess()
+            self.process_gen = RandomWalkProcess(psd=process_noise, init=init)
         elif self.process_enum == EnumNoiseProcess.GAUSS_MARKOV:
-            self.process_gen = GaussMarkovProcess()
+            self.process_gen = GaussMarkovProcess(psd=process_noise,correlation_time=correlation_time, init=init)
+        elif self.process_enum == EnumNoiseProcess.CONSTANT:
+            self.process_gen = ConstantProcess(val=process_noise)
         else:
             raise ValueError(f"Expected EnumNoiseProcess enum, got {type(self.process_enum).__name__}")
 
@@ -60,11 +63,11 @@ class NoiseModel:
         self.correlation_time = correlation_time  # in [s]
         self.relative_re_param = 1.0
 
-    def gen(self, shape):
+    def gen(self, n):
         """
         TODO: update...
         Placeholder method for generating noise samples (currently not implemented). """
-        self.process_gen.compute(shape)
+        return self.process_gen.compute(n)
 
     def get_stm_entry(self, time_step: float):
         """
