@@ -4,11 +4,15 @@
   "accelerometer": {
     "misalignment": {
       "select_model": "gauss_markov",
-      "info": "In field 'select_model' select 'gauss_markov', 'random_constant' or 'constant'",
+      "info": "In field 'select_model' select 'gauss_markov', 'random_walk', 'random_constant' or 'constant'",
       "gauss_markov": {
-        "comment": "Prn is the sigma value of the Gauss Markov (GM) power spectral density, in [deg/sqrt(s)]. Tau is the GM time constant in [sec], if null, then resorts to Random Walk",
+        "comment": "Prn is the sigma value of the Gauss Markov (GM) power spectral density, in [deg/sqrt(s)]. Tau is the GM time constant in [sec]",
         "Prn": [0.002, 0.002, 0.002],
         "Tau": 300
+      },
+      "random_walk": {
+        "comment": "Prn is the sigma value of the Random Walk power spectral density, in [deg/sqrt(s)].",
+        "Prn": [0.002, 0.002, 0.002]
       },
       "random_constant": {
         "comment": "std is the standard deviation of the discrete random constant process, in [deg]",
@@ -22,11 +26,15 @@
 
     "scale_factor": {
       "select_model": "gauss_markov",
-      "info": "In field 'select_model' select 'gauss_markov', 'random_constant' or 'constant'",
+      "info": "In field 'select_model' select 'gauss_markov', 'random_walk', 'random_constant' or 'constant'",
       "gauss_markov": {
-        "comment": "Prn is the sigma value of the Gauss Markov (GM) power spectral density, in [ppm/sqrt(s)]. Tau is the GM time constant in [sec], if null, then resorts to Random Walk",
+        "comment": "Prn is the sigma value of the Gauss Markov (GM) power spectral density, in [ppm/sqrt(s)]. Tau is the GM time constant in [sec]",
         "Prn": [5, 5, 5],
         "Tau": 300
+      },
+      "random_walk": {
+        "comment": "Prn is the sigma value of the Random Walk power spectral density, in [ppm/sqrt(s)].",
+        "Prn": [5, 5, 5]
       },
       "random_constant": {
         "comment": "std is the standard deviation of the discrete random constant process, in [ppm]",
@@ -53,11 +61,15 @@
 
     "bias_drift": {
       "select_model": "gauss_markov",
-      "info": "In field 'select_model' select 'gauss_markov'",
+      "info": "In field 'select_model' select 'gauss_markov', 'random_walk'",
       "gauss_markov": {
-        "comment": "Prn is the sigma value of the GM Process, in [mg/sqrt(s)]. Tau is the GM time constant in [sec], if null, then resorts to Random Walk",
+        "comment": "Prn is the sigma value of the GM Process, in [mg/sqrt(s)]. Tau is the GM time constant in [sec]",
         "Prn": [0.002, 0.002, 0.002],
         "Tau": 3000
+      },
+      "random_walk": {
+        "comment": "Prn is the sigma value of the Random Walk power spectral density, in [mg/sqrt(s)].",
+        "Prn": [0.002, 0.002, 0.002]
       }
     },
 
@@ -74,11 +86,15 @@
   "gyroscope": {
     "misalignment": {
       "select_model": "gauss_markov",
-      "info": "In field 'select_model' select 'gauss_markov', 'random_constant' or 'constant'",
+      "info": "In field 'select_model' select 'gauss_markov', 'random_walk', 'random_constant' or 'constant'",
       "gauss_markov": {
-        "comment": "Prn is the sigma value of the Gauss Markov (GM) power spectral density, in [deg/sqrt(s)]. Tau is the GM time constant in [sec], if null, then resorts to Random Walk",
+        "comment": "Prn is the sigma value of the Gauss Markov (GM) power spectral density, in [deg/sqrt(s)]. Tau is the GM time constant in [sec]",
         "Prn": [0.002, 0.002, 0.002],
         "Tau": 300
+      },
+      "random_walk": {
+        "comment": "Prn is the sigma value of the Random Walk power spectral density, in [deg/sqrt(s)].",
+        "Prn": [0.002, 0.002, 0.002]
       },
       "random_constant": {
         "comment": "std is the standard deviation of the discrete random constant process, in [deg]",
@@ -92,11 +108,15 @@
 
     "scale_factor": {
       "select_model": "gauss_markov",
-      "info": "In field 'select_model' select 'gauss_markov', 'random_constant' or 'constant'",
+      "info": "In field 'select_model' select 'gauss_markov', 'random_walk', 'random_constant' or 'constant'",
       "gauss_markov": {
-        "comment": "Prn is the sigma value of the Gauss Markov (GM) power spectral density, in [ppm/sqrt(s)]. Tau is the GM time constant in [sec], if null, then resorts to Random Walk",
+        "comment": "Prn is the sigma value of the Gauss Markov (GM) power spectral density, in [ppm/sqrt(s)]. Tau is the GM time constant in [sec]",
         "Prn": [5, 5, 5],
         "Tau": 300
+      },
+      "random_walk": {
+        "comment": "Prn is the sigma value of the Random Walk power spectral density, in [ppm/sqrt(s)].",
+        "Prn": [5, 5, 5]
       },
       "random_constant": {
         "comment": "std is the standard deviation of the discrete random constant process, in [ppm]",
@@ -123,11 +143,15 @@
 
     "bias_drift": {
       "select_model": "gauss_markov",
-      "info": "In field 'select_model' select 'gauss_markov'",
+      "info": "In field 'select_model' select 'gauss_markov', 'random_walk'",
       "gauss_markov": {
-        "comment": "Prn is the sigma value of the Gauss Markov (GM) power spectral density, in [deg/hr/sqrt(s)]. Tau is the GM time constant in [sec], if null, then resorts to Random Walk",
+        "comment": "Prn is the sigma value of the Gauss Markov (GM) power spectral density, in [deg/hr/sqrt(s)]. Tau is the GM time constant in [sec]",
         "Prn": [0.02, 0.02, 0.02],
         "Tau": 3000
+      },
+      "random_walk": {
+        "comment": "Prn is the sigma value of the Random Walk power spectral density, in [deg/hr/sqrt(s)].",
+        "Prn": [0.02, 0.02, 0.02]
       }
     },
     "observation_noise": {

@@ -10,10 +10,13 @@
           "properties": {
             "select_model": {
               "type": "string",
-              "enum": ["gauss_markov", "random_constant", "constant"]
+              "enum": ["gauss_markov", "random_walk", "random_constant", "constant"]
             },
             "gauss_markov": {
               "$ref": "#/definitions/gauss_markov_model"
+            },
+            "random_walk": {
+              "$ref": "#/definitions/random_walk_model"
             },
             "random_constant": {
               "$ref": "#/definitions/random_constant_model"
@@ -22,17 +25,20 @@
               "$ref": "#/definitions/constant_model"
             }
           },
-          "required": ["select_model", "gauss_markov", "random_constant", "constant"]
+          "required": ["select_model", "gauss_markov", "random_walk", "random_constant", "constant"]
         },
         "scale_factor": {
           "type": "object",
           "properties": {
             "select_model": {
               "type": "string",
-              "enum": ["gauss_markov", "random_constant", "constant"]
+              "enum": ["gauss_markov", "random_walk", "random_constant", "constant"]
             },
             "gauss_markov": {
               "$ref": "#/definitions/gauss_markov_model"
+            },
+            "random_walk": {
+              "$ref": "#/definitions/random_walk_model"
             },
             "random_constant": {
               "$ref": "#/definitions/random_constant_model"
@@ -41,7 +47,7 @@
               "$ref": "#/definitions/constant_model"
             }
           },
-          "required": ["select_model", "gauss_markov", "random_constant", "constant"]
+          "required": ["select_model", "gauss_markov", "random_walk", "random_constant", "constant"]
         },
         "bias_constant": {
           "type": "object",
@@ -64,13 +70,16 @@
           "properties": {
             "select_model": {
               "type": "string",
-              "enum": ["gauss_markov"]
+              "enum": ["gauss_markov", "random_walk"]
             },
             "gauss_markov": {
               "$ref": "#/definitions/gauss_markov_model"
+            },
+            "random_walk": {
+              "$ref": "#/definitions/random_walk_model"
             }
           },
-          "required": ["select_model", "gauss_markov"]
+          "required": ["select_model", "gauss_markov", "random_walk"]
         },
         "observation_noise": {
           "type": "object",
@@ -97,10 +106,13 @@
           "properties": {
             "select_model": {
               "type": "string",
-              "enum": ["gauss_markov", "random_constant", "constant"]
+              "enum": ["gauss_markov", "random_walk", "random_constant", "constant"]
             },
             "gauss_markov": {
               "$ref": "#/definitions/gauss_markov_model"
+            },
+            "random_walk": {
+              "$ref": "#/definitions/random_walk_model"
             },
             "random_constant": {
               "$ref": "#/definitions/random_constant_model"
@@ -109,17 +121,20 @@
               "$ref": "#/definitions/constant_model"
             }
           },
-          "required": ["select_model", "gauss_markov", "random_constant", "constant"]
+          "required": ["select_model", "gauss_markov", "random_walk", "random_constant", "constant"]
         },
         "scale_factor": {
           "type": "object",
           "properties": {
             "select_model": {
               "type": "string",
-              "enum": ["gauss_markov", "random_constant", "constant"]
+              "enum": ["gauss_markov", "random_walk", "random_constant", "constant"]
             },
             "gauss_markov": {
               "$ref": "#/definitions/gauss_markov_model"
+            },
+            "random_walk": {
+              "$ref": "#/definitions/random_walk_model"
             },
             "random_constant": {
               "$ref": "#/definitions/random_constant_model"
@@ -128,7 +143,7 @@
               "$ref": "#/definitions/constant_model"
             }
           },
-          "required": ["select_model", "gauss_markov", "random_constant", "constant"]
+          "required": ["select_model", "gauss_markov", "random_walk", "random_constant", "constant"]
         },
         "bias_constant": {
           "type": "object",
@@ -151,13 +166,16 @@
           "properties": {
             "select_model": {
               "type": "string",
-              "enum": ["gauss_markov"]
+              "enum": ["gauss_markov", "random_walk"]
             },
             "gauss_markov": {
               "$ref": "#/definitions/gauss_markov_model"
+            },
+            "random_walk": {
+              "$ref": "#/definitions/random_walk_model"
             }
           },
-          "required": ["select_model", "gauss_markov"]
+          "required": ["select_model", "gauss_markov", "random_walk"]
         },
         "observation_noise": {
           "type": "object",
@@ -195,6 +213,19 @@
         }
       },
       "required": ["Prn", "Tau"]
+    },
+    "random_walk_model": {
+      "type": "object",
+      "properties": {
+        "Prn": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      },
+      "required": ["Prn"]
     },
     "random_constant_model": {
       "type": "object",
