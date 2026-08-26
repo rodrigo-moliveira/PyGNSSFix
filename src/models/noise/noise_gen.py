@@ -1,14 +1,73 @@
+""" This module contains the stochastic process classes """
 import numpy as np
 
+__all__ = ["RandomWalkProcess", "GaussMarkovProcess", "WhiteNoiseProcess", "RandomConstantProcess", "ConstantProcess"]
+
 class NoiseProcess:
+    """
+    Base class for stochastic noise processes.
+
+    This class defines the common interface for noise-process
+    generators. Subclasses should implement the :meth:`compute`
+    method to generate a realization of the corresponding stochastic
+    process.
+
+
+    Attributes:
+        _name (str): Name of the stochastic process.
+        _axis (int): Number of process axes.
+
+    Notes
+    -----
+    The expected output of a noise process is a NumPy array with shape
+
+        (n, axis)
+
+    where ``n`` is the number of discrete-time samples and ``axis`` is
+    the number of process dimensions.
+
+    Subclasses can extend the `compute` method with additional
+    parameters required by the specific stochastic process.
+    """
     def __init__(self, axis=1):
+        """
+        Initialize a noise process.
+
+        Args:
+            axis (int, optional): Number of independent axes (or dimensions) of the process.
+                The generated output has one column per axis.
+        """
         self._name = "General Process"
         self._axis = axis
 
     def __str__(self):
+        """
+        Return the name of the stochastic process.
+
+        Returns:
+            str: Name of the stochastic process.
+        """
         return self._name
 
     def compute(self, n, *args):
+        """
+        Generate a realization of the stochastic process.
+
+        This base implementation returns an array of zeros. Subclasses
+        should override this method to implement the corresponding
+        stochastic process.
+
+        Args:
+            n (int): Number of discrete-time samples to generate.
+            *args (list): Additional parameters required by a specific process.
+
+        Returns:
+            numpy.ndarray: Array of shape ``(n, axis)`` containing the generated process realization.
+
+        Notes
+        -----
+        The base implementation represents a deterministic zero process.
+        """
         return np.zeros((n, self._axis))
 
 
@@ -46,18 +105,6 @@ class RandomWalkProcess(NoiseProcess):
     The random increments are independent between epochs and between
     axes.
 
-    Parameters
-    ----------
-    var : float or array-like of float, optional
-        Continuous-time power spectral density of the random walk.
-        One value is specified per axis. The units depend on the units
-        of the state; for a state in meters, the units are m^2/s.
-        Despite the name ``var``, this quantity is a continuous-time
-        spectral density rather than a discrete-time variance.
-    init : array-like of float, optional
-        Initial value of the random walk for each axis. If None, all
-        axes are initialized to zero.
-
     Notes
     -----
     The process variance grows linearly with time. For a constant
@@ -69,21 +116,36 @@ class RandomWalkProcess(NoiseProcess):
 
         Var[x(t)] = q * t.
 
-    Hence the standard deviation of the random walk grows as
+    Hence, the standard deviation of the random walk grows as
 
         std[x(t)] = sqrt(q * t).
     """
 
     def __init__(self, psd=1, init=None):
+        """
+        Constructor of Continuous-time random walk stochastic process.
+
+        Args:
+            psd (float or list): Continuous-time power spectral density of the random walk.
+                One value is specified per axis. The units depend on the units
+                of the state; for a state in [U], the units are [U^2/s].
+                Therefore, the name ``psd`` stands for a continuous-time
+                spectral density rather than a discrete-time variance.
+
+            init (float or list): Initial value of the random walk for each axis. If None, all
+                axes are initialized to zero. Units are [U]
+        """
         # psd is continuous time power spectral density
         if isinstance(psd, float) or isinstance(psd, int):
             psd = [float(psd)]
+        if isinstance(init, float) or isinstance(init, int):
+            init = [float(init)]
 
         axis = len(psd)
         super().__init__(axis=axis)
 
         self._name = "Random Walk Process"
-        self._psd = psd
+        self._psd = np.asarray(psd, dtype=float)
 
         if init is not None:
             if len(init) != axis:
@@ -93,27 +155,21 @@ class RandomWalkProcess(NoiseProcess):
         else:
             self._init = np.zeros(axis)
 
-    def compute(self, n, sampling_time=1, *args):
+    def compute(self, n, sampling_time=1.0, *args):
         """
         Generate a discrete-time realization of the random walk.
 
-        Parameters
-        ----------
-        n : int
-            Number of discrete time samples to generate.
-        sampling_time : float, optional
-            Sampling interval between consecutive samples, in seconds.
-            The default is 1 second.
+        Args:
+            n (int): Number of discrete time samples to generate.
+            sampling_time (float): Sampling interval between consecutive samples, in seconds.
+                The default is 1 second.
 
-        Returns
-        -------
-        numpy.ndarray
-            Array of shape (n, axis) containing the random-walk
-            realization. ``walk[k, i]`` is the value of axis ``i`` at
-            discrete epoch ``k``.
+        Returns:
+            numpy.ndarray: Array of shape (n, axis) containing the random-walk
+                realization. ``walk[k, i]`` is the value of axis ``i`` at
+                discrete epoch ``k``.
 
         Notes
-        -----
         At every epoch, an independent Gaussian increment is generated:
 
             n_k ~ N(0, q * sampling_time)
@@ -175,17 +231,6 @@ class WhiteNoiseProcess(NoiseProcess):
     Each generated sample is independent of all other samples and of
     the samples generated on other axes.
 
-    Parameters
-    ----------
-    psd : float or array-like of float, optional
-        Continuous-time power spectral density of the white noise.
-        One value is specified per axis.
-
-        If the process units are U, the PSD has units U^2 / s.
-
-        For example, if the process represents a sensor error in
-        meters, ``psd`` has units m^2/s.
-
     Notes
     -----
     The discrete-time samples are distributed as
@@ -209,6 +254,13 @@ class WhiteNoiseProcess(NoiseProcess):
     """
 
     def __init__(self, psd=1):
+        """
+        Constructor of Continuous-time white Gaussian noise process.
+
+        Args:
+            psd (float or list): Continuous-time power spectral density of the white noise.
+                One value is specified per axis. If the process units are [U], the PSD has units U^2 * s.
+        """
         if isinstance(psd, (float, int)):
             psd = [float(psd)]
 
@@ -219,32 +271,27 @@ class WhiteNoiseProcess(NoiseProcess):
 
         self._name = "White Noise Process"
 
-    def compute(self, n, sampling_time=1, *args):
+    def compute(self, n, sampling_time=1.0, *args):
         """
         Generate a discrete-time realization of the white noise.
 
-        Parameters
-        ----------
-        n : int
-            Number of discrete time samples to generate.
+        Args:
+            n (int): Number of discrete time samples to generate.
 
-        sampling_time : float, optional
-            Sampling interval between consecutive samples, in seconds.
-            Default is 1 second.
+            sampling_time (float): Sampling interval between consecutive samples, in seconds.
+                Default is 1 second.
 
-        Returns
-        -------
-        numpy.ndarray
-            Array of shape ``(n, axis)`` containing independent
-            zero-mean Gaussian white-noise samples.
+        Returns:
+            numpy.ndarray : Array of shape ``(n, axis)`` containing independent
+                zero-mean Gaussian white-noise samples.
 
         Notes
-        -----
+
         For each axis ``i`` and epoch ``k``:
 
             x[k, i] ~ N(0, psd[i] / sampling_time)
 
-        Therefore the standard deviation used to generate each sample
+        Therefore, the standard deviation used to generate each sample
         is
 
             sigma[i] = sqrt(psd[i] / sampling_time).
@@ -259,43 +306,99 @@ class WhiteNoiseProcess(NoiseProcess):
 
 
 class RandomConstantProcess(NoiseProcess):
+    """
+    Generate a random constant process.
+
+    A single random value is generated independently for each axis
+    according to a zero-mean Gaussian distribution. The generated value
+    is then kept constant for all samples.
+
+    Args:
+        std (float or int or list): Standard deviation of the Gaussian
+            distribution used to generate the constant value for each
+            axis. Units are [U].
+
+    """
 
     def __init__(self, std=1):
         """
+        Initialize a random constant process.
 
         Args:
-            std (float or int or list):
+            std (float or int or list): Standard deviation of the
+                Gaussian distribution for each axis. Units are [U].
         """
-        # std is discrete time standard deviation
-        if isinstance(std, float) or isinstance(std, int):
+        # std is the discrete-time standard deviation
+        if isinstance(std, (float, int)):
             std = [float(std)]
 
         axis = len(std)
         super().__init__(axis=axis)
+
         self._name = "Random Constant Process"
         self._std = std
 
     def compute(self, n, *args):
+        """
+        Generate a realization of the random constant process.
+
+        A single zero-mean Gaussian random value is generated for each
+        axis and repeated for all ``n`` samples.
+
+        Args:
+            n (int): Number of discrete-time samples to generate.
+            *args: Additional arguments, unused by this process.
+
+        Returns:
+            numpy.ndarray: Array of shape ``(n, axis)`` containing the
+                random constant process. Each column contains the same
+                randomly generated value for all samples.
+        """
         std = np.random.normal(scale=self._std)
         return np.ones((n, self._axis)) * std
 
 class ConstantProcess(NoiseProcess):
+    """
+    Generate a deterministic constant process.
+
+    The specified value for each axis is repeated for all samples.
+
+    Args:
+        val (float or int or list): Constant value for each axis.
+            Units are [U].
+
+    """
+
     def __init__(self, val=1):
         """
+        Initialize a constant process.
 
         Args:
-            val (float or int or list):
+            val (float or int or list): Constant value for each axis.
+                Units are [U].
         """
-        # std is discrete time standard deviation
-        if isinstance(val, float) or isinstance(val, int):
+        if isinstance(val, (float, int)):
             val = [float(val)]
 
         axis = len(val)
         super().__init__(axis=axis)
+
         self._name = "Constant Process"
         self._val = val
 
     def compute(self, n, *args):
+        """
+        Generate a realization of the constant process.
+
+        Args:
+            n (int): Number of discrete-time samples to generate.
+            *args: Additional arguments, unused by this process.
+
+        Returns:
+            numpy.ndarray: Array of shape ``(n, axis)`` containing the
+                constant process. Each column contains the corresponding
+                value specified in ``val`` for all samples.
+        """
         return np.ones((n, self._axis)) * self._val
 
 
@@ -340,23 +443,6 @@ class GaussMarkovProcess(NoiseProcess):
         sigma_x^2 = psd / (2 * beta)
                   = psd * correlation_time / 2.
 
-    Parameters
-    ----------
-    dim : int, optional
-        Number of samples to generate.
-    psd : float or array-like of float, optional
-        Continuous-time power spectral density of the driving white
-        noise. One value is specified per axis. The units are
-        state_unit^2 / s.
-    correlation_time : float or array-like of float, optional
-        Correlation time of the process in seconds. The correlation time
-        determines how quickly the process loses correlation.
-    axis : int, optional
-        Number of independent process axes.
-    initial : array-like of float, optional
-        Initial value of the process for each axis. If None, all axes
-        are initialized to zero.
-
     Notes
     -----
     The autocorrelation of the stationary process decays exponentially:
@@ -379,14 +465,30 @@ class GaussMarkovProcess(NoiseProcess):
     before the process reaches its stationary distribution.
     """
 
-    def __init__(self,psd=1,correlation_time=1,init=None,
-    ):
-        self._name = "Gauss-Markov Process"
+    def __init__(self,psd=1,correlation_time=1,init=None):
+        """
+        Constructor of First-order Gauss-Markov stochastic process.
+
+        Args:
+            psd (float or list): Continuous-time power spectral density of the driving white
+                noise. One value is specified per axis.
+                If the state units are [U], psd has units [U^2/s]
+
+            correlation_time (float): Correlation time of the process in seconds. The correlation time
+                determines how quickly the process loses correlation.
+
+            init (float or list): Initial value of the process for each axis. If None, all axes
+                are initialized to zero.
+                Units are in [U]
+        """
         if isinstance(psd, (float, int)):
             psd = [float(psd)]
+        if isinstance(init, float) or isinstance(init, int):
+            init = [float(init)]
         axis = len(psd)
 
         super().__init__(axis=axis)
+        self._name = "Gauss-Markov Process"
 
         self._psd = np.asarray(psd, dtype=float)
         self._correlation_time = correlation_time
@@ -402,26 +504,20 @@ class GaussMarkovProcess(NoiseProcess):
         else:
             self._init = np.zeros(axis)
 
-    def compute(self, n, sampling_time=1, *args):
+    def compute(self, n, sampling_time=1.0, *args):
         """
         Generate a discrete-time realization of the Gauss-Markov process.
 
-        Parameters
-        ----------
-        n : int
-            Number of discrete time samples to generate.
+        Args:
+            n (int): Number of discrete time samples to generate.
 
-        sampling_time : float
-            Sampling interval between consecutive samples, in seconds.
+            sampling_time (float): Sampling interval between consecutive samples, in seconds.
 
-        Returns
-        -------
-        numpy.ndarray
-            Array of shape ``(dim, axis)`` containing the generated
-            Gauss-Markov process.
+        Returns:
+            numpy.ndarray : Array of shape ``(n, axis)`` containing the generated Gauss-Markov process.
 
         Notes
-        -----
+
         For each axis, the discrete-time process is generated according
         to
 

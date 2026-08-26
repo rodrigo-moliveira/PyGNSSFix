@@ -1,3 +1,4 @@
+""" Module with utility functions to perform unit conversions """
 import numpy as np
 import pandas as pd
 
@@ -7,19 +8,16 @@ from src.constants import DEG2RAD, EARTH_G0
 def convert_unit(data, src_unit, out_unit):
     """
     Unit conversion. Notice not to change values in data
+
     Args:
         data: convert data units from src_unit to dst_unit. Data should be a scalar,
             a numpy array of size(n,) or (n,m). n is data length, m is data dimension.
         src_unit: a list of unit of the input data.
         out_unit: a list of unit we want to convert the data to (output).
+
     Returns:
         x: data after unit conversion (from src_unit to out_unit).
     """
-
-    # if isinstance(src_unit, str):
-    #     src_unit = [src_unit]
-    # if isinstance(out_unit, str):
-    #     out_unit = [out_unit]
 
     scale = unit_conversion_scale(src_unit, out_unit)
 
@@ -84,10 +82,12 @@ def unit_conversion_scale(src_unit, out_unit):
 def convert_unit_ndarray_scalar(x, scale):
     """
     Unit conversion of numpy array or a scalar.
+
     Args:
         x: convert x units from src_unit to out_unit. x should be a scalar,
             a numpy array of size(m,) or (n,m). n is x length (in time), m is x dimension.
         scale: 1D numpy array of unit convertion scale. x = x * scale
+
     Returns:
         x: x after unit conversion.
     """
