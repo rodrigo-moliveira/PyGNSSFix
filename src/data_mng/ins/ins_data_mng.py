@@ -35,9 +35,6 @@ class InsDataManager(Container):
         "ref_att",
         "ref_gyro",
         "ref_accel",
-        "pos",
-        "vel",
-        "att",
         "gyro",
         "accel",
         "gps",
@@ -125,6 +122,7 @@ class InsDataManager(Container):
 
         # Sensors
         self.imu_sensor = IMU()
+        self.gps = None
 
     def __str__(self):
         return f'{type(self).__name__}( DataManager for INS algorithms )'
@@ -255,7 +253,7 @@ class InsDataManager(Container):
 
             # TODO: read IMU / GPS sensors
             imu_path = config_dict.get("inputs", "imu_sensor_file")
-            read_imu_file(f"{WORKSPACE_PATH}/{imu_path}", self.imu_sensor)
+            read_imu_file(f"{WORKSPACE_PATH}/{imu_path}", self.imu_sensor, log=log)
 
         else:
             raise IOError(f"Unknown Model {ins_alg}")
@@ -281,18 +279,17 @@ class InsDataManager(Container):
             with open(f"{inputs_dir}\\InputAttitude.txt", "w", newline="") as file:
                 file.write(self.ref_att.to_file())
 
+    def save_data(self, directory):
+        log = get_logger(IO_LOG)
 
-    @staticmethod
-    def check_input_list(folder_name: str, input_list: list, log, warning=False):
-        if len(input_list) == 0:
-            if warning:
-                log.warning(f"Optional input files {folder_name} not provided. "
-                            f"Please check if they are necessary for some of the selected models.")
-            else:
-                raise IOError(f"Mandatory input files {folder_name} not provided. Please check the configurations.")
-        if len(input_list) == 1 and not input_list[0]:
-            if warning:
-                log.warning(f"Optional input files {folder_name} not provided. "
-                            f"Please check if they are necessary for some of the selected models.")
-            else:
-                raise IOError(f"Mandatory input files {folder_name} not provided. Please check the configurations.")
+        for attribute in self.__slots__:
+            data = getattr(self, attribute, None)
+
+            if isinstance(data, CSVData):
+                if not data.is_empty():
+                    if "ref" in data.name:
+                        # Skip (input) reference data (these should go to trace files)
+                        continue
+                    log.info(f"Saving data {data.name} to {directory}")
+                    with open(f"{directory}\\{data.name}.txt", "w", newline="") as file:
+                        file.write(data.to_file())

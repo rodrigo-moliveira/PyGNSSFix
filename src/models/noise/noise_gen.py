@@ -70,6 +70,10 @@ class NoiseProcess:
         """
         return np.zeros((n, self._axis))
 
+    @property
+    def axis(self):
+        return self._axis
+
 
 class RandomWalkProcess(NoiseProcess):
     """
@@ -126,7 +130,7 @@ class RandomWalkProcess(NoiseProcess):
         Constructor of Continuous-time random walk stochastic process.
 
         Args:
-            psd (float or list): Continuous-time power spectral density of the random walk.
+            psd (float or list or np.ndarray): Continuous-time power spectral density of the random walk.
                 One value is specified per axis. The units depend on the units
                 of the state; for a state in [U], the units are [U^2/s].
                 Therefore, the name ``psd`` stands for a continuous-time
@@ -258,7 +262,7 @@ class WhiteNoiseProcess(NoiseProcess):
         Constructor of Continuous-time white Gaussian noise process.
 
         Args:
-            psd (float or list): Continuous-time power spectral density of the white noise.
+            psd (float or list or np.ndarray): Continuous-time power spectral density of the white noise.
                 One value is specified per axis. If the process units are [U], the PSD has units U^2 * s.
         """
         if isinstance(psd, (float, int)):
@@ -314,29 +318,29 @@ class RandomConstantProcess(NoiseProcess):
     is then kept constant for all samples.
 
     Args:
-        std (float or int or list): Standard deviation of the Gaussian
+        var (float or int or list): Variance of the Gaussian
             distribution used to generate the constant value for each
-            axis. Units are [U].
+            axis. Units are [U^2].
 
     """
 
-    def __init__(self, std=1):
+    def __init__(self, var=1):
         """
         Initialize a random constant process.
 
         Args:
-            std (float or int or list): Standard deviation of the
-                Gaussian distribution for each axis. Units are [U].
+            var (float or int or list or np.ndarray): Variance of the
+                Gaussian distribution for each axis. Units are [U^2].
         """
-        # std is the discrete-time standard deviation
-        if isinstance(std, (float, int)):
-            std = [float(std)]
+        # var is the discrete-time variance
+        if isinstance(var, (float, int)):
+            var = [float(var)]
 
-        axis = len(std)
+        axis = len(var)
         super().__init__(axis=axis)
 
         self._name = "Random Constant Process"
-        self._std = std
+        self._var = var
 
     def compute(self, n, *args):
         """
@@ -354,7 +358,7 @@ class RandomConstantProcess(NoiseProcess):
                 random constant process. Each column contains the same
                 randomly generated value for all samples.
         """
-        std = np.random.normal(scale=self._std)
+        std = np.random.normal(scale=np.sqrt(self._var))
         return np.ones((n, self._axis)) * std
 
 class ConstantProcess(NoiseProcess):
@@ -374,7 +378,7 @@ class ConstantProcess(NoiseProcess):
         Initialize a constant process.
 
         Args:
-            val (float or int or list): Constant value for each axis.
+            val (float or int or list or np.ndarray): Constant value for each axis.
                 Units are [U].
         """
         if isinstance(val, (float, int)):
@@ -470,7 +474,7 @@ class GaussMarkovProcess(NoiseProcess):
         Constructor of First-order Gauss-Markov stochastic process.
 
         Args:
-            psd (float or list): Continuous-time power spectral density of the driving white
+            psd (float or list or np.ndarray): Continuous-time power spectral density of the driving white
                 noise. One value is specified per axis.
                 If the state units are [U], psd has units [U^2/s]
 

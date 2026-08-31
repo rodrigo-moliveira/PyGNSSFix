@@ -71,14 +71,23 @@ class InsAlgorithmManager:
             exit(-1)
 
         # Output Writer Module
-        #try:
-        #    self.main_log.info(f"Starting Output Writer Module...")
-        #    self.data_manager.save_data(f"{self.data_dir}\\output")
-        #except Exception as e:
-        #    self.main_log.error(f"Stopping execution of program due to error in execution of Output Writer Module: "
-        #                        f"{str(e)}")
-        #    print(traceback.format_exc())
-        #    exit(-1)
+        try:
+            self.main_log.info(f"Starting Output Writer Module...")
+            self.data_manager.save_data(f"{self.data_dir}\\output")
+        except Exception as e:
+            self.main_log.error(f"Stopping execution of program due to error in execution of Output Writer Module: "
+                                f"{str(e)}")
+            print(traceback.format_exc())
+            exit(-1)
+
+        # Quality Manager Module
+        try:
+            self.main_log.info(f"Starting Quality Manager Module...")
+        except Exception as e:
+            self.main_log.error(f"Stopping execution of program due to error in execution of Quality Manager Module: "
+                                f"{str(e)}")
+            print(traceback.format_exc())
+            exit(-1)
 
         self.main_log.info(f"Successfully executed INS algorithm {ins_alg}")
 

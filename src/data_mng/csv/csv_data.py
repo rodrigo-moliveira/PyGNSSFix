@@ -112,11 +112,41 @@ class CSVData:
         return time_matrix
 
     def to_file(self):
-        """TODO: add docstring"""
-        return self.data.to_csv(path_or_buf=None, index=False).rstrip("\r\n")
+        """
+        Exports the internal DataFrame to a CSV-formatted string.
+
+        Dynamically generates a header list that preserves the original time column names
+        and appends the corresponding units in parentheses to the data column names.
+
+        Returns:
+            str: A CSV-formatted string representation of the data, stripped of trailing newlines.
+        """
+        header_list = list()
+        for icol in self.time_cols:
+            header_list.append(self.data.columns[icol])
+        for iunit, icol in enumerate(self.data_cols):
+            unit = self.units[iunit] if self.units else ""
+            header_list.append(f"{self.data.columns[icol]}({unit})")
+        return self.data.to_csv(path_or_buf=None, index=False, header=header_list).rstrip("\r\n")
 
     def init_data(self, time_array:np.ndarray, data_array:np.ndarray):
-        """TODO: add docstring"""
+        """
+        Initializes and validates the internal data structure from NumPy arrays.
+
+        Horizontally stacks the time and data arrays, verifies that the number of data
+        columns matches the expected dimension, and constructs a pandas DataFrame
+        with appropriate column headers.
+
+        Args:
+            time_array (np.ndarray): 1D or 2D array of timestamps. Must be horizontally
+                                     stackable with `data_array`.
+            data_array (np.ndarray): 1D or 2D array of measurement data. The number of
+                                     columns must match the expected dimension.
+
+        Raises:
+            ValueError: If the number of data columns does not match the expected
+                        dimension defined in `self._dim`.
+        """
         dataframe = np.hstack((time_array, data_array))
 
         n_epochs, n_dim = dataframe.shape  # (n,m) shape, where n is the number of epochs and m is the row dimension

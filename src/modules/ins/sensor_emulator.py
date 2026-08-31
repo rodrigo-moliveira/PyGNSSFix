@@ -1,6 +1,9 @@
 import numpy as np
 from src.models.frames import mechanization, attitude, frames
 from src.utils.finite_diff import finite_difference
+from src.utils.math_utils import rot1, rot2, rot3
+
+
 # TODO: update docstrings
 
 class SensorEmulator:
@@ -19,17 +22,20 @@ class SensorEmulator:
         time = np.array(ref_pos_lld.to_time_array())
 
         true_gyro, true_accel = self._compute_true_imu_readouts(time, ref_pos_lld, ref_vel_eb_n, ref_euler_att)
-        sampling_time = float(time.iloc[1,0]) - float(time.iloc[0,0])
+
 
         # compute error readouts
-        self._corrupt_noise_imu(true_gyro, true_accel, sampling_time)
-        self._corrupt_noise_gps(ref_pos_lld, ref_vel_eb_n)
+        self._corrupt_noise_imu(true_gyro, true_accel, time)
+        # self._corrupt_noise_gps(ref_pos_lld, ref_vel_eb_n)
 
-    def _corrupt_noise_imu(self, true_gyro, true_accel, sampling_time):
-        for sensor, true_read in zip(["gyroscope", "accelerometer"], [true_gyro, true_accel]):
-            readout = self._add_errors_imu(sensor, true_read, sampling_time)
+    def _corrupt_noise_imu(self, true_gyro, true_accel, time):
+        sampling_time = time[1, 0] - time[0, 0]
 
-            self.results.append(readout)
+        readout_gyro = self._add_errors_imu("gyroscope", true_gyro, sampling_time)
+        readout_accel = self._add_errors_imu("accelerometer", true_accel, sampling_time)
+
+        self.data_manager.gyro.init_data(time, readout_gyro)
+        self.data_manager.accel.init_data(time, readout_accel)
 
     def _add_misalignment(self, readouts, misalignment):
         for i in range(len(readouts)):
@@ -37,13 +43,14 @@ class SensorEmulator:
             readouts[i, :] = M @ readouts[i, :]
 
     def _add_errors_imu(self, sensor, true_read, sampling_time):
-        user_models = self.imu[sensor]
+        user_models = self.data_manager.imu_sensor[sensor]
+        n_epochs = len(true_read)
 
-        misalignment = user_models["misalignment"].get_stochastic_process(len(true_read)).compute(sampling_time)
-        scale_factor = user_models["scale_factor"].get_stochastic_process(len(true_read)).compute(sampling_time)
-        bias_constant = user_models["bias_constant"].get_stochastic_process(len(true_read)).compute(sampling_time)
-        bias_drift = user_models["bias_drift"].get_stochastic_process(len(true_read)).compute(sampling_time)
-        noise = user_models["observation_noise"].get_stochastic_process(len(true_read)).compute(sampling_time)
+        misalignment = user_models["misalignment"].gen(n_epochs, sampling_time)
+        scale_factor = user_models["scale_factor"].gen(n_epochs, sampling_time)
+        bias_constant = user_models["bias_constant"].gen(n_epochs, sampling_time)
+        bias_drift = user_models["bias_drift"].gen(n_epochs, sampling_time)
+        noise = user_models["observation_noise"].gen(n_epochs, sampling_time)
 
         # attach misalignment contribution
         self._add_misalignment(true_read, misalignment)

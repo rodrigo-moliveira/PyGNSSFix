@@ -182,15 +182,16 @@ class NoiseModel:
         """
         self.name = state_str
         self.process_enum = EnumNoiseProcess.init_model(process_str)
+        process_noise = np.asarray(process_noise, dtype=float)
 
         if self.process_enum == EnumNoiseProcess.WHITE_NOISE:
-            self.process_gen = WhiteNoiseProcess(psd=process_noise)
+            self.process_gen = WhiteNoiseProcess(psd=process_noise**2)
         elif self.process_enum == EnumNoiseProcess.RANDOM_CONSTANT:
-            self.process_gen = RandomConstantProcess(std=process_noise)
+            self.process_gen = RandomConstantProcess(var=process_noise**2)
         elif self.process_enum == EnumNoiseProcess.RANDOM_WALK:
-            self.process_gen = RandomWalkProcess(psd=process_noise, init=init)
+            self.process_gen = RandomWalkProcess(psd=process_noise**2, init=init)
         elif self.process_enum == EnumNoiseProcess.GAUSS_MARKOV:
-            self.process_gen = GaussMarkovProcess(psd=process_noise,correlation_time=correlation_time, init=init)
+            self.process_gen = GaussMarkovProcess(psd=process_noise**2,correlation_time=correlation_time, init=init)
         elif self.process_enum == EnumNoiseProcess.CONSTANT:
             self.process_gen = ConstantProcess(val=process_noise)
         else:
@@ -226,7 +227,7 @@ class NoiseModel:
                 ``(n, axis)``.
 
         """
-        return self.process_gen.compute(n, sampling_time=sampling_time)
+        return self.process_gen.compute(n, sampling_time)
 
     def get_stm_entry(self, time_step: float):
         """

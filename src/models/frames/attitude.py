@@ -1,4 +1,5 @@
 """ Module with useful attitude functions and conversions """
+#TODO: update docstrings
 
 import numpy as np
 
