@@ -793,3 +793,29 @@ def plot_skyplot(azel: CSVData):
     ax.legend(loc='center left', bbox_to_anchor=(1.25, 0.5))
 
     return ax
+
+def plot_3D_trajectory(data_points, **kwargs):
+    """ TODO: update"""
+    # try to fetch axis to insert the plot. If no ax is provided, create a new one
+    ax = kwargs.get("ax", None)
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.add_subplot(projection='3d')
+
+    ax.plot([x[0] for x in data_points], [x[1] for x in data_points], [x[2] for x in data_points],
+            label=kwargs.get("label", ""))
+    if "true_position" in kwargs:
+        true = kwargs.get("true_position")
+        if true is not None:
+            ax.scatter(true[0], true[1], true[2], marker='*', label="True State")
+
+    #ax.ticklabel_format(useOffset=False)
+
+    ax.set_xlabel(kwargs.get("x_label", ""))
+    ax.set_ylabel(kwargs.get("y_label", ""))
+    ax.set_zlabel(kwargs.get("z_label", ""))
+    ax.set_title(kwargs.get("title", ""))
+
+    if "label" in kwargs:
+        ax.legend()
+    return ax

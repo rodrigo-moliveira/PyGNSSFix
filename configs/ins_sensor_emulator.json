@@ -41,5 +41,18 @@
   "output": {
       "_comment": "select output folder (absolute path) to store the run. Set 'default' to store in default path runs/",
       "output_path": "default"
-   }
+   },
+
+  "performance_evaluation": {
+
+    "run_error_computation": true,
+    "run_residual_analysis": true,
+    "run_plot_manager": true,
+
+    "plot_configs":
+    {
+      "show_plots": true,
+      "save_plots": true
+    }
+  }
 }

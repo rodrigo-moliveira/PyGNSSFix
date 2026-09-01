@@ -365,12 +365,12 @@ def get_earth_radii(lat):
 
 def grav_acceleration(r_eb_e, mode="earth"):
     """
+    TODO: to be updated
     compute acceleration due to zonal harmonics.
     The harmonics coded are the low-order ones (the equations are hard-coded) and
     the general harmonic series is not applied
 
     Args:
-        ----------
         r_eb_e : numpy array of (3,) or (3,1)
             position vector in expressed e-frame coordinates
         mode : str
@@ -409,3 +409,35 @@ def grav_acceleration(r_eb_e, mode="earth"):
     a[2] = a[2] + aux * (3 - 5 * z ** 2 / r_2) * z
 
     return a
+
+def lld2ecef(data: np.ndarray) -> np.ndarray:
+    # TODO: add docstrings
+    data = np.asarray(data)
+
+    if data.ndim == 1:
+        if data.shape[0] != 3:
+            raise ValueError(
+                f"Expected a vector with dimension 3, got shape {data.shape}"
+            )
+        was_single = True
+        data = data[None, :]       # (3,) -> (1, 3)
+
+    elif data.ndim == 2:
+        if data.shape[1] != 3:
+            raise ValueError(
+                f"Expected each vector to have dimension 3, got shape {data.shape}"
+            )
+        was_single = False
+
+    else:
+        raise ValueError(
+            f"Expected input with shape (3,) or (N, 3), got {data.shape}"
+        )
+
+    ecef = np.zeros(data.shape)
+
+    for t in range(data.shape[0]):
+        # altitude is positive downwards, hence the minus sign in h
+        ecef[t, :] = geodetic2cartesian(data[t, 0], data[t, 1], -data[t, 2])
+
+    return ecef[0] if was_single else ecef

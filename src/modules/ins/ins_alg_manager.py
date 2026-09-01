@@ -8,11 +8,7 @@ from src.errors import ConfigError
 from src.common_log import MAIN_LOG, get_logger
 from src.data_mng.ins.ins_data_mng import InsDataManager
 from src.modules.ins.sensor_emulator import SensorEmulator
-
-
-#from .solver.gnss_solver import GnssSolver
-#from .preprocessor import PreprocessorManager
-#from ...data_mng.gnss.gnss_data_mng import GnssDataManager
+from src.modules.performance.ins_performance_manager import INSPerformanceManager
 
 
 class InsAlgorithmManager:
@@ -83,6 +79,9 @@ class InsAlgorithmManager:
         # Quality Manager Module
         try:
             self.main_log.info(f"Starting Quality Manager Module...")
+            prf_mng = INSPerformanceManager(self.data_manager)
+            prf_mng.process(self.data_dir)
+            prf_mng.show_plots()
         except Exception as e:
             self.main_log.error(f"Stopping execution of program due to error in execution of Quality Manager Module: "
                                 f"{str(e)}")

@@ -1,11 +1,10 @@
-""" Module with the Performance Manager class definition """
+""" Module with the Performance Manager class definition for GNSS Algorithms """
 
 import os
 import datetime
 import numpy as np
 import pandas as pd
 
-import src.data_mng.csv.csv_data_mng
 from ...models.error_analysis import error
 from ...models.plots import plot_gnss
 from src.models.plots import planimetric
@@ -17,7 +16,7 @@ from src.utils.str_utils import replace_whitespace_with_underscore
 from src.io.config import config_dict
 
 
-class PerformanceManager:
+class GNSSPerformanceManager:
     """
     GNSS Performance manager class.
 

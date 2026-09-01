@@ -28,7 +28,7 @@ from src.common_log import set_logs, get_logger, POST_PROC_LOG
 from src.data_mng.csv.csv_data_mng import GnssRunStorageManager
 from src.io.config import config_dict
 from src.io.io_utils import clean_text_file, get_last_run_folder
-from src.modules.performance.performance_manager import PerformanceManager
+from src.modules.performance.gnss_performance_manager import GNSSPerformanceManager
 
 
 def main():
@@ -82,7 +82,7 @@ def main():
 
         # run Performance Evaluation Module
         log.info("Executing the GNSS Performance Evaluation Manager...")
-        eval_manager = PerformanceManager(data_manager, log)
+        eval_manager = GNSSPerformanceManager(data_manager, log)
         eval_manager.process(run_path)
 
         log.info("Exiting Post Processing Script!")

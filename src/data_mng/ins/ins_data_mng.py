@@ -88,8 +88,8 @@ class InsDataManager(Container):
         self.ref_gyro = CSVData(name='ref_gyro',
             description='true angular velocity in the body frame (w_ib_b)',
             units=['rad/s', 'rad/s', 'rad/s'],
-            legend=['ref_gyro_x', 'ref_gyro_y', 'ref_gyro_z'],
-            title="Gyroscope Readouts w_ib_b",
+            legend=['gyro_x', 'gyro_y', 'gyro_z'],
+            title="Gyroscope True w_ib_b",
             time_cols=[0],
             data_cols=[1, 2, 3])
 
@@ -97,8 +97,8 @@ class InsDataManager(Container):
         self.ref_accel = CSVData(name='ref_accel',
             description='true acceleration in the body frame (f_ib_b)',
             units=['m/s^2', 'm/s^2', 'm/s^2'],
-            legend=['ref_accel_x', 'ref_accel_y', 'ref_accel_z'],
-            title="Accelerometer Readouts f_ib_b",
+            legend=['accel_x', 'accel_y', 'accel_z'],
+            title="Accelerometer True f_ib_b",
             time_cols=[0],
             data_cols=[1, 2, 3])
 
