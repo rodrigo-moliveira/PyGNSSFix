@@ -17,7 +17,7 @@ def euler2dcm(euler):
     where (x,y,z) are (roll,pitch,yaw), s is short for sin and c is short for cos
 
     Args:
-        euler (numpy.ndarray or list): 3x1 Euler angles (roll, pitch, yaw), rad.
+        euler (numpy.ndarray): 3x1 Euler angles (roll, pitch, yaw), rad.
     Returns:
         numpy.ndarray: 3x3 DCM coordinate transformation matrix from n to b
     Raises:

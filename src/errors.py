@@ -132,6 +132,14 @@ class ITRFError(GNSSNavPyError):
         message = "ITRF Transformations Error -> " + message
         super().__init__(message)
 
+
+class FiniteDifferenceError(GNSSNavPyError):
+    """ Error in the Finite Difference computation. """
+
+    def __init__(self, message):
+        message = "Finite Difference Error -> " + message
+        super().__init__(message)
+
 class UnknownConversion(GNSSNavPyError):
     """ Error in the `unit_conversions` module. """
 
