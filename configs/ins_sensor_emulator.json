@@ -31,6 +31,7 @@
 
     "reference_attitude": {
       "file": "datasets/ins/ins_coil_move/reference/ref_att_euler.csv",
+      "_comment": "available forms: RPY (Roll, Pitch, Yaw) or QUAT (quaternion). The attitude rotation is from navigation to body frame (RPY_n^b or quat_n^b).",
       "form": "RPY",
       "units": ["deg","deg","deg"]
     },
