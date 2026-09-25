@@ -108,20 +108,20 @@ def quat_normalize(q):
     """
     Normalize a quaternion and enforce a non-negative scalar component.
 
-    The quaternion uses the scalar-first convention:
+    The quaternion uses the scalar-last convention:
 
-        q = [q0, q1, q2, q3]
+        q = [q1, q2, q3, q4]
 
     Since a quaternion and its negative represent the same rotation, the
-    sign is chosen such that q0 >= 0.
+    sign is chosen such that q4 >= 0.
 
     Args:
         q (numpy.ndarray):
-            4-element quaternion [q0, q1, q2, q3].
+            4-element quaternion [q1, q2, q3, q4].
 
     Returns:
         numpy.ndarray:
-            Unit-norm quaternion with q0 >= 0.
+            Unit-norm quaternion with q4 >= 0.
 
     Raises:
         AttributeError:
@@ -138,7 +138,7 @@ def quat_normalize(q):
 
     qn = q / q_norm
 
-    if qn[0] < 0.0:
+    if qn[3] < 0.0:
         qn = -qn
 
     return qn
@@ -147,13 +147,13 @@ def quat_conjugate(q):
     """
     Compute the conjugate of a quaternion.
 
-    The quaternion uses the scalar-first convention:
+    The quaternion uses the scalar-last convention:
 
-        q = [q0, q1, q2, q3]
+        q = [q1, q2, q3, q4]
 
     The conjugate is:
 
-        q* = [q0, -q1, -q2, -q3]
+        q* = [-q1, -q2, -q3, q4]
 
     For a unit quaternion, the conjugate is also the inverse rotation.
     Therefore, if `q` represents a transformation from frame r to frame b,
@@ -162,11 +162,11 @@ def quat_conjugate(q):
 
     Args:
         q (numpy.ndarray):
-            4-element quaternion [q0, q1, q2, q3].
+            4-element quaternion [q1, q2, q3, q4].
 
     Returns:
         numpy.ndarray:
-            Conjugate quaternion [q0, -q1, -q2, -q3].
+            Conjugate quaternion [-q1, -q2, -q3, q4].
 
     Raises:
         AttributeError:
@@ -175,7 +175,7 @@ def quat_conjugate(q):
     require_len_array(q, length=4)
 
     q_conj = q.copy()
-    q_conj[1:] *= -1.0
+    q_conj[0:3] *= -1.0
 
     return q_conj
 
@@ -183,9 +183,9 @@ def quat_inverse(q):
     """
     Compute the inverse of a quaternion.
 
-    The quaternion uses the scalar-first convention:
+    The quaternion uses the scalar-last convention:
 
-        q = [q0, q1, q2, q3]
+        q = [q1, q2, q3, q4]
 
     The inverse is defined as:
 
@@ -196,7 +196,7 @@ def quat_inverse(q):
 
     Args:
         q (numpy.ndarray):
-            4-element quaternion [q0, q1, q2, q3].
+            4-element quaternion [q1, q2, q3, q4].
 
     Returns:
         numpy.ndarray:
@@ -216,7 +216,7 @@ def quat_inverse(q):
         raise ValueError("Cannot invert a zero quaternion.")
 
     q_inv = q.copy()
-    q_inv[1:] *= -1.0
+    q_inv[0:3] *= -1.0
     q_inv /= q_norm_sq
 
     return q_inv
@@ -302,13 +302,59 @@ def dcm2quat(c):
 
     return quat_normalize(q)  # quaternion normalization, *** no need if dcm is really a dcm
 
+def quat2dcm(q):
+    """
+    Convert a scalar-last quaternion to a direction cosine matrix (DCM).
+
+    The quaternion uses the scalar-last convention:
+        q = [q1, q2, q3, q4] = [qx, qy, qz, qw]
+
+    The resulting DCM represents the same coordinate transformation as
+    the input quaternion. The frame transformation is therefore determined
+    by the interpretation of the input quaternion.
+
+    For example:
+        q_n^b -> C_n^b, with v_b = C_n^b @ v_n
+        q_b^n -> C_b^n, with v_n = C_b^n @ v_b
+
+    Args:
+        q (numpy.ndarray): 4-element scalar-last quaternion.
+
+    Returns:
+        numpy.ndarray: 3x3 direction cosine matrix representing the same
+            coordinate transformation as the input quaternion.
+
+    Raises:
+        AttributeError: If the input quaternion does not have the correct
+            shape.
+    """
+    require_len_array(q, length=4)
+
+    q1, q2, q3, q4 = q
+
+    dcm = np.zeros((3, 3))
+
+    dcm[0, 0] = q1*q1 - q2*q2 - q3*q3 + q4*q4
+    dcm[0, 1] = 2.0 * (q1*q2 - q4*q3)
+    dcm[0, 2] = 2.0 * (q1*q3 + q4*q2)
+
+    dcm[1, 0] = 2.0 * (q1*q2 + q4*q3)
+    dcm[1, 1] = q4*q4 - q1*q1 + q2*q2 - q3*q3
+    dcm[1, 2] = 2.0 * (q2*q3 - q4*q1)
+
+    dcm[2, 0] = 2.0 * (q1*q3 - q4*q2)
+    dcm[2, 1] = 2.0 * (q2*q3 + q4*q1)
+    dcm[2, 2] = q4*q4 - q1*q1 - q2*q2 + q3*q3
+
+    return dcm
+
 def quat_multiply(q1, q2):
     """
     Compute the Hamilton product of two quaternions.
 
-    The quaternions use the scalar-first convention:
+    The quaternions must use the scalar-last convention:
 
-        q = [q0, q1, q2, q3] = [qw, qx, qy, qz]
+        q = [q1, q2, q3, q4] = [qx, qy, qz, qw]
 
     The Hamilton product is defined as:
 
@@ -318,12 +364,17 @@ def quat_multiply(q1, q2):
 
         q1 ⊗ q2 != q2 ⊗ q1
 
+    The convention implemented follows the same right-to-left successive rotation as the DCMs, that is:
+        DCM(q1 ⊗ q2) = DCM(q1) * DCM(q2)
+
+    where DCM(.) is the quat2dcm function.
+
     Args:
         q1 (numpy.ndarray):
-            4-element quaternion [q0, q1, q2, q3].
+            4-element quaternion [q1, q2, q3, q4].
 
         q2 (numpy.ndarray):
-            4-element quaternion [q0, q1, q2, q3].
+            4-element quaternion [q1, q2, q3, q4].
 
     Returns:
         numpy.ndarray:
@@ -336,14 +387,14 @@ def quat_multiply(q1, q2):
     require_len_array(q1, length=4)
     require_len_array(q2, length=4)
 
-    a0, a1, a2, a3 = q1
-    b0, b1, b2, b3 = q2
+    a1, a2, a3, a4 = q1
+    b1, b2, b3, b4 = q2
 
     return np.array([
-        a0 * b0 - a1 * b1 - a2 * b2 - a3 * b3,
-        a0 * b1 + a1 * b0 + a2 * b3 - a3 * b2,
-        a0 * b2 - a1 * b3 + a2 * b0 + a3 * b1,
-        a0 * b3 + a1 * b2 - a2 * b1 + a3 * b0,
+         a4*b1 + a3*b2 - a2*b3 + a1*b4,
+        -a3*b1 + a4*b2 + a1*b3 + a2*b4,
+         a2*b1 - a1*b2 + a4*b3 + a3*b4,
+        -a1*b1 - a2*b2 - a3*b3 + a4*b4,
     ])
 
 """
