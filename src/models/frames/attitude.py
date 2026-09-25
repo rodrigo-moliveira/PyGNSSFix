@@ -223,82 +223,70 @@ def quat_inverse(q):
 
 def dcm2quat(c):
     """
-    Convert a direction cosine matrix (DCM) to a scalar-first quaternion.
+    Convert a direction cosine matrix (DCM) to a scalar-last quaternion.
 
-    The quaternion represents the same coordinate transformation as the
-    input DCM. The transformation direction is therefore determined by the
-    input DCM and is not imposed by this function.
+    The quaternion is represented as:
+        q = [q1, q2, q3, q4] = [qx, qy, qz, qw]
 
-    For example, if `c` transforms vector components from a reference frame
-    to a body frame:
-
-        v_b = C_b_r @ v_r
-
-    then the returned quaternion represents the reference-to-body
-    transformation. Conversely, if `c` is the body-to-reference DCM, the
-    returned quaternion represents the body-to-reference transformation.
-
-    The quaternion is represented using the scalar-first convention:
-
-        q = [q0, q1, q2, q3] = [qw, qx, qy, qz]
-
-    Since q and -q represent the same rotation, the sign is chosen such
-    that q0 >= 0.
+    The returned quaternion represents the same coordinate transformation
+    as the input DCM. The sign is chosen such that q4 >= 0.
 
     Args:
         c (numpy.ndarray):
-            3x3 direction cosine matrix representing the coordinate
-            transformation to be converted.
+            3x3 direction cosine matrix.
 
     Returns:
         numpy.ndarray:
-            4-element, unit-norm quaternion [q0, q1, q2, q3] representing
-            the same coordinate transformation as `c`.
-
-    Raises:
-        AttributeError:
-            If `c` does not have the required shape.
+            4-element unit quaternion [q1, q2, q3, q4].
     """
     require_len_matrix(c, 3, 3)
 
     tr = c[0, 0] + c[1, 1] + c[2, 2]
-    tmp = np.array([0.0, 0.0, 0.0, 0.0])
+    q = np.zeros(4)
+
     if tr > 0.0:
-        tmp[0] = 0.5 * np.sqrt(1.0 + tr)
-        tmp[1] = 0.25 / tmp[0] * (c[1, 2] - c[2, 1])
-        tmp[2] = 0.25 / tmp[0] * (c[2, 0] - c[0, 2])
-        tmp[3] = 0.25 / tmp[0] * (c[0, 1] - c[1, 0])
+        q[3] = 0.5 * np.sqrt(1.0 + tr)
+        q[0] = 0.25 / q[3] * (c[1, 2] - c[2, 1])
+        q[1] = 0.25 / q[3] * (c[2, 0] - c[0, 2])
+        q[2] = 0.25 / q[3] * (c[0, 1] - c[1, 0])
+
     else:
         if (c[1, 1] > c[0, 0]) and (c[1, 1] > c[2, 2]):
             sqdip1 = np.sqrt(c[1, 1] - c[0, 0] - c[2, 2] + 1.0)
-            tmp[2] = 0.5 * sqdip1
-            if sqdip1 != 0.0:  # // if it equals 0, something is wrong
+            q[1] = 0.5 * sqdip1
+
+            if sqdip1 != 0.0:
                 sqdip1 = 0.5 / sqdip1
-            tmp[0] = (c[2, 0] - c[0, 2]) * sqdip1
-            tmp[1] = (c[0, 1] + c[1, 0]) * sqdip1
-            tmp[3] = (c[1, 2] + c[2, 1]) * sqdip1
+
+            q[3] = (c[2, 0] - c[0, 2]) * sqdip1
+            q[0] = (c[0, 1] + c[1, 0]) * sqdip1
+            q[2] = (c[1, 2] + c[2, 1]) * sqdip1
+
         elif c[2, 2] > c[0, 0]:
             sqdip1 = np.sqrt(c[2, 2] - c[0, 0] - c[1, 1] + 1.0)
-            tmp[3] = 0.5 * sqdip1
-            if sqdip1 != 0.0:  # // if it equals 0, something is wrong
+            q[2] = 0.5 * sqdip1
+
+            if sqdip1 != 0.0:
                 sqdip1 = 0.5 / sqdip1
-            tmp[0] = (c[0, 1] - c[1, 0]) * sqdip1
-            tmp[1] = (c[2, 0] + c[0, 2]) * sqdip1
-            tmp[2] = (c[1, 2] + c[2, 1]) * sqdip1
+
+            q[3] = (c[0, 1] - c[1, 0]) * sqdip1
+            q[0] = (c[2, 0] + c[0, 2]) * sqdip1
+            q[1] = (c[1, 2] + c[2, 1]) * sqdip1
+
         else:
             sqdip1 = np.sqrt(c[0, 0] - c[1, 1] - c[2, 2] + 1.0)
-            tmp[1] = 0.5 * sqdip1
-            if sqdip1 != 0.0:  # // if it equals 0, something is wrong
-                sqdip1 = 0.5 / sqdip1
-            tmp[0] = (c[1, 2] - c[2, 1]) * sqdip1
-            tmp[2] = (c[0, 1] + c[1, 0]) * sqdip1
-            tmp[3] = (c[2, 0] + c[0, 2]) * sqdip1
+            q[0] = 0.5 * sqdip1
 
-    # ensure q[0] is non-negative
-    if tmp[0] < 0:
-        q = -1.0 * tmp
-    else:
-        q = tmp
+            if sqdip1 != 0.0:
+                sqdip1 = 0.5 / sqdip1
+
+            q[3] = (c[1, 2] - c[2, 1]) * sqdip1
+            q[1] = (c[0, 1] + c[1, 0]) * sqdip1
+            q[2] = (c[2, 0] + c[0, 2]) * sqdip1
+
+    # Choose the representative with non-negative scalar part.
+    if q[3] < 0.0:
+        q = -q
 
     return quat_normalize(q)  # quaternion normalization, *** no need if dcm is really a dcm
 
@@ -335,15 +323,15 @@ def quat2dcm(q):
     dcm = np.zeros((3, 3))
 
     dcm[0, 0] = q1*q1 - q2*q2 - q3*q3 + q4*q4
-    dcm[0, 1] = 2.0 * (q1*q2 - q4*q3)
-    dcm[0, 2] = 2.0 * (q1*q3 + q4*q2)
+    dcm[1, 0] = 2.0 * (q1*q2 - q4*q3)
+    dcm[2, 0] = 2.0 * (q1*q3 + q4*q2)
 
-    dcm[1, 0] = 2.0 * (q1*q2 + q4*q3)
+    dcm[0, 1] = 2.0 * (q1*q2 + q4*q3)
     dcm[1, 1] = q4*q4 - q1*q1 + q2*q2 - q3*q3
-    dcm[1, 2] = 2.0 * (q2*q3 - q4*q1)
+    dcm[2, 1] = 2.0 * (q2*q3 - q4*q1)
 
-    dcm[2, 0] = 2.0 * (q1*q3 - q4*q2)
-    dcm[2, 1] = 2.0 * (q2*q3 + q4*q1)
+    dcm[0, 2] = 2.0 * (q1*q3 - q4*q2)
+    dcm[1, 2] = 2.0 * (q2*q3 + q4*q1)
     dcm[2, 2] = q4*q4 - q1*q1 - q2*q2 + q3*q3
 
     return dcm
