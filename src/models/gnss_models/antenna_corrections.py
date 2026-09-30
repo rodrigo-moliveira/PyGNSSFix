@@ -2,7 +2,6 @@
     * Phase Center Offset (PCO) correction.
     * Phase Center Variation (PCV) correction.
     * Antenna Reference Point (ARP) correction.
-    * (TO BE DONE): Phase windup correction.
 """
 
 import numpy as np

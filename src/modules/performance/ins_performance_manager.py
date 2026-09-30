@@ -2,7 +2,7 @@ import os
 import numpy as np
 from src.common_log import get_logger, POST_PROC_LOG
 from src.io.config import config_dict
-from src.models.frames import lld2ecef
+from src.models.frames import new_lld2ecef, base_convertion
 from src.models.plots.plot_gnss import plot_3D_trajectory
 from src.models.plots.utils import show_all, plot_1D
 from src.utils.str_utils import replace_whitespace_with_underscore
@@ -100,7 +100,7 @@ class INSPerformanceManager:
         self._plot_imu("accel", plot_dir, "meas")
         self._plot_imu_error(plot_dir)
 
-        # Add Allan Variance plot
+        # TODO: Add Allan Variance plot
 
 
     def _plot_pos(self, data_str, plot_dir, label_prefix):
@@ -136,7 +136,7 @@ class INSPerformanceManager:
                          y_label=units[2], x_label="Simulation Time (sec)", ax=ax_alt)
 
         # ECEF plot
-        pos_ecef = lld2ecef(lld)
+        pos_ecef = base_convertion(lld, new_lld2ecef)
         ax_ecef = plot_1D(time, pos_ecef[:, 0], ax=ax_ecef, label=f"{label_prefix}_ref_x")
         ax_ecef = plot_1D(time, pos_ecef[:, 1], ax=ax_ecef, label=f"{label_prefix}_ref_y")
         ax_ecef = plot_1D(time, pos_ecef[:, 2], ax=ax_ecef, title="ECEF Cartesian Coordinates", label=f"{label_prefix}_ref_z",

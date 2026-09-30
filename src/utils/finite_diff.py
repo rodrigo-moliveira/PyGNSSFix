@@ -1,3 +1,4 @@
+""" Module with finite difference manager (numerical differentiator) """
 import numpy as np
 import pandas
 from src.errors import FiniteDifferenceError
@@ -532,3 +533,5 @@ def central_five_point(
         + 8.0 * f_x_plus_h
         - f_x_plus_2h
     ) / (12.0 * step)
+
+# TODO: for attitude differentiation, see https://chatgpt.com/c/6a97dc74-1ae4-83ed-954f-cde85052f828

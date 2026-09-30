@@ -1,6 +1,6 @@
 import numpy as np
 from src.models.frames import mechanization, attitude, frames
-from src.utils.finite_diff import finite_difference
+from src.utils.finite_diff import FiniteDifferenceError
 from src.utils.math_utils import rot1, rot2, rot3
 
 

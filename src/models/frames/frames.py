@@ -321,35 +321,6 @@ def enu2azel(x_enu, y_enu, z_enu):
 
     return [Az, El]
 
-
-def lla2lld(data: np.ndarray) -> np.ndarray:
-    data = np.asarray(data)
-
-    if data.ndim == 1:
-        if data.shape[0] != 3:
-            raise ValueError(
-                f"Expected a vector with dimension 3, got shape {data.shape}"
-            )
-        was_single = True
-        data = data[None, :]       # (3,) -> (1, 3)
-
-    elif data.ndim == 2:
-        if data.shape[1] != 3:
-            raise ValueError(
-                f"Expected each vector to have dimension 3, got shape {data.shape}"
-            )
-        was_single = False
-
-    else:
-        raise ValueError(
-            f"Expected input with shape (3,) or (N, 3), got {data.shape}"
-        )
-
-    lld = data.copy()
-    lld[:, 2] *= -1
-
-    return lld[0] if was_single else lld
-
 def get_earth_radii(lat):
     # Eq. 6 of Sensors 2012, 12 (see paper full name...)
     # see https://en.wikipedia.org/wiki/Earth_radius section 'Radii of curvature'
@@ -410,34 +381,3 @@ def grav_acceleration(r_eb_e, mode="earth"):
 
     return a
 
-def lld2ecef(data: np.ndarray) -> np.ndarray:
-    # TODO: add docstrings
-    data = np.asarray(data)
-
-    if data.ndim == 1:
-        if data.shape[0] != 3:
-            raise ValueError(
-                f"Expected a vector with dimension 3, got shape {data.shape}"
-            )
-        was_single = True
-        data = data[None, :]       # (3,) -> (1, 3)
-
-    elif data.ndim == 2:
-        if data.shape[1] != 3:
-            raise ValueError(
-                f"Expected each vector to have dimension 3, got shape {data.shape}"
-            )
-        was_single = False
-
-    else:
-        raise ValueError(
-            f"Expected input with shape (3,) or (N, 3), got {data.shape}"
-        )
-
-    ecef = np.zeros(data.shape)
-
-    for t in range(data.shape[0]):
-        # altitude is positive downwards, hence the minus sign in h
-        ecef[t, :] = geodetic2cartesian(data[t, 0], data[t, 1], -data[t, 2])
-
-    return ecef[0] if was_single else ecef
