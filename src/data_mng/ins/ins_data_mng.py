@@ -1,12 +1,11 @@
-""" Data Manager for GNSS Algorithms
-TODO: update all docstrings
+""" Data Manager for INS Algorithms
 """
 import os
 
 from src import WORKSPACE_PATH
 from src.data_mng.csv.csv_data import CSVData
 from src.data_mng.unit_conversions import convert_unit
-from src.io.config import config_dict, EnumAlgorithmPNT, EnumPositionForm, EnumAlgorithmINS, EnumVelocityFrame, EnumAttitudeForm
+from src.io.config import config_dict, EnumPositionForm, EnumAlgorithmINS, EnumVelocityFrame, EnumAttitudeForm
 from src.io.config.import_imu import read_imu_file
 from src.models.frames import *
 from src.data_mng import Container
@@ -18,14 +17,40 @@ from src.models.sensor.imu import IMU
 
 
 class InsDataManager(Container):
-    """
-    TODO: to update
-    Data Manager class that stores all necessary data for a GNSS run. Derives from the :py:class:`Container`
-    class.
+    """Manage reference, navigation, and sensor data for an INS/GNSS run.
+
+    Stores the data required for an Inertial Navigation System (INS) and
+    Global Navigation Satellite System (GNSS) processing run. The class
+    derives from :py:class:`Container` and organizes reference position,
+    velocity, and attitude data; reference and measured IMU observations;
+    GNSS data; and IMU sensor configuration.
+
+    Most attributes are instances of :py:class:`CSVData`, which provide
+    structured storage and metadata for time-tagged data. The ``gps`` and
+    ``imu_sensor`` attributes hold their respective data or configuration
+    objects.
 
     Attributes:
-
-
+        ref_pos (CSVData): Reference geodetic position in latitude,
+            longitude, and down coordinates (LLD). Columns represent
+            latitude [rad], longitude [rad], and down [m].
+        ref_pos_ecef (CSVData): Reference position in Earth-Centered,
+            Earth-Fixed (ECEF) Cartesian coordinates.
+        ref_vel_eb_n (CSVData): Reference velocity of the body with respect
+            to the Earth, expressed in the local North-East-Down (NED) frame.
+        ref_vel_eb_e (CSVData): Reference velocity of the body with respect
+            to the Earth, expressed in the ECEF frame.
+        ref_att_euler (CSVData): Reference attitude represented by Euler
+            angles, using the navigation-to-body rotation convention, RPY_n^b.
+        ref_att_quat (CSVData): Reference attitude represented by
+            quaternions in scalar-last order [qx, qy, qz, qw], q_n^b.
+        ref_gyro (CSVData): Reference angular-rate data from the gyroscope, w_ib^b.
+        ref_accel (CSVData): Reference acceleration data from the
+            accelerometer, f_ib^b.
+        gyro (CSVData): Gyroscope measurements or simulated observations.
+        accel (CSVData): Accelerometer measurements or simulated observations.
+        gps: GNSS data object with GNSS data-source configuration.
+        imu_sensor: IMU sensor object with sensor configuration.
     """
     __slots__ = [
         "ref_pos",
@@ -42,7 +67,12 @@ class InsDataManager(Container):
         "imu_sensor"]
 
     def __init__(self):
-        """ Default constructor with no arguments """
+        """Initialize the data manager and its data containers.
+
+        Calls the parent :py:class:`Container` constructor and initializes
+        the attributes used to store reference navigation data, IMU data,
+        GNSS data, and sensor configuration.
+        """
         super().__init__()
 
         #######################
@@ -180,135 +210,123 @@ class InsDataManager(Container):
         return None
 
     def _read_input_pva(self):
+        """ Reads input Position, Velocity and Attitude data and fills the corresponding attributes """
         log = get_logger(IO_LOG)
 
         # Import Position Data
-        try:
-            file_ref_pos = config_dict.get("inputs", "reference_position", "file")
-            pos_form = EnumPositionForm.init_model(config_dict.get("inputs", "reference_position", "form"))
-            pos_units = config_dict.get("inputs", "reference_position", "units")
+        file_ref_pos = config_dict.get("inputs", "reference_position", "file")
+        pos_form = EnumPositionForm.init_model(config_dict.get("inputs", "reference_position", "form"))
+        pos_units = config_dict.get("inputs", "reference_position", "units")
 
-            log.info(f"reading position data stored in file {file_ref_pos} (pos_form={pos_form})...")
+        log.info(f"reading position data stored in file {file_ref_pos} (pos_form={pos_form})...")
 
-            # transform LLA or ECEF forms to LLD
-            if pos_form == EnumPositionForm.POS_LLA or pos_form == EnumPositionForm.POS_LLD:
-                # Input Position provided in LLA Form
-                self.ref_pos.read_data(f"{WORKSPACE_PATH}/{file_ref_pos}")
-                time = np.array(self.ref_pos.to_time_array())
-                self.ref_pos_ecef.init_data(time, np.zeros((len(time), 3)))
+        # transform LLA or ECEF forms to LLD
+        if pos_form == EnumPositionForm.POS_LLA or pos_form == EnumPositionForm.POS_LLD:
+            # Input Position provided in LLA Form
+            self.ref_pos.read_data(f"{WORKSPACE_PATH}/{file_ref_pos}")
+            time = np.array(self.ref_pos.to_time_array())
+            self.ref_pos_ecef.init_data(time, np.zeros((len(time), 3)))
 
-                if pos_form == EnumPositionForm.POS_LLA:
-                    pos_lla = convert_unit(self.ref_pos.to_data_array(), pos_units, self.ref_pos.units)
-                    pos_lld = base_convertion(pos_lla, lla2lld)
-                else:
-                    pos_lld = convert_unit(self.ref_pos.to_data_array(), pos_units, self.ref_pos.units)
-                pos_ecef = base_convertion(pos_lld, lld2ecef)
-
-            elif pos_form == EnumPositionForm.POS_ECEF:
-                # Input Position provided in ECEF Form
-                self.ref_pos_ecef.read_data(f"{WORKSPACE_PATH}/{file_ref_pos}")
-                time = np.array(self.ref_pos_ecef.to_time_array())
-                self.ref_pos.init_data(time, np.zeros((len(time), 3)))
-
-                pos_ecef = convert_unit(self.ref_pos_ecef.to_data_array(), pos_units, self.ref_pos_ecef.units)
-                pos_lld = base_convertion(pos_ecef, ecef2lld)
-
+            if pos_form == EnumPositionForm.POS_LLA:
+                pos_lla = convert_unit(self.ref_pos.to_data_array(), pos_units, self.ref_pos.units)
+                pos_lld = base_convertion(pos_lla, lla2lld)
             else:
-                raise AttributeError(f"Position form is not valid. Should be one of "
-                                     f"{EnumPositionForm.show_options()}.")
-            self.ref_pos.update_data_array(pos_lld)
-            self.ref_pos_ecef.update_data_array(pos_ecef)
+                pos_lld = convert_unit(self.ref_pos.to_data_array(), pos_units, self.ref_pos.units)
+            pos_ecef = base_convertion(pos_lld, lld2ecef)
 
-        except Exception as e:
-            log.warning(f"Did not successfully import position data due to: {repr(e)}")
+        elif pos_form == EnumPositionForm.POS_ECEF:
+            # Input Position provided in ECEF Form
+            self.ref_pos_ecef.read_data(f"{WORKSPACE_PATH}/{file_ref_pos}")
+            time = np.array(self.ref_pos_ecef.to_time_array())
+            self.ref_pos.init_data(time, np.zeros((len(time), 3)))
+
+            pos_ecef = convert_unit(self.ref_pos_ecef.to_data_array(), pos_units, self.ref_pos_ecef.units)
+            pos_lld = base_convertion(pos_ecef, ecef2lld)
+
+        else:
+            raise AttributeError(f"Position form is not valid. Should be one of "
+                                 f"{EnumPositionForm.show_options()}.")
+        self.ref_pos.update_data_array(pos_lld)
+        self.ref_pos_ecef.update_data_array(pos_ecef)
 
         # Import Attitude Data
-        try:
+        file_ref_att = config_dict.get("inputs", "reference_attitude", "file")
+        att_form = EnumAttitudeForm.init_model(config_dict.get("inputs", "reference_attitude", "form"))
+        att_units = config_dict.get("inputs", "reference_attitude", "units")
 
-            file_ref_att = config_dict.get("inputs", "reference_attitude", "file")
-            att_form = EnumAttitudeForm.init_model(config_dict.get("inputs", "reference_attitude", "form"))
-            att_units = config_dict.get("inputs", "reference_attitude", "units")
+        log.info(f"reading attitude data stored in file {file_ref_att} (pos_form={att_form})...")
 
-            log.info(f"reading attitude data stored in file {file_ref_att} (pos_form={att_form})...")
+        if att_form == EnumAttitudeForm.RPY:
+            self.ref_att_euler.read_data(f"{WORKSPACE_PATH}/{file_ref_att}")
+            time = np.array(self.ref_att_euler.to_time_array())
+            self.ref_att_quat.init_data(time, np.zeros((len(time), 4)))
+            att_euler = convert_unit(self.ref_att_euler.to_data_array(), att_units, self.ref_att_euler.units)
+            att_quat = base_convertion(att_euler, euler2quat)
+        elif att_form == EnumAttitudeForm.QUAT:
+            self.ref_att_quat.read_data(f"{WORKSPACE_PATH}/{file_ref_att}")
+            time = np.array(self.ref_att_quat.to_time_array())
+            self.ref_att_euler.init_data(time, np.zeros((len(time), 3)))
+            att_quat = np.array(self.ref_att_quat.to_data_array())
+            att_euler = base_convertion(att_quat, quat2euler)
+        else:
+            raise AttributeError(
+                f"Attitude form is currently not available. Only form available is RPY.")
 
-            if att_form == EnumAttitudeForm.RPY:
-                self.ref_att_euler.read_data(f"{WORKSPACE_PATH}/{file_ref_att}")
-                time = np.array(self.ref_att_euler.to_time_array())
-                self.ref_att_quat.init_data(time, np.zeros((len(time), 4)))
-                att_euler = convert_unit(self.ref_att_euler.to_data_array(), att_units, self.ref_att_euler.units)
-                att_quat = base_convertion(att_euler, euler2quat)
-            elif att_form == EnumAttitudeForm.QUAT:
-                self.ref_att_quat.read_data(f"{WORKSPACE_PATH}/{file_ref_att}")
-                time = np.array(self.ref_att_quat.to_time_array())
-                self.ref_att_euler.init_data(time, np.zeros((len(time), 3)))
-                att_quat = np.array(self.ref_att_quat.to_data_array())
-                att_euler = base_convertion(att_quat, quat2euler)
-            else:
-                raise AttributeError(
-                    f"Attitude form is currently not available. Only form available is RPY.")
-
-            self.ref_att_euler.update_data_array(att_euler)
-            self.ref_att_quat.update_data_array(att_quat)
-
-        except Exception as e:
-            log.warning(f"Did not successfully import attitude data due to: {repr(e)}")
+        self.ref_att_euler.update_data_array(att_euler)
+        self.ref_att_quat.update_data_array(att_quat)
 
         # Import Velocity Data
-        try:
-            file_ref_vel = config_dict.get("inputs", "reference_velocity", "file")
-            vel_frame = EnumVelocityFrame.init_model(config_dict.get("inputs", "reference_velocity", "frame"))
-            vel_units = config_dict.get("inputs", "reference_velocity", "units")
-            log.info(f"reading data '{self.ref_vel_eb_n.name}' stored in file {file_ref_vel}...")
+        file_ref_vel = config_dict.get("inputs", "reference_velocity", "file")
+        vel_frame = EnumVelocityFrame.init_model(config_dict.get("inputs", "reference_velocity", "frame"))
+        vel_units = config_dict.get("inputs", "reference_velocity", "units")
+        log.info(f"reading data '{self.ref_vel_eb_n.name}' stored in file {file_ref_vel}...")
 
-            if vel_frame == EnumVelocityFrame.FRAME_N:
-                self.ref_vel_eb_n.read_data(f"{WORKSPACE_PATH}/{file_ref_vel}")
-                time = np.array(self.ref_vel_eb_n.to_time_array())
-                self.ref_vel_eb_e.init_data(time, np.zeros((len(time), 3)))
+        if vel_frame == EnumVelocityFrame.FRAME_N:
+            self.ref_vel_eb_n.read_data(f"{WORKSPACE_PATH}/{file_ref_vel}")
+            time = np.array(self.ref_vel_eb_n.to_time_array())
+            self.ref_vel_eb_e.init_data(time, np.zeros((len(time), 3)))
 
-                vel_eb_n = convert_unit(self.ref_vel_eb_n.to_data_array(), vel_units, self.ref_vel_eb_n.units)
-                vel_eb_e = base_convertion(vel_eb_n, vel_n2e, np.array(self.ref_pos.to_data_array()))
+            vel_eb_n = convert_unit(self.ref_vel_eb_n.to_data_array(), vel_units, self.ref_vel_eb_n.units)
+            vel_eb_e = base_convertion(vel_eb_n, vel_n2e, np.array(self.ref_pos.to_data_array()))
 
-            elif vel_frame == EnumVelocityFrame.FRAME_E:
-                self.ref_vel_eb_e.read_data(f"{WORKSPACE_PATH}/{file_ref_vel}")
-                time = np.array(self.ref_vel_eb_e.to_time_array())
-                self.ref_vel_eb_n.init_data(time, np.zeros((len(time), 3)))
+        elif vel_frame == EnumVelocityFrame.FRAME_E:
+            self.ref_vel_eb_e.read_data(f"{WORKSPACE_PATH}/{file_ref_vel}")
+            time = np.array(self.ref_vel_eb_e.to_time_array())
+            self.ref_vel_eb_n.init_data(time, np.zeros((len(time), 3)))
 
-                vel_eb_e = convert_unit(self.ref_vel_eb_e.to_data_array(), vel_units, self.ref_vel_eb_e.units)
-                vel_eb_n = base_convertion(vel_eb_e, vel_e2n, np.array(self.ref_pos.to_data_array()))
-            else:
-                raise AttributeError(
-                    f"Velocity frame is currently not available. Only navigation frame N and E is available.")
-
-            self.ref_vel_eb_n.update_data_array(vel_eb_n)
-            self.ref_vel_eb_e.update_data_array(vel_eb_e)
-
-        except Exception as e:
-            log.warning(f"Did not successfully import velocity data due to: {repr(e)}")
+            vel_eb_e = convert_unit(self.ref_vel_eb_e.to_data_array(), vel_units, self.ref_vel_eb_e.units)
+            vel_eb_n = base_convertion(vel_eb_e, vel_e2n, np.array(self.ref_pos.to_data_array()))
+        else:
+            raise AttributeError(
+                f"Velocity frame is currently not available. Only navigation frame N and E is available.")
+        self.ref_vel_eb_n.update_data_array(vel_eb_n)
+        self.ref_vel_eb_e.update_data_array(vel_eb_e)
 
 
     def read_inputs(self, ins_alg: EnumAlgorithmINS, trace_dir):
         """
         Function to read the input data. The data files are read from the user configurations
         according to the chosen algorithm.
-        There are mandatory inputs for each GNSS Algorithm (SPS, PR-PPP).
+        There are mandatory inputs for each INS Algorithm.
 
         Args:
-            gnss_alg(EnumAlgorithmPNT): GNSS Algorithm Enumeration
+            ins_alg(EnumAlgorithmINS): INS Algorithm Enumeration
             trace_dir(str): path to write trace files
         Raises:
             IOError: an exception is raised if the trace directory is not created successfully
         """
         log = get_logger(IO_LOG)
 
-        # read observation data
-        # TODO: depending on algorithm selected, the inputs to be read are different
         if ins_alg == EnumAlgorithmINS.SENSOR_EMULATOR:
             log.info(f"Reading Sensor Emulator Inputs.")
+
+            # Input Reference PVA data
             self._read_input_pva()
 
-            # TODO: read IMU / GPS sensors
+            # Sensor (IMU/GNSS) configuration
             imu_path = config_dict.get("inputs", "imu_sensor_file")
             read_imu_file(f"{WORKSPACE_PATH}/{imu_path}", self.imu_sensor, log=log)
+            # Add GNSS file here
 
         else:
             raise IOError(f"Unknown Model {ins_alg}")

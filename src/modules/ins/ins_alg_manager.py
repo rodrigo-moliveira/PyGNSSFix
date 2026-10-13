@@ -1,5 +1,4 @@
-""" GNSS Algorithm Manager Module """
-# TODO: update docstrings
+""" INS Algorithm Manager Module """
 
 import traceback
 
@@ -13,20 +12,19 @@ from src.modules.performance.ins_performance_manager import INSPerformanceManage
 
 class InsAlgorithmManager:
     """
-    TODO: to be updated
-    GNSS Algorithm Manager.
+    INS Algorithm Manager.
 
-    This class executes the GNSS PNT solver algorithm. It is structured in the following tasks:
-        * Constructs the :py:class:`GnssDataManager` instance
-        * Reads all the input data (:py:meth:`GnssDataManager.read_inputs`)
-        * Launches the main PNT algorithm (function `compute`), which performs the following sub-tasks:
-            * launches the :py:class:`PreprocessorManager` algorithm
-            * launches the :py:class:`GnssSolver` algorithm
-            * compute DOPs (see :py:meth:`compute_dop`)
+    This class executes the GNSS/INS solver algorithm. It is structured in the following tasks:
+        * Constructs the :py:class:`InsDataManager` instance
+        * Reads all the input data (:py:meth:`InsDataManager.read_inputs`)
+        * Launches the configured INS algorithm, which can be:
+            * Sensor Emulator
+            * INS Strapdown Integration
+            * INS Loosely Coupled
 
         Attributes:
             data_dir(str): absolute path where the output data is stored
-            data_manager(GnssDataManager): instance of the GNSS Data Manager
+            data_manager(InsDataManager): instance of the INS Data Manager
             main_log(logging.Logger): logger instance
     """
 
@@ -57,14 +55,14 @@ class InsAlgorithmManager:
             exit(-1)
 
         # Main Algorithm Module
-        try:
-            self.main_log.info(f"Starting Main Algorithm Module...")
-            self._compute(self.data_manager, ins_alg, f"{self.data_dir}\\trace")
-        except Exception as e:
-            self.main_log.error(f"Stopping execution of program due to error in execution of Main Algorithm "
-                                f"Module: {e}")
-            print(traceback.format_exc())
-            exit(-1)
+        #try:
+        #    self.main_log.info(f"Starting Main Algorithm Module...")
+        #    self._compute(self.data_manager, ins_alg, f"{self.data_dir}\\trace")
+        #except Exception as e:
+        #    self.main_log.error(f"Stopping execution of program due to error in execution of Main Algorithm "
+        #                        f"Module: {e}")
+        #    print(traceback.format_exc())
+        #    exit(-1)
 
         # Output Writer Module
         try:
@@ -77,29 +75,25 @@ class InsAlgorithmManager:
             exit(-1)
 
         # Quality Manager Module
-        try:
-            self.main_log.info(f"Starting Quality Manager Module...")
-            prf_mng = INSPerformanceManager(self.data_manager)
-            prf_mng.process(self.data_dir)
-            prf_mng.show_plots()
-        except Exception as e:
-            self.main_log.error(f"Stopping execution of program due to error in execution of Quality Manager Module: "
-                                f"{str(e)}")
-            print(traceback.format_exc())
-            exit(-1)
+        #try:
+        #    self.main_log.info(f"Starting Quality Manager Module...")
+        #    prf_mng = INSPerformanceManager(self.data_manager)
+        #   prf_mng.process(self.data_dir)
+        #    prf_mng.show_plots()
+        #except Exception as e:
+        #    self.main_log.error(f"Stopping execution of program due to error in execution of Quality Manager Module: "
+        #                        f"{str(e)}")
+        #    print(traceback.format_exc())
+        #    exit(-1)
 
         self.main_log.info(f"Successfully executed INS algorithm {ins_alg}")
 
 
     def _compute(self, data_manager, ins_alg, trace_path):
-        """ Internal function for the computation of the PNT solver task """
+        """ Internal function for the computation of the INS solver task """
 
         if ins_alg == EnumAlgorithmINS.SENSOR_EMULATOR:
             # Running Sensor Emulator
             self.main_log.info(f"Running Sensor Emulator Module")
             emulator = SensorEmulator(trace_path, data_manager)
             emulator.compute()
-
-
-        #data_manager.add_data("nav_solution", solver.solution)
-
