@@ -385,6 +385,55 @@ def quat_multiply(q1, q2):
         -a1*b1 - a2*b2 - a3*b3 + a4*b4,
     ])
 
+def quat_rotate(q, x_A):
+    """
+    Transform a 3D vector from frame A to frame B using a quaternion.
+
+    The quaternion uses the scalar-last convention:
+        q = [q1, q2, q3, q4] = [qx, qy, qz, qw]
+
+    The quaternion represents the coordinate transformation from frame A
+    to frame B. The vector is embedded as a pure quaternion and transformed
+    using the quaternion product defined by quat_multiply():
+
+        x_B = q × x_A_quat × q_conj
+
+    where:
+        x_A_quat = [x_A[0], x_A[1], x_A[2], 0]
+
+    The input quaternion must be unit length for the sandwich product to
+    preserve the vector's magnitude.
+
+    Args:
+        q (numpy.ndarray):
+            4-element unit quaternion representing the transformation
+            from frame A to frame B, in scalar-last order.
+
+        x_A (numpy.ndarray):
+            3-element vector expressed in frame A.
+
+    Returns:
+        numpy.ndarray:
+            3-element vector expressed in frame B.
+
+    Raises:
+        AttributeError:
+            If either input does not have the required shape.
+    """
+    require_len_array(q, length=4)
+    require_len_array(x_A, length=3)
+
+    x_A_quat = np.array([x_A[0], x_A[1], x_A[2], 0.0])
+
+    q_conj = quat_conjugate(q)
+
+    x_B_quat = quat_multiply(
+        quat_multiply(q, x_A_quat),
+        q_conj
+    )
+
+    return x_B_quat[:3]
+
 """
 def exp_att2euler(pos, exp_att):
 
