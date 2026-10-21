@@ -55,14 +55,14 @@ class InsAlgorithmManager:
             exit(-1)
 
         # Main Algorithm Module
-        #try:
-        #    self.main_log.info(f"Starting Main Algorithm Module...")
-        #    self._compute(self.data_manager, ins_alg, f"{self.data_dir}\\trace")
-        #except Exception as e:
-        #    self.main_log.error(f"Stopping execution of program due to error in execution of Main Algorithm "
-        #                        f"Module: {e}")
-        #    print(traceback.format_exc())
-        #    exit(-1)
+        try:
+            self.main_log.info(f"Starting Main Algorithm Module...")
+            self._compute(self.data_manager, ins_alg, f"{self.data_dir}\\trace")
+        except Exception as e:
+            self.main_log.error(f"Stopping execution of program due to error in execution of Main Algorithm "
+                                f"Module: {e}")
+            print(traceback.format_exc())
+            exit(-1)
 
         # Output Writer Module
         try:

@@ -371,3 +371,74 @@ class EnumAttitudeForm(Enum):
     @classmethod
     def show_options(cls):
         return f"'RPY', 'QUAT'"
+
+
+class EnumAttitudeDiffState(Enum):
+    """ Enumeration for the Attitude Form to perform differentiation for sensor emulator """
+    RPY = 0
+    QUAT = 1
+    DCM = 2
+
+    @classmethod
+    def init_model(cls, model_str: str):
+        if model_str.lower() == "rpy":
+            return EnumAttitudeDiffState.RPY
+        elif model_str.lower() == "quat":
+            return EnumAttitudeDiffState.QUAT
+        elif model_str.lower() == "dcm":
+            return EnumAttitudeDiffState.DCM
+        else:
+            raise EnumError(f"Unsupported algorithm {model_str}. Available options are {cls.show_options()}.")
+
+    @classmethod
+    def show_options(cls):
+        return f"'RPY', 'QUAT', 'DCM'"
+
+
+class EnumAttitudeDiffMethod(Enum):
+    """ Enumeration for the Attitude method to perform differentiation for sensor emulator """
+    FIN_DEF = 0
+    REL_ATT = 1
+
+    @classmethod
+    def init_model(cls, model_str: str):
+        if model_str.lower() == "finite-difference":
+            return EnumAttitudeDiffMethod.FIN_DEF
+        elif model_str.lower() == "relative-attitude":
+            return EnumAttitudeDiffMethod.REL_ATT
+        else:
+            raise EnumError(f"Unsupported algorithm {model_str}. Available options are {cls.show_options()}.")
+
+    @classmethod
+    def show_options(cls):
+        return f"'finite-difference', 'relative-attitude'"
+
+class EnumFinDiffMethod(Enum):
+    """ Enumeration for the finite-difference algorithm for sensor emulator """
+    F2P = 0 # forward-two-point
+    C2P = 1 # central-two-point
+    F3P = 2 # forward-three-point
+    B3P = 3 # backward-three-point
+    C5P = 4 # central-five-point
+    OPT = 5 # optimal
+
+    @classmethod
+    def init_model(cls, model_str: str):
+        if model_str.lower() == "forward-two-point":
+            return EnumFinDiffMethod.F2P
+        elif model_str.lower() == "central-two-point":
+            return EnumFinDiffMethod.C2P
+        elif model_str.lower() == "forward-three-point":
+            return EnumFinDiffMethod.F3P
+        elif model_str.lower() == "backward-three-point":
+            return EnumFinDiffMethod.B3P
+        elif model_str.lower() == "central-five-point":
+            return EnumFinDiffMethod.C5P
+        elif model_str.lower() == "optimal":
+            return EnumFinDiffMethod.OPT
+        else:
+            raise EnumError(f"Unsupported algorithm {model_str}. Available options are {cls.show_options()}.")
+
+    @classmethod
+    def show_options(cls):
+        return f"'forward-two-point', 'central-two-point', 'forward-three-point', 'backward-three-point', 'central-five-point', 'optimal'"

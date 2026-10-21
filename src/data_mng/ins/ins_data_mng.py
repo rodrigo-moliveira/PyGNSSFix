@@ -44,8 +44,8 @@ class InsDataManager(Container):
             angles, using the navigation-to-body rotation convention, RPY_n^b.
         ref_att_quat (CSVData): Reference attitude represented by
             quaternions in scalar-last order [qx, qy, qz, qw], q_n^b.
-        ref_gyro (CSVData): Reference angular-rate data from the gyroscope, w_ib^b.
-        ref_accel (CSVData): Reference acceleration data from the
+        true_gyro (CSVData): Reference angular-rate data from the gyroscope, w_ib^b.
+        true_accel (CSVData): Reference acceleration data from the
             accelerometer, f_ib^b.
         gyro (CSVData): Gyroscope measurements or simulated observations.
         accel (CSVData): Accelerometer measurements or simulated observations.
@@ -59,8 +59,8 @@ class InsDataManager(Container):
         "ref_vel_eb_e",
         "ref_att_euler",
         "ref_att_quat",
-        "ref_gyro",
-        "ref_accel",
+        "true_gyro",
+        "true_accel",
         "gyro",
         "accel",
         "gps",
@@ -132,7 +132,7 @@ class InsDataManager(Container):
         #######################
 
         # True (errorless) gyro readout measurements
-        self.ref_gyro = CSVData(name='ref_gyro',
+        self.true_gyro = CSVData(name='true_gyro',
             description='true angular velocity in the body frame (w_ib_b)',
             units=['rad/s', 'rad/s', 'rad/s'],
             legend=['gyro_x', 'gyro_y', 'gyro_z'],
@@ -141,7 +141,7 @@ class InsDataManager(Container):
             data_cols=[1, 2, 3])
 
         # True (errorless) accelerometer readout measurements
-        self.ref_accel = CSVData(name='ref_accel',
+        self.true_accel = CSVData(name='true_accel',
             description='true acceleration in the body frame (f_ib_b)',
             units=['m/s^2', 'm/s^2', 'm/s^2'],
             legend=['accel_x', 'accel_y', 'accel_z'],
@@ -229,10 +229,10 @@ class InsDataManager(Container):
 
             if pos_form == EnumPositionForm.POS_LLA:
                 pos_lla = convert_unit(self.ref_pos.to_data_array(), pos_units, self.ref_pos.units)
-                pos_lld = base_convertion(pos_lla, lla2lld)
+                pos_lld = base_convertion(pos_lla, sc_lla2lld)
             else:
                 pos_lld = convert_unit(self.ref_pos.to_data_array(), pos_units, self.ref_pos.units)
-            pos_ecef = base_convertion(pos_lld, lld2ecef)
+            pos_ecef = base_convertion(pos_lld, sc_lld2ecef)
 
         elif pos_form == EnumPositionForm.POS_ECEF:
             # Input Position provided in ECEF Form
@@ -241,7 +241,7 @@ class InsDataManager(Container):
             self.ref_pos.init_data(time, np.zeros((len(time), 3)))
 
             pos_ecef = convert_unit(self.ref_pos_ecef.to_data_array(), pos_units, self.ref_pos_ecef.units)
-            pos_lld = base_convertion(pos_ecef, ecef2lld)
+            pos_lld = base_convertion(pos_ecef, sc_ecef2lld)
 
         else:
             raise AttributeError(f"Position form is not valid. Should be one of "
@@ -261,13 +261,13 @@ class InsDataManager(Container):
             time = np.array(self.ref_att_euler.to_time_array())
             self.ref_att_quat.init_data(time, np.zeros((len(time), 4)))
             att_euler = convert_unit(self.ref_att_euler.to_data_array(), att_units, self.ref_att_euler.units)
-            att_quat = base_convertion(att_euler, euler2quat)
+            att_quat = base_convertion(att_euler, sc_euler2quat)
         elif att_form == EnumAttitudeForm.QUAT:
             self.ref_att_quat.read_data(f"{WORKSPACE_PATH}/{file_ref_att}")
             time = np.array(self.ref_att_quat.to_time_array())
             self.ref_att_euler.init_data(time, np.zeros((len(time), 3)))
             att_quat = np.array(self.ref_att_quat.to_data_array())
-            att_euler = base_convertion(att_quat, quat2euler)
+            att_euler = base_convertion(att_quat, sc_quat2euler)
         else:
             raise AttributeError(
                 f"Attitude form is currently not available. Only form available is RPY.")
@@ -287,7 +287,7 @@ class InsDataManager(Container):
             self.ref_vel_eb_e.init_data(time, np.zeros((len(time), 3)))
 
             vel_eb_n = convert_unit(self.ref_vel_eb_n.to_data_array(), vel_units, self.ref_vel_eb_n.units)
-            vel_eb_e = base_convertion(vel_eb_n, vel_n2e, np.array(self.ref_pos.to_data_array()))
+            vel_eb_e = base_convertion(vel_eb_n, sc_vel_n2e, np.array(self.ref_pos.to_data_array()))
 
         elif vel_frame == EnumVelocityFrame.FRAME_E:
             self.ref_vel_eb_e.read_data(f"{WORKSPACE_PATH}/{file_ref_vel}")
@@ -295,7 +295,7 @@ class InsDataManager(Container):
             self.ref_vel_eb_n.init_data(time, np.zeros((len(time), 3)))
 
             vel_eb_e = convert_unit(self.ref_vel_eb_e.to_data_array(), vel_units, self.ref_vel_eb_e.units)
-            vel_eb_n = base_convertion(vel_eb_e, vel_e2n, np.array(self.ref_pos.to_data_array()))
+            vel_eb_n = base_convertion(vel_eb_e, sc_vel_e2n, np.array(self.ref_pos.to_data_array()))
         else:
             raise AttributeError(
                 f"Velocity frame is currently not available. Only navigation frame N and E is available.")

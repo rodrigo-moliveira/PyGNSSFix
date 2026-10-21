@@ -5,7 +5,7 @@ import numpy as np
 
 from src.constants import EARTH_ROTATION
 from .frames import get_earth_radii
-from src.utils.math_utils import vector2skew_symmetric
+from src.utils.math_utils import vector2skew_symmetric, skew_symmetric2vector
 
 w_ie_e = np.array([0, 0, EARTH_ROTATION])  # in rad/s. This vector is also w_ie_i, although this is not needed
 
@@ -40,7 +40,7 @@ def compute_w_ie_n(lat):
                      -np.sin(lat)]) * EARTH_ROTATION
 
 
-def compute_w_nb_b(euler_dot, euler):
+def compute_w_nb_b_euler(euler_dot, euler):
     # euler angles (phi, theta, psi) = (roll, pitch, yaw)
 
     phi_dot, theta_dot, psi_dot = euler_dot[:]
@@ -58,6 +58,15 @@ def compute_w_nb_b(euler_dot, euler):
 
     return w_nb_b
 
+def compute_w_nb_b_dcm(dcm_dot, dcm):
+    # input is c_n^b (dcm from n to b)
+    skew_matrix = dcm.T @ dcm_dot
+    w_nb_b = skew_symmetric2vector(skew_matrix)
+
+    return w_nb_b
+
+def compute_w_nb_b_quat(quat_dot, quat):
+    pass
 
 ###################################
 # N-Frame Mechanization Equations #

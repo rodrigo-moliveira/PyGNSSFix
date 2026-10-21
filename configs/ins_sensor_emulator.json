@@ -16,27 +16,46 @@
 
     "_comment1": "Select Input data files",
     "reference_position": {
-      "file": "datasets/ins/ins_coil_move/reference/ref_pos.csv",
+      "file": "datasets/ins/test_pva/InputPositionECEF.txt",
       "_comment": "available forms are LLA (latitude,longitude,altitude), LLD (latitude,longitude,down) or ECEF (cartesian x,y,z)",
-      "form": "LLA",
-      "units": ["deg","deg","m"]
+      "form": "ECEF",
+      "units": ["m","m","m"]
     },
 
     "reference_velocity": {
-      "file": "datasets/ins/ins_coil_move/reference/ref_vel.csv",
+      "file": "datasets/ins/test_pva/InputVelocityECEF.txt",
       "_comment": "available frames: navigation n (v_eb^n), body b (v_eb^b), ECEF e (v_eb^e)",
-      "frame": "n",
+      "frame": "e",
       "units": ["m/s","m/s","m/s"]
     },
 
     "reference_attitude": {
-      "file": "datasets/ins/ins_coil_move/reference/ref_att_euler.csv",
+      "file": "datasets/ins/test_pva/InputAttitudeQuat.txt",
       "_comment": "available forms: RPY (Roll, Pitch, Yaw) or QUAT (quaternion). The attitude rotation is from navigation to body frame (RPY_n^b or quat_n^b).",
-      "form": "RPY",
-      "units": ["deg","deg","deg"]
+      "form": "QUAT",
+      "units": ["rad","rad","rad"]
     },
     "imu_sensor_file": "sensors/imu_high_end.json",
     "gps_sensor_file": ""
+  },
+
+  "sensor_emulator":
+  {
+    "attitude":
+    {
+      "_comment0": "Select the attitude state to perform the derivative computation. Available states are 'rpy', 'dcm' or 'quat'",
+      "diff_state": "rpy",
+
+      "_comment1": "Select the differentiation method. Available options are 'finite-difference' or 'relative-attitude'",
+      "method": "finite-difference",
+
+      "_comment2": "Select the finite-difference algorithm. Available options are 'forward-two-point', 'central-two-point', 'forward-three-point', 'backward-three-point', 'central-five-point', 'optimal'",
+      "finite_diff_method": "forward-two-point"
+    },
+    "velocity": {
+      "_comment": "Select the finite-difference algorithm. Available options are 'forward-two-point', 'central-two-point', 'forward-three-point', 'backward-three-point', 'central-five-point', 'optimal'",
+      "finite_diff_method": "forward-two-point"
+    }
   },
 
   "output": {

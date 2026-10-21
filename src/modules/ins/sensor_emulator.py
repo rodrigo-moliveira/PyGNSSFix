@@ -1,6 +1,11 @@
 import numpy as np
-from src.models.frames import mechanization, attitude, frames
-from src.utils.finite_diff import FiniteDifferenceError
+import pandas as pd
+
+from src.common_log import get_logger, INS_ALG_LOG
+from src.errors import FiniteDifferenceError
+from src.models.frames import mechanization, attitude, frames, base_convertion, sc_euler2dcm
+from src.utils.finite_diff import NumericalDifferentiator
+from src.io.config import config_dict, EnumAttitudeDiffState, EnumAttitudeDiffMethod, EnumFinDiffMethod
 from src.utils.math_utils import rot1, rot2, rot3
 
 
@@ -10,19 +15,34 @@ class SensorEmulator:
     def __init__(self, trace_path, data_manager):
         self.trace_path = trace_path
         self.data_manager = data_manager
+        self.log = get_logger(INS_ALG_LOG)
+
+        # attitude configuration
+        self.att_diff_state = EnumAttitudeDiffState.init_model(config_dict.get("sensor_emulator", "attitude", "diff_state"))
+        self.att_diff_method = EnumAttitudeDiffMethod.init_model(config_dict.get("sensor_emulator", "attitude", "method"))
+        if self.att_diff_method == EnumAttitudeDiffMethod.FIN_DEF:
+            self.att_differentiator = NumericalDifferentiator(config_dict.get("sensor_emulator", "attitude", "finite_diff_method"))
+        else:
+            self.att_differentiator = None
+
+        # velocity configuration
+        self.vel_differentiator = NumericalDifferentiator(config_dict.get("sensor_emulator", "velocity", "finite_diff_method"))
+
+        # Printing to log
+        self.log.info(f"Sensor Emulator initialized with the following parameters:")
+        self.log.info(f"Attitude Difference State: {self.att_diff_state}")
+        self.log.info(f"Attitude Differentiation Method: {self.att_diff_method}")
+        if self.att_diff_method == EnumAttitudeDiffMethod.FIN_DEF:
+            self.log.info(f"Attitude Finite Difference Method: {config_dict.get("sensor_emulator", "attitude", "finite_diff_method")}")
+        self.log.info(f"Velocity Finite Difference Method: {config_dict.get("sensor_emulator", "velocity", "finite_diff_method")}")
+
 
     def __str__(self):
         return "InsAlgorithm(Sensor Emulation Algorithm)"
 
     def compute(self):
-        # fetch PVAT inputs from the data manager
-        ref_pos_lld = self.data_manager.get_data("ref_pos")
-        ref_vel_eb_n = self.data_manager.get_data("ref_vel")
-        ref_euler_att = self.data_manager.get_data("ref_att")
-        time = np.array(ref_pos_lld.to_time_array())
-
-        true_gyro, true_accel = self._compute_true_imu_readouts(time, ref_pos_lld, ref_vel_eb_n, ref_euler_att)
-
+        # compute errorless readouts
+        true_gyro, true_accel, time = self._compute_true_imu_readouts()
 
         # compute error readouts
         self._corrupt_noise_imu(true_gyro, true_accel, time)
@@ -98,36 +118,67 @@ class SensorEmulator:
         gps_ned = np.concatenate((gps_pos_lld, gps_vel_ned), axis=1)
         self.results.append(gps_ned)
 
-    def _compute_true_imu_readouts(self, time, pos_lld, vel_eb_n, euler_att):
+    def _compute_true_imu_readouts(self):
         # n-frame mechanization
 
+        # fetch PVAT inputs from the data manager
+        ref_pos_lld = self.data_manager.get_data("ref_pos")
+        ref_vel_eb_n = self.data_manager.get_data("ref_vel_eb_n")
+        ref_euler_att = self.data_manager.get_data("ref_att_euler")
+        ref_quat_att = self.data_manager.get_data("ref_att_quat")
+        time = np.array(ref_pos_lld.to_time_array())
+        # TODO: consider if ref_dcm should be a state variable
+        ref_dcm_att = base_convertion(ref_euler_att.to_data_array(), sc_euler2dcm)
+        ref_dcm_att = pd.DataFrame(np.concatenate((time, ref_dcm_att), axis=1))
+
         # initialize outputs
-        w_ib_b = np.zeros((len(pos_lld.data), 3))  # gyro is w_ib_b
-        f_ib_b = np.zeros((len(pos_lld.data), 3))  # accel is f_ib_b
+        w_ib_b = np.ones((len(ref_pos_lld.data), 3))  * np.nan # gyro is w_ib_b
+        f_ib_b = np.ones((len(ref_pos_lld.data), 3)) * np.nan  # accel is f_ib_b
 
         # iterate in time
-        for i, pos_row in pos_lld.data.iloc[1:].iterrows():
+        for i, pos_row in ref_pos_lld.data.iloc[:].iterrows():
             # 1 - unpack data for this epoch
-            t = time[i,0]
-            step = t - time[i-1,0]
+            t = time[i, 0]
             lld = np.array(pos_row[1:4])
-            v_eb_n = np.array(vel_eb_n.data.iloc[i,1:4])
-            v_eb_n_prev = np.array(vel_eb_n.data.iloc[i-1, 1:4])
-            euler = np.array(euler_att.data.iloc[i,1:4])
-            euler_prev = np.array(euler_att.data.iloc[i-1, 1:4])
+            v_eb_n = np.array(ref_vel_eb_n.data.iloc[i, 1:4])
+            euler = np.array(ref_euler_att.data.iloc[i, 1:4])
+            quat = np.array(ref_quat_att.data.iloc[i, 1:])
 
             # 2 - compute rotation matrices
-            c_nb = attitude.euler2dcm(euler)  # matrix from n to b
+            # c_nb = attitude.euler2dcm(euler)  # matrix from n to b
+            c_nb = np.array(ref_dcm_att.iloc[i, 1:]).reshape(3, 3)
             c_en = frames.latlon2dcm_e_ned(lld[0], lld[1])  # matrix from e to n
 
-            # 3 - apply finite differences to euler angles
-            euler_dot = finite_difference(euler_prev, euler, step)
+            # 3. compute attitude difference (w_nb_b)
+            w_nb_b = np.zeros([0, 0, 0])
+            if self.att_differentiator is not None:
+                # finite difference method
+                try:
+                    # TODO: check for each case, how to improve the correctness of the finite difference (for example, call quat_normalize)
+                    if self.att_diff_state == EnumAttitudeDiffState.RPY:
+                        euler_dot = self.att_differentiator.compute(ref_euler_att.data, 0, ref_euler_att.data_cols, t)
+                        w_nb_b = mechanization.compute_w_nb_b_euler(euler_dot, euler)
+                    elif self.att_diff_state == EnumAttitudeDiffState.QUAT:
+                        quat_dot = self.att_differentiator.compute(ref_quat_att.data, 0, ref_quat_att.data_cols, t)
+                        w_nb_b = mechanization.compute_w_nb_b_quat(quat_dot, quat)
+                    elif self.att_diff_state == EnumAttitudeDiffState.DCM:
+                        dcm_dot = self.att_differentiator.compute(ref_dcm_att, 0, list(range(1,10)), t)
+                        w_nb_b = mechanization.compute_w_nb_b_dcm(np.array(dcm_dot).reshape(3,3), c_nb)
+                except FiniteDifferenceError as e:
+                    self.log.warning(f"FiniteDifferenceError caught when computing attitude finite difference due to: {e}")
+                    continue
+            else:
+                # relative attitude
+                pass
 
-            # 4 - apply finite differences to velocity vector (in n frame!)
-            v_eb_n_dot = finite_difference(v_eb_n_prev, v_eb_n, step)
+            # 4. compute velocity finite difference (v_eb_n_dot)
+            try:
+                v_eb_n_dot = self.vel_differentiator.compute(ref_vel_eb_n.data, 0, ref_vel_eb_n.data_cols, t)
+            except FiniteDifferenceError as e:
+                self.log.warning(f"FiniteDifferenceError caught when computing velocity finite difference due to: {e}")
+                continue
 
             # 5 - get rotation vectors between frames i-e, e-n and n-b, and local gravity vector
-            w_nb_b = mechanization.compute_w_nb_b(euler_dot, euler)
             w_ie_n = mechanization.compute_w_ie_n(lld[0])
             w_en_n, _, _ = mechanization.compute_w_en_n(v_eb_n, lld)
             r_eb_e = np.array(frames.geodetic2cartesian(lld[0], lld[1], -lld[2])) # remember that altitude is positive downwards!
@@ -138,7 +189,7 @@ class SensorEmulator:
             f_ib_b[i] = mechanization.compute_f_ib_b(c_nb, c_en, w_en_n, w_ie_n, v_eb_n_dot, g_eb_e, v_eb_n)
 
         # append to results
-        self.data_manager.ref_gyro.init_data(time, w_ib_b)
-        self.data_manager.ref_accel.init_data(time, f_ib_b)
+        self.data_manager.true_gyro.init_data(time, w_ib_b)
+        self.data_manager.true_accel.init_data(time, f_ib_b)
 
-        return w_ib_b, f_ib_b
+        return w_ib_b, f_ib_b, time

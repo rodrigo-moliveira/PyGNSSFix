@@ -10,7 +10,7 @@ def base_convertion(
     operation: Callable[..., np.ndarray],
     *args,
 ) -> np.ndarray:
-    """Apply a conversion operation to one or more 3D or 4D vectors.
+    """Apply a conversion operation to one or more 3D, 4D or 9D vectors.
 
     Converts the input data to a NumPy array, validates its dimensions,
     and passes it to the specified operation along with any additional
@@ -18,8 +18,8 @@ def base_convertion(
     vector, while batch inputs retain their two-dimensional shape.
 
     Args:
-        data_in: Input vector with shape (3,) or (4,), or a batch of
-            vectors with shape (N, 3) or (N, 4).
+        data_in: Input vector with shape (3,), (4,) or (9,), or a batch of
+            vectors with shape (N, 3) or (N, 4) or (N, 9).
         operation: Callable that performs the conversion. It must accept
             the input array and any additional positional arguments.
         *args: Additional positional arguments passed to the operation.
@@ -31,28 +31,28 @@ def base_convertion(
 
     Raises:
         ValueError: If the input does not have one or two dimensions,
-            or if its vector dimension is not 3 or 4.
+            or if its vector dimension is not 3 or 4 or 9.
     """
     data = np.asarray(data_in)
 
     if data.ndim == 1:
-        if data.shape[0] not in (3, 4):
+        if data.shape[0] not in (3, 4, 9):
             raise ValueError(
-                f"Expected a vector with dimension 3 or 4, got shape {data.shape}"
+                f"Expected a vector with dimension 3 or 4 or 9, got shape {data.shape}"
             )
         was_single = True
         data = data[None, :]
 
     elif data.ndim == 2:
-        if data.shape[1] not in (3, 4):
+        if data.shape[1] not in (3, 4, 9):
             raise ValueError(
-                f"Expected each vector to have dimension 3 or 4, got shape {data.shape}"
+                f"Expected each vector to have dimension 3 or 4 or 9, got shape {data.shape}"
             )
         was_single = False
 
     else:
         raise ValueError(
-            f"Expected input with shape (3,), (4,), (N, 3), or (N, 4), "
+            f"Expected input with shape (3,), (4,) (9,), (N, 3), (N, 4) or (N, 9), "
             f"got {data.shape}"
         )
 
@@ -61,7 +61,7 @@ def base_convertion(
     return data_out[0] if was_single else data_out
 
 
-def lld2ecef(data_in):
+def sc_lld2ecef(data_in):
     """Convert geodetic coordinates to Earth-Centered, Earth-Fixed coordinates.
 
     Converts each input vector from geodetic latitude, longitude, and
@@ -85,7 +85,7 @@ def lld2ecef(data_in):
     return data_out
 
 
-def ecef2lld(data_in):
+def sc_ecef2lld(data_in):
     """Convert Earth-Centered, Earth-Fixed coordinates to geodetic coordinates
 
     Converts each input vector from Earth-Centered, Earth-Fixed (ECEF)
@@ -109,7 +109,7 @@ def ecef2lld(data_in):
     return data_out
 
 
-def lla2lld(data_in):
+def sc_lla2lld(data_in):
     """Convert altitude sign convention from positive-up to positive-down.
 
     Copies the input geodetic coordinates and reverses the sign of the
@@ -128,7 +128,7 @@ def lla2lld(data_in):
     data_out[:, 2] *= -1
     return data_out
 
-def euler2quat(data_in):
+def sc_euler2quat(data_in):
     """Convert Euler angles to quaternions.
 
     Converts each input Euler-angle vector to a quaternion using the
@@ -153,7 +153,7 @@ def euler2quat(data_in):
     return data_out
 
 
-def quat2euler(data_in):
+def sc_quat2euler(data_in):
     """Convert quaternions to Euler angles.
 
     Converts each input quaternion to Euler angles using the
@@ -177,7 +177,7 @@ def quat2euler(data_in):
         data_out[t, :] = euler
     return data_out
 
-def vel_n2e(data_in, pos_lld):
+def sc_vel_n2e(data_in, pos_lld):
     """Transform velocity vectors from NED to ECEF coordinates.
 
     Transforms each velocity vector from the local North-East-Down (NED)
@@ -207,7 +207,7 @@ def vel_n2e(data_in, pos_lld):
 
     return data_out
 
-def vel_e2n(data_in, pos_lld):
+def sc_vel_e2n(data_in, pos_lld):
     """Transform velocity vectors from ECEF to NED coordinates.
 
     Transforms each velocity vector from the Earth-Centered,
@@ -236,4 +236,28 @@ def vel_e2n(data_in, pos_lld):
         v_eb_n = dcm_e_ned @ v_eb_e # v_eb^n = dcm_e^n @ v_eb^e
         data_out[t, :] = v_eb_n
 
+    return data_out
+
+def sc_euler2dcm(data_in):
+    """Convert Euler angles to DCM.
+
+    Converts each input Euler angles to a DCM matrix using the
+    Euler-to-DCM-angle transformations.
+
+    Args:
+        data_in: Array of Euler angles with shape (N, 3), where each row contains
+        roll, pitch, and yaw, respectively. The angles describe the
+        rotation from the reference frame to the body frame, following
+        the 3-2-1 (yaw-pitch-roll) rotation sequence.
+
+    Returns:
+        Array of DCM attitude with shape (N, 9), where each row contains
+        the flattened 3x3 DCM matrix. It can be converted back to a
+        3x3 numpy array using the ``reshape(3, 3)`` method.
+    """
+    data_out = np.zeros((len(data_in), 9))
+    for t in range(data_in.shape[0]):
+        euler = data_in[t, :]
+        dcm = euler2dcm(euler)
+        data_out[t, :] = dcm.flatten()
     return data_out
