@@ -75,16 +75,16 @@ class InsAlgorithmManager:
             exit(-1)
 
         # Quality Manager Module
-        #try:
-        #    self.main_log.info(f"Starting Quality Manager Module...")
-        #    prf_mng = INSPerformanceManager(self.data_manager)
-        #   prf_mng.process(self.data_dir)
-        #    prf_mng.show_plots()
-        #except Exception as e:
-        #    self.main_log.error(f"Stopping execution of program due to error in execution of Quality Manager Module: "
-        #                        f"{str(e)}")
-        #    print(traceback.format_exc())
-        #    exit(-1)
+        try:
+            self.main_log.info(f"Starting Quality Manager Module...")
+            prf_mng = INSPerformanceManager(self.data_manager)
+            prf_mng.process(self.data_dir)
+            prf_mng.show_plots()
+        except Exception as e:
+            self.main_log.error(f"Stopping execution of program due to error in execution of Quality Manager Module: "
+                                f"{str(e)}")
+            print(traceback.format_exc())
+            exit(-1)
 
         self.main_log.info(f"Successfully executed INS algorithm {ins_alg}")
 

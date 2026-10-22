@@ -94,8 +94,8 @@ class INSPerformanceManager:
         self._plot_att("ref_att", plot_dir, "ref")
 
         self.log.info("Plotting IMU data...")
-        self._plot_imu("ref_gyro", plot_dir, "true")
-        self._plot_imu("ref_accel", plot_dir, "true")
+        self._plot_imu("true_gyro", plot_dir, "true")
+        self._plot_imu("true_accel", plot_dir, "true")
         self._plot_imu("gyro", plot_dir, "meas")
         self._plot_imu("accel", plot_dir, "meas")
         self._plot_imu_error(plot_dir)
@@ -222,10 +222,10 @@ class INSPerformanceManager:
 
     def _plot_imu_error(self, plot_dir):
         try:
-            true_accel = self.data_manager.get_data("accel")
-            meas_accel = self.data_manager.get_data("ref_accel")
-            true_gyro = self.data_manager.get_data("gyro")
-            meas_gyro = self.data_manager.get_data("ref_gyro")
+            meas_accel = self.data_manager.get_data("accel")
+            true_accel = self.data_manager.get_data("true_accel")
+            meas_gyro = self.data_manager.get_data("gyro")
+            true_gyro = self.data_manager.get_data("true_gyro")
             if true_accel.is_empty() or meas_accel.is_empty() or true_gyro.is_empty() or meas_gyro.is_empty():
                 raise ValueError
         except:

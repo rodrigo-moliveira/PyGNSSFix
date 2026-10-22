@@ -4,6 +4,7 @@
 import numpy as np
 
 from src.constants import EARTH_ROTATION
+from . import quat_multiply, quat_inverse
 from .frames import get_earth_radii
 from src.utils.math_utils import vector2skew_symmetric, skew_symmetric2vector
 
@@ -58,15 +59,20 @@ def compute_w_nb_b_euler(euler_dot, euler):
 
     return w_nb_b
 
-def compute_w_nb_b_dcm(dcm_dot, dcm):
+def compute_w_nb_b_dcm(dcm_dot, dcm_n_b):
     # input is c_n^b (dcm from n to b)
-    skew_matrix = dcm.T @ dcm_dot
-    w_nb_b = skew_symmetric2vector(skew_matrix)
+    # d(C_n^b)/dt = C_n^b * Skew_bn^b
+    # -> Skew_nb^b = -d(C_n^b)/dt * (C_n^b)^T
+    skew_nb_b = -dcm_dot @ dcm_n_b.T
+    w_nb_b = skew_symmetric2vector(skew_nb_b)
 
     return w_nb_b
 
-def compute_w_nb_b_quat(quat_dot, quat):
-    pass
+def compute_w_nb_b_quat(quat_dot, q_n_b):
+    # d(q_n^b)/dt = 1/2 * w_nb^b \quat_multiply q_n^b
+    w = 2.0 * quat_multiply(quat_dot, quat_inverse(q_n_b))
+    w_nb_b = w[0:3]
+    return w_nb_b
 
 ###################################
 # N-Frame Mechanization Equations #
