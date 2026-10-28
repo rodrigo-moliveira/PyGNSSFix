@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 
 from src.common_log import get_logger, INS_ALG_LOG
-from src.errors import FiniteDifferenceError
-from src.models.frames import mechanization, attitude, frames, base_convertion, sc_euler2dcm
+from src.errors import FiniteDifferenceError, SensorEmulationError
+from src.models.frames import mechanization, frames, base_convertion, sc_euler2dcm, rel_att_quat
 from src.utils.finite_diff import NumericalDifferentiator
 from src.io.config import config_dict, EnumAttitudeDiffState, EnumAttitudeDiffMethod, EnumFinDiffMethod
 from src.utils.math_utils import rot1, rot2, rot3
@@ -24,6 +24,9 @@ class SensorEmulator:
             self.att_differentiator = NumericalDifferentiator(config_dict.get("sensor_emulator", "attitude", "finite_diff_method"))
         else:
             self.att_differentiator = None
+            if self.att_diff_state == EnumAttitudeDiffState.RPY:
+                raise SensorEmulationError(f"When Relative Attitude is defined, the attitude state cannot be set to RPY. "
+                                           f"Please revise the attitude state to either QUAT or DCM.")
 
         # velocity configuration
         self.vel_differentiator = NumericalDifferentiator(config_dict.get("sensor_emulator", "velocity", "finite_diff_method"))
@@ -150,7 +153,7 @@ class SensorEmulator:
             c_en = frames.latlon2dcm_e_ned(lld[0], lld[1])  # matrix from e to n
 
             # 3. compute attitude difference (w_nb_b)
-            w_nb_b = np.zeros([0, 0, 0])
+            w_nb_b = np.zeros(3)
             if self.att_differentiator is not None:
                 # finite difference method
                 try:
@@ -168,15 +171,27 @@ class SensorEmulator:
                     self.log.warning(f"FiniteDifferenceError caught when computing attitude finite difference due to: {e}")
                     continue
             else:
-                # relative attitude
-                pass
+                try:
+                    # relative attitude
+                    dt = time[i+1, 0] - t
+                    if self.att_diff_state == EnumAttitudeDiffState.QUAT:
+                        quat_next = np.array(ref_quat_att.data.iloc[i+1, 1:])
+                        w_nb_b = rel_att_quat(quat, quat_next, dt)
+                    elif self.att_diff_state == EnumAttitudeDiffState.DCM:
+                        pass
+                except Exception as e:
+                    self.log.warning(f"Exception caught when computing relative attitude difference due to: {e}")
+                    continue
 
+
+            # TODO: add w_nb_b to the trace file
             # 4. compute velocity finite difference (v_eb_n_dot)
             try:
                 v_eb_n_dot = self.vel_differentiator.compute(ref_vel_eb_n.data, 0, ref_vel_eb_n.data_cols, t)
             except FiniteDifferenceError as e:
                 self.log.warning(f"FiniteDifferenceError caught when computing velocity finite difference due to: {e}")
                 continue
+            # TODO: add v_eb_n_dot to the trace file
 
             # 5 - get rotation vectors between frames i-e, e-n and n-b, and local gravity vector
             w_ie_n = mechanization.compute_w_ie_n(lld[0])

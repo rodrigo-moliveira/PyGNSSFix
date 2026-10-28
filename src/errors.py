@@ -140,6 +140,14 @@ class FiniteDifferenceError(GNSSNavPyError):
         message = "Finite Difference Error -> " + message
         super().__init__(message)
 
+
+class SensorEmulationError(GNSSNavPyError):
+    """ Error in the Sensor Emulator algorithm. """
+
+    def __init__(self, message):
+        message = "Sensor Emulator Error -> " + message
+        super().__init__(message)
+
 class UnknownConversion(GNSSNavPyError):
     """ Error in the `unit_conversions` module. """
 
