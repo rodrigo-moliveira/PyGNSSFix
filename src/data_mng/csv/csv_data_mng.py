@@ -56,8 +56,8 @@ class GnssRunStorageManager(Container):
         self.time = CSVData(name="time",
                             description="Time in GPS Time Scale",
                             title="GPS Time Scale",
-                            time_cols=(0, 1),
-                            data_cols=(2,))
+                            time_cols=[0, 1],
+                            data_cols=[2,])
 
         # position in ECEF
         self.position = CSVData(name="position",
@@ -66,8 +66,8 @@ class GnssRunStorageManager(Container):
                                 legend=['x', 'y', 'z', 'cov_xx', 'cov_yy', 'cov_zz', 'cov_xy', 'cov_xz',
                                         'cov_yz'],
                                 title="Estimated Position in the ECEF Frame",
-                                time_cols=(0, 1),
-                                data_cols=(2, 3, 4, 5, 6, 7, 8, 9, 10))
+                                time_cols=[0, 1],
+                                data_cols=[2, 3, 4, 5, 6, 7, 8, 9, 10])
 
         # clock bias
         self.clock_bias = CSVData(name="clock_bias",
@@ -75,8 +75,8 @@ class GnssRunStorageManager(Container):
                                   units=['s', 's^2'],
                                   # legend=['clock_bias', 'cov'],
                                   title="Estimated Receiver Clock Bias",
-                                  time_cols=(0, 1),
-                                  data_cols=(2, 3))
+                                  time_cols=[0, 1],
+                                  data_cols=[2, 3])
 
         # clock bias rate
         self.clock_bias_rate = CSVData(name="clock_bias_rate",
@@ -84,8 +84,8 @@ class GnssRunStorageManager(Container):
                                        units=['', 's/s', '(s/s)^2'],
                                        legend=['constellation', 'clock rate', 'cov'],
                                        title="Receiver Clock Bias Rate",
-                                       time_cols=(0, 1),
-                                       data_cols=(2, 3, 4))
+                                       time_cols=[0, 1],
+                                       data_cols=[2, 3, 4])
 
         # DGNSS Bias
         self.dgnss_bias = CSVData(name="dgnss_bias",
@@ -93,8 +93,8 @@ class GnssRunStorageManager(Container):
                                   units=['','','s', 's^2'],
                                   legend=['constellation','datatype','bias', 'cov'],
                                   title="Estimated DGNSS Biases",
-                                  time_cols=(0, 1),
-                                  data_cols=(2, 3, 4, 5))
+                                  time_cols=[0, 1],
+                                  data_cols=[2, 3, 4, 5])
 
         # velocity in ECEF
         self.velocity = CSVData(name="velocity",
@@ -104,8 +104,8 @@ class GnssRunStorageManager(Container):
                                 legend=['x', 'y', 'z', 'cov_xx', 'cov_yy', 'cov_zz', 'cov_xy', 'cov_xz',
                                         'cov_yz'],
                                 title="Estimated Velocity in the ECEF Frame",
-                                time_cols=(0, 1),
-                                data_cols=(2, 3, 4, 5, 6, 7, 8, 9, 10))
+                                time_cols=[0, 1],
+                                data_cols=[2, 3, 4, 5, 6, 7, 8, 9, 10])
 
         # Dilution of Precision (DOP)
         self.dop_ecef = CSVData(name="DOP_ECEF",
@@ -113,63 +113,63 @@ class GnssRunStorageManager(Container):
                                 units=['', '', '', '', '', ''],
                                 legend=['dop_x', 'dop_y', 'dop_z', 'dop_time', 'dop_geometry', 'dop_position'],
                                 title="Dilution of Precision (ECEF)",
-                                time_cols=(0, 1),
-                                data_cols=(2, 3, 4, 5, 6, 7))
+                                time_cols=[0, 1],
+                                data_cols=[2, 3, 4, 5, 6, 7])
 
         self.dop_local = CSVData(name="DOP_local",
                                  description="Dilution of Precision in local (ENU) frame",
                                  units=['', '', '', ''],
                                  legend=['dop_east', 'dop_north', 'dop_up', 'dop_horizontal'],
                                  title="Dilution of Precision (ENU)",
-                                 time_cols=(0, 1),
-                                 data_cols=(2, 3, 4, 5))
+                                 time_cols=[0, 1],
+                                 data_cols=[2, 3, 4, 5])
 
         # pseudorange prefit residuals
         self.pr_prefit_residuals = CSVData(name="pr_prefit_residuals",
                                            description="Pseudorange Prefit Residuals",
                                            title="Pseudorange Prefit Residuals",
-                                           time_cols=(0, 1),
-                                           data_cols=(2, 3, 4, 5),
+                                           time_cols=[0, 1],
+                                           data_cols=[2, 3, 4, 5],
                                            func_filter=lambda df: df[df["data_type"].str.contains("PR")])
 
         # pseudorange postfit residuals
         self.pr_postfit_residuals = CSVData(name="pr_postfit_residuals",
                                             description="Pseudorange Postfit Residuals",
                                             title="Pseudorange Postfit Residuals",
-                                            time_cols=(0, 1),
-                                            data_cols=(2, 3, 4, 5),
+                                            time_cols=[0, 1],
+                                            data_cols=[2, 3, 4, 5],
                                             func_filter=lambda df: df[df["data_type"].str.contains("PR")])
 
         # carrier phase prefit residuals
         self.cp_prefit_residuals = CSVData(name="cp_prefit_residuals",
                                            description="Carrier Phase Prefit Residuals",
                                            title="Carrier Phase Prefit Residuals",
-                                           time_cols=(0, 1),
-                                           data_cols=(2, 3, 4, 5),
+                                           time_cols=[0, 1],
+                                           data_cols=[2, 3, 4, 5],
                                            func_filter=lambda df: df[df["data_type"].str.contains("CP")])
 
         # carrier phase postfit residuals
         self.cp_postfit_residuals = CSVData(name="cp_postfit_residuals",
                                             description="Carrier Phase Postfit Residuals",
                                             title="Carrier Phase Postfit Residuals",
-                                            time_cols=(0, 1),
-                                            data_cols=(2, 3, 4, 5),
+                                            time_cols=[0, 1],
+                                            data_cols=[2, 3, 4, 5],
                                             func_filter=lambda df: df[df["data_type"].str.contains("CP")])
 
         # pr rate prefit residuals
         self.pr_rate_prefit_residuals = CSVData(name="pr_rate_prefit_residuals",
                                                 description="Pseudorange Rate Prefit Residuals",
                                                 title="Pseudorange Rate Prefit Residuals",
-                                                time_cols=(0, 1),
-                                                data_cols=(2, 3, 4, 5),
+                                                time_cols=[0, 1],
+                                                data_cols=[2, 3, 4, 5],
                                                 func_filter=lambda df: df[df["data_type"].str.contains("D")])
 
         # pr rate postfit residuals
         self.pr_rate_postfit_residuals = CSVData(name="pr_rate_postfit_residuals",
                                                  description="Pseudorange Rate Postfit Residuals",
                                                  title="Pseudorange Rate Postfit Residuals",
-                                                 time_cols=(0, 1),
-                                                 data_cols=(2, 3, 4, 5),
+                                                 time_cols=[0, 1],
+                                                 data_cols=[2, 3, 4, 5],
                                                  func_filter=lambda df: df[df["data_type"].str.contains("D")])
 
         # satellite azimuth elevation
@@ -178,8 +178,8 @@ class GnssRunStorageManager(Container):
                                       units=['', 'deg', 'deg'],
                                       legend=['sat', 'azimuth', 'elevation'],
                                       title="Satellite Azimuth and Elevation",
-                                      time_cols=(0, 1),
-                                      data_cols=(2, 3, 4),
+                                      time_cols=[0, 1],
+                                      data_cols=[2, 3, 4],
                                       )
 
         # Inter System Bias ISB
@@ -187,8 +187,8 @@ class GnssRunStorageManager(Container):
                            description="Inter System Bias ISB",
                            units=['s', 's^2'],
                            title="Inter System Bias ISB",
-                           time_cols=(0, 1),
-                           data_cols=(2, 3),
+                           time_cols=[0, 1],
+                           data_cols=[2, 3],
                            )
 
         # Iono
@@ -197,8 +197,8 @@ class GnssRunStorageManager(Container):
                             units=['', 'm', 'm^2'],
                             legend=['sat', 'iono', 'cov'],
                             title="Estimated Ionosphere Delay",
-                            time_cols=(0, 1),
-                            data_cols=(2, 3, 4),
+                            time_cols=[0, 1],
+                            data_cols=[2, 3, 4],
                             )
 
         self.tropo_wet = CSVData(name="tropo",
@@ -206,37 +206,37 @@ class GnssRunStorageManager(Container):
                                  units=['m', 'm^2'],
                                  legend=['tropo_wet', 'cov'],
                                  title="Estimated Troposphere (Wet Delay)",
-                                 time_cols=(0, 1),
-                                 data_cols=(2, 3),
+                                 time_cols=[0, 1],
+                                 data_cols=[2, 3],
                                  )
 
         # GNSS observation data
         self.obs = CSVData(name="obs",
                            description="GNSS Observations",
                            title="GNSS Observations",
-                           time_cols=(0, 1),
-                           data_cols=(2, 3, 4, 5))
+                           time_cols=[0, 1],
+                           data_cols=[2, 3, 4, 5])
 
         # GNSS raw observation data
         self.raw_obs = CSVData(name="raw_obs",
                                description="GNSS Raw Observations",
                                title="GNSS Observations",
-                               time_cols=(0, 1),
-                               data_cols=(2, 3, 4, 5))
+                               time_cols=[0, 1],
+                               data_cols=[2, 3, 4, 5])
 
         # GNSS observation data (Melbourne-Wubbena Combinations)
         self.mw_obs = CSVData(name="mw_obs",
                               description="Melbourne-Wubbena Observations",
                               title="Melbourne-Wubbena Observations",
-                              time_cols=(0, 1),
-                              data_cols=(2, 3, 4, 5))
+                              time_cols=[0, 1],
+                              data_cols=[2, 3, 4, 5])
 
         # GNSS observation data (Geometry-Free Combinations)
         self.gf_obs = CSVData(name="gf_obs",
                               description="Geometry-Free Observations",
                               title="Geometry-Free Observations",
-                              time_cols=(0, 1),
-                              data_cols=(2, 3, 4, 5))
+                              time_cols=[0, 1],
+                              data_cols=[2, 3, 4, 5])
 
         # Ambiguity
         self.ambiguity = CSVData(name="ambiguity",
@@ -244,8 +244,8 @@ class GnssRunStorageManager(Container):
                                  units=['', '', 'm', 'm^2'],
                                  legend=['sat', 'datatype', 'ambiguity', 'cov'],
                                  title="Estimated Ambiguity",
-                                 time_cols=(0, 1),
-                                 data_cols=(2, 3, 4, 5),
+                                 time_cols=[0, 1],
+                                 data_cols=[2, 3, 4, 5],
                                  )
 
         # Phase Bias
@@ -254,8 +254,8 @@ class GnssRunStorageManager(Container):
                                   units=['', '', 'm', 'm^2'],
                                   legend=['constellation', 'datatype', 'phase_bias', 'cov'],
                                   title="Estimated Receiver Phase Bias",
-                                  time_cols=(0, 1),
-                                  data_cols=(2, 3, 4, 5),
+                                  time_cols=[0, 1],
+                                  data_cols=[2, 3, 4, 5],
                                   )
 
         # available data for the current simulation

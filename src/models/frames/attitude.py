@@ -434,6 +434,31 @@ def quat_rotate(q, x_A):
 
     return x_B_quat[:3]
 
+def rel_att_quat(quat, quat_next, dt):
+
+    d = np.dot(quat, quat_next)
+    if d < 0.0:
+        quat_next = -quat_next
+
+    q_rel = quat_multiply(quat_next, quat_inverse(quat))
+    if q_rel[3] < 0:
+        q_rel = -q_rel
+
+    qv = q_rel[0:3]
+    qv_norm = np.linalg.norm(qv)
+    q4 = q_rel[3]
+
+    theta = 2.0 * np.arctan2(qv_norm, q4)
+
+    if np.allclose(theta, 0.0):
+        theta_vec = 2.0 * qv
+    else:
+        theta_vec = theta * qv / qv_norm
+
+    w = theta_vec / dt
+
+    return w
+
 """
 def exp_att2euler(pos, exp_att):
 

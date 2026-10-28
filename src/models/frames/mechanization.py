@@ -5,7 +5,7 @@ import numpy as np
 
 from src.constants import EARTH_ROTATION
 from . import quat_multiply, quat_inverse
-from .frames import get_earth_radii
+from src.models.frames import frames
 from src.utils.math_utils import vector2skew_symmetric, skew_symmetric2vector
 
 w_ie_e = np.array([0, 0, EARTH_ROTATION])  # in rad/s. This vector is also w_ie_i, although this is not needed
@@ -16,7 +16,7 @@ def compute_w_en_n(v_eb_n, lld):
     v_n, v_e, v_z = v_eb_n[:]
     lat, long, d = lld[:]
 
-    rm, rn = get_earth_radii(lat)
+    rm, rn = frames.get_earth_radii(lat)
 
     rm_effective = rm - d
     rn_effective = rn - d
@@ -90,3 +90,18 @@ def compute_f_ib_b(c_nb, c_en, w_en_n, w_ie_n, v_eb_n_dot, g_eb_e, v_eb_n):
     f_ib_n = v_eb_n_dot - c_en @ g_eb_e + (skew_en_n + 2 * skew_ie_n) @ v_eb_n
     f_ib_b = c_nb @ f_ib_n  # accelerometer readout
     return f_ib_b
+
+def compute_imu_readouts(lld, w_nb_b, v_eb_n, v_eb_n_dot, c_nb):
+    # Get rotation vectors between frames i-e, e-n and n-b, and local gravity vector
+    c_en = frames.latlon2dcm_e_ned(lld[0], lld[1])  # matrix from e to n
+    w_ie_n = compute_w_ie_n(lld[0])
+    w_en_n, _, _ = compute_w_en_n(v_eb_n, lld)
+    r_eb_e = np.array(
+        frames.geodetic2cartesian(lld[0], lld[1], -lld[2]))  # remember that altitude is positive downwards!
+    g_eb_e = frames.grav_acceleration(r_eb_e)
+
+    # Apply the mechanization equations (in the n-frame)
+    w_ib_b = compute_w_ib_b(c_nb, w_ie_n, w_en_n, w_nb_b)
+    f_ib_b = compute_f_ib_b(c_nb, c_en, w_en_n, w_ie_n, v_eb_n_dot, g_eb_e, v_eb_n)
+
+    return w_ib_b, f_ib_b

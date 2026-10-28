@@ -1,11 +1,12 @@
 import numpy as np
 import pandas as pd
+import os
 
 from src.common_log import get_logger, INS_ALG_LOG
 from src.errors import FiniteDifferenceError, SensorEmulationError
-from src.models.frames import mechanization, frames, base_convertion, sc_euler2dcm, rel_att_quat
+from src.models.frames import mechanization, base_convertion, sc_euler2dcm, rel_att_quat
 from src.utils.finite_diff import NumericalDifferentiator
-from src.io.config import config_dict, EnumAttitudeDiffState, EnumAttitudeDiffMethod, EnumFinDiffMethod
+from src.io.config import config_dict, EnumAttitudeDiffState, EnumAttitudeDiffMethod
 from src.utils.math_utils import rot1, rot2, rot3
 
 
@@ -13,9 +14,16 @@ from src.utils.math_utils import rot1, rot2, rot3
 
 class SensorEmulator:
     def __init__(self, trace_path, data_manager):
-        self.trace_path = trace_path
+        self.trace_dir = None
         self.data_manager = data_manager
         self.log = get_logger(INS_ALG_LOG)
+
+        if config_dict.get("algorithm", "trace_files"):
+            self.trace_dir = f"{trace_path}\\sensor_emulator"
+            try:
+                os.makedirs(self.trace_dir)
+            except:
+                raise IOError(f"Cannot create dir: {self.trace_dir}")
 
         # attitude configuration
         self.att_diff_state = EnumAttitudeDiffState.init_model(config_dict.get("sensor_emulator", "attitude", "diff_state"))
@@ -124,6 +132,15 @@ class SensorEmulator:
     def _compute_true_imu_readouts(self):
         # n-frame mechanization
 
+        if self.trace_dir is not None:
+            fh_omega = open(f"{self.trace_dir}\\w_nb_b.txt", "w")
+            fh_force = open(f"{self.trace_dir}\\v_eb_n_dot.txt", "w")
+
+            fh_omega.write("epoch,w_ib_b X [rad/s],w_ib_b Y [rad/s],w_ib_b Z [rad/s]\n")
+            fh_force.write("epoch,f_ib_b X [m/s^2],f_ib_b Y [m/s^2],f_ib_b Z [m/s^2]\n")
+        else:
+            fh_omega = fh_force = None
+
         # fetch PVAT inputs from the data manager
         ref_pos_lld = self.data_manager.get_data("ref_pos")
         ref_vel_eb_n = self.data_manager.get_data("ref_vel_eb_n")
@@ -150,7 +167,6 @@ class SensorEmulator:
             # 2 - compute rotation matrices
             # c_nb = attitude.euler2dcm(euler)  # matrix from n to b
             c_nb = np.array(ref_dcm_att.iloc[i, 1:]).reshape(3, 3)
-            c_en = frames.latlon2dcm_e_ned(lld[0], lld[1])  # matrix from e to n
 
             # 3. compute attitude difference (w_nb_b)
             w_nb_b = np.zeros(3)
@@ -179,32 +195,36 @@ class SensorEmulator:
                         w_nb_b = rel_att_quat(quat, quat_next, dt)
                     elif self.att_diff_state == EnumAttitudeDiffState.DCM:
                         pass
+                        # TODO: do this
                 except Exception as e:
                     self.log.warning(f"Exception caught when computing relative attitude difference due to: {e}")
                     continue
 
-
-            # TODO: add w_nb_b to the trace file
             # 4. compute velocity finite difference (v_eb_n_dot)
             try:
                 v_eb_n_dot = self.vel_differentiator.compute(ref_vel_eb_n.data, 0, ref_vel_eb_n.data_cols, t)
             except FiniteDifferenceError as e:
                 self.log.warning(f"FiniteDifferenceError caught when computing velocity finite difference due to: {e}")
                 continue
-            # TODO: add v_eb_n_dot to the trace file
 
-            # 5 - get rotation vectors between frames i-e, e-n and n-b, and local gravity vector
-            w_ie_n = mechanization.compute_w_ie_n(lld[0])
-            w_en_n, _, _ = mechanization.compute_w_en_n(v_eb_n, lld)
-            r_eb_e = np.array(frames.geodetic2cartesian(lld[0], lld[1], -lld[2])) # remember that altitude is positive downwards!
-            g_eb_e = frames.grav_acceleration(r_eb_e)
+            # 5. Apply the mechanization equations (in the n-frame)
+            _w_ib_b, _f_ib_b = mechanization.compute_imu_readouts(lld, w_nb_b, v_eb_n, v_eb_n_dot, c_nb)
+            w_ib_b[i] = _w_ib_b
+            f_ib_b[i] = _f_ib_b
 
-            # 6 - finally, apply the mechanization equations (in the n-frame)
-            w_ib_b[i] = mechanization.compute_w_ib_b(c_nb, w_ie_n, w_en_n, w_nb_b)
-            f_ib_b[i] = mechanization.compute_f_ib_b(c_nb, c_en, w_en_n, w_ie_n, v_eb_n_dot, g_eb_e, v_eb_n)
+            # 6 - save to trace file
+            if fh_omega is not None:
+                fh_omega.write(f"{t},{w_nb_b[0]},{w_nb_b[1]},{w_nb_b[2]}\n")
+            if fh_force is not None:
+                fh_force.write(f"{t},{v_eb_n_dot[0]},{v_eb_n_dot[1]},{v_eb_n_dot[2]}\n")
 
         # append to results
         self.data_manager.true_gyro.init_data(time, w_ib_b)
         self.data_manager.true_accel.init_data(time, f_ib_b)
+
+
+        if fh_omega is not None and fh_force is not None:
+            fh_omega.close()
+            fh_force.close()
 
         return w_ib_b, f_ib_b, time
