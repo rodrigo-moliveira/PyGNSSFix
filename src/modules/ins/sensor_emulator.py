@@ -4,7 +4,7 @@ import os
 
 from src.common_log import get_logger, INS_ALG_LOG
 from src.errors import FiniteDifferenceError, SensorEmulationError
-from src.models.frames import mechanization, base_convertion, sc_euler2dcm, rel_att_quat
+from src.models.frames import mechanization, base_convertion, sc_euler2dcm, rel_att_quat, rel_att_dcm
 from src.utils.finite_diff import NumericalDifferentiator
 from src.io.config import config_dict, EnumAttitudeDiffState, EnumAttitudeDiffMethod
 from src.utils.math_utils import rot1, rot2, rot3
@@ -194,8 +194,8 @@ class SensorEmulator:
                         quat_next = np.array(ref_quat_att.data.iloc[i+1, 1:])
                         w_nb_b = rel_att_quat(quat, quat_next, dt)
                     elif self.att_diff_state == EnumAttitudeDiffState.DCM:
-                        pass
-                        # TODO: do this
+                        dcm_next = np.array(ref_dcm_att.iloc[i + 1, 1:]).reshape(3, 3)
+                        w_nb_b = rel_att_dcm(c_nb, dcm_next, dt)
                 except Exception as e:
                     self.log.warning(f"Exception caught when computing relative attitude difference due to: {e}")
                     continue
