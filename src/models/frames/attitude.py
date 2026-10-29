@@ -1,8 +1,9 @@
 """ Module with useful attitude functions and representation conversions """
 
 import numpy as np
+import scipy
 
-from src.utils.math_utils import require_len_array, require_len_matrix
+from src.utils.math_utils import require_len_array, require_len_matrix, skew_symmetric2vector
 
 
 def euler2dcm(euler):
@@ -435,12 +436,116 @@ def quat_rotate(q, x_A):
     return x_B_quat[:3]
 
 def rel_att_quat(quat, quat_next, dt):
+    """
+    Estimate the body angular velocity from two consecutive attitude
+    quaternions using the relative rotation quaternion.
 
+    The input quaternions represent the attitude transformation from
+    the navigation frame (NED) to the body frame, using the convention
+
+        v^b = C_n^b @ v^n
+
+    where C_n^b is the direction cosine matrix (DCM) corresponding
+    to the input quaternion.
+
+    The relative quaternion is computed as
+
+        q_rel = q_n^{b_{k+1}} ⊗ (q_n^{b_k})^{-1}
+
+    where ⊗ denotes quaternion multiplication. Under the quaternion
+    multiplication convention used by quat_multiply(), this relative
+    quaternion represents the coordinate transformation from body
+    frame b_k to body frame b_{k+1}, denoted q_{b_k}^{b_{k+1}}.
+
+    This interpretation assumes that the navigation frame is held
+    fixed between epochs t_k and t_{k+1}. Consequently, the estimated
+    angular velocity is the average angular velocity of the body
+    relative to the navigation frame, expressed in the body frame.
+
+    If the navigation frame is a moving local-level NED frame, its
+    rotation relative to inertial space is not included in this
+    estimate. To obtain the inertial angular velocity measured by an
+    ideal gyroscope, the navigation-frame angular velocity must also
+    be accounted for.
+
+    The relative quaternion is converted into a rotation vector using
+    the axis-angle representation. For a unit quaternion,
+
+        q_rel = [e * sin(theta / 2), cos(theta / 2)]
+
+    where e is the unit rotation axis and theta is the rotation angle.
+
+    The angle is recovered as
+
+        theta = 2 * atan2(norm(qv), q4)
+
+    where qv = q_rel[0:3] is the vector part and q4 = q_rel[3]
+    is the scalar part (scalar-last quaternion convention).
+
+    The rotation vector is then
+
+        theta_vec = theta * qv / norm(qv)
+
+    for a nonzero rotation. For very small rotations, the limiting
+    approximation
+
+        theta_vec ≈ 2 * qv
+
+    is used.
+
+    Finally, the interval-average angular velocity is estimated as
+
+        w = theta_vec / dt
+
+    Quaternion sign handling:
+      1. The sign of quat_next is adjusted, if necessary, so that
+         dot(quat, quat_next) >= 0. This avoids artificial sign jumps
+         between consecutive quaternion samples.
+      2. The relative quaternion is negated, if necessary, so that
+         its scalar component is non-negative. This selects the
+         principal rotation angle in [0, pi].
+
+    Assumptions:
+      - Both input quaternions are valid, normalized attitude
+        quaternions.
+      - quat_multiply(a, b) implements the quaternion composition
+        convention consistent with the attitude-to-DCM mapping.
+      - dt is positive and expressed in seconds.
+      - The relative rotation over the interval is represented by
+        its principal rotation, with angle in [0, pi].
+      - The result is an interval-average angular velocity, not
+        necessarily the instantaneous angular velocity at either
+        endpoint.
+
+    Args:
+        quat (np.ndarray):
+            Attitude quaternion at time t_k, mapping NED coordinates
+            to body-frame coordinates. Scalar-last order [qx, qy, qz, qw].
+        quat_next (np.ndarray) :
+            Attitude quaternion at time t_{k+1}, using the same convention
+            as quat.
+        dt (float) :
+            Time interval t_{k+1} - t_k, in seconds. Must be positive.
+
+    Returns:
+        np.ndarray:
+            Estimated interval-average angular velocity of the body
+            relative to the navigation frame, expressed in body
+            coordinates, in rad/s.
+
+    """
+
+    # Ensure that consecutive quaternion samples use consistent signs and avoids artificial jumps due to the equivalence
+    # q = -q
     d = np.dot(quat, quat_next)
     if d < 0.0:
         quat_next = -quat_next
 
+    # q_rel is q_b,k^b,k+1, that is, rotation from body frame from t(k) to t(k+1)
     q_rel = quat_multiply(quat_next, quat_inverse(quat))
+
+    # This ensures that we use the relative quaternion with a non-negative scalar component, corresponding to a
+    # principal rotation angle in [0, pi]
     if q_rel[3] < 0:
         q_rel = -q_rel
 
@@ -455,9 +560,98 @@ def rel_att_quat(quat, quat_next, dt):
     else:
         theta_vec = theta * qv / qv_norm
 
+    # Compute w_nb^b(t_k)
     w = theta_vec / dt
 
     return w
+
+def rel_att_dcm(dcm, dcm_next, dt):
+    """Estimate body angular velocity from consecutive attitude DCMs.
+
+    The input DCMs represent the transformation from navigation-frame
+    (NED) coordinates to body-frame coordinates, following the
+    convention:
+
+        v^b = C_n^b @ v^n
+
+    where C_n^b is the direction cosine matrix (DCM) at the corresponding
+    epoch.
+
+    The relative DCM is computed as:
+
+        C_rel = C_n^{b_{k+1}} @ (C_n^{b_k}).T
+
+    This relative DCM represents the coordinate transformation from
+    body frame b_k to body frame b_{k+1}, denoted C_{b_k}^{b_{k+1}},
+    assuming the navigation frame is fixed between epochs t_k and
+    t_{k+1}.
+
+    The matrix logarithm is used to extract the relative rotation:
+
+        L = logm(C_rel)
+
+    For a valid rotation matrix, L is skew-symmetric in exact arithmetic.
+    The rotation vector is recovered using the convention:
+
+        theta_vec = vee(-L)
+
+    where vee() converts a skew-symmetric matrix into its corresponding
+    three-dimensional vector. The negative sign follows from the
+    navigation-to-body DCM convention and the definition of the
+    relative DCM above.
+
+    The interval-average angular velocity is estimated as:
+
+        w_nb^b = theta_vec / dt
+
+    This gives the average angular velocity of the body relative to the
+    navigation frame, expressed in body coordinates, over the interval
+    [t_k, t_{k+1}].
+
+    If the navigation frame is a moving local-level NED frame, its
+    rotation relative to inertial space is not included in this estimate.
+    To obtain the inertial angular velocity measured by an ideal
+    gyroscope, the navigation-frame angular velocity must also be
+    accounted for.
+
+    Args:
+        dcm (numpy.ndarray): Attitude DCM at time t_k, with shape (3, 3).
+            Transforms vectors from navigation coordinates to body
+            coordinates, i.e. v_b = dcm @ v_n.
+        dcm_next (numpy.ndarray): Attitude DCM at time t_{k+1}, with
+            shape (3, 3), using the same convention as dcm.
+        dt (float): Positive time interval t_{k+1} - t_k, in seconds.
+
+    Returns:
+        numpy.ndarray: Estimated interval-average angular velocity
+            w_nb^b, expressed in body coordinates, with shape (3,)
+            and units of rad/s.
+
+    Assumptions:
+        - Both input DCMs are valid rotation matrices in SO(3).
+        - Both DCMs use the same navigation-frame coordinate basis.
+        - dt is positive and expressed in seconds.
+        - The relative rotation is represented by the principal matrix
+          logarithm, with rotation angle in [0, pi].
+        - The result is an interval-average angular velocity, not
+          necessarily the instantaneous angular velocity at either
+          endpoint.
+
+    """
+    # dcm_rel is C_b,k^b,k+1, that is, rotation matrix from body frame from t(k) to t(k+1)
+    dcm_rel = dcm_next @ dcm.T
+
+    # The relation between rotation axis and DCM is
+    # A(theta_vec) = exp(- skew(theta_vec)). We invert this
+    # Note: a more numerical friendly implementation may be done in the future, if we get problems
+    log = scipy.linalg.logm(dcm_rel)
+    theta_vec = skew_symmetric2vector(-log)
+
+    # Compute w_nb^b(t_k)
+    w = theta_vec / dt
+
+    return w
+
 
 """
 def exp_att2euler(pos, exp_att):
