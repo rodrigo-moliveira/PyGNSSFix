@@ -31,8 +31,8 @@
 
     "reference_attitude": {
       "file": "datasets/ins/test_pva/InputAttitudeQuat.txt",
-      "_comment": "available forms: RPY (Roll, Pitch, Yaw) or QUAT (quaternion). The attitude rotation is from navigation to body frame (RPY_n^b or quat_n^b).",
-      "form": "QUAT",
+      "_comment": "available forms: rpy (Roll, Pitch, Yaw) or quat (quaternion). The attitude rotation is from navigation to body frame (RPY_n^b or quat_n^b).",
+      "form": "quat",
       "units": ["rad","rad","rad"]
     },
     "imu_sensor_file": "sensors/imu_high_end.json",
@@ -44,13 +44,13 @@
     "attitude":
     {
       "_comment0": "Select the attitude state to perform the derivative computation. Available states are 'rpy', 'dcm' or 'quat'",
-      "diff_state": "rpy",
+      "diff_state": "quat",
 
       "_comment1": "Select the differentiation method. Available options are 'finite-difference' or 'relative-attitude'",
-      "method": "finite-difference",
+      "method": "relative-attitude",
 
       "_comment2": "Select the finite-difference algorithm. Available options are 'forward-two-point', 'central-two-point', 'forward-three-point', 'backward-three-point', 'central-five-point', 'optimal'",
-      "finite_diff_method": "forward-two-point"
+      "finite_diff_method": "optimal"
     },
     "velocity": {
       "_comment": "Select the finite-difference algorithm. Available options are 'forward-two-point', 'central-two-point', 'forward-three-point', 'backward-three-point', 'central-five-point', 'optimal'",

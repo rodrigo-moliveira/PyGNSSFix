@@ -45,15 +45,38 @@
     "inputs": {
       "type": "object",
       "properties": {
+        "trace_files": {"type": "boolean"},
+
         "reference_position": {
-          "type": "string"
+          "type": "object",
+          "properties": {
+            "file": {"type": "string"},
+            "form": {"type": "string", "enum": ["ECEF", "LLA", "LLD"]},
+            "units": {"type": "array"}
+          },
+          "required": ["file", "form", "units"]
         },
+
         "reference_velocity": {
-          "type": "string"
+          "type": "object",
+          "properties": {
+            "file": {"type": "string"},
+            "frame": {"type": "string", "enum": ["n", "b", "e"]},
+            "units": {"type": "array"}
+          },
+          "required": ["file", "frame", "units"]
         },
+
         "reference_attitude": {
-          "type": "string"
+          "type": "object",
+          "properties": {
+            "file": {"type": "string"},
+            "form": {"type": "string", "enum": ["rpy", "quat"]},
+            "units": {"type": "array"}
+          },
+          "required": ["file", "form", "units"]
         },
+
         "imu_sensor_file": {
           "type": "string"
         },
@@ -62,6 +85,7 @@
         }
       },
       "required": [
+        "trace_files",
         "reference_position",
         "reference_velocity",
         "reference_attitude",
@@ -69,6 +93,37 @@
         "gps_sensor_file"
       ]
     },
+
+    "sensor_emulator": {
+      "type": "object",
+      "properties": {
+        "attitude": {
+          "type": "object",
+          "properties": {
+            "diff_state": {"type": "string", "enum": ["rpy", "quat", "dcm"]},
+            "method": {"type": "string", "enum": ["relative-attitude", "finite-difference"]},
+            "finite_diff_method": {
+              "type": "string",
+              "enum": ["forward-two-point","central-two-point","forward-three-point","backward-three-point","central-five-point","optimal"]
+            }
+          },
+          "required": ["diff_state", "method", "finite_diff_method"]
+        },
+        "velocity":
+        {
+          "type": "object",
+          "properties": {
+            "finite_diff_method": {
+              "type": "string",
+              "enum": ["forward-two-point","central-two-point","forward-three-point","backward-three-point","central-five-point","optimal"]
+            }
+          },
+          "required": ["finite_diff_method"]
+        }
+      },
+      "required": ["attitude", "velocity"]
+    },
+
     "output": {
         "type": "object",
         "properties": {
@@ -85,6 +140,8 @@
     "log",
     "algorithm",
     "inputs",
-    "output"
+    "sensor_emulator",
+    "output",
+    "performance_evaluation"
   ]
 }
