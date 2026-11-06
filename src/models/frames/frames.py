@@ -1,5 +1,4 @@
 """ Useful reference frame functions and conversions """
-#TODO: update docstrings
 import numpy as np
 from src import constants
 from src.utils.math_utils import rot2, rot3, rot1
@@ -322,11 +321,43 @@ def enu2azel(x_enu, y_enu, z_enu):
     return [Az, El]
 
 def get_earth_radii(lat):
-    # Eq. 6 of Sensors 2012, 12 (see paper full name...)
-    # see https://en.wikipedia.org/wiki/Earth_radius section 'Radii of curvature'
-    # Rn -> primer vertical at provided latitude
-    # Rm -> Radius of curvature in the meridian
+    """Compute the Earth's radii of curvature at a given geodetic latitude.
 
+    Evaluates the two principal radii of curvature of the reference
+    ellipsoid at the specified latitude:
+
+    * **Rm** (meridian) – radius of curvature in the meridian plane::
+
+          Rm = a (1 − e²) / (1 − e² sin²φ)^(3/2)
+
+    * **Rn** (prime vertical) – radius of curvature in the prime-vertical
+      (parallel) plane::
+
+          Rn = a / (1 − e² sin²φ)^(1/2)
+
+    where *a* is the semi-major axis and *e²* is the first eccentricity
+    squared of the ellipsoid.
+
+    These expressions correspond to Eq. 6 of [1] and are also summarised in
+    the "Radii of curvature" section of the Wikipedia article *Earth radius*
+    (https://en.wikipedia.org/wiki/Earth_radius#Radii_of_curvature).
+
+    [1] Falco, Gianluca & Einicke, Garry & Malos, John & Dovis, Fabio. (2012).
+        Performance Analysis of Constrained Loosely Coupled GPS/INS Integration
+        Solutions. Sensors. 12. 15983-16007. 10.3390/s121115983.
+
+    Args:
+        lat: Geodetic latitude in **radians**.  Positive for the Northern Hemisphere,
+            negative for the southern.
+
+    Returns:
+        A tuple ``(rm, rn)``:
+
+        * ``rm`` (float) – Radius of curvature in the meridian at *lat*,
+          in metres.
+        * ``rn`` (float) – Prime-vertical radius of curvature at *lat*,
+          in metres.
+    """
     sl_sqr = np.sin(lat) ** 2
 
     rm = (EARTH_A * (1 - e_sq)) / (np.sqrt(1.0 - e_sq * sl_sqr) * (1.0 - e_sq * sl_sqr))
@@ -336,16 +367,16 @@ def get_earth_radii(lat):
 
 def grav_acceleration(r_eb_e, mode="earth"):
     """
-    TODO: to be updated
-    compute acceleration due to zonal harmonics.
+    Compute acceleration due to zonal harmonics.
+
     The harmonics coded are the low-order ones (the equations are hard-coded) and
-    the general harmonic series is not applied
+    the general harmonic series is not applied for now. Currently only the J2 term.
 
     Args:
-        r_eb_e : numpy array of (3,) or (3,1)
+        r_eb_e (numpy.ndarray) : numpy array of (3,) or (3,1)
             position vector in expressed e-frame coordinates
-        mode : str
-            'inertial' to compute inertial gravity or 'earth' to compute gravity w.r.t. Earth (Coriolis effect)
+        mode (str) : 'inertial' to compute inertial gravity or
+            'earth' to compute gravity w.r.t. Earth (Coriolis effect).
 
     NOTE: The relation between inertial gravity and gravity w.r.t. Earth is given by:
         Earth_grav^e = Inertial_grav^e - w_ie_e cross_product (w_ie_e cross_product r_eb_e)

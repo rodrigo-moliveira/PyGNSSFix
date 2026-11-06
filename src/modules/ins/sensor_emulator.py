@@ -1,3 +1,4 @@
+""" Module with the Sensor Emulation Algorithm"""
 import numpy as np
 import pandas as pd
 import os
@@ -10,10 +11,62 @@ from src.io.config import config_dict, EnumAttitudeDiffState, EnumAttitudeDiffMe
 from src.utils.math_utils import rot1, rot2, rot3
 
 
-# TODO: update docstrings
-
 class SensorEmulator:
+    """Emulates sensor measurements (gyroscope and accelerometer) for algorithm validation.
+
+    This class replays or emulates sensor traces to feed INS/navigation algorithms
+    with controlled, realistic measurement data.  It handles attitude-differencing
+    configuration (state representation, method, finite-difference scheme) and
+    velocity differentiation, and optionally writes intermediate trace files to disk.
+
+    Sensor noise model
+    ------------------
+    Each gyro / accelerometer channel is modelled as::
+
+        y_meas = (1 + scale_factor) * M @ y_true + bias_drift + bias_constant + noise
+
+    where
+
+    * **scale_factor** – per-axis scale-factor error (dimensionless).
+    * **M** – misalignment matrix (small-angle tilt between sensor and body axes).
+    * **y_true** – ideal (bias-free, noise-free) sensor reading.
+    * **bias_drift** – slowly time-varying bias (e.g. first-order Markov / random walk).
+    * **bias_constant** – fixed bias offset.
+    * **noise** – zero-mean white measurement noise (typically white Gaussian).
+
+    Attributes:
+        trace_dir: Absolute path to the directory where sensor trace files are
+            written, or ``None`` if trace-file output is disabled.
+        data_manager: Reference to the central data manager for trace I/O.
+        log: Logger instance scoped to the INS algorithm log channel.
+        att_diff_state: Enum describing the attitude representation used for
+            differencing (e.g. RPY, QUAT, DCM).
+        att_diff_method: Enum describing how the attitude difference is computed
+            (e.g. FIN_DEF for finite-difference).
+        att_differentiator: A :class:`NumericalDifferentiator` instance for attitude,
+            or ``None`` when a relative attitude difference is used.
+        vel_differentiator: A :class:`NumericalDifferentiator` instance for velocity.
+    """
     def __init__(self, trace_path, data_manager):
+        """Initialise the sensor emulator from the global configuration.
+
+        Reads the ``sensor_emulator`` section of *config_dict* to determine the
+        attitude-differencing state, method, and finite-difference schemes, then
+        sets up the required differentiators.  If the *algorithm* section requests
+        trace-file output, a dedicated sub-directory is created under *trace_path*.
+
+        Args:
+            trace_path: Base directory under which sensor trace files will be
+                stored
+            data_manager: Instance responsible for reading/writing trace data.
+
+        Raises:
+            IOError: If the trace directory cannot be created.
+            SensorEmulationError: If the attitude difference method is set to
+                ``FIN_DEF`` but the attitude state is ``RPY``, which is an
+                unsupported combination.
+
+        """
         self.trace_dir = None
         self.data_manager = data_manager
         self.log = get_logger(INS_ALG_LOG)
@@ -25,7 +78,7 @@ class SensorEmulator:
             except:
                 raise IOError(f"Cannot create dir: {self.trace_dir}")
 
-        # attitude configuration
+        # configuration from the user
         self.att_diff_state = EnumAttitudeDiffState.init_model(config_dict.get("sensor_emulator", "attitude", "diff_state"))
         self.att_diff_method = EnumAttitudeDiffMethod.init_model(config_dict.get("sensor_emulator", "attitude", "method"))
         if self.att_diff_method == EnumAttitudeDiffMethod.FIN_DEF:
@@ -35,8 +88,6 @@ class SensorEmulator:
             if self.att_diff_state == EnumAttitudeDiffState.RPY:
                 raise SensorEmulationError(f"When Relative Attitude is defined, the attitude state cannot be set to RPY. "
                                            f"Please revise the attitude state to either QUAT or DCM.")
-
-        # velocity configuration
         self.vel_differentiator = NumericalDifferentiator(config_dict.get("sensor_emulator", "velocity", "finite_diff_method"))
 
         # Printing to log
@@ -52,6 +103,21 @@ class SensorEmulator:
         return "InsAlgorithm(Sensor Emulation Algorithm)"
 
     def compute(self):
+        """Generate the full set of (noisy) IMU sensor readouts for the current run.
+
+        This is the main entry point of the :class:`SensorEmulator`.  It orchestrates
+        a two-stage pipeline:
+
+        1. **True readouts** – Compute bias-free, noise-free gyroscope and
+           accelerometer outputs from the reference trajectory.
+        2. **Error injection** – Corrupt the true readouts with the configured
+           misalignment, scale-factor, bias, and noise models (see the class-level
+           *Sensor noise model* section).
+
+        The resulting corrupted data is written into
+        ``self.data_manager.gyro`` and ``self.data_manager.accel`` for downstream
+        algorithm consumption.
+        """
         # compute errorless readouts
         true_gyro, true_accel, time = self._compute_true_imu_readouts()
 
@@ -60,6 +126,17 @@ class SensorEmulator:
         # self._corrupt_noise_gps(ref_pos_lld, ref_vel_eb_n)
 
     def _corrupt_noise_imu(self, true_gyro, true_accel, time):
+        """Apply the full IMU error model and store corrupted readouts.
+
+        Delegates to :meth:`_add_errors_imu` for each sensor (gyroscope and
+        accelerometer) and writes the resulting arrays into the data manager so
+        that downstream algorithms read the noisy values.
+
+        Args:
+            true_gyro: Ideal gyroscope readings
+            true_accel: Ideal accelerometer readings
+            time: Time-stamp array
+        """
         sampling_time = time[1, 0] - time[0, 0]
 
         readout_gyro = self._add_errors_imu("gyroscope", true_gyro, sampling_time)
@@ -69,11 +146,48 @@ class SensorEmulator:
         self.data_manager.accel.init_data(time, readout_accel)
 
     def _add_misalignment(self, readouts, misalignment):
+        """Apply per-epoch misalignment rotations in place.
+
+        For each epoch, a 3-2-1 (Z-Y-X) intrinsic rotation matrix is constructed
+        from the three Euler angles supplied in *misalignment* and multiplied
+        onto the corresponding readout row.
+
+        Args:
+            readouts: Sensor reading matrix, shape ``(n_epochs, 3)``.  Modified
+                in place.
+            misalignment: Per-epoch Euler angles, shape ``(n_epochs, 3)``, where
+                the columns correspond to rotation about axis 1, axis 2, and
+                axis 3 (radians).
+        """
         for i in range(len(readouts)):
             M = rot1(misalignment[i, 0]) @ rot2(misalignment[i, 1]) @ rot3(misalignment[i, 2])
             readouts[i, :] = M @ readouts[i, :]
 
     def _add_errors_imu(self, sensor, true_read, sampling_time):
+        """Generate a corrupted sensor readout by stacking all error terms.
+
+        Retrieves the user-configured error models for *sensor* from
+        ``self.data_manager.imu_sensor``, generates samples for each model, and
+        combines them according to::
+
+            readout = (1 + scale_factor) * (M @ true_read)
+                      + bias_drift + bias_constant + noise
+
+        where ``M`` is the per-epoch misalignment rotation.
+
+        Args:
+            sensor: Sensor identifier – ``"gyroscope"`` or ``"accelerometer"``.
+            true_read: Ideal sensor readings, shape ``(n_epochs, 3)``.  The
+                misalignment step modifies this array in place; callers that need
+                the original values should pass a copy.
+            sampling_time: Time interval between consecutive samples in seconds,
+                used by each error model for temporal correlation (e.g. Allan
+                variance, random walk).
+
+        Returns:
+            Corrupted readout matrix, shape ``(n_epochs, 3)``, with the same
+            physical units as *true_read*.
+        """
         user_models = self.data_manager.imu_sensor[sensor]
         n_epochs = len(true_read)
 
@@ -91,7 +205,7 @@ class SensorEmulator:
 
         return readout
 
-    def _corrupt_noise_gps(self, ref_pos_lld, ref_vel_ned):
+    """def _corrupt_noise_gps(self, ref_pos_lld, ref_vel_ned):
         # compute gps_pos_ecef, gps_vel_ecef (ECEF format)
         # compute gps_pos_lld, gps_vel_ned (NED format)
 
@@ -127,17 +241,40 @@ class SensorEmulator:
 
         # ned output
         gps_ned = np.concatenate((gps_pos_lld, gps_vel_ned), axis=1)
-        self.results.append(gps_ned)
+        self.results.append(gps_ned)"""
 
     def _compute_true_imu_readouts(self):
-        # n-frame mechanization
+        """Compute bias-free, noise-free IMU readouts via N-frame mechanization.
+
+        Reads the reference trajectory in the navigation (N) frame and
+        extracts the corresponding ideal gyroscope and accelerometer outputs
+        that an IMU mounted on the vehicle would observe.
+
+        The mechanization equations are formulated in the N frame as described
+        in [1]_.
+
+            [1] Springer Handbook of Global Navigation Satellite Systems,
+            Peter J.G. Teunissen, Oliver Montenbruck, Springer Cham, 2017.
+            Chapter 28
+
+        Returns:
+            A tuple of three arrays:
+
+            * ``true_gyro`` – Ideal gyroscope body-rate readings,
+              shape ``(n_epochs, 3)``, in rad/s.
+            * ``true_accel`` – Ideal accelerometer specific-force readings,
+              shape ``(n_epochs, 3)``, in m/s².
+            * ``time`` – Time-stamp matrix, shape ``(n_epochs, 2)``, where
+              column 0 is the epoch time (s) and column 1 is the sampling
+              offset.
+        """
 
         if self.trace_dir is not None:
             fh_omega = open(f"{self.trace_dir}\\w_nb_b.txt", "w")
             fh_force = open(f"{self.trace_dir}\\v_eb_n_dot.txt", "w")
 
-            fh_omega.write("epoch,w_ib_b X [rad/s],w_ib_b Y [rad/s],w_ib_b Z [rad/s]\n")
-            fh_force.write("epoch,f_ib_b X [m/s^2],f_ib_b Y [m/s^2],f_ib_b Z [m/s^2]\n")
+            fh_omega.write("epoch,w_ib^b X [rad/s],w_ib^b Y [rad/s],w_ib^b Z [rad/s]\n")
+            fh_force.write("epoch,f_ib^b X [m/s^2],f_ib^b Y [m/s^2],f_ib^b Z [m/s^2]\n")
         else:
             fh_omega = fh_force = None
 
@@ -147,7 +284,6 @@ class SensorEmulator:
         ref_euler_att = self.data_manager.get_data("ref_att_euler")
         ref_quat_att = self.data_manager.get_data("ref_att_quat")
         time = np.array(ref_pos_lld.to_time_array())
-        # TODO: consider if ref_dcm should be a state variable
         ref_dcm_att = base_convertion(ref_euler_att.to_data_array(), sc_euler2dcm)
         ref_dcm_att = pd.DataFrame(np.concatenate((time, ref_dcm_att), axis=1))
 
@@ -173,7 +309,7 @@ class SensorEmulator:
             if self.att_differentiator is not None:
                 # finite difference method
                 try:
-                    # TODO: check for each case, how to improve the correctness of the finite difference (for example, call quat_normalize)
+                    # NOTE: we may need to check for each case, how to improve the correctness of the finite difference (for example, call quat_normalize)
                     if self.att_diff_state == EnumAttitudeDiffState.RPY:
                         euler_dot = self.att_differentiator.compute(ref_euler_att.data, 0, ref_euler_att.data_cols, t)
                         w_nb_b = mechanization.compute_w_nb_b_euler(euler_dot, euler)
@@ -218,11 +354,11 @@ class SensorEmulator:
             if fh_force is not None:
                 fh_force.write(f"{t},{v_eb_n_dot[0]},{v_eb_n_dot[1]},{v_eb_n_dot[2]}\n")
 
-        # append to results
+        # Append to results to data manager
         self.data_manager.true_gyro.init_data(time, w_ib_b)
         self.data_manager.true_accel.init_data(time, f_ib_b)
 
-
+        # Close trace files
         if fh_omega is not None and fh_force is not None:
             fh_omega.close()
             fh_force.close()
