@@ -87,11 +87,11 @@ class INSPerformanceManager:
         #self._plot_pos("pos", plot_dir, "est")
 
         self.log.info("Plotting velocity data...")
-        self._plot_vel("ref_vel", plot_dir, "ref")
+        self._plot_vel("ref_vel_eb_n", plot_dir, "ref")
         #self._plot_vel("vel", plot_dir, "est")
 
         self.log.info("Plotting attitude data...")
-        self._plot_att("ref_att", plot_dir, "ref")
+        self._plot_att("ref_att_euler", plot_dir, "ref")
 
         self.log.info("Plotting IMU data...")
         self._plot_imu("true_gyro", plot_dir, "true")

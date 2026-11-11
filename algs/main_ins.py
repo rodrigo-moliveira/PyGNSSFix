@@ -1,4 +1,28 @@
-""" TODO: update docstrings... """
+""" Main scrip to execute the INS Algorithms.
+
+The `main_ins.py` script launches the execution of the INS Algorithm Manager.
+Depending on the user configurations, the Manager may execute different INS algorithms.
+Currently, the available algorithms are:
+    * Sensor Emulator
+    * INS Strapdown Propagation
+    * GNSS/INS Loosely Coupled Estimation
+
+The INS Performance Manager is always launched after the main algorithm run. Different performance metrics
+are evaluated, depending on which algorithm was executed.
+
+To run `main_ins.py` please do:
+    $ python main_ins.py <path_to_config>
+
+where:
+    <path_to_config>: Path to the configuration file. Examples of configuration files are stored in the project folder
+        :file:`../configs`
+    In this folder there are examples for each of the implemented algorithms.
+
+Usage:
+    To execute the script, pass the path to the configuration file:
+
+        $ python main_ins.py configs/sample_config.xml
+"""
 
 import sys
 import json
