@@ -71,6 +71,9 @@ class CSVData:
         if self.func_filter is not None:
             data = self.func_filter(data)
 
+        if not isinstance(data, pd.DataFrame):
+            raise ValueError(f"data should be a valid pandas DataFrame instance")
+
         n_epochs, n_dim = data.shape  # (n,m) shape, where n is the number of epochs and m is the row dimension
 
         # unpack shape
@@ -83,7 +86,7 @@ class CSVData:
         # Rename columns by index
         if self.legend:
             for i, new_name in zip(self.data_cols, self.legend):
-                data.columns.values[i] = new_name
+                data.rename(columns={data.columns[i]: new_name}, inplace=True)
 
         self.data = data
 
