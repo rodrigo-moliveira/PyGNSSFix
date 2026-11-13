@@ -83,28 +83,88 @@ def tide_gravity(h2, l2, r_rec_unit, r_body, MASS_RATIO, lat, long):
 
 def solid_disp(lat, long, r_sun, r_moon, r_rec, R_ECEF2ENU, gmst, step3=True):
     """
-    Displacement by solid earth tide.
+    Compute the solid Earth tide displacement of a station.
 
-    This function implements the simplified corrections from the IERS Conventions 2010:
-        * Step 1: Corrections to be computed in the time domain
-        * Step 2: Corrections to be computed in the frequency domain and to be added to the results of Step 1
-        * Step 3: Eliminate permanent deformation
+    This function implements the solid Earth tide displacement model described
+    in the IERS Conventions (2010), Chapter 7, Section 7.1.1.
+
+    The model consists of two computational steps:
+
+        Step 1: Compute the tidal displacement in the time domain using
+            nominal, frequency-independent Love and Shida numbers.
+
+        Step 2: Compute frequency-dependent corrections in the frequency
+            domain and add them to the results of Step 1.
+
+    The resulting displacement (Step 1 + Step 2) includes both permanent
+    and periodic tidal deformations. It therefore represents the displacement
+    of the instantaneous station position relative to its conventional
+    tide-free reference position.
+
+    Optionally, the permanent deformation can be removed:
+
+        Full model (Step 1 + Step 2):
+            Permanent + periodic displacement.
+            Displacement between the instantaneous and conventional
+            tide-free positions.
+
+        Periodic-only model (Step 1 + Step 2 - Step 3):
+            Periodic displacement only.
+            Displacement between the instantaneous and mean-tide positions.
+
+    Step 3:
+        Here, Step 3 refers to the removal of the permanent deformation described
+        in Section 7.1.1.2 of the IERS Conventions (2010).
+        The Step 3 removes the permanent deformation associated with the
+        degree-2 zonal tidal potential, following Eqs. (7.14a)
+        and (7.14b) of the IERS Conventions (2010).
+        The permanent deformation is computed in the local ENU frame
+        and subtracted from the displacement obtained in Steps 1 and 2.
 
     Reference:
-        [1] IERS Conventions 2010 https://iers-conventions.obspm.fr/content/tn36.pdf (Chapter 7)
+        [1] IERS Conventions (2010), Chapter 7, Section 7.1.1:
+            Displacement of reference points.
+            https://iers-conventions.obspm.fr/content/tn36.pdf
+
+    Notes:
+        The reference frame of the estimated station position depends on
+        whether the permanent tidal deformation is included in the applied
+        displacement correction.
+
+        When Step 1 + Step 2 are applied in the observation model, both
+        permanent and periodic tidal deformations are corrected for.
+        Consequently, the estimated station position corresponds to the
+        conventional tide-free position:
+
+            r_est = r_TF
+
+        When Step 3 is additionally applied (Step 1 + Step 2 - Step 3),
+        the permanent deformation is removed from the displacement model,
+        leaving only the periodic tidal deformation. Consequently, the
+        estimated station position retains the permanent deformation and
+        corresponds to the mean-tide position:
+
+            r_est = r_TF + delta_r_permanent = r_MT
+
+        Therefore, the choice of correction model determines the tidal
+        convention of the estimated station coordinates.
 
     Args:
-        lat (float)
-        long (float)
-        r_sun (numpy.ndarray)
-        r_moon (numpy.ndarray)
-        r_rec (numpy.ndarray)
-        R_ECEF2ENU (numpy.ndarray)
-        gmst (float)
-        step3 (bool)
+        lat (float): Geodetic latitude of the station.
+        long (float): Longitude of the station.
+        r_sun (numpy.ndarray): Geocentric position vector of the Sun.
+        r_moon (numpy.ndarray): Geocentric position vector of the Moon.
+        r_rec (numpy.ndarray): Geocentric position vector of the receiver.
+        R_ECEF2ENU (numpy.ndarray): Rotation matrix from ECEF to ENU.
+        gmst (float): Greenwich Mean Sidereal Time.
+        step3 (bool): If True, remove the permanent deformation according
+            to Eqs. (7.14a) and (7.14b), returning the periodic
+            displacement relative to the mean-tide reference position.
+            If False, retain the permanent deformation, returning the
+            full displacement relative to the tide-free reference position.
 
     Returns:
-        numpy.ndarray : computed correction in ECEF frame (m)
+        numpy.ndarray: Solid Earth tide displacement in the ECEF frame (m).
     """
     r_rec_unit = r_rec / np.linalg.norm(r_rec)
 
@@ -288,6 +348,8 @@ def compute_displacement(epoch, r_rec, ocean_loading_mng=None, gmst_model='IAU82
     enable_solid_tides = config_dict.get("model", "earth_deformation_effects", "enable_solid_tides")
     enable_ocean_loading = config_dict.get("model", "earth_deformation_effects", "enable_ocean_loading")
     enable_pode_tides = config_dict.get("model", "earth_deformation_effects", "enable_pode_tides")
+    # TODO: add step3 to configuration. when step3=True, we get mean-tide station coordinates. When step3=False we get
+    #   tide free coordinates
 
     # pre-computations required
     lat = np.arcsin(r_rec[2] / np.linalg.norm(r_rec))
@@ -299,7 +361,7 @@ def compute_displacement(epoch, r_rec, ocean_loading_mng=None, gmst_model='IAU82
         gmst = get_gmst(epoch, gmst_model)
         r_sun = compute_sun_pos(epoch)
         r_moon = compute_moon_pos(epoch)
-        disp_solid = solid_disp(lat, long, r_sun, r_moon, r_rec, R_ECEF2ENU, gmst, step3=True)
+        disp_solid = solid_disp(lat, long, r_sun, r_moon, r_rec, R_ECEF2ENU, gmst, step3=False)
         disp_ecef += disp_solid
 
     # ocean loading

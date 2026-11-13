@@ -518,3 +518,158 @@ Furthermore, seasonal hydrological loading, non-tidal atmospheric loading and ot
 - ITRF2020 uses conventional tide-free station coordinates.
 - Daily PPP solutions intended for comparison with ITRF2020 should retain the permanent deformation in the solid Earth tide correction.
 - The monument-to-ARP eccentricity, receiver PCO and PCV must be handled separately and consistently to ensure that the estimated coordinates refer to the monument marker.
+
+12. Complete IERS solid Earth tide displacement model
+
+According to IERS Conventions 2010, Chapter 7, Section 7.1.1, the conventional solid Earth tide displacement model consists of two steps:
+
+Step 1: Time-domain corrections
+
+The first step computes the main solid Earth tide displacement contributions in the time domain.
+
+These contributions are caused primarily by the gravitational attraction of the Moon and the Sun.
+
+The resulting displacement accounts for the radial and horizontal deformation of the Earth's crust and includes the permanent component associated with the tidal potential.
+
+Step 2: Frequency-dependent corrections
+
+The second step introduces frequency-dependent corrections to the nominal Love and Shida numbers.
+
+These corrections account for the fact that the Earth's response to tidal forcing varies with frequency.
+
+In particular, the diurnal frequency band requires special treatment due to the nearly diurnal free wobble (NDFW) resonance associated with the Earth's free core nutation.
+
+The frequency-dependent corrections are added to the results of Step 1.
+
+Consequently, the complete solid Earth tide displacement is:
+
+[
+\boxed{
+\Delta\mathbf r_{\mathrm{solid}}(t) =
+\Delta\mathbf r_{\mathrm{step1}}(t)
++
+\Delta\mathbf r_{\mathrm{step2}}(t)
+}
+]
+
+This displacement contains both:
+
+The permanent (time-independent) deformation.
+
+The periodic (time-dependent) deformation.
+
+12.1 Coordinate convention resulting from the complete model
+
+IERS Conventions 2010, Section 7.1.1.2, explains that the complete solid Earth tide model contains the permanent deformation.
+
+When the complete model is applied to GNSS observations, the estimated station coordinates correspond to conventional tide-free coordinates.
+
+This is the coordinate convention adopted by ITRF.
+
+The relationship between conventional tide-free and mean-tide coordinates is:
+
+[
+\boxed{
+\mathbf r_{\mathrm{MT}} =
+\mathbf r_{\mathrm{TF}}
++
+\Delta\mathbf r_{\mathrm{permanent}}
+}
+]
+
+Therefore, to obtain mean-tide coordinates from conventional tide-free coordinates, the permanent deformation must be added back to the coordinates.
+
+Importantly, this transformation is not part of the standard Step 1 + Step 2 solid Earth tide displacement calculation. It is a separate coordinate-system transformation.
+
+12.2 Implementation in a GNSS processor
+
+For a PPP processor intended to produce station coordinates consistent with ITRF2020, the displacement model should retain the permanent deformation.
+
+The appropriate implementation is:
+
+# IERS Conventions 2010, Chapter 7
+# Steps 1 and 2: Complete solid Earth tide displacement.
+# Permanent deformation is retained.
+
+disp_ecef = disp_step1 + disp_step2
+
+The resulting displacement is applied at each observation epoch through the receiver position correction in the GNSS observation model.
+
+The following implementation should therefore be avoided when conventional tide-free coordinates are required:
+
+disp_ecef = disp_step1 + disp_step2 - disp_step3
+
+provided that disp_step3 represents the permanent deformation.
+
+Subtracting the permanent component leaves only the periodic displacement and results in estimated mean-tide coordinates.
+
+
+### 1. Full model: Step 1 + Step 2
+
+Your observation model is:
+
+\[
+\mathbf r_{\mathrm{inst}}(t)
+=
+\mathbf r_{\mathrm{est}}
++
+\Delta\mathbf r_{\mathrm{perm}}
++
+\Delta\mathbf r_{\mathrm{periodic}}(t)
+\]
+
+Rearranging:
+
+\[
+\mathbf r_{\mathrm{est}}
+=
+\mathbf r_{\mathrm{inst}}(t)
+-
+\Delta\mathbf r_{\mathrm{perm}}
+-
+\Delta\mathbf r_{\mathrm{periodic}}(t)
+\]
+
+Therefore:
+
+\[
+\boxed{\mathbf r_{\mathrm{est}}=\mathbf r_{\mathrm{TF}}}
+\]
+
+Your estimated position is tide-free.
+
+### 2. Periodic-only model: Step 1 + Step 2 − Step 3
+
+Your observation model becomes:
+
+\[
+\mathbf r_{\mathrm{inst}}(t)
+=
+\mathbf r_{\mathrm{est}}
++
+\Delta\mathbf r_{\mathrm{periodic}}(t)
+\]
+
+Rearranging:
+
+\[
+\mathbf r_{\mathrm{est}}
+=
+\mathbf r_{\mathrm{inst}}(t)
+-
+\Delta\mathbf r_{\mathrm{periodic}}(t)
+\]
+
+Since the permanent deformation is no longer modelled, it remains in the estimated reference position:
+
+\[
+\boxed{
+\mathbf r_{\mathrm{est}}
+=
+\mathbf r_{\mathrm{TF}}+\Delta\mathbf r_{\mathrm{perm}}
+=
+\mathbf r_{\mathrm{MT}}
+}
+\]
+
+Your estimated position is mean-tide.
